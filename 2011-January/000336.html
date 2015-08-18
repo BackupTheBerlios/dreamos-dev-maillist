@@ -1,0 +1,110 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r333 - in trunk: . shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2011-January/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r333%20-%20in%20trunk%3A%20.%20shell&In-Reply-To=%3C20110109221138.19B07480BEC%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000335.html">
+   <LINK REL="Next"  HREF="000337.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r333 - in trunk: . shell</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r333%20-%20in%20trunk%3A%20.%20shell&In-Reply-To=%3C20110109221138.19B07480BEC%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r333 - in trunk: . shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun Jan  9 23:11:37 CET 2011</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000335.html">[Dreamos-dev] r332 - in trunk: . boot utils utils/eltorito_iso
+</A></li>
+        <LI>Next message: <A HREF="000337.html">[Dreamos-dev] r334 - trunk/io
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#336">[ date ]</a>
+              <a href="thread.html#336">[ thread ]</a>
+              <a href="subject.html#336">[ subject ]</a>
+              <a href="author.html#336">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2011-01-09 23:11:37 +0100 (Sun, 09 Jan 2011)
+New Revision: 333
+
+Modified:
+   trunk/dreamos.img
+   trunk/shell/testing.c
+Log:
+Aggiornata la funzione che testa il nuovo gestore di memoria
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2011-01-09 09:27:59 UTC (rev 332)
++++ trunk/shell/testing.c	2011-01-09 22:11:37 UTC (rev 333)
+@@ -100,11 +100,26 @@
+ }
+ 
+ void try_newheap(){
++	unsigned int testA;
++	unsigned int testB;
++	unsigned int testC;
+ 	//printf(&quot;Testing the new heap (in development)\n&quot;);
+ 	//printf(&quot;First step: testing a new heap...\n&quot;);
+ 	//new_heap(HEAP_START_ADDRESS, HEAP_START_SIZE);
+-	printf(&quot;Second step: trying new_malloc...\n&quot;);
+-	new_malloc(sizeof(new_heap_t));	
++	printf(&quot;Second step: trying new_malloc...\n&quot;);	
++	testA=new_malloc(8);	
++	printf(&quot;Address of testA = 0x%x\n&quot;, testA);
++	testB=new_malloc(8);
++	printf(&quot;Address of testB = 0x%x\n&quot;, testB);
++	testC=new_malloc(8);
++	printf(&quot;Address of testC = 0x%x\n&quot;, testC);
++	new_free(testC);
++	new_free(testB);
++	unsigned int testD;
++	testD = new_malloc(12);
++	printf(&quot;Address of testD= 0x%x\n&quot;, testD);
++	new_free(testA);
++	new_free(testD);
+ 	printf(&quot;DONE\n&quot;);
+ }
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000335.html">[Dreamos-dev] r332 - in trunk: . boot utils utils/eltorito_iso
+</A></li>
+	<LI>Next message: <A HREF="000337.html">[Dreamos-dev] r334 - trunk/io
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#336">[ date ]</a>
+              <a href="thread.html#336">[ thread ]</a>
+              <a href="subject.html#336">[ subject ]</a>
+              <a href="author.html#336">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

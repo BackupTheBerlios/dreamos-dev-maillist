@@ -1,0 +1,1015 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r31 - in trunk: . drivers hardware include	include/drivers include/hardware include/io include/libc	include/lng include/mem include/misc include/processore	include/shell include/system io libc mem misc processore	shell system
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2008-September/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r31%20-%20in%20trunk%3A%20.%20drivers%20hardware%20include%0A%09include/drivers%20include/hardware%20include/io%20include/libc%0A%09include/lng%20include/mem%20include/misc%20include/processore%0A%09include/shell%20include/system%20io%20libc%20mem%20misc%20processore%0A%09shell%20system&In-Reply-To=%3C200809111358.m8BDw5qn015738%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000030.html">
+   <LINK REL="Next"  HREF="000032.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r31 - in trunk: . drivers hardware include	include/drivers include/hardware include/io include/libc	include/lng include/mem include/misc include/processore	include/shell include/system io libc mem misc processore	shell system</H1>
+    <B>shainer at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r31%20-%20in%20trunk%3A%20.%20drivers%20hardware%20include%0A%09include/drivers%20include/hardware%20include/io%20include/libc%0A%09include/lng%20include/mem%20include/misc%20include/processore%0A%09include/shell%20include/system%20io%20libc%20mem%20misc%20processore%0A%09shell%20system&In-Reply-To=%3C200809111358.m8BDw5qn015738%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r31 - in trunk: . drivers hardware include	include/drivers include/hardware include/io include/libc	include/lng include/mem include/misc include/processore	include/shell include/system io libc mem misc processore	shell system">shainer at mail.berlios.de
+       </A><BR>
+    <I>Thu Sep 11 15:58:05 CEST 2008</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000030.html">[Dreamos-dev] r30 - in trunk: . include/shell
+</A></li>
+        <LI>Next message: <A HREF="000032.html">[Dreamos-dev] r32 - in trunk: . include/lng include/system shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#31">[ date ]</a>
+              <a href="thread.html#31">[ thread ]</a>
+              <a href="subject.html#31">[ subject ]</a>
+              <a href="author.html#31">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: shainer
+Date: 2008-09-11 15:57:27 +0200 (Thu, 11 Sep 2008)
+New Revision: 31
+
+Modified:
+   trunk/drivers/keyboard.c
+   trunk/hardware/8253.c
+   trunk/hardware/cpuid.c
+   trunk/hardware/keyboard.c
+   trunk/hardware/pic8259.c
+   trunk/include/drivers/keyboard.h
+   trunk/include/hardware/8253.h
+   trunk/include/hardware/cpuid.h
+   trunk/include/hardware/keyboard.h
+   trunk/include/hardware/pic8259.h
+   trunk/include/io/io.h
+   trunk/include/io/video.h
+   trunk/include/kernel.h
+   trunk/include/libc/ctype.h
+   trunk/include/libc/stddef.h
+   trunk/include/libc/stdio.h
+   trunk/include/libc/string.h
+   trunk/include/lng/en.h
+   trunk/include/lng/it.h
+   trunk/include/mem/buddy.h
+   trunk/include/mem/fismem.h
+   trunk/include/mem/kheap.h
+   trunk/include/mem/paging.h
+   trunk/include/misc/ordered_array.h
+   trunk/include/multiboot.h
+   trunk/include/processore/gdt.h
+   trunk/include/processore/handlers.h
+   trunk/include/processore/idt.h
+   trunk/include/shell/shell.h
+   trunk/include/system/syscall.h
+   trunk/include/use.h
+   trunk/include/version.h
+   trunk/io/io.c
+   trunk/io/video.c
+   trunk/kernel.c
+   trunk/libc/ctype.c
+   trunk/libc/stdio.c
+   trunk/libc/string.c
+   trunk/mem/buddy.c
+   trunk/mem/fismem.c
+   trunk/mem/kheap.c
+   trunk/mem/paging.c
+   trunk/misc/ordered_array.c
+   trunk/processore/gdt.c
+   trunk/processore/handlers.c
+   trunk/processore/idt.c
+   trunk/shell/shell.c
+   trunk/system/syscall.c
+Log:
+Corretto l'indirizzo della FSF nei commenti riguardanti la licenza. Per favore, nei vari file che create inserite almeno il commento standard sulla licenza cos?\195?\172 sono tutti uguali. Al di sotto potete inserire poi tutte le info che volete :)
+
+Modified: trunk/drivers/keyboard.c
+===================================================================
+--- trunk/drivers/keyboard.c	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/drivers/keyboard.c	2008-09-11 13:57:27 UTC (rev 31)
+@@ -20,7 +20,7 @@
+  *
+  *  You should have received a copy of the GNU General Public License
+  *  along with this program; if not, write to the Free Software
+- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+ 
+ #include &lt;keyboard.h&gt;
+
+Modified: trunk/hardware/8253.c
+===================================================================
+--- trunk/hardware/8253.c	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/hardware/8253.c	2008-09-11 13:57:27 UTC (rev 31)
+@@ -13,7 +13,7 @@
+  *
+  * You should have received a copy of the GNU General Public License
+  * along with this program; if not, write to the Free Software
+- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+ #include &lt;io.h&gt;
+ #include &lt;stdio.h&gt;
+
+Modified: trunk/hardware/cpuid.c
+===================================================================
+--- trunk/hardware/cpuid.c	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/hardware/cpuid.c	2008-09-11 13:57:27 UTC (rev 31)
+@@ -13,7 +13,7 @@
+  *
+  * You should have received a copy of the GNU General Public License
+  * along with this program; if not, write to the Free Software
+- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+ 
+ /* CPUID-based function to detect CPU type
+
+Modified: trunk/hardware/keyboard.c
+===================================================================
+--- trunk/hardware/keyboard.c	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/hardware/keyboard.c	2008-09-11 13:57:27 UTC (rev 31)
+@@ -13,7 +13,8 @@
+  *
+  * You should have received a copy of the GNU General Public License
+  * along with this program; if not, write to the Free Software
+- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++
+  */
+ 
+ #include &lt;keyboard.h&gt;
+@@ -32,4 +33,4 @@
+         _kputs(s);
+         _kputs(&quot;\n&quot;);
+     }
+-}
+\ No newline at end of file
++}
+
+Modified: trunk/hardware/pic8259.c
+===================================================================
+--- trunk/hardware/pic8259.c	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/hardware/pic8259.c	2008-09-11 13:57:27 UTC (rev 31)
+@@ -13,7 +13,7 @@
+  *
+  * You should have received a copy of the GNU General Public License
+  * along with this program; if not, write to the Free Software
+- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+ 
+ #include &lt;pic8259.h&gt;
+
+Modified: trunk/include/drivers/keyboard.h
+===================================================================
+--- trunk/include/drivers/keyboard.h	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/include/drivers/keyboard.h	2008-09-11 13:57:27 UTC (rev 31)
+@@ -20,7 +20,7 @@
+  *
+  *  You should have received a copy of the GNU General Public License
+  *  along with this program; if not, write to the Free Software
+- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+ 
+ #ifndef _KEYBOARD_H_
+
+Modified: trunk/include/hardware/8253.h
+===================================================================
+--- trunk/include/hardware/8253.h	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/include/hardware/8253.h	2008-09-11 13:57:27 UTC (rev 31)
+@@ -13,7 +13,7 @@
+  *
+  * You should have received a copy of the GNU General Public License
+  * along with this program; if not, write to the Free Software
+- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+ 
+ #ifndef _8253_H
+
+Modified: trunk/include/hardware/cpuid.h
+===================================================================
+--- trunk/include/hardware/cpuid.h	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/include/hardware/cpuid.h	2008-09-11 13:57:27 UTC (rev 31)
+@@ -13,7 +13,7 @@
+  *
+  * You should have received a copy of the GNU General Public License
+  * along with this program; if not, write to the Free Software
+- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
++ * Foundation, Inc.,51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+ 
+ /* CPUID definitions
+
+Modified: trunk/include/hardware/keyboard.h
+===================================================================
+--- trunk/include/hardware/keyboard.h	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/include/hardware/keyboard.h	2008-09-11 13:57:27 UTC (rev 31)
+@@ -13,7 +13,7 @@
+  *
+  * You should have received a copy of the GNU General Public License
+  * along with this program; if not, write to the Free Software
+- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+ 
+ #ifndef __KEYBOARD_H
+
+Modified: trunk/include/hardware/pic8259.h
+===================================================================
+--- trunk/include/hardware/pic8259.h	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/include/hardware/pic8259.h	2008-09-11 13:57:27 UTC (rev 31)
+@@ -13,7 +13,7 @@
+  *
+  * You should have received a copy of the GNU General Public License
+  * along with this program; if not, write to the Free Software
+- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+ 
+ #ifndef _PIC8259_H
+
+Modified: trunk/include/io/io.h
+===================================================================
+--- trunk/include/io/io.h	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/include/io/io.h	2008-09-11 13:57:27 UTC (rev 31)
+@@ -1,3 +1,20 @@
++/*
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2 of the License, or
++ *  (at your option) any later version.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++
+ /***************************************************************************
+  *            io.h
+  *
+
+Modified: trunk/include/io/video.h
+===================================================================
+--- trunk/include/io/video.h	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/include/io/video.h	2008-09-11 13:57:27 UTC (rev 31)
+@@ -19,7 +19,7 @@
+  *
+  *  You should have received a copy of the GNU General Public License
+  *  along with this program; if not, write to the Free Software
+- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+  
+ #ifndef _VIDEO_H
+
+Modified: trunk/include/kernel.h
+===================================================================
+--- trunk/include/kernel.h	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/include/kernel.h	2008-09-11 13:57:27 UTC (rev 31)
+@@ -19,7 +19,7 @@
+  *
+  *  You should have received a copy of the GNU General Public License
+  *  along with this program; if not, write to the Free Software
+- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+  
+ #ifndef _KERNEL_H
+
+Modified: trunk/include/libc/ctype.h
+===================================================================
+--- trunk/include/libc/ctype.h	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/include/libc/ctype.h	2008-09-11 13:57:27 UTC (rev 31)
+@@ -13,7 +13,7 @@
+  *
+  * You should have received a copy of the GNU General Public License
+  * along with this program; if not, write to the Free Software
+- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+ 
+ /*
+
+Modified: trunk/include/libc/stddef.h
+===================================================================
+--- trunk/include/libc/stddef.h	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/include/libc/stddef.h	2008-09-11 13:57:27 UTC (rev 31)
+@@ -13,7 +13,7 @@
+  *
+  * You should have received a copy of the GNU General Public License
+  * along with this program; if not, write to the Free Software
+- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+  
+  /*
+
+Modified: trunk/include/libc/stdio.h
+===================================================================
+--- trunk/include/libc/stdio.h	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/include/libc/stdio.h	2008-09-11 13:57:27 UTC (rev 31)
+@@ -20,7 +20,7 @@
+  *
+  *  You should have received a copy of the GNU General Public License
+  *  along with this program; if not, write to the Free Software
+- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+ 
+ #ifndef _STDIO_H
+
+Modified: trunk/include/libc/string.h
+===================================================================
+--- trunk/include/libc/string.h	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/include/libc/string.h	2008-09-11 13:57:27 UTC (rev 31)
+@@ -20,7 +20,7 @@
+  *
+  *  You should have received a copy of the GNU General Public License
+  *  along with this program; if not, write to the Free Software
+- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+ 
+ #ifndef _STRING_H
+
+Modified: trunk/include/lng/en.h
+===================================================================
+--- trunk/include/lng/en.h	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/include/lng/en.h	2008-09-11 13:57:27 UTC (rev 31)
+@@ -1,18 +1,19 @@
+-/*  DreamOS
+-    en.h
+-    This file is part of Foobar.
+-    Foobar is free software: you can redistribute it and/or modify
+-    it under the terms of the GNU General Public License as published by
+-    the Free Software Foundation, either version 3 of the License, or
+-    (at your option) any later version.
+-    Foobar is distributed in the hope that it will be useful,
+-    but WITHOUT ANY WARRANTY; without even the implied warranty of
+-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-    GNU General Public License for more details.
+-    You should have received a copy of the GNU General Public License
+-    along with Foobar.  If not, see &lt;<A HREF="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</A>&gt;.
+-*/
+-
++/*
++ * En.h
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2 of the License, or
++ *  (at your option) any later version.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
+ #ifndef _EN_H_
+ #define _EN_H_
+ 
+
+Modified: trunk/include/lng/it.h
+===================================================================
+--- trunk/include/lng/it.h	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/include/lng/it.h	2008-09-11 13:57:27 UTC (rev 31)
+@@ -1,17 +1,19 @@
+-/*  DreamOS
+-    it.h
+-    This file is part of Foobar.
+-    Foobar is free software: you can redistribute it and/or modify
+-    it under the terms of the GNU General Public License as published by
+-    the Free Software Foundation, either version 3 of the License, or
+-    (at your option) any later version.
+-    Foobar is distributed in the hope that it will be useful,
+-    but WITHOUT ANY WARRANTY; without even the implied warranty of
+-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-    GNU General Public License for more details.
+-    You should have received a copy of the GNU General Public License
+-    along with Foobar.  If not, see &lt;<A HREF="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</A>&gt;.
+-*/
++/*
++ * It.h
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2 of the License, or
++ *  (at your option) any later version.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
+ 
+ #ifndef _IT_H_
+ #define _IT_H_
+
+Modified: trunk/include/mem/buddy.h
+===================================================================
+--- trunk/include/mem/buddy.h	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/include/mem/buddy.h	2008-09-11 13:57:27 UTC (rev 31)
+@@ -19,7 +19,7 @@
+  *
+  *  You should have received a copy of the GNU General Public License
+  *  along with this program; if not, write to the Free Software
+- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+ 
+ #ifndef BUDDY_H
+@@ -41,4 +41,4 @@
+ buddy_t* new_buddy();
+ buddy_t* create_buddy(int);
+ unsigned int alloc_buddy(int, buddy_t*);
+-#endif
+\ No newline at end of file
++#endif
+
+Modified: trunk/include/mem/fismem.h
+===================================================================
+--- trunk/include/mem/fismem.h	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/include/mem/fismem.h	2008-09-11 13:57:27 UTC (rev 31)
+@@ -19,7 +19,7 @@
+  *
+  *  You should have received a copy of the GNU General Public License
+  *  along with this program; if not, write to the Free Software
+- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+  
+ #ifndef _FISMEM_H
+
+Modified: trunk/include/mem/kheap.h
+===================================================================
+--- trunk/include/mem/kheap.h	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/include/mem/kheap.h	2008-09-11 13:57:27 UTC (rev 31)
+@@ -19,7 +19,7 @@
+  *
+  *  You should have received a copy of the GNU General Public License
+  *  along with this program; if not, write to the Free Software
+- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+ 
+ #ifndef KHEAP_H
+@@ -67,4 +67,4 @@
+ 
+ void* alloc(unsigned int, heap_t*);
+ 
+-#endif
+\ No newline at end of file
++#endif
+
+Modified: trunk/include/mem/paging.h
+===================================================================
+--- trunk/include/mem/paging.h	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/include/mem/paging.h	2008-09-11 13:57:27 UTC (rev 31)
+@@ -13,7 +13,7 @@
+  *
+  * You should have received a copy of the GNU General Public License
+  * along with this program; if not, write to the Free Software
+- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+  
+  /*
+
+Modified: trunk/include/misc/ordered_array.h
+===================================================================
+--- trunk/include/misc/ordered_array.h	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/include/misc/ordered_array.h	2008-09-11 13:57:27 UTC (rev 31)
+@@ -19,7 +19,7 @@
+  *
+  *  You should have received a copy of the GNU General Public License
+  *  along with this program; if not, write to the Free Software
+- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+ 
+ #ifndef ORDERED_ARRAY_H
+@@ -41,4 +41,4 @@
+ ordered_array_t new_array(void_t, unsigned int, unsigned int);
+ void insert_array(void_t, ordered_array_t*);
+ 
+-#endif
+\ No newline at end of file
++#endif
+
+Modified: trunk/include/multiboot.h
+===================================================================
+--- trunk/include/multiboot.h	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/include/multiboot.h	2008-09-11 13:57:27 UTC (rev 31)
+@@ -1,17 +1,19 @@
+-/*  DreamOS
+-    multiboot.h
+-    This file is part of Foobar.
+-    Foobar is free software: you can redistribute it and/or modify
+-    it under the terms of the GNU General Public License as published by
+-    the Free Software Foundation, either version 3 of the License, or
+-    (at your option) any later version.
+-    Foobar is distributed in the hope that it will be useful,
+-    but WITHOUT ANY WARRANTY; without even the implied warranty of
+-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-    GNU General Public License for more details.
+-    You should have received a copy of the GNU General Public License
+-    along with Foobar.  If not, see &lt;<A HREF="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</A>&gt;.
+-*/
++/*
++ * Multiboot.h
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2 of the License, or
++ *  (at your option) any later version.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
+ 
+  /* Do not include here in boot.S. */
+ 
+@@ -89,4 +91,4 @@
+        unsigned long length_high;
+        unsigned long type;
+      } memory_map_t;
+-#endif
+\ No newline at end of file
++#endif
+
+Modified: trunk/include/processore/gdt.h
+===================================================================
+--- trunk/include/processore/gdt.h	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/include/processore/gdt.h	2008-09-11 13:57:27 UTC (rev 31)
+@@ -13,7 +13,7 @@
+  *
+  * You should have received a copy of the GNU General Public License
+  * along with this program; if not, write to the Free Software
+- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+  
+  /*
+
+Modified: trunk/include/processore/handlers.h
+===================================================================
+--- trunk/include/processore/handlers.h	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/include/processore/handlers.h	2008-09-11 13:57:27 UTC (rev 31)
+@@ -13,7 +13,7 @@
+  *
+  * You should have received a copy of the GNU General Public License
+  * along with this program; if not, write to the Free Software
+- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+  
+  /*
+
+Modified: trunk/include/processore/idt.h
+===================================================================
+--- trunk/include/processore/idt.h	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/include/processore/idt.h	2008-09-11 13:57:27 UTC (rev 31)
+@@ -13,7 +13,7 @@
+  *
+  * You should have received a copy of the GNU General Public License
+  * along with this program; if not, write to the Free Software
+- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+  
+  /*
+
+Modified: trunk/include/shell/shell.h
+===================================================================
+--- trunk/include/shell/shell.h	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/include/shell/shell.h	2008-09-11 13:57:27 UTC (rev 31)
+@@ -1,23 +1,24 @@
+-/*  DreamOS
+-    shell.h
+-    This file is part of DreamOS.
+-    Foobar is free software: you can redistribute it and/or modify
+-    it under the terms of the GNU General Public License as published by
+-    the Free Software Foundation, either version 3 of the License, or
+-    (at your option) any later version.
+-    Foobar is distributed in the hope that it will be useful,
+-    but WITHOUT ANY WARRANTY; without even the implied warranty of
+-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-    GNU General Public License for more details.
+-    You should have received a copy of the GNU General Public License
+-    along with Foobar.  If not, see &lt;<A HREF="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</A>&gt;.
+-*/
++/*
++ * Shell.h
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2 of the License, or
++ *  (at your option) any later version.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
+ 
+ /* 
+   Shell Coded by
+     Osiris 
+ */
+-// Wrote by Osiris
+ 
+ #ifndef __SHELL_H
+ #define __SHELL_H
+
+Modified: trunk/include/system/syscall.h
+===================================================================
+--- trunk/include/system/syscall.h	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/include/system/syscall.h	2008-09-11 13:57:27 UTC (rev 31)
+@@ -13,7 +13,7 @@
+  *
+  * You should have received a copy of the GNU General Public License
+  * along with this program; if not, write to the Free Software
+- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+  
+  /*
+
+Modified: trunk/include/use.h
+===================================================================
+--- trunk/include/use.h	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/include/use.h	2008-09-11 13:57:27 UTC (rev 31)
+@@ -1,17 +1,19 @@
+-/*  DreamOS
+-    en.h
+-    This file is part of Foobar.
+-    Foobar is free software: you can redistribute it and/or modify
+-    it under the terms of the GNU General Public License as published by
+-    the Free Software Foundation, either version 3 of the License, or
+-    (at your option) any later version.
+-    Foobar is distributed in the hope that it will be useful,
+-    but WITHOUT ANY WARRANTY; without even the implied warranty of
+-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-    GNU General Public License for more details.
+-    You should have received a copy of the GNU General Public License
+-    along with Foobar.  If not, see &lt;<A HREF="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</A>&gt;.
+-*/
++/*
++ * Use.h
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2 of the License, or
++ *  (at your option) any later version.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
+ 
+ #ifndef _EN_H_
+ #define _EN_H_
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/include/version.h	2008-09-11 13:57:27 UTC (rev 31)
+@@ -1,12 +1,25 @@
+-/* 
+-* What is the Kernel version ? Bhoo
+-*  Here the script..
+-*  
+-*	Coded by Osiris
+-*  at jeek69 [at] katamail d0t com
+-*
+-*/
++/*
++ * Version.h
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2 of the License, or
++ *  (at your option) any later version.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
+ 
++/*
++ * Author: Osiris
++ * <A HREF="https://lists.berlios.de/mailman/listinfo/dreamos-dev">osiris at katamail.com</A>
++ */
++
+ #define VERSION &quot;0&quot;
+ #define PATCHLEVEL &quot;0&quot;
+ #define EXTRAVERSION &quot;-dreamos&quot;
+
+Modified: trunk/io/io.c
+===================================================================
+--- trunk/io/io.c	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/io/io.c	2008-09-11 13:57:27 UTC (rev 31)
+@@ -20,7 +20,7 @@
+  *
+  *  You should have received a copy of the GNU General Public License
+  *  along with this program; if not, write to the Free Software
+- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+ 
+ #include &lt;io.h&gt;
+
+Modified: trunk/io/video.c
+===================================================================
+--- trunk/io/video.c	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/io/video.c	2008-09-11 13:57:27 UTC (rev 31)
+@@ -22,7 +22,7 @@
+  *
+  *  You should have received a copy of the GNU General Public License
+  *  along with this program; if not, write to the Free Software
+- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+  
+ #include &lt;video.h&gt;
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/kernel.c	2008-09-11 13:57:27 UTC (rev 31)
+@@ -19,7 +19,7 @@
+  *
+  *  You should have received a copy of the GNU General Public License
+  *  along with this program; if not, write to the Free Software
+- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+  
+ #include &lt;multiboot.h&gt;
+
+Modified: trunk/libc/ctype.c
+===================================================================
+--- trunk/libc/ctype.c	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/libc/ctype.c	2008-09-11 13:57:27 UTC (rev 31)
+@@ -20,7 +20,7 @@
+  *
+  *  You should have received a copy of the GNU General Public License
+  *  along with this program; if not, write to the Free Software
+- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+ 
+ #include&lt;ctype.h&gt;
+
+Modified: trunk/libc/stdio.c
+===================================================================
+--- trunk/libc/stdio.c	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/libc/stdio.c	2008-09-11 13:57:27 UTC (rev 31)
+@@ -20,7 +20,7 @@
+  *
+  *  You should have received a copy of the GNU General Public License
+  *  along with this program; if not, write to the Free Software
+- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+ 
+ #include &lt;stdio.h&gt;
+
+Modified: trunk/libc/string.c
+===================================================================
+--- trunk/libc/string.c	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/libc/string.c	2008-09-11 13:57:27 UTC (rev 31)
+@@ -20,7 +20,7 @@
+  *
+  *  You should have received a copy of the GNU General Public License
+  *  along with this program; if not, write to the Free Software
+- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+ 
+ #include &lt;string.h&gt;
+
+Modified: trunk/mem/buddy.c
+===================================================================
+--- trunk/mem/buddy.c	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/mem/buddy.c	2008-09-11 13:57:27 UTC (rev 31)
+@@ -19,7 +19,7 @@
+  *
+  *  You should have received a copy of the GNU General Public License
+  *  along with this program; if not, write to the Free Software
+- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+ 
+ #include &lt;buddy.h&gt;
+@@ -78,4 +78,4 @@
+     new_buddy-&gt;size = size;
+     printf(&quot;Creating buddy at address: 0x%x with buddy size: %d\n&quot;, new_buddy, new_buddy-&gt;size);
+     return new_buddy;
+-}
+\ No newline at end of file
++}
+
+Modified: trunk/mem/fismem.c
+===================================================================
+--- trunk/mem/fismem.c	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/mem/fismem.c	2008-09-11 13:57:27 UTC (rev 31)
+@@ -19,7 +19,7 @@
+  *
+  *  You should have received a copy of the GNU General Public License
+  *  along with this program; if not, write to the Free Software
+- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+ 
+ #include &lt;fismem.h&gt;
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/mem/kheap.c	2008-09-11 13:57:27 UTC (rev 31)
+@@ -18,7 +18,7 @@
+  *
+  *  You should have received a copy of the GNU General Public License
+  *  along with this program; if not, write to the Free Software
+- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+ 
+ #include &lt;kheap.h&gt;
+@@ -79,4 +79,4 @@
+ /**Queste funzioni sono messe solo per alcune prove verranno eliminate entro le prossime revisioni*/
+ void try_alloc(){
+     alloc(4, kheap);
+-}
+\ No newline at end of file
++}
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/mem/paging.c	2008-09-11 13:57:27 UTC (rev 31)
+@@ -13,7 +13,7 @@
+  *
+  * You should have received a copy of the GNU General Public License
+  * along with this program; if not, write to the Free Software
+- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+  
+  /*
+
+Modified: trunk/misc/ordered_array.c
+===================================================================
+--- trunk/misc/ordered_array.c	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/misc/ordered_array.c	2008-09-11 13:57:27 UTC (rev 31)
+@@ -19,7 +19,7 @@
+  *
+  *  You should have received a copy of the GNU General Public License
+  *  along with this program; if not, write to the Free Software
+- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+ 
+ #include &lt;ordered_array.h&gt;
+@@ -59,4 +59,4 @@
+     while(i&lt;array-&gt;size)
+         i++;
+     if(i==array-&gt;size) array-&gt;array[++i] = elem;
+-}
+\ No newline at end of file
++}
+
+Modified: trunk/processore/gdt.c
+===================================================================
+--- trunk/processore/gdt.c	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/processore/gdt.c	2008-09-11 13:57:27 UTC (rev 31)
+@@ -13,7 +13,7 @@
+  *
+  * You should have received a copy of the GNU General Public License
+  * along with this program; if not, write to the Free Software
+- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+  
+  /*
+
+Modified: trunk/processore/handlers.c
+===================================================================
+--- trunk/processore/handlers.c	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/processore/handlers.c	2008-09-11 13:57:27 UTC (rev 31)
+@@ -13,7 +13,7 @@
+  *
+  * You should have received a copy of the GNU General Public License
+  * along with this program; if not, write to the Free Software
+- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+  
+  /*
+
+Modified: trunk/processore/idt.c
+===================================================================
+--- trunk/processore/idt.c	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/processore/idt.c	2008-09-11 13:57:27 UTC (rev 31)
+@@ -13,7 +13,7 @@
+  *
+  * You should have received a copy of the GNU General Public License
+  * along with this program; if not, write to the Free Software
+- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+  
+  /*
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/shell/shell.c	2008-09-11 13:57:27 UTC (rev 31)
+@@ -19,7 +19,7 @@
+  *
+  *  You should have received a copy of the GNU General Public License
+  *  along with this program; if not, write to the Free Software
+- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+ 
+ 
+
+Modified: trunk/system/syscall.c
+===================================================================
+--- trunk/system/syscall.c	2008-09-10 21:49:06 UTC (rev 30)
++++ trunk/system/syscall.c	2008-09-11 13:57:27 UTC (rev 31)
+@@ -13,7 +13,7 @@
+  *
+  * You should have received a copy of the GNU General Public License
+  * along with this program; if not, write to the Free Software
+- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+  
+  /*
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000030.html">[Dreamos-dev] r30 - in trunk: . include/shell
+</A></li>
+	<LI>Next message: <A HREF="000032.html">[Dreamos-dev] r32 - in trunk: . include/lng include/system shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#31">[ date ]</a>
+              <a href="thread.html#31">[ thread ]</a>
+              <a href="subject.html#31">[ subject ]</a>
+              <a href="author.html#31">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

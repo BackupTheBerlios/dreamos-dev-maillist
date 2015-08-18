@@ -1,0 +1,316 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r185 - in trunk: . include/io io mem shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-January/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r185%20-%20in%20trunk%3A%20.%20include/io%20io%20mem%20shell&In-Reply-To=%3C201001162340.o0GNegbe022273%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000186.html">
+   <LINK REL="Next"  HREF="000188.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r185 - in trunk: . include/io io mem shell</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r185%20-%20in%20trunk%3A%20.%20include/io%20io%20mem%20shell&In-Reply-To=%3C201001162340.o0GNegbe022273%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r185 - in trunk: . include/io io mem shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun Jan 17 00:40:42 CET 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000186.html">[Dreamos-dev] r184 - in trunk: . fs include include/shell libc	shell utils
+</A></li>
+        <LI>Next message: <A HREF="000188.html">[Dreamos-dev] r186 - in trunk: . fs
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#187">[ date ]</a>
+              <a href="thread.html#187">[ thread ]</a>
+              <a href="subject.html#187">[ subject ]</a>
+              <a href="author.html#187">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-01-17 00:40:40 +0100 (Sun, 17 Jan 2010)
+New Revision: 185
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/io/video.h
+   trunk/io/video.c
+   trunk/kernel.c
+   trunk/mem/kheap.c
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+Log:
+Modificati i colori della shell, ditemi che ne pensate.
+Eliminate alcune stampe del boot.
+AGgiunte per i colori standard delle #define NOMECOLORE. 
+Consultate il file include/video.h per i colori disponibili.
+Ditemi cosa ve ne pare dei nuovi colori.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/io/video.h
+===================================================================
+--- trunk/include/io/video.h	2010-01-12 23:33:03 UTC (rev 184)
++++ trunk/include/io/video.h	2010-01-16 23:40:40 UTC (rev 185)
+@@ -28,6 +28,24 @@
+ #define _SCR_W 80
+ #define _SCR_H 25
+ 
++#define BLACK 0
++#define BLUE 1
++#define GREEN 2
++#define CYAN 3
++#define RED 4
++#define MAGENTA 5
++#define BROWN 6
++#define GREY 7
++#define DARK_GREY 8
++#define BRIGHT_BLUE 9
++#define BRIGHT_GREEN 10
++#define BRIGHT_CYAN 11
++#define BRIGHT_RED 12
++#define BRIGHT_MAGENTA 13
++#define YELLOW 14
++#define WHITE 15
++
++
+ #define OK_POS 70
+ 
+ void _kntos(char*,unsigned int, int);
+
+Modified: trunk/io/video.c
+===================================================================
+--- trunk/io/video.c	2010-01-12 23:33:03 UTC (rev 184)
++++ trunk/io/video.c	2010-01-16 23:40:40 UTC (rev 185)
+@@ -219,6 +219,7 @@
+ void _kprintOK() {
+     _kgoto(60, _kgetline());
+     _kputs(&quot;\033\001 [\033\012OK\033\001]\033\007\n&quot;);
++    _kcolor(WHITE);
+ }
+ 
+ /*
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2010-01-12 23:33:03 UTC (rev 184)
++++ trunk/kernel.c	2010-01-16 23:40:40 UTC (rev 185)
+@@ -63,14 +63,14 @@
+     syscall_init();
+     module_start = *((unsigned int*)boot_info-&gt;mods_addr);
+ 	module_end = *((unsigned int*)(boot_info-&gt;mods_addr+4));
+-    _kcolor('\012');
++    _kcolor(BRIGHT_GREEN);
+     _kputs(DREAMOS_VER);
+-    _kcolor('\007');
++    _kcolor(WHITE);
+     _kputs(LNG_SITE);
+-    _kcolor('\011');
++    _kcolor(BRIGHT_BLUE);
+     _kputs(SITEURL);
+     _kputs(&quot;\n&quot;);
+-    _kcolor('\007');
++    _kcolor(WHITE);
+     _kputs(&quot;\n&quot;);    
+     _kputs(LNG_GDT);
+     init_gdt();
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2010-01-12 23:33:03 UTC (rev 184)
++++ trunk/mem/kheap.c	2010-01-16 23:40:40 UTC (rev 185)
+@@ -104,9 +104,8 @@
+     new_heap-&gt;used_list = NULL;
+     new_heap-&gt;free_nodes = NULL;
+     printf(&quot;  First heap created...\n&quot;);   
+-    printf(&quot;  Size: %d\n&quot;
+-	   &quot;  Tot mem: %d\n&quot;
+-	   &quot;  Start address: %x\n&quot;, (new_heap-&gt;free_list)-&gt;size, tot_mem, new_heap);	    
++    printf(&quot;  Size: %d &quot;
++	   &quot;  Tot mem: %d\n&quot;, (new_heap-&gt;free_list)-&gt;size, tot_mem);	    
+ 	apic_node = alloc_node();
+ 	apic_node-&gt;start_address = 0xFEC00000;
+ 	apic_node-&gt;size = 4096;
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-01-12 23:33:03 UTC (rev 184)
++++ trunk/shell/commands.c	2010-01-16 23:40:40 UTC (rev 185)
+@@ -29,20 +29,20 @@
+ 
+ void aalogo()
+ {
+-  _kcolor (4);
++  _kcolor (BRIGHT_GREEN);
+   printf(&quot;\t\t ____           _____          _____ _____\n&quot;);
+   printf(&quot;\t\t|    \\ ___ ___ |  _  | _______|     |   __|\n&quot;);
+   printf(&quot;\t\t|  |  |  _| -_|| |_| ||       |  |  |__   |\n&quot;);
+   printf(&quot;\t\t|____/|_| |___||_| |_||_|\134_/|_|_____|_____|\n&quot;);
+-  _kcolor (6);
++  _kcolor (WHITE);
+   printf(&quot;\t\tVersion: \&quot;%s %s.%s%s\&quot;\n&quot;, NAME, VERSION, PATCHLEVEL, EXTRAVERSION);
+-  _kcolor(7);
++  //_kcolor(WHITE);
+   logo();
+ }
+ 
+ void logo()
+ {
+-  _kcolor (5);
++  _kcolor (BRIGHT_BLUE);
+   printf(&quot;\n&quot;);
+   printf(&quot;\t\t\t The Dream Operating System \n&quot;
+ 	 &quot;\t\t           v%s.%s%s %s      \n\n&quot;
+@@ -52,7 +52,7 @@
+ 	 VERSION, PATCHLEVEL, EXTRAVERSION, REV_NUM);
+ 	
+   printf(&quot;\n\n\n\n&quot;);
+-  _kcolor(7);
++  _kcolor(WHITE);
+ }
+ 
+ void help()
+@@ -138,10 +138,10 @@
+ 
+   // CPU Info
+   _kputs (LNG_CPU);
+-  _kcolor (4);
++  _kcolor (BRIGHT_RED);
+   _kgoto (61, _kgetline());
+   _kputs (cpu_vendor);
+-  _kcolor(7);
++  _kcolor(WHITE);
+   printf(&quot;\n&quot;);
+ 
+   // Memory RAM Info
+@@ -187,19 +187,21 @@
+ */
+ void credits(void)
+ {
+-  _kcolor('\011');
++  _kcolor(BRIGHT_BLUE);
+   _kputs(&quot;DreamOS Credits\n\n&quot;);                
+   _kputs(&quot;Main Developers:\n&quot;);
+-  _kcolor('\012');
++  _kcolor(GREEN);
+    printf(  &quot;Finarfin - Ivan (Founder)\n\n&quot;);
+-  _kcolor('\011');
++  _kcolor(BRIGHT_BLUE);
+   _kputs(&quot;Developers:\n&quot;);
+-  _kcolor('\012');
++  _kcolor(GREEN);
+   _kputs(&quot;Lord Osiris - Diego Stamigni \n\n&quot;);
+-  _kcolor('\011');
++  _kcolor(BRIGHT_BLUE);
+   _kputs(&quot;Contributors:\n&quot;);
+-  _kcolor('\012');
+-  _kputs(&quot;vinc94\n&quot;
++  _kcolor(GREEN);
++  _kputs(&quot;N3m3s1s\n&quot;
++			&quot;Blackz\n&quot;
++		    &quot;vinc94\n&quot;
+ 	  		&quot;tk0\n&quot;
+ 	  		&quot;DT\n&quot;
+          	&quot;Celeron\n&quot;
+@@ -207,7 +209,7 @@
+          	&quot;m0nt0\n&quot;
+ 			&quot;shainer\n&quot;
+          	&quot;and many others (3 or 4 :P)\n\n&quot;);
+-  _kcolor('\007');
++  _kcolor(WHITE);
+ }
+ 
+ void sleep_cmd(void)
+@@ -357,7 +359,7 @@
+ 	i = 0;
+ 	while( i &lt; j ) {
+ 		if (argc == 1) {
+-			_kcolor(1);
++			_kcolor(BRIGHT_BLUE);
+ 			printf(&quot;%s   &quot;, mountpoint_list[i].mountpoint);
+ 		}
+ 		else {
+@@ -367,13 +369,13 @@
+ 							current_user.username,
+ 							mountpoint_list[i].gid, 
+ 							current_user.username);
+-				_kcolor(1);
++				_kcolor(BRIGHT_BLUE);
+ 				printf(&quot;%s\n&quot;, mountpoint_list[i].mountpoint);
+-				_kcolor(7);
++				_kcolor(WHITE);
+ 		}
+ 		i++; 
+ 	}
+-	_kcolor(7);
++	_kcolor(WHITE);
+ 	printf(&quot; --&gt;   Total: %d\n&quot;, j);
+ }
+ 
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2010-01-12 23:33:03 UTC (rev 184)
++++ trunk/shell/shell.c	2010-01-16 23:40:40 UTC (rev 185)
+@@ -102,7 +102,9 @@
+   memset(cmd, '\0', CMD_LEN);
+   memset(current_user.username, '\0', USER_LEN);
+   memset(current_user.cur_path, '\0', CURPATH_LEN);
++  _kcolor(BRIGHT_BLUE);
+   printf(LNG_WELCOME);
++  _kcolor(WHITE);
+   
+   do {		
+     printf(LNG_USER);
+@@ -120,10 +122,11 @@
+   {
+     /*for (c = 1 ; c &lt;= 10 ; c++) {
+     	    lastcmd[c] = (char *)kmalloc(sizeof(char) * 30); 
+-    }*/	    
+-    printf(&quot;%s~:%s# &quot;, current_user.username, 
+-				  current_user.cur_path,
+-				  current_user.username);
++    }*/
++    _kcolor(9);	    
++    printf(&quot;%s&quot;, current_user.username);
++    _kcolor(15);
++	printf(&quot;~:%s# &quot;, current_user.cur_path);
+     scanf(&quot;%254s&quot;,cmd);
+     
+     //history(cmd);
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000186.html">[Dreamos-dev] r184 - in trunk: . fs include include/shell libc	shell utils
+</A></li>
+	<LI>Next message: <A HREF="000188.html">[Dreamos-dev] r186 - in trunk: . fs
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#187">[ date ]</a>
+              <a href="thread.html#187">[ thread ]</a>
+              <a href="subject.html#187">[ subject ]</a>
+              <a href="author.html#187">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

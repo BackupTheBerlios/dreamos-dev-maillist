@@ -1,0 +1,113 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r308 - in trunk: . boot include/misc misc
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-October/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r308%20-%20in%20trunk%3A%20.%20boot%20include/misc%20misc&In-Reply-To=%3C20101019213453.BEF56480480%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000310.html">
+   <LINK REL="Next"  HREF="000312.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r308 - in trunk: . boot include/misc misc</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r308%20-%20in%20trunk%3A%20.%20boot%20include/misc%20misc&In-Reply-To=%3C20101019213453.BEF56480480%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r308 - in trunk: . boot include/misc misc">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Tue Oct 19 23:34:53 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000310.html">[Dreamos-dev] r307 - in trunk: . boot misc
+</A></li>
+        <LI>Next message: <A HREF="000312.html">[Dreamos-dev] r309 - trunk/misc
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#311">[ date ]</a>
+              <a href="thread.html#311">[ thread ]</a>
+              <a href="subject.html#311">[ subject ]</a>
+              <a href="author.html#311">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-10-19 23:34:53 +0200 (Tue, 19 Oct 2010)
+New Revision: 308
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/include/misc/ordered_array.h
+   trunk/misc/ordered_array.c
+Log:
+Aggiunta funzione print_array con scopo di debug.
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/misc/ordered_array.h
+===================================================================
+--- trunk/include/misc/ordered_array.h	2010-10-17 20:34:00 UTC (rev 307)
++++ trunk/include/misc/ordered_array.h	2010-10-19 21:34:53 UTC (rev 308)
+@@ -46,4 +46,5 @@
+ void destroy_array(ordered_array_t*);
+ type_t get_array(int, ordered_array_t*);
+ void remove_array(int, ordered_array_t*);
++void print_array(ordered_array_t*);
+ #endif
+
+Modified: trunk/misc/ordered_array.c
+===================================================================
+--- trunk/misc/ordered_array.c	2010-10-17 20:34:00 UTC (rev 307)
++++ trunk/misc/ordered_array.c	2010-10-19 21:34:53 UTC (rev 308)
+@@ -86,4 +86,14 @@
+ 		array-&gt;size++;
+ 	}
+     printf(&quot;Test header_less_than: %d\n&quot;, header_t_less_than(elem, array-&gt;array[i-1]));
++    print_array(array);
+ }
++
++void print_array(ordered_array_t* array){
++	int i=0;
++	printf(&quot;Print\n&quot;);
++	while(i&lt;array-&gt;size+1){
++		printf(&quot;Val: %d: %u\n&quot;, i, array-&gt;array[i]);
++		i++;
++	}
++}
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000310.html">[Dreamos-dev] r307 - in trunk: . boot misc
+</A></li>
+	<LI>Next message: <A HREF="000312.html">[Dreamos-dev] r309 - trunk/misc
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#311">[ date ]</a>
+              <a href="thread.html#311">[ thread ]</a>
+              <a href="subject.html#311">[ subject ]</a>
+              <a href="author.html#311">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

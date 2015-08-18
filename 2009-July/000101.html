@@ -1,0 +1,314 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r99 - in trunk: . hardware include/shell processore	shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-July/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r99%20-%20in%20trunk%3A%20.%20hardware%20include/shell%20processore%0A%09shell&In-Reply-To=%3C200907132125.n6DLPmRO022556%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000100.html">
+   <LINK REL="Next"  HREF="000102.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r99 - in trunk: . hardware include/shell processore	shell</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r99%20-%20in%20trunk%3A%20.%20hardware%20include/shell%20processore%0A%09shell&In-Reply-To=%3C200907132125.n6DLPmRO022556%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r99 - in trunk: . hardware include/shell processore	shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Mon Jul 13 23:25:48 CEST 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000100.html">[Dreamos-dev] r98 - in trunk: . drivers include include/shell shell
+</A></li>
+        <LI>Next message: <A HREF="000102.html">[Dreamos-dev] r100 - in trunk: . doc include
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#101">[ date ]</a>
+              <a href="thread.html#101">[ thread ]</a>
+              <a href="subject.html#101">[ subject ]</a>
+              <a href="author.html#101">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-07-13 23:25:47 +0200 (Mon, 13 Jul 2009)
+New Revision: 99
+
+Removed:
+   trunk/hardware/keyboard.c
+Modified:
+   trunk/.bochsrc
+   trunk/Makefile
+   trunk/README
+   trunk/dreamos.img
+   trunk/include/shell/shell.h
+   trunk/processore/handlers.c
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+Log:
+Pulito un po' di codice
+Eliminato il file hardware/keyboard.h
+Eliminati i riferimenti a tali files dal Makefile
+Aggiornato il Readme
+
+
+Modified: trunk/.bochsrc
+===================================================================
+--- trunk/.bochsrc	2009-07-13 14:14:39 UTC (rev 98)
++++ trunk/.bochsrc	2009-07-13 21:25:47 UTC (rev 99)
+@@ -17,7 +17,7 @@
+ # the &quot;wx&quot; display library.
+ #=======================================================================
+ #config_interface: textconfig
+-#config_interface: wx
++config_interface: wx
+ 
+ #=======================================================================
+ # DISPLAY_LIBRARY
+@@ -59,7 +59,7 @@
+ #display_library: sdl, options=&quot;fullscreen&quot; # startup in fullscreen mode
+ #display_library: term
+ #display_library: win32, options=&quot;legacyF12&quot; # use F12 to toggle mouse
+-#display_library: wx
++display_library: wx
+ #display_library: x, options=&quot;gui_debug&quot;
+ #display_library: x
+ #=======================================================================
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2009-07-13 14:14:39 UTC (rev 98)
++++ trunk/Makefile	2009-07-13 21:25:47 UTC (rev 99)
+@@ -36,8 +36,7 @@
+       io/io.o\
+       libc/stdio.o\
+       hardware/cpuid.o\
+-      hardware/keyboard.o\
+-      processore/gdt.o\
++	  processore/gdt.o\
+       processore/idt.o\
+       processore/handlers.o\
+       hardware/pic8259.o\
+
+Modified: trunk/README
+===================================================================
+--- trunk/README	2009-07-13 14:14:39 UTC (rev 98)
++++ trunk/README	2009-07-13 21:25:47 UTC (rev 99)
+@@ -67,10 +67,10 @@
+ 
+ 	- c -- Compilare DreamOS --
+ 
+-Posizionatevi dentro la cartella con i sorgenti ed eseguite il comando:
+-	sh start sh
+-Se avete qemu installato vi partira' in automatico, se invece avete bochs, al termine della compilazione con lo script start.sh dovete dare:
+-bochs
++Posizionatevi dentro la cartella con i sorgenti troverete uno script chiamato start.sh, per lanciarlo date:
++	sh start.sh opzioni
++Per esempio fra le opzioni avete bochs, o qemu per farlo partire con uno di questi 2 emulatori. Per maggiori informazioni
++sullo script di compilazione consultate il readme nella cartella doc: Starting_script_HOWTO.txt
+ 
+ 	- d -- Mettere su floppy -- (Opzionale)
+ 
+@@ -94,6 +94,8 @@
+ 	boot
+ Naturalmenet modificando /path/al/file/dreamos.img con la path al file dreamos.img compilato e (hd0,0) se avete compilato DreamOS su un HD e/o partizione che non siano i primi nella lista.
+ 
++Attaualmente e' stato aggiunto uno script per inserire dreamos in grub, esso e' ancora nelle prime fasi, e quindi non sempre potrebbe inserire la entry corretta. Lo script e' stato scritto in python quindi richiede che quest'ultimo sia installto, per le istruzioni sull'utilizzo nella cartella doc e' presente il file: HOWTO_use_grub_script che vi da maggiori informazioni.
++
+ - 3 -----------------------
+ ---- Usare DreamOS --------
+ 
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Deleted: trunk/hardware/keyboard.c
+===================================================================
+--- trunk/hardware/keyboard.c	2009-07-13 14:14:39 UTC (rev 98)
++++ trunk/hardware/keyboard.c	2009-07-13 21:25:47 UTC (rev 99)
+@@ -1,36 +0,0 @@
+-/*
+- * Dreamos
+- * keyboard.c
+- * This program is free software; you can redistribute it and/or
+- * modify it under the terms of the GNU General Public License
+- * as published by the Free Software Foundation; either version 2
+- * of the License, or (at your option) any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program; if not, write to the Free Software
+- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+-
+- */
+-
+-#include &lt;keyboard.h&gt;
+-#include &lt;video.h&gt;
+-#include &lt;string.h&gt;
+-#include &lt;pic8259.h&gt;
+-#include &lt;io.h&gt;
+-
+-void keyboard_irq(){
+-    char *s;
+-    int keyvalue;
+-    keyvalue = inportb(0x60);
+-     if(keyvalue&lt;0x80){
+-        _kputs(&quot;E' Stato premuto un tasto &quot;);
+-        _kntos(s, keyvalue, 10);
+-        _kputs(s);
+-        _kputs(&quot;\n&quot;);
+-    }
+-}
+
+Modified: trunk/include/shell/shell.h
+===================================================================
+--- trunk/include/shell/shell.h	2009-07-13 14:14:39 UTC (rev 98)
++++ trunk/include/shell/shell.h	2009-07-13 21:25:47 UTC (rev 99)
+@@ -21,6 +21,11 @@
+ #define USER_LEN 24
+ #define CMD_LEN 256
+ 
++struct cmd {
++	const char cmdname[CMD_LEN];
++	void (*h_func)(void);
++};
++
+ void shell(void);
+ 
+ #endif
+
+Modified: trunk/processore/handlers.c
+===================================================================
+--- trunk/processore/handlers.c	2009-07-13 14:14:39 UTC (rev 98)
++++ trunk/processore/handlers.c	2009-07-13 21:25:47 UTC (rev 99)
+@@ -34,8 +34,7 @@
+ // #define DEBUG 1
+ void (*IntTable[IDT_SIZE])();
+ IRQ_s *shareHandler[16];
+-// IRQ_s *tmpHandler;
+-// IRQ_s shareHandler[16];
++
+ /** @author Ivan Gualandri
+  *  @return none
+  * Questa funzione si occupa di inizializzare la tabella di funzioni che gestiscono le 
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-07-13 14:14:39 UTC (rev 98)
++++ trunk/shell/commands.c	2009-07-13 21:25:47 UTC (rev 99)
+@@ -55,18 +55,18 @@
+   printf (&quot;Available commands:\n&quot;);
+   printf(&quot;help      - See the 'help' list to learn the DreamOS commands now available\n&quot;
+          &quot;clear     - Clear the screen\n&quot;
+-	 &quot;poweroff  - Turn off the machine\n&quot;
++		 &quot;poweroff  - Turn off the machine\n&quot;
+          &quot;kmalloc   - Test a basic kmalloc function\n&quot;
+          &quot;do_fault  - Test a page_fault\n&quot;
+          &quot;aalogo    - Show an ascii art logo\n&quot;
+          &quot;uname     - Print kernel version, try uname --help for more info\n&quot;
+          &quot;printmem  - Print used locations of memory\n&quot;
+          &quot;credits   - Show DreamOS credits\n&quot;
+-	 &quot;sleep     - pause DreamOS for a particular number of seconds\n&quot;
+-	 &quot;cpuid     - Show cpu identification informations\n&quot;
+-	 &quot;date      - Show date and time\n&quot;
+-	 &quot;echo      - Print some lines of text\n&quot;
+-	 &quot;drv_load  - Tool to load and kill modules\n&quot;);
++	 	 &quot;sleep     - pause DreamOS for a particular number of seconds\n&quot;
++	 	 &quot;cpuid     - Show cpu identification informations\n&quot;
++	 	 &quot;date      - Show date and time\n&quot;
++	  	 &quot;echo      - Print some lines of text\n&quot;
++	 	 &quot;drv_load  - Tool to load and kill drivers\n&quot;);
+ }
+ 
+ void echo()
+@@ -81,7 +81,7 @@
+ {
+   printf (&quot;Poweroff...\n&quot;);
+   
+-  asm(&quot;sti&quot;);
++  asm(&quot;cli&quot;);
+   printf(&quot;E' ora possibile spegnere il computer.\n&quot;);
+   while(1);
+ }
+@@ -223,11 +223,12 @@
+   _kputs(&quot;DreamOS Credits\n\n&quot;);                
+   _kputs(&quot;Main Developers:\n&quot;);
+   _kcolor('\012');
+-   printf(&quot;Osiris - Diego Stamigni \n&quot;	  
+-             &quot;Finarfin - Ivan\n\n\n&quot;            
+-         );
+-
++   printf(  &quot;Finarfin - Ivan (Founder)\n\n&quot;);
+   _kcolor('\011');
++  _kputs(&quot;Developers:\n&quot;);
++  _kcolor('\012');
++  _kputs(&quot;Osiris - Diego Stamigni \n\n&quot;);
++  _kcolor('\011');
+   _kputs(&quot;Contributors:\n&quot;);
+   _kcolor('\012');
+   _kputs(&quot;vinc94\n&quot;
+@@ -236,6 +237,7 @@
+          	&quot;Celeron\n&quot;
+ 	 		&quot;Hamcha\n&quot;
+          	&quot;m0nt0\n&quot;
++			&quot;shainer\n&quot;
+          	&quot;and many others (3 or 4 :P)\n\n&quot;);
+   _kcolor('\007');
+ }
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-07-13 14:14:39 UTC (rev 98)
++++ trunk/shell/shell.c	2009-07-13 21:25:47 UTC (rev 99)
+@@ -41,11 +41,6 @@
+ 
+ #define NUM_COM 16
+ 
+-struct cmd {
+-	const char cmdname[CMD_LEN];
+-	void (*h_func)(void);
+-};
+-
+ /*
+  * Inserisce gli argomenti di un comando in un array di stringhe
+  * argc = numero degli argomenti
+@@ -140,4 +135,3 @@
+     }
+   }
+ }
+-
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000100.html">[Dreamos-dev] r98 - in trunk: . drivers include include/shell shell
+</A></li>
+	<LI>Next message: <A HREF="000102.html">[Dreamos-dev] r100 - in trunk: . doc include
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#101">[ date ]</a>
+              <a href="thread.html#101">[ thread ]</a>
+              <a href="subject.html#101">[ subject ]</a>
+              <a href="author.html#101">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

@@ -1,0 +1,261 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r351 - in trunk: . boot mem shell utils
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2011-March/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r351%20-%20in%20trunk%3A%20.%20boot%20mem%20shell%20utils&In-Reply-To=%3C20110313100831.A5D904813A4%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000353.html">
+   <LINK REL="Next"  HREF="000355.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r351 - in trunk: . boot mem shell utils</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r351%20-%20in%20trunk%3A%20.%20boot%20mem%20shell%20utils&In-Reply-To=%3C20110313100831.A5D904813A4%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r351 - in trunk: . boot mem shell utils">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun Mar 13 11:08:31 CET 2011</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000353.html">[Dreamos-dev] r350 - in trunk: . utils/eltorito_iso	utils/eltorito_iso/boot
+</A></li>
+        <LI>Next message: <A HREF="000355.html">[Dreamos-dev] r352 - in trunk: . boot include/mem mem shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#354">[ date ]</a>
+              <a href="thread.html#354">[ thread ]</a>
+              <a href="subject.html#354">[ subject ]</a>
+              <a href="author.html#354">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2011-03-13 11:08:31 +0100 (Sun, 13 Mar 2011)
+New Revision: 351
+
+Modified:
+   trunk/Makefile
+   trunk/README
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/kernel.c
+   trunk/mem/paging.c
+   trunk/shell/testing.c
+   trunk/utils/README.eltorito_gen
+Log:
+Removed debug tests.
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2011-03-13 09:08:19 UTC (rev 350)
++++ trunk/Makefile	2011-03-13 10:08:31 UTC (rev 351)
+@@ -130,7 +130,7 @@
+ 	 sed -i -e &quot;/^#define NAME/s/\&quot;.*\&quot;/\&quot;$(NAME)\&quot;/&quot; include/version.h
+ 	 sed -i -e &quot;/^#define REV_NUM/s/\&quot;.*\&quot;/\&quot;&quot;-r`cat .svn/entries | head -n 4 | tail -n 1`&quot;\&quot;/&quot; include/version.h
+ 
+-.PHONY: clean install qemu
++.PHONY: clean install iso-image qemu
+ 
+ clean:
+ 	rm -f *.img *.bin *.map 
+
+Modified: trunk/README
+===================================================================
+--- trunk/README	2011-03-13 09:08:19 UTC (rev 350)
++++ trunk/README	2011-03-13 10:08:31 UTC (rev 351)
+@@ -2,8 +2,8 @@
+  DreamOS
+ ---------------------------
+ 
+-1. Cosa &#232; DreamOS
+-	a. Cosa NON &#232; DreamOS
++1. Cosa &#195;&#168; DreamOS
++	a. Cosa NON &#195;&#168; DreamOS
+ 2. Installare DreamOS
+ 	a. Requisiti necessari
+ 	b. Scaricare da SVN
+@@ -19,10 +19,10 @@
+ 
+ 
+ - 1 -----------------------
+---- Cosa &#232; DreamOS --------
++--- Cosa &#195;&#168; DreamOS --------
+ 
+-Il DreamOS &#232; un sistema operativo open source rilasciato sotto licenza GPLv3 sviluppato partendo da 0 puramente per scopi didattici o comunque per capire come funzionano i sistemi operativi.
+-Il team di sviluppo attuale &#232; composto dagli sviluppatori
++Il DreamOS &#195;&#168; un sistema operativo open source rilasciato sotto licenza GPLv3 sviluppato partendo da 0 puramente per scopi didattici o comunque per capire come funzionano i sistemi operativi.
++Il team di sviluppo attuale &#195;&#168; composto dagli sviluppatori
+ 
+ Ivan Gualandri - Finarfin (<A HREF="http://www.osdev.it">http://www.osdev.it</A> <A HREF="http://italialinux.altervista.org">http://italialinux.altervista.org</A>) - Creatore e Main Developer 
+ 
+@@ -30,31 +30,31 @@
+ Alessandro (celeron) 
+ 
+ 
+-	- a -- Cosa NON &#232; DreamOS -
++	- a -- Cosa NON &#195;&#168; DreamOS -
+ 
+-DreamOS non &#232; un sistema operativo completo e pronto per essere utilizzato per l'uso quotidiano, non &#232; basato su Kernel esistenti e non &#232; supportato/sponsorizzato da alcuna societ&#224;.
++DreamOS non &#195;&#168; un sistema operativo completo e pronto per essere utilizzato per l'uso quotidiano, non &#195;&#168; basato su Kernel esistenti e non &#195;&#168; supportato/sponsorizzato da alcuna societ&#195;&#160;.
+ 
+ - 2 -----------------------
+ --- Installare DreamOS ----
+ 
+-Per Installazione s'intende compilare e mettere DreamOS su un supporto per l'avvio, visto che attualmente DreamOS non &#232; predisposto per installazioni vere e proprie.
++Per Installazione s'intende compilare e mettere DreamOS su un supporto per l'avvio, visto che attualmente DreamOS non &#195;&#168; predisposto per installazioni vere e proprie.
+ 
+ 	- a - Requisiti necessari -
+ 
+-DreamOS &#232; un sistema operativo sviluppato per funzionare su cpu con architettura Intel x86/IA32 (i386/i686) e attualmente &#232; sviluppato in modo da partire da floppy anche se, utilizzando GRUB, si pu&#242; farlo partire avendo l'immagine compilata sull'Hard-disk.
+-DreamOS pu&#242; essere anche emulato usando Software come qEmu o Bochs.
++DreamOS &#195;&#168; un sistema operativo sviluppato per funzionare su cpu con architettura Intel x86/IA32 (i386/i686) e attualmente &#195;&#168; sviluppato in modo da partire da floppy anche se, utilizzando GRUB, si pu&#195;&#178; farlo partire avendo l'immagine compilata sull'Hard-disk.
++DreamOS pu&#195;&#178; essere anche emulato usando Software come qEmu o Bochs.
+ 
+ Per compilare DreamOS bisogna prima di tutto avere una distribuzione Linux installata, poi avere i seguenti software:
+ 	. Nasm
+ 	. GCC
+ 	. make
+ 
+-Opzionalmente un emulatore di cpu se non si vuole provare il sistema operativo su hardware reale e SVN se volete scaricare le versioni pi&#249; recenti da repository.
++Opzionalmente un emulatore di cpu se non si vuole provare il sistema operativo su hardware reale e SVN se volete scaricare le versioni pi&#195;&#185; recenti da repository.
+ 
+ 	- b -- Scaricare da SVN ---
+ 
+ Potete scaricare i sorgenti di DreamOS da SVN attraverso il repository <A HREF="svn://svn.berlios.de/dreamos/trunk">svn://svn.berlios.de/dreamos/trunk</A>
+-Per i meno pratici il comando da eseguire &#232;: (assicuratevi di avere il pacchetto SVN installato)
++Per i meno pratici il comando da eseguire &#195;&#168;: (assicuratevi di avere il pacchetto SVN installato)
+ 	svn checkout <A HREF="svn://svn.berlios.de/dreamos/trunk">svn://svn.berlios.de/dreamos/trunk</A>
+ 
+ Alla fine del download dovreste avere una cartella trunk/ con tutti i sorgenti al suo interno
+@@ -93,11 +93,11 @@
+ - 3 -----------------------
+ ---- Usare DreamOS --------
+ 
+-L'Interattivit&#224; di DreamOS al momento si ferma ad una CLI (Command Line Interface, Interfaccia a linea di comando) con un numero limitato di comandi utilizzabili, la maggior parte a scopo di test.
++L'Interattivit&#195;&#160; di DreamOS al momento si ferma ad una CLI (Command Line Interface, Interfaccia a linea di comando) con un numero limitato di comandi utilizzabili, la maggior parte a scopo di test.
+ 
+ 	- a ------- L'Avvio -------
+ 
+-L'avvio di DreamOS contiene il loading di tutte le funzioni necessarie al funzionamento del S.O. e della CLI, alla fine dell'avvio verr&#224; chiesto un Username che verr&#224; usato in seguito nella CLI.
++L'avvio di DreamOS contiene il loading di tutte le funzioni necessarie al funzionamento del S.O. e della CLI, alla fine dell'avvio verr&#195;&#160; chiesto un Username che verr&#195;&#160; usato in seguito nella CLI.
+ Per poter accedere l'username deve essere definito nel file passwd. Di default sono definiti 2 utenti: root e user.
+ Attualmente non viene richiesta alcuna password
+ 
+@@ -105,8 +105,8 @@
+ 
+ La CLI di DreamOS ha una struttura molto comune a quella *NIX
+ 	Username~# Comando inserito
+-Dove Username &#232; l'username inserito durante l'avvio.
+-Si pu&#242; avere una lista di comandi disponibili attraverso il comando:
++Dove Username &#195;&#168; l'username inserito durante l'avvio.
++Si pu&#195;&#178; avere una lista di comandi disponibili attraverso il comando:
+ 	help
+ Inoltre sono presenti alcuni comandi che rimarcano la controparte *NIX come uname (uname --help) o echo.
+ 
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2011-03-13 09:08:19 UTC (rev 350)
++++ trunk/kernel.c	2011-03-13 10:08:31 UTC (rev 351)
+@@ -99,11 +99,11 @@
+     _kprintOK();   
+     init_paging();
+ 
+-    
++    /*
+     init_newmem();     
+     try_newheap();
+     while(1);            
+-    
++    */
+     _kprintOK();    	
+     printf(&quot;Memory (upper) amount-&gt; %d Mb \n&quot;, boot_info-&gt;mem_upper/1024);
+     printf(&quot;Memory (lower) amount-&gt; %d kb \n&quot;, boot_info-&gt;mem_lower);	
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2011-03-13 09:08:19 UTC (rev 350)
++++ trunk/mem/paging.c	2011-03-13 10:08:31 UTC (rev 351)
+@@ -84,7 +84,7 @@
+     load_pdbr((unsigned int)current_page_dir);
+ 	//set_pagetable_entry_ric(1019, 512 ,0xFEE00000, SUPERVISOR|PD_PRESENT|WRITE, 0);
+ 	//set_pagetable_entry_ric(1019, 0 ,0xFEC00000, SUPERVISOR|PD_PRESENT|WRITE, 0);	
+-    //kheap = make_heap(tot_mem - ((unsigned int) &amp;end));    
++    kheap = make_heap(tot_mem - ((unsigned int) &amp;end));    
+ }
+ 
+ /**
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2011-03-13 09:08:19 UTC (rev 350)
++++ trunk/shell/testing.c	2011-03-13 10:08:31 UTC (rev 351)
+@@ -100,6 +100,7 @@
+ }
+ 
+ void try_newheap(){
++	#ifdef NEW_HEAP_TEST
+ 	unsigned int testA;
+ 	unsigned int testB;
+ 	unsigned int testC;
+@@ -122,6 +123,7 @@
+ 	n_free(testA);
+ 	n_free(testD);
+ 	printf(&quot;DONE\n&quot;);
++	#endif
+ }
+ 
+ void help_tester()
+
+Modified: trunk/utils/README.eltorito_gen
+===================================================================
+--- trunk/utils/README.eltorito_gen	2011-03-13 09:08:19 UTC (rev 350)
++++ trunk/utils/README.eltorito_gen	2011-03-13 10:08:31 UTC (rev 351)
+@@ -9,5 +9,5 @@
+  eltorito_gen.sh
+  
+  E questo creera automaticamente, il file dreamos.iso se presenti i 2 files:
+- 1. ../dreamos.img
+- 2. ../initfs
++ 1. ./dreamos.img
++ 2. ./initfs
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000353.html">[Dreamos-dev] r350 - in trunk: . utils/eltorito_iso	utils/eltorito_iso/boot
+</A></li>
+	<LI>Next message: <A HREF="000355.html">[Dreamos-dev] r352 - in trunk: . boot include/mem mem shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#354">[ date ]</a>
+              <a href="thread.html#354">[ thread ]</a>
+              <a href="subject.html#354">[ subject ]</a>
+              <a href="author.html#354">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

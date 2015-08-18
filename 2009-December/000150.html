@@ -1,0 +1,157 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r148 - in trunk: . fs include/fs shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-December/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r148%20-%20in%20trunk%3A%20.%20fs%20include/fs%20shell&In-Reply-To=%3C200912012310.nB1NALeU012087%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   
+   <LINK REL="Next"  HREF="000151.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r148 - in trunk: . fs include/fs shell</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r148%20-%20in%20trunk%3A%20.%20fs%20include/fs%20shell&In-Reply-To=%3C200912012310.nB1NALeU012087%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r148 - in trunk: . fs include/fs shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Wed Dec  2 00:10:21 CET 2009</I>
+    <P><UL>
+        
+        <LI>Next message: <A HREF="000151.html">[Dreamos-dev] r149 - in trunk: . fs include/fs include/sys shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#150">[ date ]</a>
+              <a href="thread.html#150">[ thread ]</a>
+              <a href="subject.html#150">[ subject ]</a>
+              <a href="author.html#150">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-12-02 00:10:21 +0100 (Wed, 02 Dec 2009)
+New Revision: 148
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/initfs
+   trunk/fs/initrd.c
+   trunk/include/fs/vfs.h
+   trunk/shell/testing.c
+Log:
+Aggiunti commenti doxygen per struct file_descriptor
+Aggiunta lettura contenuto di initfs dalla open.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initfs
+===================================================================
+--- trunk/fs/initfs	2009-11-28 23:25:38 UTC (rev 147)
++++ trunk/fs/initfs	2009-12-01 23:10:21 UTC (rev 148)
+@@ -1,4 +1,4 @@
+-informazioni a buffo per non lasciare
+-un file da 0 byte.....
+-
+-boh
++1 informazioni a buffo per non lasciare
++2 un file da 0 byte.....
++3
++4 boh
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2009-11-28 23:25:38 UTC (rev 147)
++++ trunk/fs/initrd.c	2009-12-01 23:10:21 UTC (rev 148)
+@@ -19,7 +19,10 @@
+ #include &lt;stdio.h&gt;
+ #include &lt;stddef.h&gt;
+ #include &lt;initrd.h&gt;
++#include &lt;multiboot.h&gt;
+ 
++extern char *module_start;
++
+ void dummy(){
+ 	printf(&quot;Qui solo per una prova\n&quot;);
+ }	
+@@ -30,5 +33,13 @@
+ }
+ 
+ int dummy_open(const char *path, int flags, ...){
++	char *module_var;
++	int j = 0;
++	module_var = module_start;
+ 	printf(&quot;Hi, i'm a dummy open. And i do nothing!!! path: %s\n&quot;, path);
++	while (j &lt; 74) {
++		putchar(module_var[j]);
++		j++;
++	}
++	_kputs(&quot;\n&quot;);
+ }
+
+Modified: trunk/include/fs/vfs.h
+===================================================================
+--- trunk/include/fs/vfs.h	2009-11-28 23:25:38 UTC (rev 147)
++++ trunk/include/fs/vfs.h	2009-12-01 23:10:21 UTC (rev 148)
+@@ -57,9 +57,13 @@
+ 		struct directory_operations dir_op;
+ };
+ 
++/*!  \struct file_descriptor
++     \brief Struttura dati che le informazioni su di un file aperto
++ */
++
+ struct file_descriptor {
+-	int fs_spec_id;
+-	int mountpoint_id;
++	int fs_spec_id; /**&lt; Il descrittore del file interno del FileSystem*/
++	int mountpoint_id; /**&lt; L'id del mountpoint nel quale si trova il file */
+ };
+ 
+ //extern struct inode *root;
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2009-11-28 23:25:38 UTC (rev 147)
++++ trunk/shell/testing.c	2009-12-01 23:10:21 UTC (rev 148)
+@@ -114,7 +114,7 @@
+ 	int j=0;
+ 	char* mod_address;
+ 	mod_address = module_start;	
+-	while(j&lt;66){
++	while(j&lt;74){
+ 		putchar(mod_address[j]);
+ 		j++;
+ 	}
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	
+	<LI>Next message: <A HREF="000151.html">[Dreamos-dev] r149 - in trunk: . fs include/fs include/sys shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#150">[ date ]</a>
+              <a href="thread.html#150">[ thread ]</a>
+              <a href="subject.html#150">[ subject ]</a>
+              <a href="author.html#150">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

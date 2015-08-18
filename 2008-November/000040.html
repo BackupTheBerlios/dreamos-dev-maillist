@@ -1,0 +1,270 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r40 - in trunk: include/mem mem misc shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2008-November/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r40%20-%20in%20trunk%3A%20include/mem%20mem%20misc%20shell&In-Reply-To=%3C200811142141.mAELf0gh026619%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   
+   <LINK REL="Next"  HREF="000041.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r40 - in trunk: include/mem mem misc shell</H1>
+    <B>shainer at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r40%20-%20in%20trunk%3A%20include/mem%20mem%20misc%20shell&In-Reply-To=%3C200811142141.mAELf0gh026619%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r40 - in trunk: include/mem mem misc shell">shainer at mail.berlios.de
+       </A><BR>
+    <I>Fri Nov 14 22:41:00 CET 2008</I>
+    <P><UL>
+        
+        <LI>Next message: <A HREF="000041.html">[Dreamos-dev] r41 - in trunk: . include mem shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#40">[ date ]</a>
+              <a href="thread.html#40">[ thread ]</a>
+              <a href="subject.html#40">[ subject ]</a>
+              <a href="author.html#40">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: shainer
+Date: 2008-11-14 22:40:59 +0100 (Fri, 14 Nov 2008)
+New Revision: 40
+
+Modified:
+   trunk/include/mem/kheap.h
+   trunk/mem/kheap.c
+   trunk/misc/ordered_list.c
+   trunk/shell/shell.c
+Log:
+Prima versione della funzione free() per liberare indirizzi, con merge attivato; aggiunto comando free per testarla
+
+Modified: trunk/include/mem/kheap.h
+===================================================================
+--- trunk/include/mem/kheap.h	2008-10-27 20:47:04 UTC (rev 39)
++++ trunk/include/mem/kheap.h	2008-11-14 21:40:59 UTC (rev 40)
+@@ -54,6 +54,9 @@
+ heap_node_t* alloc_node();
+ 
+ void* alloc(unsigned int, heap_t*);
++void free (void *);
+ 
++void print_heap_list (heap_node_t *);
++
+ #endif
+ 
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2008-10-27 20:47:04 UTC (rev 39)
++++ trunk/mem/kheap.c	2008-11-14 21:40:59 UTC (rev 40)
+@@ -47,8 +47,6 @@
+ /* Test procedure (&quot;try_heap&quot; shell command&quot;) */
+ void try_alloc()
+ {
+-    heap_node_t *navigator;
+-    int count=0;
+    
+     printf(&quot;try_alloc(): Used list address: %d, Value: %d\n&quot;, &amp;(kheap-&gt;used_list), kheap-&gt;used_list);
+     alloc(5000, kheap);
+@@ -56,13 +54,7 @@
+     alloc(50, kheap);
+     alloc(100, kheap);
+ 
+-    navigator = kheap-&gt;used_list;
+-    printf(&quot;Navigating all the list...\n&quot;);
+-
+-    while(navigator) {
+-        printf(&quot;%d) Current_element-&gt;start_address: %d\n&quot;, ++count, navigator-&gt;start_address);
+-        navigator = navigator-&gt;next;
+-   }
++    print_heap_list (kheap-&gt;used_list);
+ }
+ 
+ /**
+@@ -168,4 +160,94 @@
+     temp = node_address;
+     node_address = node_address + sizeof(heap_node_t);
+     return (heap_node_t*) temp;
+-}
+\ No newline at end of file
++}
++
++/**
++  * Free a block of memory
++  * @author shainer
++  * @version 1.0
++  * @param Start_address of the block
++  * @return none
++  */
++void free (void *location)
++{
++  heap_node_t *busy = kheap-&gt;used_list;
++  heap_node_t *prev = busy;
++  heap_node_t *free = kheap-&gt;free_list;
++  heap_node_t *n2;
++
++  if ((unsigned int)location % 4 != 0)
++    printf (&quot;Indirizzo non allineato a 4kb\n&quot;);
++
++  while (busy) {
++    if (busy-&gt;start_address == location) {
++      if (prev == busy) { /* node is the first */
++        kheap-&gt;used_list = busy-&gt;next;
++      } else
++        prev-&gt;next = busy-&gt;next;
++        
++      insert_list (busy, &amp;(kheap-&gt;free_list)); // insert node in the free_list
++
++      /* 
++       * Deallocation finished, starting merge...
++       * I need &quot;busy&quot;, the next (n2) and the previous (prev) node
++       */
++      n2 = kheap-&gt;free_list;
++      prev = kheap-&gt;free_list;
++      while (n2 != busy) {
++        prev = n2;
++        n2 = n2-&gt;next;
++      }
++      n2 = busy-&gt;next;
++
++      printf (&quot;--Pre merge--\n&quot;);
++      printf (&quot;Prev address: %d, size: %d\n&quot;, prev-&gt;start_address, prev-&gt;size);
++      printf (&quot;Busy address: %d, size: %d\n&quot;, busy-&gt;start_address, busy-&gt;size);
++      if (n2)
++        printf (&quot;N2 address: %d, size %d\n\n&quot;, n2-&gt;start_address, n2-&gt;size);
++
++      /* Merge busy into prev */
++      if (prev != busy &amp;&amp; (prev-&gt;start_address + prev-&gt;size) == busy-&gt;start_address) {
++        printf (&quot;Backward merge\n&quot;);
++        prev-&gt;size += busy-&gt;size;
++        prev-&gt;next = n2;
++      }
++      /* Merge n2 into busy */
++      if (n2 &amp;&amp; (busy-&gt;start_address + busy-&gt;size) == n2-&gt;start_address) {
++        printf (&quot;Forward merge\n&quot;);
++        busy-&gt;size += n2-&gt;size;
++        busy-&gt;next = n2-&gt;next;
++      }
++
++      break;
++    }
++    prev = busy;
++    busy = busy-&gt;next;
++  }
++
++  if (!busy)
++    printf (&quot;Address not found in list\n&quot;);
++
++  printf(&quot;Navigating used list...\n&quot;);
++  print_heap_list (kheap-&gt;used_list);
++  printf(&quot;Navigating free list...\n&quot;);
++  print_heap_list (kheap-&gt;free_list);
++}
++
++/**
++  * Print a heap list
++  * @author shainer
++  * @version 1.0
++  * @param list List to be printed
++  */
++void print_heap_list (heap_node_t *list)
++{
++   int count=0;
++
++   while (list) {
++     printf (&quot;%d) Current-&gt;start_address: %d\n&quot;, count++, list-&gt;start_address);
++     list = list-&gt;next;
++   }
++   printf (&quot;\n&quot;);
++}
++
+
+Modified: trunk/misc/ordered_list.c
+===================================================================
+--- trunk/misc/ordered_list.c	2008-10-27 20:47:04 UTC (rev 39)
++++ trunk/misc/ordered_list.c	2008-11-14 21:40:59 UTC (rev 40)
+@@ -29,7 +29,7 @@
+ /** 
+   * Insert a new element in the list
+   * @author shainer
+-  * @version 0.1
++  * @version 0.2
+   * @param new_node New element
+   * @param list Destination list
+   * @return none
+@@ -49,8 +49,14 @@
+       swap = swap-&gt;next;
+       if (!swap) break;
+     }
+-    previous-&gt;next = new_node;
+-    new_node-&gt;next = swap;             
++
++    if (previous == swap) { /* new_node is to become the new first one */
++      *ulist = new_node;
++      new_node-&gt;next = swap;
++    } else { /* new_node is in the middle of the list */
++      previous-&gt;next = new_node;
++      new_node-&gt;next = swap;
++    }             
+   }
+ }
+ 
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2008-10-27 20:47:04 UTC (rev 39)
++++ trunk/shell/shell.c	2008-11-14 21:40:59 UTC (rev 40)
+@@ -196,6 +196,13 @@
+             try_alloc();
+         }
+ 
++	else if (!(_kstrncmp(cmd,&quot;free&quot;,4))) {
++	    unsigned int ptr = 425532;
++	    free(ptr);
++	    ptr = 433724;
++ 	    free(ptr);
++	}
++
+         else if (!(_kstrncmp(cmd,&quot;try_buddy&quot;,9)))
+         {
+              printf(&quot;L'indirizzo di kbuddy e': 0x%x\n&quot;, kbuddy);
+@@ -285,6 +292,7 @@
+            &quot;uname     - Print kernel version, try uname --help for more info\n&quot;
+            &quot;try_buddy - Try buddy mmu\n&quot;
+            &quot;try_heap  - Try heap mmu\n&quot;
++           &quot;free      - Try free() with merge\n&quot;
+            &quot;credits  - Show DreamOS credists\n&quot;
+ 	       &quot;echo      - Print some lines of text\n&quot;);
+ }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	
+	<LI>Next message: <A HREF="000041.html">[Dreamos-dev] r41 - in trunk: . include mem shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#40">[ date ]</a>
+              <a href="thread.html#40">[ thread ]</a>
+              <a href="subject.html#40">[ subject ]</a>
+              <a href="author.html#40">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

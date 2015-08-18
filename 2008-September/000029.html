@@ -1,0 +1,708 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r29 - in trunk: . include mem shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2008-September/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r29%20-%20in%20trunk%3A%20.%20include%20mem%20shell&In-Reply-To=%3C200809102136.m8ALaVwB003286%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000028.html">
+   <LINK REL="Next"  HREF="000030.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r29 - in trunk: . include mem shell</H1>
+    <B>osiris_h4ck at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r29%20-%20in%20trunk%3A%20.%20include%20mem%20shell&In-Reply-To=%3C200809102136.m8ALaVwB003286%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r29 - in trunk: . include mem shell">osiris_h4ck at mail.berlios.de
+       </A><BR>
+    <I>Wed Sep 10 23:36:31 CEST 2008</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000028.html">[Dreamos-dev] r28 - in trunk: . include/mem mem processore
+</A></li>
+        <LI>Next message: <A HREF="000030.html">[Dreamos-dev] r30 - in trunk: . include/shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#29">[ date ]</a>
+              <a href="thread.html#29">[ thread ]</a>
+              <a href="subject.html#29">[ subject ]</a>
+              <a href="author.html#29">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: osiris_h4ck
+Date: 2008-09-10 23:36:06 +0200 (Wed, 10 Sep 2008)
+New Revision: 29
+
+Modified:
+   trunk/.bochsrc
+   trunk/include/version.h
+   trunk/kernel.c
+   trunk/mem/fismem.c
+   trunk/shell/shell.c
+   trunk/start.sh
+Log:
+- Effettuati vari bugfix
+- Miglioramento grafica shell e colori :P
+- Miglioramento comandi con argomenti
+- Fixato bug nel fismem
+- Effettuata pulizia codici
+
+Osiris r0x :)
+
+
+
+Modified: trunk/.bochsrc
+===================================================================
+--- trunk/.bochsrc	2008-09-09 23:22:47 UTC (rev 28)
++++ trunk/.bochsrc	2008-09-10 21:36:06 UTC (rev 29)
+@@ -16,8 +16,8 @@
+ # NOTE: if you use the &quot;wx&quot; configuration interface, you must also use
+ # the &quot;wx&quot; display library.
+ #=======================================================================
+-#config_interface: textconfig
+-config_interface: wx
++config_interface: textconfig
++#config_interface: wx
+ 
+ #=======================================================================
+ # DISPLAY_LIBRARY
+@@ -59,8 +59,8 @@
+ #display_library: sdl, options=&quot;fullscreen&quot; # startup in fullscreen mode
+ #display_library: term
+ #display_library: win32, options=&quot;legacyF12&quot; # use F12 to toggle mouse
+-display_library: wx
+-#display_library: x
++#display_library: wx
++display_library: x
+ 
+ #=======================================================================
+ # ROMIMAGE:
+@@ -112,8 +112,8 @@
+ # VGAROMIMAGE
+ # You now need to load a VGA ROM BIOS into C0000.
+ #=======================================================================
+-vgaromimage: file=/usr/share/vgabios/vgabios.bin
+-#vgaromimage: file=$BXSHARE/VGABIOS-lgpl-latest
++#vgaromimage: file=/usr/share/vgabios/vgabios.bin
++vgaromimage: file=/usr/share/bochs/VGABIOS-lgpl-latest
+ #vgaromimage: file=bios/VGABIOS-lgpl-latest-cirrus
+ 
+ #=======================================================================
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2008-09-09 23:22:47 UTC (rev 28)
++++ trunk/include/version.h	2008-09-10 21:36:06 UTC (rev 29)
+@@ -11,4 +11,4 @@
+ #define PATCHLEVEL &quot;0&quot;
+ #define EXTRAVERSION &quot;-dreamos&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r25&quot;
++#define REV_NUM &quot;-r28&quot;
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2008-09-09 23:22:47 UTC (rev 28)
++++ trunk/kernel.c	2008-09-10 21:36:06 UTC (rev 29)
+@@ -43,9 +43,9 @@
+ 
+ unsigned int *current_page_table;
+ extern unsigned int end;
+-// multiboot_info_t *boot_informations;
++ multiboot_info_t *boot_informations;
+ asmlinkage void _start(struct multiboot_info *boot_info){
+-//     boot_informations = boot_info;    
++     boot_informations = boot_info;    
+ 	main_loop(boot_info);
+ 	while(1);
+ }
+@@ -75,7 +75,7 @@
+     asm(&quot;cli&quot;);   
+     init_idt();
+     _kprintOK();   
+-//     calcola_memoria();    
++    //calcola_memoria(); 
+     set_memorysize((boot_info-&gt;mem_upper+boot_info-&gt;mem_lower)*1024);
+     init_mem();    
+     _kputs(LNG_PIC8259);
+@@ -89,10 +89,6 @@
+     printf(LNG_PIT8253);
+     configure_PIT ();
+     _kprintOK();
+-//      printf(&quot;Prova_2 %s, %d\n&quot;, prova_2, &amp;prova_2);
+-    /*asm (&quot;movl $0, %eax\n&quot;
+-     &quot;movl $37, %ebx\n&quot;
+-     &quot;int $80&quot;);    */
+ 
+     printf(&quot;Memory (upper) amount-&gt; %d kb \n&quot;, boot_info-&gt;mem_upper);
+     printf(&quot;Memory (lower) amount-&gt; %d kb \n&quot;, boot_info-&gt;mem_lower);
+@@ -101,9 +97,7 @@
+     printf(&quot;----\n&quot;);
+     printf(&quot;Loading the shell..\n&quot;);
+     printf(&quot;[+] Loading complete!!\n\n&quot;);    
+-//     printf(&quot;End: %d Address: 0x%x\n&quot;, end, &amp;end);
+-    //printf(&quot;\n\n[+] It's TODO ok ------------------------------------------&gt;&quot;);
+-    //_kprintOK();
++    printf(&quot;End: %d Address: 0x%x\n&quot;, end, &amp;end);
+ 
+ 		printf(&quot;\n----\n&quot;);
+     		printf(&quot;Loading the shell..\n&quot;);
+
+Modified: trunk/mem/fismem.c
+===================================================================
+--- trunk/mem/fismem.c	2008-09-09 23:22:47 UTC (rev 28)
++++ trunk/mem/fismem.c	2008-09-10 21:36:06 UTC (rev 29)
+@@ -21,6 +21,7 @@
+  *  along with this program; if not, write to the Free Software
+  *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+  */
++
+ #include &lt;fismem.h&gt;
+ #include &lt;video.h&gt;
+ #include &lt;stdio.h&gt;
+@@ -207,37 +208,43 @@
+ 
+ /**
+   * Calcola la quantita' di memoria
+-  * @author Ivan Gualandri
++  * @author Ivan Gualandri and Osiris
+   * @version 1.0
+   * @return size_t Dimensione della memoria.
+   * Questa funzione andra'completamente modificata appena si aggiungera il boot con grub.
+   */
+-size_t calcola_memoria(){
++
++size_t calcola_memoria()
++{
+     unsigned int *mem_position;
+-    /*asm(&quot;cli&quot;);
++    asm(&quot;cli&quot;);
+     outportb(0xFF, MASTER_PORT_1);                     //Disabilito gli interrupt hardware
+     outportb(0xFF, SLAVE_PORT_1);
+     mem_position = (unsigned int*) BASE_MEM;
+     *mem_position = VALUE_MEM;
+ 
+-    for(;;){
+-        if(*mem_position == VALUE_MEM) {
++      while(*mem_position == VALUE_MEM)
++      {
++
+             *mem_position = ANTI_VALUE_MEM;
+             asm(&quot;&quot;: : :&quot;memory&quot;);
+-            if(*mem_position == ANTI_VALUE_MEM){
+-                mem_position += OFFSET_MEM;
+-                *mem_position = VALUE_MEM;
+-                asm(&quot;&quot;: : :&quot;memory&quot;);
+-            }
+-            else break;
+-        }
+-        else break;
+-        asm(&quot;&quot;: : :&quot;memory&quot;);
++
++            	 if (*mem_position == ANTI_VALUE_MEM)
++		 {
++              	 	  *mem_position += OFFSET_MEM;
++                	  asm(&quot;&quot;: : :&quot;memory&quot;);
++            	 }
++	    
++            else 
++		break;
++
++            asm(&quot;&quot;: : :&quot;memory&quot;);
+     }
+ 
++
+     outportb(master_cur_mask, MASTER_PORT_1);         //Abilito gli interrupt hardware
+     outportb(slave_cur_mask, SLAVE_PORT_1);
+-    asm(&quot;sti&quot;);*/
++    asm(&quot;sti&quot;);
+     mem_position = 16777216;
+     tot_mem = (unsigned long) mem_position;
+     return (unsigned long) mem_position;
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2008-09-09 23:22:47 UTC (rev 28)
++++ trunk/shell/shell.c	2008-09-10 21:36:06 UTC (rev 29)
+@@ -1,25 +1,28 @@
+-/*  DreamOS
+-    shell.c
+-    This file is part of DreamOSr.
+-    Foobar is free software: you can redistribute it and/or modify
+-    it under the terms of the GNU General Public License as published by
+-    the Free Software Foundation, either version 3 of the License, or
+-    (at your option) any later version.
+-    Foobar is distributed in the hope that it will be useful,
+-    but WITHOUT ANY WARRANTY; without even the implied warranty of
+-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-    GNU General Public License for more details.
+-    You should have received a copy of the GNU General Public License
+-    along with Foobar.  If not, see &lt;<A HREF="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</A>&gt;.
+-*/
++/***************************************************************************
++ *            shell.c
++ *
++ *  Sun Apr  1 00:16:03 2007
++ *  Copyright  2007  Osiris
++ *  Email	jeek69 [at] katamail dot com
++ ****************************************************************************/
+ 
+-/* 
+-*  Shell Coded by
+-*	Osiris 
+-*
+-*   jeek69 [at] katamail dot com
+-*/
++/*
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2 of the License, or
++ *  (at your option) any later version.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
++ */
+ 
++
+ #include &lt;multiboot.h&gt;
+ #include &lt;kernel.h&gt;
+ #include &lt;stddef.h&gt;
+@@ -40,89 +43,39 @@
+ #include &lt;kheap.h&gt;
+ #include &lt;buddy.h&gt;
+ #include &lt;version.h&gt;
+-//#include &lt;stdlib.h&gt;
+ 
+-
+ extern buddy_t* kbuddy;
+-void logo()
+-{
+-	printf(&quot;\n\n\t\t-------------------------- \n&quot;
+-	       &quot;\t\tThe Dream Operating System \n&quot;
+-	       &quot;\t\t      v0.01 pre-alpha      \n&quot;
+-	       &quot;\t\t-------------------------- \n&quot;);
+-	printf(&quot;\n\n\n\n\n\n&quot;);
+-}
+ 
+-void help()
+-{
+-	printf(&quot;help      - See the 'help' list to learn the DreamOS command now avaible\n&quot;
+-	       &quot;poweroff  - Turn off the machine\n&quot;
+-	       &quot;info      - See the system info about Memory and other stuffs like that\n&quot;
+-               &quot;kmalloc   - Test a basic kmalloc function\n&quot;
+-               &quot;do_fault  - Test a page_fault (WARNING: This hang the OS)\n&quot;
+-               &quot;aalogo    - Show an ascii art logo\n&quot;
+-               &quot;uname     - Print kernel version\n&quot;
+-               &quot;try_buddy - Try buddy mmu\n&quot;
+-               &quot;try_heap - Try heap mmu\n&quot;
+-	       &quot;echo      - Print some lines of text\n&quot;);
+-}
+ 
+-void poweroff()
+-{
+-	/*asm(	&quot;movl %0, %%eax\n&quot;
+-		&quot;int $0xff\n&quot;
+-		: : &quot;g&quot;(1)); // valore di enum*/
+-    asm(&quot;sti&quot;);
+-    printf(&quot;E' ora possibile spegnere il computer.\n&quot;);
+-    while(1);
+-}
+-
+-void info()
+-{
+-	printf(&quot;:==========: System info: :==========:\n\n&quot;);
+-        printf(&quot;Memory RAM: %d Mb&quot;, get_bmpelements());
+-        _kputs (LNG_CPU);
+-        _kcolor (4);
+-        _kgoto (61, _kgetline());
+-        _kputs (cpu_vendor);
+-        _kcolor(7);  
+-	printf(&quot;\n&quot;);  
+-        printf(LNG_FREERAM);
+-        _kgoto(60, _kgetline());
+-        printf(&quot; %d kb\n&quot;, get_memsize()/1024);
+-        printf(LNG_FREEPAGE);
+-        _kgoto(60, _kgetline());
+-        printf(&quot; %d\n&quot;, get_numpages());
+-        printf(LNG_BITMAP);
+-	_kgoto(60, _kgetline());
+-	printf(&quot; %d&quot;, get_bmpelements());
+-        _kgoto(60, _kgetline());
+-        printf(&quot;\nSize of mem_area: %d\n&quot;, sizeof(mem_area));
+-        printf(&quot;Page Dir Entry n.0 is: %d\n&quot;, get_pagedir_entry(0));
+-        printf(&quot;Page Table Entry n.4 in Page dir 0 is: %d\n&quot;, get_pagetable_entry(0,4));
+-	printf(&quot;:==========: :==========: :==========:\n&quot;);
+-}
+-
+ void shell(int argc, char *argv[])
+ {
+ 	unsigned char cmd[256];
+-	//char *cmd=kmalloc(sizeof(cmd));
+-	//char *string=kmalloc(sizeof(string));
+ 	unsigned char string[256];
+-	int a = 1, flag = 1;
+-	char *str1;
++	int flag = 1;
++	char *str1, *user = kmalloc(24);
++	memset(user, 0, strlen(user));
+ 
+ 	printf(&quot;[?] Enter your username: &quot;);
+-    char user[24];
+-    memset(user, 0, 24);   
+ 	scanf (&quot;%s&quot;,user);
+ 
+-	printf(&quot;\n\n\n\n\n\n&quot;);
++	while (1)
++	{
++		if (!(_kstrncmp(user, &quot;&quot;, 1) ) )
++		{
++			printf(&quot;[?] Enter your username: &quot;);
++			scanf (&quot;%s&quot;,user);
++			printf(&quot;[x] Please, insert your username :)\n&quot;);
++		}
++		else
++			break;	
++	}
++	
++	_kclear();
+ 	aalogo();
+ 	printf(&quot;\n\n\n\n&quot;);
+ 
+-    shell_mess = 7;
+-    argc=1;
++        shell_mess = 7;
++        argc=1;
+ 
+ 	for (;;)
+ 	{
+@@ -153,69 +106,76 @@
+ 		argc++;
+ 	    }
+ 	    // fine argomentazione.. facile no ? :) --&gt; Osiris r0x :P
++	    // Si, d'accordo, ora dobbiamo includerlo in una libreria.. :)
+ 
+ 
+ 		if (!(_kstrncmp(cmd,&quot;help&quot;,4) ) )
+ 		{
+ 			printf(&quot;Available command: \n&quot;);
+ 			help();
+-			cmd[a]=NULL;
+-			memset(cmd, 0, strlen(cmd));
+ 		}
+ 
+-		if (!(_kstrncmp(cmd, &quot;echo&quot;, 4) ) )
++		else if (!(_kstrncmp(cmd, &quot;echo&quot;, 4) ) )
+ 		{
+ 			strncpy(string,cmd,strlen(cmd));
+ 			memmove(string, string+5, strlen(string));
+ 			printf(&quot;%s\n&quot;,string);
+ 			memset(string+5, 0, strlen(string));
+-			memset(cmd, 0, strlen(cmd));
+ 		}
+ 
+ 		else if (!(_kstrncmp(cmd,&quot;poweroff&quot;,8)))
+ 		{
+ 			printf(&quot;Poweroff..\n&quot;);
+ 			poweroff();
+-			cmd[a]=NULL;
+-			memset(cmd, 0, strlen(cmd));
+ 		}
+ 		
+ 		else if (!(_kstrncmp(cmd, &quot;clear&quot;, 5)))
+ 		{
+ 			_kclear();
+-			cmd[a]=NULL;
+-			memset(cmd, 0, strlen(cmd));
+ 		}
+ 
+ 		else if (!(_kstrncmp(cmd, &quot;uname&quot;,5)))
+ 		{
+-			//if (_kstrncmp(argv[2], NULL,0) == -1)
+-			//{
++			if (argv[2] != &quot; &quot;)
++			{
+ 				memmove(argv[2], argv[2]+6, strlen(argv[2]));
+-				//printf(&quot;%s\n&quot;, argv[2]);
+-			//}
++			}
+ 
+-			if (!(_kstrncmp(argv[2], &quot;-a&quot;, 2)))
++			if (!(_kstrncmp(argv[2], &quot;-a&quot;, 2)) || !(_kstrncmp(argv[2], &quot;--all&quot;, 5)))
+        			{
+-			printf(&quot;%s %s.%s.%s%s #1 beta CEST 2008 %s\n&quot;,NAME,VERSION,PATCHLEVEL,REV_NUM,EXTRAVERSION,cpu_vendor);
++				printf(&quot;%s %s.%s.%s%s #1 beta CEST 2008 %s\n&quot;,NAME,VERSION,PATCHLEVEL,REV_NUM,EXTRAVERSION,cpu_vendor);
+ 			}
+-			else { printf(&quot;%s\n&quot;, NAME); }
+-			memset(cmd, 0, strlen(cmd));
+ 
++			else if (!(_kstrncmp(argv[2], &quot;-r&quot;, 2)) || !(_kstrncmp(argv[2], &quot;--rev&quot;, 5)))
++       			{
++			 	printf(&quot;%s.%s.%s%s\n&quot;,VERSION,PATCHLEVEL,REV_NUM,EXTRAVERSION);
++			}
++
++			else if (!(_kstrncmp(argv[2], &quot;-h&quot;, 2) ) || !(_kstrncmp(argv[2], &quot;--help&quot;, 6)))
++       			{
++			 	uname_help();
++			}
++				
++			else if (!(_kstrncmp(argv[2], &quot;-i&quot;, 2)) || !(_kstrncmp(argv[2], &quot;--info&quot;, 6)))
++			{
++				info();
++			}
++
++			if (!(_kstrncmp(argv[2], '/0', 1)))
++			{
++				printf(&quot;%s\n&quot;
++				       &quot;For more info about this tool, please do 'uname --help'\n&quot;,NAME);
++			}
++
++
+ 		}
+ 
+-		else if (!(_kstrncmp(cmd,&quot;info&quot;,4)))
+-		{
+-			info();
+-			cmd[a]=NULL;
+-			memset(cmd, 0, strlen(cmd));
+-		}
+ 		else if (!(_kstrncmp(cmd,&quot;answer&quot;,6)))
+-      		  {
++      		{
+           		  printf(&quot;42\n&quot;);
+-          		  cmd[a]=NULL;
+ 			  memset(cmd, 0, strlen(cmd));
+         	}
++
+         else if (!(_kstrncmp(cmd,&quot;kmalloc&quot;,7)))
+         {
+             printf(&quot;kmalloc try: ...\n&quot;);
+@@ -232,48 +192,158 @@
+                 i++;
+             }
+             printf(&quot;Address of a: %d\n&quot;, b);
+-            cmd[a]=NULL;
+-        	memset(cmd, 0, strlen(cmd));
+ 
+         }
+-        else if (!(_kstrncmp(cmd,&quot;do_fault&quot;,8))){  
+-	    printf (&quot;Genero un pagefault...\n&quot;);
+-            char *prova;
+-            prova = 0xa0000000;
+-            *prova = 10;
+-            cmd[a]=NULL;
+-    	    memset(cmd, 0, strlen(cmd));
++
++        else if (!(_kstrncmp(cmd,&quot;do_fault&quot;,8)))
++	{  
++             printf (&quot;Genero un pagefault...\n&quot;);
++             char *prova;
++             prova = 0xa0000000;
++             *prova = 10;
+         }
++
+         else if (!(_kstrncmp(cmd,&quot;try_heap&quot;,8))){
+             try_alloc();
+-            memset(cmd, 0, strlen(cmd));
+         }
++
+         else if (!(_kstrncmp(cmd,&quot;try_buddy&quot;,9))){
+              printf(&quot;L'indirizzo di kbuddy e': 0x%x\n&quot;, kbuddy);
+              alloc_buddy(16, kbuddy);
+              printf(&quot;New allocation\n\n&quot;);
+              alloc_buddy(8, kbuddy);
+-            cmd[a] = NULL;
+-	        memset(cmd, 0, strlen(cmd));
+         }
+-        else if (!(_kstrncmp(cmd,&quot;aalogo&quot;,6))) aalogo();        
+-        else if(strlen(cmd)&gt;0){
++
++        else if (!(_kstrncmp(cmd,&quot;aalogo&quot;,6))) 
++		aalogo();
++        
++        else if (strlen(cmd)&gt;0)
++	{
+             printf(&quot;Unknown command: %s\n&quot;, cmd);
+             memset(cmd, 0, strlen(cmd));
+         }
+-        cmd[a]=NULL;
++
++	memset(string+5, 0, strlen(string));
+ 	memset(cmd, 0, strlen(cmd));
++	memset(argv[2], 0, strlen(argv[2]));
+ 
+ 	}
+ }
+ 
+ void aalogo() {
+-printf(&quot;\t ____                     _____ _____\n&quot;);
+-printf(&quot;\t |    \\ ___ ___ ___ _____|     |   __|\n&quot;);
+-printf(&quot;\t |  |  |  _| -_| = |     |  |  |__   |\n&quot;);
+-printf(&quot;\t |____/|_| |___|__||_|_|_|_____|_____|\n&quot;);
+-printf(&quot;\t -.rev: \&quot;%s\&quot;\n&quot;,REV_NUM);
++_kcolor (4);
++printf(&quot;\t\t ____           _____          _____ _____\n&quot;);
++printf(&quot;\t\t|    \\ ___ ___ |  _  | _______|     |   __|\n&quot;);
++printf(&quot;\t\t|  |  |  _| -_|| |_| ||       |  |  |__   |\n&quot;);
++printf(&quot;\t\t|____/|_| |___||_| |_||_|\134_/|_|_____|_____|\n&quot;);
++_kcolor (6);
++printf(&quot;\t\tRevision: \&quot;%s\&quot;\n&quot;,REV_NUM);
++_kcolor(7);
+ logo();
+ }
+ 
++void logo()
++{
++	_kcolor (5);
++	printf(&quot;\n&quot;);
++	printf(&quot;\t\t\t The Dream Operating System \n&quot;
++	       &quot;\t\t           v0.01%s pre-alpha      \n\n&quot;
+ 
++	  &quot;\t\tHave you ever dreammed an operation system \n&quot;
++	  &quot;\t\tof your Dream? I think yep, becuse You can \n&quot;
++	              &quot;\t\t\t\tChange Happens!        \n&quot;,REV_NUM);
++	
++	printf(&quot;\n\n\n\n&quot;);
++	_kcolor(7);
++}
++
++void uname_help() 
++{
++	//_kcolor (5);
++	printf(&quot;Uname function allow you to see the kernel and system information.\n&quot;);
++	printf(&quot;Function avaibles:\n&quot;);
++	//_kcolor (2);
++	printf(&quot;1) '-a'   - Kernel version and processor type\n&quot;
++  	       &quot;2) '-r'   - Only the kernel version\n&quot;
++  	       &quot;3) '-i'   - All info of system and kernel\n&quot;);	
++	_kcolor (7);
++}
++
++void help()
++{
++	printf(&quot;help      - See the 'help' list to learn the DreamOS command now avaible\n&quot;
++	       &quot;poweroff  - Turn off the machine\n&quot;
++               &quot;kmalloc   - Test a basic kmalloc function\n&quot;
++               &quot;do_fault  - Test a page_fault (WARNING: This hang the OS)\n&quot;
++               &quot;aalogo    - Show an ascii art logo\n&quot;
++               &quot;uname     - Print kernel version, try uname --help for more info\n&quot;
++               &quot;try_buddy - Try buddy mmu\n&quot;
++               &quot;try_heap  - Try heap mmu\n&quot;
++	       &quot;echo      - Print some lines of text\n&quot;);
++}
++
++void poweroff()
++{
++	/*asm(	&quot;movl %0, %%eax\n&quot;
++		&quot;int $0xff\n&quot;
++		: : &quot;g&quot;(1)); // valore di enum*/
++    asm(&quot;sti&quot;);
++    printf(&quot;E' ora possibile spegnere il computer.\n&quot;);
++    while(1);
++}
++
++void info()
++{
++	printf(&quot;\n:==========: :System info: :==========:\n\n&quot;);
++	
++	// Kernel info
++	printf( &quot;Version: '%s'\n&quot;
++		&quot;Patchlevel: '%s'\n&quot;
++		&quot;Extraversion: '%s'\n&quot;
++		&quot;Name: '%s'\n&quot;
++		&quot;Revision: '%s'\n&quot;,VERSION,PATCHLEVEL,EXTRAVERSION,NAME,REV_NUM);
++
++	// CPU Info
++	_kputs (LNG_CPU);
++        _kcolor (4);
++        _kgoto (61, _kgetline());
++        _kputs (cpu_vendor);
++        _kcolor(7);
++	printf(&quot;\n&quot;);
++
++	// Memory RAM Info
++        printf(&quot;Memory RAM: &quot;);
++	_kgoto(60, _kgetline());
++	printf(&quot; %d Kb\n&quot;, get_memsize()/1024);
++
++	// Memory free RAM Info
++	printf(LNG_FREERAM);
++        _kgoto(60, _kgetline());
++        printf(&quot; %d Kb\n&quot;, get_numpages());
++  
++	printf(&quot;\n&quot;);
++
++	// Bitmap Info
++        printf(&quot;Number bitmap's elements: &quot;);
++	_kgoto(60, _kgetline());
++	printf(&quot; %d&quot;, get_bmpelements());
++        _kgoto(60, _kgetline());
++
++	// Mem_area Info
++        printf(&quot;\nSize of mem_area: &quot;);
++	_kgoto(60, _kgetline());	
++	printf(&quot; %d\n&quot;, sizeof(mem_area));
++
++	// Page Dir Info
++        printf(&quot;Page Dir Entry n.0 is: &quot;);
++	_kgoto(60, _kgetline());
++	printf(&quot; %d\n&quot;, get_pagedir_entry(0));
++        
++	// Page Table Info
++	printf(&quot;Page Table Entry n.4 in Page dir 0 is: &quot;);
++	_kgoto(60, _kgetline());	
++	printf(&quot; %d\n&quot;, get_pagetable_entry(0,4));
++
++	printf(&quot;\n:==========: :===========: :==========:\n\n&quot;);
++}
++
+
+Modified: trunk/start.sh
+===================================================================
+--- trunk/start.sh	2008-09-09 23:22:47 UTC (rev 28)
++++ trunk/start.sh	2008-09-10 21:36:06 UTC (rev 29)
+@@ -23,7 +23,7 @@
+ fi
+ 
+ if [ &quot;$1&quot; == &quot;bochs&quot; ]; then
+-bochs boot/grub.img
++bochs -f .bochsrc -q
+ exit
+ fi
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000028.html">[Dreamos-dev] r28 - in trunk: . include/mem mem processore
+</A></li>
+	<LI>Next message: <A HREF="000030.html">[Dreamos-dev] r30 - in trunk: . include/shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#29">[ date ]</a>
+              <a href="thread.html#29">[ thread ]</a>
+              <a href="subject.html#29">[ subject ]</a>
+              <a href="author.html#29">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

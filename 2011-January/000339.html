@@ -1,0 +1,140 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r336 - in trunk: mem shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2011-January/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r336%20-%20in%20trunk%3A%20mem%20shell&In-Reply-To=%3C20110117220715.BFE6F48129C%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000338.html">
+   <LINK REL="Next"  HREF="000340.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r336 - in trunk: mem shell</H1>
+    <B>theking0 at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r336%20-%20in%20trunk%3A%20mem%20shell&In-Reply-To=%3C20110117220715.BFE6F48129C%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r336 - in trunk: mem shell">theking0 at mail.berlios.de
+       </A><BR>
+    <I>Mon Jan 17 23:07:15 CET 2011</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000338.html">[Dreamos-dev] r335 - in trunk: . boot include/mem libc mem shell
+</A></li>
+        <LI>Next message: <A HREF="000340.html">[Dreamos-dev] r337 - in trunk: . boot mem misc
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#339">[ date ]</a>
+              <a href="thread.html#339">[ thread ]</a>
+              <a href="subject.html#339">[ subject ]</a>
+              <a href="author.html#339">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: theking0
+Date: 2011-01-17 23:07:15 +0100 (Mon, 17 Jan 2011)
+New Revision: 336
+
+Modified:
+   trunk/mem/heap.c
+   trunk/mem/paging.c
+   trunk/shell/testing.c
+Log:
+Fix all compile warnings
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2011-01-17 21:32:59 UTC (rev 335)
++++ trunk/mem/heap.c	2011-01-17 22:07:15 UTC (rev 336)
+@@ -26,6 +26,7 @@
+ #include &lt;stdio.h&gt;
+ #include &lt;ordered_array.h&gt;
+ #include &lt;kheap.h&gt;
++#include &lt;stddef.h&gt;
+ 
+ extern unsigned int end;
+ extern unsigned int address_cur;
+@@ -79,16 +80,16 @@
+ 		//&amp;printf(&quot;Heap defined\n&quot;);
+ 		printf(&quot;Start Address: %u End Address: %u &quot;, n_heap-&gt;start_address, n_heap-&gt;end_address);
+ 		printf(&quot;Address_cur value: %x\n&quot;, address_cur);
+-		return new_address;
++		return (unsigned int)new_address;
+ 	}
+ 	return 0;
+ }
+ 
+ void *new_alloc(unsigned int size, unsigned short int p_aligned, new_heap_t* t_heap){
+ 	//#define MEMDEBUG 1
++#ifdef  MEMDEBUG
+ 	unsigned int real_size = size +sizeof(header_t) + sizeof(footer_t);	
+ 	//printf(&quot;Size of:\n\theader_t: %d\n\tfooter_t: %d\n\treal_size: %d\n\tsize: %d\n&quot;, sizeof(header_t), sizeof(footer_t), real_size, size);	
+-	#ifdef  MEMDEBUG
+ 	printf(&quot;Real size: %d\n&quot;, real_size);
+ 	unsigned int min_index = locate_smallest_hole(real_size, PAGE_ALIGNED, t_heap);
+ 	if(min_index == -1 ){
+@@ -177,6 +178,7 @@
+ 		//get_array(0, &amp;t_heap-&gt;index);
+ 	}	
+ 	#endif
++	return NULL;
+ }
+ 
+ void expand(unsigned int new_size, new_heap_t *t_heap){
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2011-01-17 21:32:59 UTC (rev 335)
++++ trunk/mem/paging.c	2011-01-17 22:07:15 UTC (rev 336)
+@@ -257,7 +257,7 @@
+     if (pd_entry == 0) {
+ 	    int i=0;
+ 	    new_pt = create_pageTable();
+-	    if(new_pt==4468736) printf(&quot;Eccolo qua lo stronzo\n&quot;);
++	    if(new_pt == (unsigned int *) 4468736) printf(&quot;Eccolo qua lo stronzo\n&quot;);
+ 	    while(i&lt;PT_LIMIT){
+ 	      new_pt[i] = 0x00000000;
+ 	      i++;
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2011-01-17 21:32:59 UTC (rev 335)
++++ trunk/shell/testing.c	2011-01-17 22:07:15 UTC (rev 336)
+@@ -102,7 +102,7 @@
+ void try_newheap(){
+ 	unsigned int testA;
+ 	unsigned int testB;
+-	unsigned int testC;
++	//unsigned int testC;
+ 	//printf(&quot;Testing the new heap (in development)\n&quot;);
+ 	//printf(&quot;First step: testing a new heap...\n&quot;);
+ 	//new_heap(HEAP_START_ADDRESS, HEAP_START_SIZE);
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000338.html">[Dreamos-dev] r335 - in trunk: . boot include/mem libc mem shell
+</A></li>
+	<LI>Next message: <A HREF="000340.html">[Dreamos-dev] r337 - in trunk: . boot mem misc
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#339">[ date ]</a>
+              <a href="thread.html#339">[ thread ]</a>
+              <a href="subject.html#339">[ subject ]</a>
+              <a href="author.html#339">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

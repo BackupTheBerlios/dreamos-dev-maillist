@@ -1,0 +1,147 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r273 - trunk/utils
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-July/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r273%20-%20trunk/utils&In-Reply-To=%3C20100707193228.74243480D6D%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000275.html">
+   <LINK REL="Next"  HREF="000277.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r273 - trunk/utils</H1>
+    <B>dt- at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r273%20-%20trunk/utils&In-Reply-To=%3C20100707193228.74243480D6D%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r273 - trunk/utils">dt- at mail.berlios.de
+       </A><BR>
+    <I>Wed Jul  7 21:32:28 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000275.html">[Dreamos-dev] r272 - in trunk: . boot
+</A></li>
+        <LI>Next message: <A HREF="000277.html">[Dreamos-dev] r274 - trunk/utils
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#276">[ date ]</a>
+              <a href="thread.html#276">[ thread ]</a>
+              <a href="subject.html#276">[ subject ]</a>
+              <a href="author.html#276">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: dt-
+Date: 2010-07-07 21:32:28 +0200 (Wed, 07 Jul 2010)
+New Revision: 273
+
+Added:
+   trunk/utils/passwd.pl
+Log:
+Aggiunto lo script passwd.pl per la gestione del file passwd
+
+
+Added: trunk/utils/passwd.pl
+===================================================================
+--- trunk/utils/passwd.pl	                        (rev 0)
++++ trunk/utils/passwd.pl	2010-07-07 19:32:28 UTC (rev 273)
+@@ -0,0 +1,63 @@
++#!/usr/bin/perl
++
++#TODO:
++# 1. rendere meno &quot;forzato&quot; e portabile il noecho della richiesta della password.
++# 2. flags.
++# 3. pulizia generale dello script.
++
++my $__script_version__=&quot;0.1&quot;;
++my $__script_author__=&quot;DT&quot;;
++my $__script_license__=&quot;New BSD License&quot;;
++
++my $filepath=&quot;../files/passwd&quot;;
++
++
++# Read Users
++
++my %passwd = ();
++my %junkdata = ();
++
++open(PASSWD, &quot;+&lt;&quot;, $filepath) or die(&quot;Can't open $filepath: $!&quot;);
++
++print &quot;Current Users:\n&quot;;
++while(&lt;PASSWD&gt;) {
++	chomp($_);
++	my ($user, $password, @junk) = split(/:/);
++	print &quot;$user\n&quot;;
++	if(@junk) {
++		print &quot;.junkdata: @junk\n&quot;;
++	}
++	$passwd{$user}=$password;
++	$junkdata{$user}=@junkdata;
++}
++print &quot;\n&quot;;
++# Add User
++
++print &quot;username: &quot;;
++$username = &lt;&gt;;
++chomp($username);
++print &quot;$username\n&quot;;
++
++if(!($username =~ m/^(\w+)$/)) {
++	print &quot;Invalid username \&quot;$username\&quot;\n&quot;;
++	exit 1;
++}
++if(exists $passwd{$username}) {
++	print &quot;User \&quot;$username\&quot; exists.\n&quot;;
++	exit 1;
++}
++
++
++
++print &quot;password: &quot;;
++system(&quot;stty -echo&quot;);
++$password = &lt;&gt;;
++system(&quot;stty echo&quot;);
++chomp($password);
++print &quot;$password\n&quot;;
++
++print &quot;adduser $username:$password\n&quot;;
++
++print PASSWD &quot;\n$username:$password&quot;;
++
++close(PASSWD);
+\ No newline at end of file
+
+
+Property changes on: trunk/utils/passwd.pl
+___________________________________________________________________
+Added: svn:executable
+   + *
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000275.html">[Dreamos-dev] r272 - in trunk: . boot
+</A></li>
+	<LI>Next message: <A HREF="000277.html">[Dreamos-dev] r274 - trunk/utils
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#276">[ date ]</a>
+              <a href="thread.html#276">[ thread ]</a>
+              <a href="subject.html#276">[ subject ]</a>
+              <a href="author.html#276">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

@@ -1,0 +1,134 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r322 - in trunk: . boot include/mem mem
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-December/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r322%20-%20in%20trunk%3A%20.%20boot%20include/mem%20mem&In-Reply-To=%3C20101204221302.74A07480B86%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   
+   <LINK REL="Next"  HREF="000326.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r322 - in trunk: . boot include/mem mem</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r322%20-%20in%20trunk%3A%20.%20boot%20include/mem%20mem&In-Reply-To=%3C20101204221302.74A07480B86%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r322 - in trunk: . boot include/mem mem">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sat Dec  4 23:13:02 CET 2010</I>
+    <P><UL>
+        
+        <LI>Next message: <A HREF="000326.html">[Dreamos-dev] r323 - in trunk: . include/mem mem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#325">[ date ]</a>
+              <a href="thread.html#325">[ thread ]</a>
+              <a href="subject.html#325">[ subject ]</a>
+              <a href="author.html#325">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-12-04 23:13:01 +0100 (Sat, 04 Dec 2010)
+New Revision: 322
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/include/mem/heap.h
+   trunk/mem/heap.c
+Log:
+Spostato old_size dentro la funzione expand. 
+Aggiunta in create heap valorizzazione di max_address  per l'heap
+Aggiunto in expand controllo su allineamento a 4k delle richieste.
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/mem/heap.h
+===================================================================
+--- trunk/include/mem/heap.h	2010-11-29 22:09:29 UTC (rev 321)
++++ trunk/include/mem/heap.h	2010-12-04 22:13:01 UTC (rev 322)
+@@ -24,7 +24,7 @@
+ #ifndef __HEAP_H
+ #define __HEAP_H
+ 
+-#define HEAP_START_ADDRESS 0xD0000000
++#define HEAP_START_ADDRESS 0xD0000000 /**Indirizzo iniziale*/
+ #define HEAP_START_SIZE 0x100000
+ #define HEAP_INDEX_SIZE 0x20000
+ #define HEAP_MAGIC 0x12893457
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-11-29 22:09:29 UTC (rev 321)
++++ trunk/mem/heap.c	2010-12-04 22:13:01 UTC (rev 322)
+@@ -47,7 +47,8 @@
+ 		header_t *first_hole = (header_t*)start;		
+ 		t_heap-&gt;index = new_array((void*)start,size, &amp;header_t_less_than);
+ 		t_heap-&gt;start_address = start;
+-		t_heap-&gt;end_address = start + size;					
++		t_heap-&gt;end_address = start + size;
++		t_heap-&gt;max_address = 0xDFFFF000; /**Da controllare max address*/					
+ 		first_hole-&gt;size = t_heap-&gt;end_address - start;		
+ 		first_hole-&gt;magic = HEAP_MAGIC;		
+ 		first_hole-&gt;is_hole = 1; /*TRUE*/			
+@@ -89,7 +90,7 @@
+ 	#ifdef  MEMDEBUG
+ 	unsigned int min_index = locate_smallest_hole(real_size, PAGE_ALIGNED, t_heap);
+ 	if(min_index == -1 ){
+-		/*No hole with the requested size found, asking more space for heap*/
++		/*No hole with the requested size found, asking more space for heap*/		
+ 		printf(&quot;No hole  found we need to grow\n&quot;);
+ 		expand(real_size, t_heap);
+ 	}
+@@ -133,6 +134,13 @@
+ }
+ 
+ void expand(unsigned int new_size, new_heap_t *t_heap){
++	unsigned int old_size = t_heap-&gt;end_address - t_heap-&gt;start_address; 
++	/** First of all: Align the space required*/
++	if(new_size&amp;0xFFFFF000 != 0){
++		new_size&amp;=0xFFFFF000;
++		new_size+=0x1000;
++	}
++	/**/
+ 	printf(&quot;Placeholder for expand\n&quot;);	
+ }
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	
+	<LI>Next message: <A HREF="000326.html">[Dreamos-dev] r323 - in trunk: . include/mem mem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#325">[ date ]</a>
+              <a href="thread.html#325">[ thread ]</a>
+              <a href="subject.html#325">[ subject ]</a>
+              <a href="author.html#325">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

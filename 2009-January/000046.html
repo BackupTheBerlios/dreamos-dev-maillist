@@ -1,0 +1,183 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r46 - in trunk: . libc processore shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-January/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r46%20-%20in%20trunk%3A%20.%20libc%20processore%20shell&In-Reply-To=%3C200901152320.n0FNKjH5000898%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000045.html">
+   <LINK REL="Next"  HREF="000047.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r46 - in trunk: . libc processore shell</H1>
+    <B>shainer at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r46%20-%20in%20trunk%3A%20.%20libc%20processore%20shell&In-Reply-To=%3C200901152320.n0FNKjH5000898%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r46 - in trunk: . libc processore shell">shainer at mail.berlios.de
+       </A><BR>
+    <I>Fri Jan 16 00:20:45 CET 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000045.html">[Dreamos-dev] r45 - in trunk: . include mem shell
+</A></li>
+        <LI>Next message: <A HREF="000047.html">[Dreamos-dev] r47 - in trunk: . hardware include include/misc mem	misc processore shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#46">[ date ]</a>
+              <a href="thread.html#46">[ thread ]</a>
+              <a href="subject.html#46">[ subject ]</a>
+              <a href="author.html#46">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: shainer
+Date: 2009-01-16 00:20:44 +0100 (Fri, 16 Jan 2009)
+New Revision: 46
+
+Modified:
+   trunk/dreamos.img
+   trunk/libc/stdio.c
+   trunk/processore/handlers.c
+   trunk/shell/shell.c
+Log:
+Corretto momentaneamente un bug relativo alla gestione degli IRQ condivisi che, su Bochs, faceva andare l'OS in un loop infinito di eccezioni. Aggiunto comando sleep nella shell
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/libc/stdio.c
+===================================================================
+--- trunk/libc/stdio.c	2009-01-07 11:27:16 UTC (rev 45)
++++ trunk/libc/stdio.c	2009-01-15 23:20:44 UTC (rev 46)
+@@ -55,7 +55,7 @@
+   /* Make sure all chars are numbers */
+   for (i=0; *(nptr+i); ++i) {
+     if(!isdigit(*(nptr+i)))
+-      return 0;
++      return -1;
+   }
+ 
+   i=0;
+
+Modified: trunk/processore/handlers.c
+===================================================================
+--- trunk/processore/handlers.c	2009-01-07 11:27:16 UTC (rev 45)
++++ trunk/processore/handlers.c	2009-01-15 23:20:44 UTC (rev 46)
+@@ -101,26 +101,34 @@
+     int irqn;
+     irqn = get_current_irq();  
+     IRQ_s* tmpHandler; 
+-    #ifdef DEBUG
+-    printf(&quot;Next shareHandler: %d\n&quot;, tmpHandler-&gt;next);
+-    #endif
+     if(irqn&gt;0) {
+-        tmpHandler = shareHandler[irqn-1];
+-        tmpHandler-&gt;IRQ_func();
+-        #ifdef DEBUG
+-        printf(&quot;2 - IRQ_func: %d, %d\n&quot;, tmpHandler-&gt;IRQ_func, tmpHandler);
+-        #endif
+-        while(tmpHandler-&gt;next!=NULL) {
+-            tmpHandler = tmpHandler-&gt;next;                           
+-            #ifdef DEBUG
+-            printf(&quot;1 - IRQ_func (_prova): %d, %d\n&quot;, tmpHandler-&gt;IRQ_func, tmpHandler);
+-            #endif
+-            tmpHandler-&gt;IRQ_func();
+-        }
++      switch(irqn){
++	case 1: 
++	  PIT_handler();
++	  break;
++	case 2:
++	  keyboard_isr();
++	  break;
++      }
++//         tmpHandler = shareHandler[irqn-1];
++//         tmpHandler-&gt;IRQ_func();
++//         #ifdef DEBUG
++//         printf(&quot;2 - IRQ_func: %d, %d\n&quot;, tmpHandler-&gt;IRQ_func, tmpHandler);
++//         #endif
++//         while(tmpHandler-&gt;next!=NULL) {
++//             tmpHandler = tmpHandler-&gt;next;                           
++//             #ifdef DEBUG
++//             printf(&quot;1 - IRQ_func (_prova): %d, %d\n&quot;, tmpHandler-&gt;IRQ_func, tmpHandler);
++//             #endif
++//             tmpHandler-&gt;IRQ_func();
++//         }
+     }
+ //  else printf(&quot;IRQ N: %d E' arrivato qualcosa che non so gestire &quot;, irqn);
+     if(irqn&lt;=8) outportb(0x20, MASTER_PORT);
+-    else if(irqn&lt;=16)outportb(0x20, SLAVE_PORT);
++    else if(irqn&lt;=16){
++      outportb(0x20, SLAVE_PORT);
++      outportb(0x20, MASTER_PORT);
++    }
+ }
+ 
+ void _int_rsv(){
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-01-07 11:27:16 UTC (rev 45)
++++ trunk/shell/shell.c	2009-01-15 23:20:44 UTC (rev 46)
+@@ -168,11 +168,21 @@
+ 			printf (&quot;Type: %s\n&quot;, sh_info-&gt;cpu_type);
+ 		}
+ 
+-		else if (!(_kstrncmp(cmd,&quot;answer&quot;,6)))
++		else if (!(_kstrncmp(cmd, &quot;answer&quot;,6)))
+       		{
+           		  printf(&quot;42\n&quot;);			  
+         	}
++		else if (!(_kstrncmp(cmd, &quot;sleep&quot;, 5)))
++		{
++			int s;
+ 
++			if (argv[1]) {
++			  s = atoi(argv[1]);
++			  if (s != -1)
++			    sleep (s);
++		 	} else printf (&quot;Missing operand\n&quot;);
++		}
++
+         else if (!(_kstrncmp(cmd,&quot;kmalloc&quot;,7)))
+         {
+             printf(&quot;kmalloc try: ...\n&quot;);
+@@ -310,6 +320,7 @@
+            &quot;uname     - Print kernel version, try uname --help for more info\n&quot;
+            &quot;printmem  - Print used locations of memory\n&quot;
+            &quot;credits   - Show DreamOS credits\n&quot;
++	   &quot;sleep     - pause DreamOS for a particular number of seconds\n&quot;
+ 	   &quot;cpuid     - Show cpu identification informations\n&quot;
+ 	       &quot;echo      - Print some lines of text\n&quot;);
+ }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000045.html">[Dreamos-dev] r45 - in trunk: . include mem shell
+</A></li>
+	<LI>Next message: <A HREF="000047.html">[Dreamos-dev] r47 - in trunk: . hardware include include/misc mem	misc processore shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#46">[ date ]</a>
+              <a href="thread.html#46">[ thread ]</a>
+              <a href="subject.html#46">[ subject ]</a>
+              <a href="author.html#46">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

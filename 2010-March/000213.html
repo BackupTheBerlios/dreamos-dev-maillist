@@ -1,0 +1,118 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r210 - in trunk: . files shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-March/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r210%20-%20in%20trunk%3A%20.%20files%20shell&In-Reply-To=%3C201003082151.o28LpdDl006123%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000212.html">
+   <LINK REL="Next"  HREF="000214.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r210 - in trunk: . files shell</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r210%20-%20in%20trunk%3A%20.%20files%20shell&In-Reply-To=%3C201003082151.o28LpdDl006123%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r210 - in trunk: . files shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Mon Mar  8 22:51:39 CET 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000212.html">[Dreamos-dev] r209 - in trunk: . fs include/shell shell
+</A></li>
+        <LI>Next message: <A HREF="000214.html">[Dreamos-dev] r211 - in trunk: . fs libc shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#213">[ date ]</a>
+              <a href="thread.html#213">[ thread ]</a>
+              <a href="subject.html#213">[ subject ]</a>
+              <a href="author.html#213">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-03-08 22:51:30 +0100 (Mon, 08 Mar 2010)
+New Revision: 210
+
+Added:
+   trunk/files/README
+Modified:
+   trunk/bl.img
+   trunk/dreamos.img
+   trunk/initfs
+   trunk/shell/commands.c
+Log:
+Aggiunto file README ad initfs e nella cartella files dei sorgenti.
+Corretti alcuni bugs in more.
+
+
+Modified: trunk/bl.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Added: trunk/files/README
+===================================================================
+--- trunk/files/README	2010-03-08 20:24:33 UTC (rev 209)
++++ trunk/files/README	2010-03-08 21:51:30 UTC (rev 210)
+@@ -0,0 +1,9 @@
++DREAMOS 0.2.0-trunk
++
++Welcome to the dreamOS operting system.
++
++If you want some help enter the &quot;help&quot; command into the cli.
++
++Bye,
++The Dream(OS) Team
++
+
+Modified: trunk/initfs
+===================================================================
+(Binary files differ)
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-03-08 20:24:33 UTC (rev 209)
++++ trunk/shell/commands.c	2010-03-08 21:51:30 UTC (rev 210)
+@@ -415,7 +415,7 @@
+ 			i = open(argv[1], O_RDONLY, 42);
+ 			if(i&gt;-1) {
+ 				int j=0;		
+-				while(read(i, &amp;buf, 1)!=NULL) {
++				while(read(i, &amp;buf, 1)!= (int) NULL) {
+ 					putchar(buf);			
+ 					j++;
+ 				}	
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000212.html">[Dreamos-dev] r209 - in trunk: . fs include/shell shell
+</A></li>
+	<LI>Next message: <A HREF="000214.html">[Dreamos-dev] r211 - in trunk: . fs libc shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#213">[ date ]</a>
+              <a href="thread.html#213">[ thread ]</a>
+              <a href="subject.html#213">[ subject ]</a>
+              <a href="author.html#213">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

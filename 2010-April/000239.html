@@ -1,0 +1,136 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r236 - in trunk: . fs include/io io
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-April/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r236%20-%20in%20trunk%3A%20.%20fs%20include/io%20io&In-Reply-To=%3C201004211734.o3LHY9Xh013679%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000238.html">
+   <LINK REL="Next"  HREF="000240.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r236 - in trunk: . fs include/io io</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r236%20-%20in%20trunk%3A%20.%20fs%20include/io%20io&In-Reply-To=%3C201004211734.o3LHY9Xh013679%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r236 - in trunk: . fs include/io io">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Wed Apr 21 19:34:09 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000238.html">[Dreamos-dev] r235 - in trunk: . fs include/fs include/shell io	shell
+</A></li>
+        <LI>Next message: <A HREF="000240.html">[Dreamos-dev] r237 - in trunk: . fs include/fs shell utils
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#239">[ date ]</a>
+              <a href="thread.html#239">[ thread ]</a>
+              <a href="subject.html#239">[ subject ]</a>
+              <a href="author.html#239">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-04-21 19:34:02 +0200 (Wed, 21 Apr 2010)
+New Revision: 236
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/unistd.c
+   trunk/include/io/video.h
+   trunk/io/video.c
+Log:
+Ora la printf puo' stampare anche i numeri negativi.
+Andra sistemata ancora la kntos ma ora almeno i numeri negativi sono 
+visualizzabili
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/unistd.c
+===================================================================
+--- trunk/fs/unistd.c	2010-04-20 21:05:05 UTC (rev 235)
++++ trunk/fs/unistd.c	2010-04-21 17:34:02 UTC (rev 236)
+@@ -47,6 +47,7 @@
+ 		printf(&quot;Oh i received something: %s\n&quot;, buf);
+ 		if((ssize_t*)mountpoint_list[fd_list[fildes].mountpoint_id].operations.write!=NULL)
+ 			mountpoint_list[fd_list[fildes].mountpoint_id].operations.write(fs_fd, buf, nbyte);
++		else printf(&quot;Give Me a pen and i'll write you the world\n&quot;);
+ 		else return -1;
+ 	}
+ 	else return -1;
+
+Modified: trunk/include/io/video.h
+===================================================================
+--- trunk/include/io/video.h	2010-04-20 21:05:05 UTC (rev 235)
++++ trunk/include/io/video.h	2010-04-21 17:34:02 UTC (rev 236)
+@@ -48,7 +48,7 @@
+ 
+ #define OK_POS 70
+ 
+-void _kntos(char*,unsigned int, int);
++void _kntos(char*,int, int);
+ void _kputc(char);
+ void _kcolor(char);
+ void _kputs(char *);
+
+Modified: trunk/io/video.c
+===================================================================
+--- trunk/io/video.c	2010-04-20 21:05:05 UTC (rev 235)
++++ trunk/io/video.c	2010-04-21 17:34:02 UTC (rev 236)
+@@ -291,9 +291,10 @@
+   *
+   * Move the number &quot;num&quot; into a string
+   */
+-void _kntos(char *buffer,unsigned int num, int base)
++void _kntos(char *buffer,int num, int base)
+ {
+   int mod;
++  //int numval;
+   char *p, *pbase;
+ 
+   p = pbase = buffer;
+@@ -303,9 +304,10 @@
+   else {
+     if (num == 0)
+       *p++ = '0';
+-	else if(num&lt;0) {
++	else if(num&lt;0) {		
+ 		num=(~num)+1;
+ 		*p++='-';
++		*pbase++;
+ 	}
+     while(num &gt; 0)
+     {
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000238.html">[Dreamos-dev] r235 - in trunk: . fs include/fs include/shell io	shell
+</A></li>
+	<LI>Next message: <A HREF="000240.html">[Dreamos-dev] r237 - in trunk: . fs include/fs shell utils
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#239">[ date ]</a>
+              <a href="thread.html#239">[ thread ]</a>
+              <a href="subject.html#239">[ subject ]</a>
+              <a href="author.html#239">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

@@ -1,0 +1,429 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r16 - in trunk: . include/mem mem shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2008-July/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r16%20-%20in%20trunk%3A%20.%20include/mem%20mem%20shell&In-Reply-To=%3C200807272204.m6RM4nN4022996%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000015.html">
+   
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r16 - in trunk: . include/mem mem shell</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r16%20-%20in%20trunk%3A%20.%20include/mem%20mem%20shell&In-Reply-To=%3C200807272204.m6RM4nN4022996%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r16 - in trunk: . include/mem mem shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Mon Jul 28 00:04:49 CEST 2008</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000015.html">[Dreamos-dev] r15 - in trunk: . drivers hardware include/io	include/shell io shell
+</A></li>
+        
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#16">[ date ]</a>
+              <a href="thread.html#16">[ thread ]</a>
+              <a href="subject.html#16">[ subject ]</a>
+              <a href="author.html#16">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2008-07-28 00:04:48 +0200 (Mon, 28 Jul 2008)
+New Revision: 16
+
+Added:
+   trunk/include/mem/buddy.h
+   trunk/mem/buddy.c
+Modified:
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/kernel.map
+   trunk/mem/paging.c
+   trunk/shell/shell.c
+Log:
+Aggiunti file buddy.c e buddy.h
+Creata funzione di init.
+Si e' deciso di usare per ora come MMU il buddy system.
+Stampa di alcune informazioni di prova.
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2008-07-27 16:28:58 UTC (rev 15)
++++ trunk/Makefile	2008-07-27 22:04:48 UTC (rev 16)
+@@ -1,5 +1,5 @@
+ CFLAGS = -nostdlib -fomit-frame-pointer -fno-builtin -fno-stack-protector -Wall -march=i686 -m32 -I./include -I./include/io -I./include/drivers -I./include/libc -I./include/processore -I./include/hardware -I./include/mem -I./include/system -I./include/shell -I./include/misc
+-OBJ = kernel.o io/video.o drivers/keyboard.o libc/ctype.o libc/string.o io/io.o libc/stdio.o hardware/cpuid.o hardware/keyboard.o processore/gdt.o processore/idt.o processore/handlers.o hardware/pic8259.o mem/fismem.o mem/paging.o mem/kheap.o misc/ordered_array.o system/syscall.o hardware/8253.o shell/shell.o
++OBJ = kernel.o io/video.o drivers/keyboard.o libc/ctype.o libc/string.o io/io.o libc/stdio.o hardware/cpuid.o hardware/keyboard.o processore/gdt.o processore/idt.o processore/handlers.o hardware/pic8259.o mem/fismem.o mem/paging.o mem/kheap.o mem/buddy.o misc/ordered_array.o system/syscall.o hardware/8253.o shell/shell.o
+ 
+ dreamos.img: bl.img kernel.bin
+ 	mv kernel.bin dreamos.img
+@@ -25,6 +25,7 @@
+ mem/fismem.o: mem/fismem.c
+ mem/paging.o: mem/paging.c
+ mem/kheap.o: mem/kheap.c
++mem/buddy.o: mem/buddy.c
+ misc/ordered_array.o: misc/ordered_array.c
+ drivers/keyboard.o: drivers/keyboard.c
+ system/syscall.o: system/syscall.c
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Added: trunk/include/mem/buddy.h
+===================================================================
+--- trunk/include/mem/buddy.h	2008-07-27 16:28:58 UTC (rev 15)
++++ trunk/include/mem/buddy.h	2008-07-27 22:04:48 UTC (rev 16)
+@@ -0,0 +1,40 @@
++/***************************************************************************
++ *            buddy.h
++ *
++ *  Sun 18 07 08 07:47:17 2007
++ *  Copyright  2008  Ivan Gualandri
++ *  Email
++ ****************************************************************************/
++
++/*
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2 of the License, or
++ *  (at your option) any later version.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
++ */
++
++#ifndef BUDDY_H
++#define BUDDY_H
++
++/*!  \struct buddy_t
++     \brief Struttura dati che mantiene le informazioni su un singolo buddy
++ */
++typedef struct {
++    unsigned int start_address; /**&lt; Indirizzo di inizio del buddy*/
++    unsigned int size; /**&lt; Dimensione della memoria da gestire*/
++    struct buddy_t* left; /**&lt; Figlio sinistro*/
++    struct buddy_t* right; /**&lt; Figlio destro*/
++} buddy_t;
++
++buddy_t* new_buddy();
++
++#endif
+\ No newline at end of file
+
+Modified: trunk/kernel.map
+===================================================================
+--- trunk/kernel.map	2008-07-27 16:28:58 UTC (rev 15)
++++ trunk/kernel.map	2008-07-27 22:04:48 UTC (rev 16)
+@@ -9,6 +9,7 @@
+ IDT_Table           0x800             processore/idt.o
+ cpu_vendor          0xc               kernel.o
+ shell_mess          0x2               kernel.o
++kbuddy              0x4               mem/buddy.o
+ tot_mem             0x4               mem/fismem.o
+ slave_cur_mask      0x1               hardware/pic8259.o
+ current_page_dir    0x4               mem/paging.o
+@@ -138,44 +139,46 @@
+                 0x00000000001036fd                release_pages
+                 0x0000000000103a36                calcola_memoria
+                 0x0000000000103ac1                free
+- .text          0x0000000000103ae4      0x31e mem/paging.o
+-                0x0000000000103c41                create_pageTable
++ .text          0x0000000000103ae4      0x328 mem/paging.o
++                0x0000000000103c4b                create_pageTable
+                 0x0000000000103ae4                init_paging
+-                0x0000000000103d75                get_pagedir_entry
+-                0x0000000000103c26                create_pageDir
+-                0x0000000000103dbc                load_pdbr
+-                0x0000000000103d23                set_pagetable_entry_ric
+-                0x0000000000103d92                get_pagetable_entry
+-                0x0000000000103c5c                set_pagedir_entry
+-                0x0000000000103c9d                set_pagedir_entry_ric
+-                0x0000000000103ce2                set_pagetable_entry
+- *fill*         0x0000000000103e02        0x2 00
+- .text          0x0000000000103e04       0x9f mem/kheap.o
+-                0x0000000000103e04                kmalloc
+-                0x0000000000103e26                make_heap
+- *fill*         0x0000000000103ea3        0x1 00
+- .text          0x0000000000103ea4       0xcc misc/ordered_array.o
+-                0x0000000000103f22                insert_array
+-                0x0000000000103ea4                new_array
+- .text          0x0000000000103f70       0xdd system/syscall.o
+-                0x0000000000103f92                syscall_init
+-                0x0000000000103f70                sysputch
+-                0x0000000000103fc8                syscall_handler
+- *fill*         0x000000000010404d        0x3 00
+- .text          0x0000000000104050      0x11e hardware/8253.o
+-                0x000000000010413f                sleep
+-                0x0000000000104050                PIT_handler
+-                0x00000000001040d6                configure_PIT
+- *fill*         0x000000000010416e        0x2 00
+- .text          0x0000000000104170      0x4b6 shell/shell.o
+-                0x00000000001041b4                info
+-                0x0000000000104347                shell
+-                0x00000000001045e3                aalogo
+-                0x00000000001041a2                poweroff
+-                0x000000000010418f                help
+-                0x0000000000104170                logo
++                0x0000000000103d7f                get_pagedir_entry
++                0x0000000000103c30                create_pageDir
++                0x0000000000103dc6                load_pdbr
++                0x0000000000103d2d                set_pagetable_entry_ric
++                0x0000000000103d9c                get_pagetable_entry
++                0x0000000000103c66                set_pagedir_entry
++                0x0000000000103ca7                set_pagedir_entry_ric
++                0x0000000000103cec                set_pagetable_entry
++ .text          0x0000000000103e0c       0x9f mem/kheap.o
++                0x0000000000103e0c                kmalloc
++                0x0000000000103e2e                make_heap
++ *fill*         0x0000000000103eab        0x1 00
++ .text          0x0000000000103eac       0x65 mem/buddy.o
++                0x0000000000103eac                new_buddy
++ *fill*         0x0000000000103f11        0x3 00
++ .text          0x0000000000103f14       0xcc misc/ordered_array.o
++                0x0000000000103f92                insert_array
++                0x0000000000103f14                new_array
++ .text          0x0000000000103fe0       0xdd system/syscall.o
++                0x0000000000104002                syscall_init
++                0x0000000000103fe0                sysputch
++                0x0000000000104038                syscall_handler
++ *fill*         0x00000000001040bd        0x3 00
++ .text          0x00000000001040c0      0x11e hardware/8253.o
++                0x00000000001041af                sleep
++                0x00000000001040c0                PIT_handler
++                0x0000000000104146                configure_PIT
++ *fill*         0x00000000001041de        0x2 00
++ .text          0x00000000001041e0      0x4b6 shell/shell.o
++                0x0000000000104224                info
++                0x00000000001043b7                shell
++                0x0000000000104653                aalogo
++                0x0000000000104212                poweroff
++                0x00000000001041ff                help
++                0x00000000001041e0                logo
+                 0x0000000000105000                . = ALIGN (0x1000)
+- *fill*         0x0000000000104626      0x9da 00
++ *fill*         0x0000000000104696      0x96a 00
+ 
+ .rel.dyn        0x0000000000105000        0x0
+  .rel.text      0x0000000000000000        0x0 bl.img
+@@ -210,6 +213,7 @@
+  .data          0x0000000000105324        0x0 mem/paging.o
+  .data          0x0000000000105324        0x4 mem/kheap.o
+                 0x0000000000105324                address_cur
++ .data          0x0000000000105328        0x0 mem/buddy.o
+  .data          0x0000000000105328        0x0 misc/ordered_array.o
+  .data          0x0000000000105328        0x4 system/syscall.o
+                 0x0000000000105328                syscall_table
+@@ -228,13 +232,13 @@
+  .rodata        0x0000000000105730       0x8a mem/fismem.o
+  *fill*         0x00000000001057ba        0x2 00
+  .rodata        0x00000000001057bc       0x23 mem/paging.o
+- .rodata        0x00000000001057df       0x1e misc/ordered_array.o
+- *fill*         0x00000000001057fd        0x3 00
+- .rodata        0x0000000000105800      0x42f shell/shell.o
++ .rodata        0x00000000001057df       0x1b mem/buddy.o
++ .rodata        0x00000000001057fa       0x1e misc/ordered_array.o
++ .rodata        0x0000000000105818      0x42f shell/shell.o
+                 0x0000000000106000                . = ALIGN (0x1000)
+- *fill*         0x0000000000105c2f      0x3d1 00
++ *fill*         0x0000000000105c47      0x3b9 00
+ 
+-.bss            0x0000000000106000    0x33fec
++.bss            0x0000000000106000    0x33ff0
+                 0x0000000000106000                bss = .
+                 0x0000000000106000                _bss = .
+                 0x0000000000106000                __bss = .
+@@ -262,6 +266,7 @@
+  .bss           0x000000000010645c        0x0 mem/paging.o
+  .bss           0x000000000010645c        0x4 mem/kheap.o
+                 0x000000000010645c                kheap
++ .bss           0x0000000000106460        0x0 mem/buddy.o
+  .bss           0x0000000000106460        0x0 misc/ordered_array.o
+  .bss           0x0000000000106460        0x0 system/syscall.o
+  .bss           0x0000000000106460        0x8 hardware/8253.o
+@@ -297,9 +302,11 @@
+                 0x0000000000139fe4                bmp_elements
+  COMMON         0x0000000000139fe8        0x4 mem/paging.o
+                 0x0000000000139fe8                current_page_dir
+-                0x0000000000139fec                end = .
+-                0x0000000000139fec                _end = .
+-                0x0000000000139fec                __end = .
++ COMMON         0x0000000000139fec        0x4 mem/buddy.o
++                0x0000000000139fec                kbuddy
++                0x0000000000139ff0                end = .
++                0x0000000000139ff0                _end = .
++                0x0000000000139ff0                __end = .
+ LOAD bl.img
+ LOAD kernel.o
+ LOAD io/video.o
+@@ -317,6 +324,7 @@
+ LOAD mem/fismem.o
+ LOAD mem/paging.o
+ LOAD mem/kheap.o
++LOAD mem/buddy.o
+ LOAD misc/ordered_array.o
+ LOAD system/syscall.o
+ LOAD hardware/8253.o
+@@ -324,7 +332,7 @@
+ Address of section .text set to 0x100000
+ OUTPUT(kernel.bin elf32-i386)
+ 
+-.comment        0x0000000000000000      0x263
++.comment        0x0000000000000000      0x280
+  .comment       0x0000000000000000       0x1f bl.img
+  .comment       0x000000000000001f       0x1d kernel.o
+  .comment       0x000000000000003c       0x1d io/video.o
+@@ -342,10 +350,11 @@
+  .comment       0x0000000000000198       0x1d mem/fismem.o
+  .comment       0x00000000000001b5       0x1d mem/paging.o
+  .comment       0x00000000000001d2       0x1d mem/kheap.o
+- .comment       0x00000000000001ef       0x1d misc/ordered_array.o
+- .comment       0x000000000000020c       0x1d system/syscall.o
+- .comment       0x0000000000000229       0x1d hardware/8253.o
+- .comment       0x0000000000000246       0x1d shell/shell.o
++ .comment       0x00000000000001ef       0x1d mem/buddy.o
++ .comment       0x000000000000020c       0x1d misc/ordered_array.o
++ .comment       0x0000000000000229       0x1d system/syscall.o
++ .comment       0x0000000000000246       0x1d hardware/8253.o
++ .comment       0x0000000000000263       0x1d shell/shell.o
+ 
+ .note.GNU-stack
+                 0x0000000000000000        0x0
+@@ -382,6 +391,8 @@
+  .note.GNU-stack
+                 0x0000000000000000        0x0 mem/kheap.o
+  .note.GNU-stack
++                0x0000000000000000        0x0 mem/buddy.o
++ .note.GNU-stack
+                 0x0000000000000000        0x0 misc/ordered_array.o
+  .note.GNU-stack
+                 0x0000000000000000        0x0 system/syscall.o
+
+Added: trunk/mem/buddy.c
+===================================================================
+--- trunk/mem/buddy.c	2008-07-27 16:28:58 UTC (rev 15)
++++ trunk/mem/buddy.c	2008-07-27 22:04:48 UTC (rev 16)
+@@ -0,0 +1,43 @@
++/***************************************************************************
++ *            buddy.c
++ *
++ *  Sun 18 07 08 07:47:17 2007
++ *  Copyright  2008  Ivan Gualandri
++ *  Email
++ ****************************************************************************/
++
++/*
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2 of the License, or
++ *  (at your option) any later version.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
++ */
++
++#include &lt;buddy.h&gt;
++#include &lt;paging.h&gt;
++#include &lt;kheap.h&gt;
++#include &lt;stdio.h&gt;
++#include &lt;stddef.h&gt;
++
++extern unsigned int end;
++extern unsigned int address_cur;
++buddy_t* kbuddy;
++buddy_t* new_buddy(){
++    buddy_t* temp;
++    temp = (buddy_t*) kmalloc(sizeof(buddy_t));
++    printf(&quot;end: %x | address_cur: %x\n&quot;, &amp;end, address_cur);
++    temp-&gt;start_address = address_cur;
++    temp-&gt;size = 65536; //da cambiare
++    temp-&gt;left = NULL;
++    temp-&gt;right = NULL;
++    return temp;
++}
+\ No newline at end of file
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2008-07-27 16:28:58 UTC (rev 15)
++++ trunk/mem/paging.c	2008-07-27 22:04:48 UTC (rev 16)
+@@ -28,11 +28,14 @@
+ #include &lt;video.h&gt;
+ #include &lt;stddef.h&gt;
+ #include &lt;kheap.h&gt;
++#include &lt;buddy.h&gt;
+ // #define DEBUG 1
+ 
+ unsigned int *current_page_dir;
+ unsigned int *current_page_table;
+ extern heap_t *kheap;
++extern buddy_t *kbuddy;
++
+ void init_paging(){
+     int i;
+     printf(&quot;Abilito Paging: In lavorazione....&quot;);
+@@ -64,6 +67,7 @@
+     }        
+     load_pdbr((unsigned int)current_page_dir);
+     kheap = make_heap(10,10,10);
++    kbuddy = new_buddy();
+ }
+ 
+ /**
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2008-07-27 16:28:58 UTC (rev 15)
++++ trunk/shell/shell.c	2008-07-27 22:04:48 UTC (rev 16)
+@@ -163,5 +163,5 @@
+ printf(&quot;\t|    \\ ___ ___ ___ _____|     |   __|\n&quot;);
+ printf(&quot;\t|  |  |  _| -_| = |     |  |  |__   |\n&quot;);
+ printf(&quot;\t|____/|_| |___|__||_|_|_|_____|_____|\n&quot;);
+-printf(&quot;\t Rev15\n\n\n&quot;);
++printf(&quot;\t Rev16\n\n\n&quot;);
+ }
+\ No newline at end of file
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000015.html">[Dreamos-dev] r15 - in trunk: . drivers hardware include/io	include/shell io shell
+</A></li>
+	
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#16">[ date ]</a>
+              <a href="thread.html#16">[ thread ]</a>
+              <a href="subject.html#16">[ subject ]</a>
+              <a href="author.html#16">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

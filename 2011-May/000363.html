@@ -1,0 +1,203 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r360 - in trunk: . include include/mem include/tasks	mem tasks
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2011-May/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r360%20-%20in%20trunk%3A%20.%20include%20include/mem%20include/tasks%0A%09mem%20tasks&In-Reply-To=%3C20110508212802.9256948125E%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   
+   <LINK REL="Next"  HREF="000364.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r360 - in trunk: . include include/mem include/tasks	mem tasks</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r360%20-%20in%20trunk%3A%20.%20include%20include/mem%20include/tasks%0A%09mem%20tasks&In-Reply-To=%3C20110508212802.9256948125E%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r360 - in trunk: . include include/mem include/tasks	mem tasks">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun May  8 23:28:02 CEST 2011</I>
+    <P><UL>
+        
+        <LI>Next message: <A HREF="000364.html">[Dreamos-dev] r361 - in trunk: . boot include/mem tasks
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#363">[ date ]</a>
+              <a href="thread.html#363">[ thread ]</a>
+              <a href="subject.html#363">[ subject ]</a>
+              <a href="author.html#363">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2011-05-08 23:28:02 +0200 (Sun, 08 May 2011)
+New Revision: 360
+
+Added:
+   trunk/include/tasks/
+   trunk/include/tasks/task_utils.h
+   trunk/tasks/
+   trunk/tasks/task_utils.c
+Modified:
+   trunk/include/mem/paging.h
+   trunk/mem/paging.c
+Log:
+Iniziato sviluppo multitasking. 
+Preparati primi prototipi di funzione.
+
+
+Modified: trunk/include/mem/paging.h
+===================================================================
+--- trunk/include/mem/paging.h	2011-04-23 21:00:16 UTC (rev 359)
++++ trunk/include/mem/paging.h	2011-05-08 21:28:02 UTC (rev 360)
+@@ -75,9 +75,11 @@
+ 
+ unsigned int get_pagedir_entry(int);
+ unsigned int get_pagetable_entry(int,int);
++unsigned int get_phys_address(unsigned int);
+ 
+ void load_pdbr(unsigned int);
+ void map_kernel(pde_t);
+ void page_fault_handler(int);
++void free_logical_page(unsigned int);
+ 
+ #endif
+
+Added: trunk/include/tasks/task_utils.h
+===================================================================
+--- trunk/include/tasks/task_utils.h	                        (rev 0)
++++ trunk/include/tasks/task_utils.h	2011-05-08 21:28:02 UTC (rev 360)
+@@ -0,0 +1,30 @@
++/***************************************************************************
++ *            task_utils.h
++ *
++ *  Sat May  7 2011
++ *  Copyright  2011  Ivan Gualandri
++ *  Email
++ ****************************************************************************/
++
++/*
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2 of the License, or
++ *  (at your option) any later version.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++ 
++ #ifndef TASK_UT_H
++ #define TASK_UT_H
++ 
++ unsigned int map_kernel();
++ 
++ #endif
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2011-04-23 21:00:16 UTC (rev 359)
++++ trunk/mem/paging.c	2011-05-08 21:28:02 UTC (rev 360)
+@@ -96,7 +96,6 @@
+   * @return page_dir address
+   */
+ unsigned int* create_pageDir(){
+-//     Page_Dir prova;        
+     return request_pages(8, NOT_ADD_LIST);       
+ }
+ 
+@@ -286,3 +285,11 @@
+ 	}        
+     return;
+ }
++
++unsigned int get_phys_address(unsigned int address){
++	return 0;
++}
++
++void free_logical_page(unsigned int address){
++	return;
++}
+
+Added: trunk/tasks/task_utils.c
+===================================================================
+--- trunk/tasks/task_utils.c	                        (rev 0)
++++ trunk/tasks/task_utils.c	2011-05-08 21:28:02 UTC (rev 360)
+@@ -0,0 +1,43 @@
++/***************************************************************************
++ *            task_utils.c
++ *
++ *  Sat May  7 2011
++ *  Copyright  2011  Ivan Gualandri
++ *  Email
++ ****************************************************************************/
++
++/*
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2 of the License, or
++ *  (at your option) any later version.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++#include &lt;task_utils.h&gt;
++#include &lt;fismem.h&gt;
++#include &lt;paging.h&gt;
++
++/**
++   * Make a copy of the kernel into a new pagedir/pagetable
++   * @author Ivan Gualandri
++   * @version 1.0 
++   */
++unsigned int map_kernel(){
++	unsigned int *pagedir;
++	unsigned int *pagetable;
++	pagedir = create_pageDir();
++	pagetable = create_pageTable();
++	
++	//set_pagedir_entry_ric(0, (unsigned int)current_page_table, PD_PRESENT|SUPERVISOR|WRITE,0);    
++	
++	return 0;
++}
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	
+	<LI>Next message: <A HREF="000364.html">[Dreamos-dev] r361 - in trunk: . boot include/mem tasks
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#363">[ date ]</a>
+              <a href="thread.html#363">[ thread ]</a>
+              <a href="subject.html#363">[ subject ]</a>
+              <a href="author.html#363">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

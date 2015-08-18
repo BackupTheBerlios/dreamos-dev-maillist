@@ -1,0 +1,169 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r342 - in trunk: . drivers include/mem mem
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2011-January/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r342%20-%20in%20trunk%3A%20.%20drivers%20include/mem%20mem&In-Reply-To=%3C20110125221808.903A4480BFF%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000344.html">
+   
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r342 - in trunk: . drivers include/mem mem</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r342%20-%20in%20trunk%3A%20.%20drivers%20include/mem%20mem&In-Reply-To=%3C20110125221808.903A4480BFF%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r342 - in trunk: . drivers include/mem mem">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Tue Jan 25 23:18:08 CET 2011</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000344.html">[Dreamos-dev] r341 - in trunk: . boot include/mem mem
+</A></li>
+        
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#345">[ date ]</a>
+              <a href="thread.html#345">[ thread ]</a>
+              <a href="subject.html#345">[ subject ]</a>
+              <a href="author.html#345">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2011-01-25 23:18:08 +0100 (Tue, 25 Jan 2011)
+New Revision: 342
+
+Modified:
+   trunk/drivers/keyboard.c
+   trunk/include/mem/heap.h
+   trunk/kernel.c
+   trunk/mem/heap.c
+Log:
+Sistemati alcuni commenti doxygen. 
+Modifiche minori.
+
+
+Modified: trunk/drivers/keyboard.c
+===================================================================
+--- trunk/drivers/keyboard.c	2011-01-23 22:27:23 UTC (rev 341)
++++ trunk/drivers/keyboard.c	2011-01-25 22:18:08 UTC (rev 342)
+@@ -308,13 +308,26 @@
+     return c;
+ }
+ 
++/**
++  * Set Keyboard echo Shadow 
++  * @author Ivan Gualandri
++  * @version 1.0
++  * @param 1 if you want enable shadow 0 otherwise
++  * @return 1 if keyboard echo shadow enable 0 if not.
++  */
+ int  set_shadow(int value){
+ 	if(value&gt;1 || value &lt; 0) return -1;
+ 	else shadow = value;
+ 	return shadow;
+ }
+ 
+-int get_shadow(){
+-	//printf(&quot;Address shadow: %u\n&quot;, &amp;shadow);
++/**
++  * Get Keyboard Shadow informations 
++  * @author Ivan Gualandri
++  * @version 1.0
++  * @return 1 if keyboard echo shadow enable 0 if not.
++  */
++
++int get_shadow(){	
+ 	return shadow;
+ }
+
+Modified: trunk/include/mem/heap.h
+===================================================================
+--- trunk/include/mem/heap.h	2011-01-23 22:27:23 UTC (rev 341)
++++ trunk/include/mem/heap.h	2011-01-25 22:18:08 UTC (rev 342)
+@@ -49,16 +49,16 @@
+     \brief Contiene le informazioni relative alle locazioni di memoria 
+  */
+ typedef struct {
+-	unsigned int magic; /*!&lt;For header identification*/	
+-	short int is_hole; /*!&lt;1 se si tratta di un hole 0 se si tratta di un block*/
+-	int size;  /*!&lt;Total size of the block (IMPORTANT: including header and footer)*/
++	unsigned int magic; /*!&lt; For header identification*/	
++	short int is_hole; /*!&lt; 1 se si tratta di un hole 0 se si tratta di un block*/
++	int size;  /*!&lt; Total size of the block (IMPORTANT: including header and footer)*/
+ }__attribute__((packed)) header_t;
+ 
+ /*! \struct footer_t 
+     \brief Contiene altre informazioni relative alle locazioni di memoria 
+  */
+ typedef struct {
+-	unsigned int magic; /*!&lt;For footer identification */
++	unsigned int magic; /*!&lt; For footer identification */
+ 	header_t *header;/*!&lt; Pointer to the block header*/
+ } footer_t;
+ 
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2011-01-23 22:27:23 UTC (rev 341)
++++ trunk/kernel.c	2011-01-25 22:18:08 UTC (rev 342)
+@@ -107,7 +107,7 @@
+     _kprintOK();    	
+     printf(&quot;Memory (upper) amount-&gt; %d Mb \n&quot;, boot_info-&gt;mem_upper/1024);
+     printf(&quot;Memory (lower) amount-&gt; %d kb \n&quot;, boot_info-&gt;mem_lower);	
+-    /* Alloc and fill CPUID structure */
++    /** Alloc and fill CPUID structure */
+     sinfo = kmalloc(sizeof(struct cpuinfo_generic));    
+     get_cpuid (sinfo);        
+     vfs_init();
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2011-01-23 22:27:23 UTC (rev 341)
++++ trunk/mem/heap.c	2011-01-25 22:18:08 UTC (rev 342)
+@@ -43,7 +43,6 @@
+ }
+ 
+ new_heap_t *new_heap(unsigned int start, unsigned int size){
+-	/*Actually we need to use kmalloc!*/
+ 	new_heap_t* t_heap =(new_heap_t*) new_malloc(sizeof(new_heap_t));		
+ 	if(start%0x1000 == 0){		
+ 		header_t *first_hole = (header_t*)start;		
+@@ -53,7 +52,7 @@
+ 		t_heap-&gt;max_address = 0xDFFFF000; /**Da controllare max address*/					
+ 		first_hole-&gt;size = t_heap-&gt;end_address - start;		
+ 		first_hole-&gt;magic = HEAP_MAGIC;		
+-		first_hole-&gt;is_hole = 1; /*TRUE*/			
++		first_hole-&gt;is_hole = HEAP_HOLE; 
+ 		insert_array((void*) first_hole, &amp;t_heap-&gt;index);
+ 		//printf(&quot;First hole: %u size: %u&quot;, t_heap-&gt;start_address, t_heap-&gt;end_address);
+ 		//get_array(0, &amp;t_heap-&gt;index);
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000344.html">[Dreamos-dev] r341 - in trunk: . boot include/mem mem
+</A></li>
+	
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#345">[ date ]</a>
+              <a href="thread.html#345">[ thread ]</a>
+              <a href="subject.html#345">[ subject ]</a>
+              <a href="author.html#345">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

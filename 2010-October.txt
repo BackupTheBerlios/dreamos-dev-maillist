@@ -1,0 +1,1724 @@
+From finarfin at mail.berlios.de  Sun Oct  3 23:06:02 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun,  3 Oct 2010 23:06:02 +0200
+Subject: [Dreamos-dev] r298 - in trunk: . boot include/mem misc
+Message-ID: <20101003210602.3582D480F75@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-10-03 23:06:02 +0200 (Sun, 03 Oct 2010)
+New Revision: 298
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/include/mem/heap.h
+   trunk/misc/ordered_array.c
+Log:
+Aggiunto elemento in heap_t
+Corretto cast in create new_array
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/mem/heap.h
+===================================================================
+--- trunk/include/mem/heap.h	2010-09-24 13:37:30 UTC (rev 297)
++++ trunk/include/mem/heap.h	2010-10-03 21:06:02 UTC (rev 298)
+@@ -38,6 +38,7 @@
+ 	ordered_array_t index; /*!< Indice degli holes */
+ 	unsigned int start_address; /*!< Indirizzo di inizio dell'heap */
+ 	unsigned int end_address; /*!< Indirizzo di fine dell'heap */
++	unsigned int max_address; /*!< Indirizzo massimo dove possiamo espandere l'heap */
+ }new_heap_t;
+ 
+ /*! \struct header_t 
+
+Modified: trunk/misc/ordered_array.c
+===================================================================
+--- trunk/misc/ordered_array.c	2010-09-24 13:37:30 UTC (rev 297)
++++ trunk/misc/ordered_array.c	2010-10-03 21:06:02 UTC (rev 298)
+@@ -50,10 +50,10 @@
+     ordered_array_t tmp_array;
+     tmp_array.size_max = size;
+     tmp_array.size = 0;
+-    tmp_array.array = (void_t)start;
++    tmp_array.array = (void_t*)start;
+     tmp_array.less_than = predicate;    
+     /* Questa parte e' memsettbile dopo che sara' fatta */
+-    //printf("SizeMax: %d\n", tmp_array.size_max);
++    printf("SizeMax: %d\n", tmp_array.size_max);
+     //memset(tmp_array.array, 0, tmp_array.size_max);
+     return tmp_array;
+ }
+
+
+
+From finarfin at mail.berlios.de  Mon Oct  4 22:54:36 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Mon,  4 Oct 2010 22:54:36 +0200
+Subject: [Dreamos-dev] r299 - in trunk: . boot include/misc mem misc
+Message-ID: <20101004205436.DD8DB4810E7@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-10-04 22:54:36 +0200 (Mon, 04 Oct 2010)
+New Revision: 299
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/include/misc/ordered_array.h
+   trunk/mem/heap.c
+   trunk/misc/ordered_array.c
+Log:
+Corrette definizioni di tipo in new_array, e in ordered_array_t
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/misc/ordered_array.h
+===================================================================
+--- trunk/include/misc/ordered_array.h	2010-10-03 21:06:02 UTC (rev 298)
++++ trunk/include/misc/ordered_array.h	2010-10-04 20:54:36 UTC (rev 299)
+@@ -35,13 +35,13 @@
+      \brief Struttura dati che un vettore ordinato.
+  */
+ typedef struct {
+-    void_t *array; /**< Il vettore che sara' ordinato*/
++    type_t* array; /**< Il vettore che sara' ordinato*/
+     unsigned int size; /**< La dimensione attuale*/
+     unsigned int size_max; /**< La dimensione massima*/
+     lessthan_predicate_t less_than;
+ }ordered_array_t;
+ 
+-ordered_array_t new_array(unsigned int, unsigned int, lessthan_predicate_t);
++ordered_array_t new_array(void*, unsigned int, lessthan_predicate_t);
+ void insert_array(void_t, ordered_array_t*);
+ void destroy_array(ordered_array_t*);
+ type_t get_array(int, ordered_array_t*);
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-10-03 21:06:02 UTC (rev 298)
++++ trunk/mem/heap.c	2010-10-04 20:54:36 UTC (rev 299)
+@@ -47,7 +47,7 @@
+ 		printf("all right\n");
+ 		t_heap->start_address = start;
+ 		t_heap->end_address = start + size;	
+-		t_heap->index = new_array(start,size, &header_t_less_than);
++		t_heap->index = new_array((void*)start,size, &header_t_less_than);
+ 		printf("Start_address: %u\n", n_heap->start_address);		
+ 		printf("End Address: %u\n", n_heap->end_address);
+ 		return t_heap;		
+
+Modified: trunk/misc/ordered_array.c
+===================================================================
+--- trunk/misc/ordered_array.c	2010-10-03 21:06:02 UTC (rev 298)
++++ trunk/misc/ordered_array.c	2010-10-04 20:54:36 UTC (rev 299)
+@@ -43,11 +43,12 @@
+   * @param size grandezza massima dell'array
+   * @return Pointer to a new ordered_array_t
+   */
+-ordered_array_t new_array(unsigned int start, unsigned int size, lessthan_predicate_t predicate){
++ordered_array_t new_array(void* start, unsigned int size, lessthan_predicate_t predicate){
+     int i;
+     i=0;
+     printf("Make array code goes here...\n");        
+     ordered_array_t tmp_array;
++    tmp_array.array = (type_t*)start;
+     tmp_array.size_max = size;
+     tmp_array.size = 0;
+     tmp_array.array = (void_t*)start;
+
+
+
+From finarfin at mail.berlios.de  Sat Oct  9 00:01:29 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sat,  9 Oct 2010 00:01:29 +0200
+Subject: [Dreamos-dev] r300 - in trunk: . boot mem misc
+Message-ID: <20101008220129.BDB57480B55@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-10-09 00:01:29 +0200 (Sat, 09 Oct 2010)
+New Revision: 300
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/kernel.c
+   trunk/mem/heap.c
+   trunk/misc/ordered_array.c
+Log:
+Spostata chiamata a init_newmem, subito dopo init_paging.
+Modificata la stampa della dimensione della memoria, la upper ora viene 
+presentata in Mb anziche in kb.
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2010-10-04 20:54:36 UTC (rev 299)
++++ trunk/kernel.c	2010-10-08 22:01:29 UTC (rev 300)
+@@ -97,9 +97,10 @@
+     init_mem();       
+     asm("sti");
+     _kprintOK();   
+-    init_paging();    
++    init_paging();
++    init_newmem();     
+     _kprintOK();    	
+-    printf("Memory (upper) amount-> %d kb \n", boot_info->mem_upper);
++    printf("Memory (upper) amount-> %d Mb \n", boot_info->mem_upper/1024);
+     printf("Memory (lower) amount-> %d kb \n", boot_info->mem_lower);
+ 
+     /* Alloc and fill CPUID structure */
+@@ -107,14 +108,13 @@
+     get_cpuid (sinfo);
+         
+     vfs_init();
+-    initfs_init();
+-      init_newmem(); 
++    initfs_init();      
+ 	if(boot_info->mods_count > 0) printf("Found n. %d Modules\n", boot_info->mods_count);		
+ 	//printf("Address of module: 0x%x - 0x%x\n", *((unsigned int*)boot_info->mods_addr),module_end-(unsigned int) module_start);
+     printf("\n");
+     printf("----\n");
+-    /*set_shadow(DISABLED);
+-    printf("The shadow: %d\n", get_shadow());*/
++    //set_shadow(DISABLED);
++    /*printf("The shadow: %d\n", get_shadow());*/
+     printf(LNG_SHELL);    
+     _kprintOK();
+ 		printf("[+] Address: 0x%x\n", &end);		   	        
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-10-04 20:54:36 UTC (rev 299)
++++ trunk/mem/heap.c	2010-10-08 22:01:29 UTC (rev 300)
+@@ -29,11 +29,11 @@
+ extern unsigned int end;
+ extern unsigned int address_cur;
+ new_heap_t *n_heap;
+-unsigned int placement_address=(unsigned int) &end;
++//unsigned int placement_address=(unsigned int) &end;
+ 
+ 
+ void init_newmem(){
+-	placement_address = address_cur;
++	//placement_address = address_cur;
+ 	n_heap = (new_heap_t*)new_heap(HEAP_START_ADDRESS, HEAP_INDEX_SIZE);
+ }
+ 
+@@ -50,7 +50,7 @@
+ 		t_heap->index = new_array((void*)start,size, &header_t_less_than);
+ 		printf("Start_address: %u\n", n_heap->start_address);		
+ 		printf("End Address: %u\n", n_heap->end_address);
+-		return t_heap;		
++		return t_heap;
+ 	}
+ 	else printf("ERROR\n");
+ 	return 0;
+
+Modified: trunk/misc/ordered_array.c
+===================================================================
+--- trunk/misc/ordered_array.c	2010-10-04 20:54:36 UTC (rev 299)
++++ trunk/misc/ordered_array.c	2010-10-08 22:01:29 UTC (rev 300)
+@@ -44,14 +44,13 @@
+   * @return Pointer to a new ordered_array_t
+   */
+ ordered_array_t new_array(void* start, unsigned int size, lessthan_predicate_t predicate){
+-    int i;
+-    i=0;
+-    printf("Make array code goes here...\n");        
++    //int i;
++    //i=0;
++    //printf("Make array code goes here...\n");        
+     ordered_array_t tmp_array;
+     tmp_array.array = (type_t*)start;
+     tmp_array.size_max = size;
+-    tmp_array.size = 0;
+-    tmp_array.array = (void_t*)start;
++    tmp_array.size = 0;	    
+     tmp_array.less_than = predicate;    
+     /* Questa parte e' memsettbile dopo che sara' fatta */
+     printf("SizeMax: %d\n", tmp_array.size_max);
+
+
+
+From finarfin at mail.berlios.de  Mon Oct 11 19:53:11 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Mon, 11 Oct 2010 19:53:11 +0200
+Subject: [Dreamos-dev] r301 - in trunk: . boot drivers include/drivers mem
+	misc
+Message-ID: <20101011175311.34AB7480F6C@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-10-11 19:53:10 +0200 (Mon, 11 Oct 2010)
+New Revision: 301
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/drivers/keyboard.c
+   trunk/include/drivers/keyboard.h
+   trunk/kernel.c
+   trunk/mem/fismem.c
+   trunk/mem/heap.c
+   trunk/mem/paging.c
+   trunk/misc/ordered_array.c
+Log:
+Shadow e' stata dichiarata come static
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/drivers/keyboard.c
+===================================================================
+--- trunk/drivers/keyboard.c	2010-10-08 22:01:29 UTC (rev 300)
++++ trunk/drivers/keyboard.c	2010-10-11 17:53:10 UTC (rev 301)
+@@ -80,7 +80,7 @@
+ 
+ extern unsigned int last_tab;
+ 
+-int shadow=0;
++static int shadow=0;
+ 
+ /*
+  * The keyboard handler
+@@ -315,5 +315,6 @@
+ }
+ 
+ int get_shadow(){
++	//printf("Address shadow: %u\n", &shadow);
+ 	return shadow;
+ }
+
+Modified: trunk/include/drivers/keyboard.h
+===================================================================
+--- trunk/include/drivers/keyboard.h	2010-10-08 22:01:29 UTC (rev 300)
++++ trunk/include/drivers/keyboard.h	2010-10-11 17:53:10 UTC (rev 301)
+@@ -61,7 +61,6 @@
+ 
+ /* Procedures */
+ 
+-extern int shadow;
+ 
+ void keyboard_isr (void);
+ void keyboard_enable (void);
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2010-10-08 22:01:29 UTC (rev 300)
++++ trunk/kernel.c	2010-10-11 17:53:10 UTC (rev 301)
+@@ -91,8 +91,7 @@
+     init_IRQ();   
+     _kprintOK();            	
+     printf(LNG_PIT8253);
+-    configure_PIT ();   
+-    //_kprintOK();   
++    configure_PIT ();       
+     set_memorysize((boot_info->mem_upper+boot_info->mem_lower)*1024);
+     init_mem();       
+     asm("sti");
+@@ -114,7 +113,7 @@
+     printf("\n");
+     printf("----\n");
+     //set_shadow(DISABLED);
+-    /*printf("The shadow: %d\n", get_shadow());*/
++    //printf("The shadow: %d\n", get_shadow());
+     printf(LNG_SHELL);    
+     _kprintOK();
+ 		printf("[+] Address: 0x%x\n", &end);		   	        
+
+Modified: trunk/mem/fismem.c
+===================================================================
+--- trunk/mem/fismem.c	2010-10-08 22:01:29 UTC (rev 300)
++++ trunk/mem/fismem.c	2010-10-11 17:53:10 UTC (rev 301)
+@@ -118,7 +118,8 @@
+      add_memarea_element(indirizzo, n_pages);
+     #ifdef DEBUG
+     printf("Next_free: %d\n", mem_info->next_free);
+-    #endif
++    printf("%u\n", indirizzo);
++    #endif    
+     return (void*) indirizzo;
+ }
+ 
+@@ -210,7 +211,7 @@
+ 
+ /**
+   * Calcola la quantita' di memoria
+-  * @author Ivan Gualandri and Osiris
++  * @author Ivan Gualandri
+   * @version 1.0
+   * @return size_t Dimensione della memoria.
+   * Questa funzione andra'completamente modificata appena si aggiungera il boot con grub.
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-10-08 22:01:29 UTC (rev 300)
++++ trunk/mem/heap.c	2010-10-11 17:53:10 UTC (rev 301)
+@@ -33,7 +33,7 @@
+ 
+ 
+ void init_newmem(){
+-	//placement_address = address_cur;
++	//placement_address = address_cur;	
+ 	n_heap = (new_heap_t*)new_heap(HEAP_START_ADDRESS, HEAP_INDEX_SIZE);
+ }
+ 
+@@ -44,7 +44,7 @@
+ new_heap_t *new_heap(unsigned int start, unsigned int size){
+ 	new_heap_t* t_heap =(new_heap_t*) new_malloc(sizeof(new_heap_t));
+ 	if(start%0x1000 == 0){
+-		printf("all right\n");
++		//printf("all right\n");
+ 		t_heap->start_address = start;
+ 		t_heap->end_address = start + size;	
+ 		t_heap->index = new_array((void*)start,size, &header_t_less_than);
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2010-10-08 22:01:29 UTC (rev 300)
++++ trunk/mem/paging.c	2010-10-11 17:53:10 UTC (rev 301)
+@@ -238,7 +238,7 @@
+     unsigned int *new_pt;
+ 	void *new_p;
+     //printf("Test\n");
+-        /* Ricava l'indirizzo che ha causato l'eccezione */
++    /* Ricava l'indirizzo che ha causato l'eccezione */
+     asm ("movl %%cr2, %0":"=r" (fault_addr));
+     //if(fault_addr > 0) printf("Ok ");
+ 	//printf("Fault addr: %u\n", fault_addr); 
+@@ -257,6 +257,7 @@
+     if (pd_entry == 0) {
+ 	    int i=0;
+ 	    new_pt = create_pageTable();
++	    if(new_pt==4468736) printf("Eccolo qua lo stronzo\n");
+ 	    while(i<PT_LIMIT){
+ 	      new_pt[i] = 0x00000000;
+ 	      i++;
+@@ -273,7 +274,9 @@
+ 	printf ("Entry corrente della pagetable: %d\n", pt_entry);
+ 	#endif
+ 	if (pt_entry == 0) {
++		//Si configura una entry della pagetable.
+ 	    new_p = request_pages (1, ADD_LIST);
++	    if(new_p==4468736) printf("Eccolo qua lo stronzo\n");
+ 	    set_pagetable_entry_ric (pdir, ptable, (unsigned int)new_p, PD_PRESENT|SUPERVISOR|WRITE, 0);
+ 	    #ifdef DEBUG
+ 	    printf ("Nuova entry dopo la mappatura: %d\n", get_pagetable_entry (pdir, ptable));
+
+Modified: trunk/misc/ordered_array.c
+===================================================================
+--- trunk/misc/ordered_array.c	2010-10-08 22:01:29 UTC (rev 300)
++++ trunk/misc/ordered_array.c	2010-10-11 17:53:10 UTC (rev 301)
+@@ -44,16 +44,21 @@
+   * @return Pointer to a new ordered_array_t
+   */
+ ordered_array_t new_array(void* start, unsigned int size, lessthan_predicate_t predicate){
+-    //int i;
+-    //i=0;
++    int i;
+     //printf("Make array code goes here...\n");        
+     ordered_array_t tmp_array;
+     tmp_array.array = (type_t*)start;
++    //printf("Address: %u\n", &tmp_array);
+     tmp_array.size_max = size;
+     tmp_array.size = 0;	    
+     tmp_array.less_than = predicate;    
+     /* Questa parte e' memsettbile dopo che sara' fatta */
+     printf("SizeMax: %d\n", tmp_array.size_max);
++    i=0;    
++    while(i < tmp_array.size_max){
++		tmp_array.array[i] = 0x0;
++		i++;
++	}
+     //memset(tmp_array.array, 0, tmp_array.size_max);
+     return tmp_array;
+ }
+
+
+
+From finarfin at mail.berlios.de  Tue Oct 12 22:43:40 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Tue, 12 Oct 2010 22:43:40 +0200
+Subject: [Dreamos-dev] r302 - in trunk: . boot mem
+Message-ID: <20101012204341.059D0481142@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-10-12 22:43:40 +0200 (Tue, 12 Oct 2010)
+New Revision: 302
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/mem/heap.c
+Log:
+Aggiunto primo hole in create_heap
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-10-11 17:53:10 UTC (rev 301)
++++ trunk/mem/heap.c	2010-10-12 20:43:40 UTC (rev 302)
+@@ -42,14 +42,17 @@
+ }
+ 
+ new_heap_t *new_heap(unsigned int start, unsigned int size){
+-	new_heap_t* t_heap =(new_heap_t*) new_malloc(sizeof(new_heap_t));
+-	if(start%0x1000 == 0){
+-		//printf("all right\n");
++	new_heap_t* t_heap =(new_heap_t*) new_malloc(sizeof(new_heap_t));	
++	if(start%0x1000 == 0){		
++		header_t *first_hole = (header_t*)start;
+ 		t_heap->start_address = start;
+ 		t_heap->end_address = start + size;	
+ 		t_heap->index = new_array((void*)start,size, &header_t_less_than);
+-		printf("Start_address: %u\n", n_heap->start_address);		
+-		printf("End Address: %u\n", n_heap->end_address);
++		printf("Start_address: %u End Address: %u\n", n_heap->start_address, n_heap->end_address);		
++		printf("Making first Hole\n");		
++		first_hole->size = t_heap->end_address - start;
++		first_hole->magic = HEAP_MAGIC;
++		first_hole->is_hole = 1; /*TRUE*/
+ 		return t_heap;
+ 	}
+ 	else printf("ERROR\n");
+
+
+
+From finarfin at mail.berlios.de  Sat Oct 16 22:41:44 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sat, 16 Oct 2010 22:41:44 +0200
+Subject: [Dreamos-dev] r303 - in trunk: . boot hardware include/mem mem misc
+	shell
+Message-ID: <20101016204144.A2F5648114D@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-10-16 22:41:44 +0200 (Sat, 16 Oct 2010)
+New Revision: 303
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/hardware/cpuid.c
+   trunk/include/mem/heap.h
+   trunk/kernel.c
+   trunk/mem/heap.c
+   trunk/misc/ordered_array.c
+   trunk/shell/testing.c
+Log:
+La new_malloc e' buggata. Va corretta. 
+Aggiunti commenti. 
+Eliminata chiamata a new_heap nel comando try_newheap di tester.
+
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/hardware/cpuid.c
+===================================================================
+--- trunk/hardware/cpuid.c	2010-10-12 20:43:40 UTC (rev 302)
++++ trunk/hardware/cpuid.c	2010-10-16 20:41:44 UTC (rev 303)
+@@ -39,7 +39,7 @@
+   cpuid_write_vendor (sh_info, ereg);
+ 
+   ereg->eax = 1;
+-  ereg->ebx = ereg->ecx = ereg->edx = 0;
++  ereg->ebx = ereg->ecx = ereg->edx = 0;    
+   cpuid_write_proctype (sh_info, ereg);
+ 
+   free (ereg);
+@@ -70,8 +70,8 @@
+   cpu_vendor[9] = (char)((regs->ecx & 0x0000FF00)>>8);
+   cpu_vendor[10] = (char)((regs->ecx & 0x00FF0000)>>16);
+   cpu_vendor[11] = (char)((regs->ecx & 0xFF000000)>>24);
+-  cpu_vendor[12] = '\0';
+-  s->cpu_vendor = cpu_vendor;
++  cpu_vendor[12] = '\0';  
++  s->cpu_vendor = cpu_vendor;  
+ }
+ 
+ /*
+@@ -90,6 +90,7 @@
+   call_cpuid (regs);
+ 
+   type = cpuid_get_byte (regs->eax, 0xB, 0x3);
++
+   switch (type)
+   {
+     case 0:
+@@ -108,7 +109,7 @@
+     s->cpu_type = "(Intel reserved bit)";
+     break;
+   }
+-
++    
+   familyID = cpuid_get_byte(regs->eax, 0x7, 0xE);
+   s->cpu_family = familyID;
+   if (familyID == 0x0F)
+@@ -120,11 +121,10 @@
+     ext_model = cpuid_get_byte (regs->eax, 0xF, 0xE);
+     s->cpu_model += (ext_model<<4);
+   }
++  s->apic_id = cpuid_get_byte (regs->ebx, 0x17, 0xFF);  
+ 
+-  s->apic_id = cpuid_get_byte (regs->ebx, 0x17, 0xFF);
+   cpuid_feature_ecx (s, regs->ecx);
+   cpuid_feature_edx (s, regs->edx);
+-
+   /* Get brand string to identify the processor */
+   if (familyID >= 0x0F && model >= 0x03)
+     s->brand_string = cpuid_brand_string (regs);
+
+Modified: trunk/include/mem/heap.h
+===================================================================
+--- trunk/include/mem/heap.h	2010-10-12 20:43:40 UTC (rev 302)
++++ trunk/include/mem/heap.h	2010-10-16 20:41:44 UTC (rev 303)
+@@ -61,7 +61,7 @@
+ 
+ new_heap_t *new_heap(unsigned int, unsigned int);
+ 
+-void *new_alloc(unsigned int, unsigned short int, new_heap_t);
++void *new_alloc(unsigned int, unsigned short int, new_heap_t*);
+ void new_free();
+ void init_newmem();
+ 
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2010-10-12 20:43:40 UTC (rev 302)
++++ trunk/kernel.c	2010-10-16 20:41:44 UTC (rev 303)
+@@ -55,6 +55,7 @@
+ multiboot_info_t *boot_informations;
+ char *module_start;
+ unsigned int module_end;
++extern new_heap_t* n_heap;
+ asmlinkage void _start(struct multiboot_info *boot_info)
+ {
+     boot_informations = boot_info;    
+@@ -100,16 +101,13 @@
+     init_newmem();     
+     _kprintOK();    	
+     printf("Memory (upper) amount-> %d Mb \n", boot_info->mem_upper/1024);
+-    printf("Memory (lower) amount-> %d kb \n", boot_info->mem_lower);
+-
++    printf("Memory (lower) amount-> %d kb \n", boot_info->mem_lower);	
+     /* Alloc and fill CPUID structure */
+-    sinfo = kmalloc(sizeof(struct cpuinfo_generic));
+-    get_cpuid (sinfo);
+-        
++    sinfo = kmalloc(sizeof(struct cpuinfo_generic));    
++    get_cpuid (sinfo);        
+     vfs_init();
+     initfs_init();      
+-	if(boot_info->mods_count > 0) printf("Found n. %d Modules\n", boot_info->mods_count);		
+-	//printf("Address of module: 0x%x - 0x%x\n", *((unsigned int*)boot_info->mods_addr),module_end-(unsigned int) module_start);
++	if(boot_info->mods_count > 0) printf("Found n. %d Modules\n", boot_info->mods_count);			
+     printf("\n");
+     printf("----\n");
+     //set_shadow(DISABLED);
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-10-12 20:43:40 UTC (rev 302)
++++ trunk/mem/heap.c	2010-10-16 20:41:44 UTC (rev 303)
+@@ -29,12 +29,11 @@
+ extern unsigned int end;
+ extern unsigned int address_cur;
+ new_heap_t *n_heap;
+-//unsigned int placement_address=(unsigned int) &end;
+ 
+ 
+ void init_newmem(){
+-	//placement_address = address_cur;	
+ 	n_heap = (new_heap_t*)new_heap(HEAP_START_ADDRESS, HEAP_INDEX_SIZE);
++	//printf("Start_address: %u End Address: %u\n", n_heap->start_address, n_heap->end_address);		
+ }
+ 
+ static short int header_t_less_than(void *a,void *b){
+@@ -42,17 +41,17 @@
+ }
+ 
+ new_heap_t *new_heap(unsigned int start, unsigned int size){
+-	new_heap_t* t_heap =(new_heap_t*) new_malloc(sizeof(new_heap_t));	
++	new_heap_t* t_heap =(new_heap_t*) kmalloc(sizeof(new_heap_t));	
+ 	if(start%0x1000 == 0){		
+-		header_t *first_hole = (header_t*)start;
++		header_t *first_hole = (header_t*)start;		
++		t_heap->index = new_array((void*)start,size, &header_t_less_than);
+ 		t_heap->start_address = start;
+-		t_heap->end_address = start + size;	
+-		t_heap->index = new_array((void*)start,size, &header_t_less_than);
+-		printf("Start_address: %u End Address: %u\n", n_heap->start_address, n_heap->end_address);		
+-		printf("Making first Hole\n");		
++		t_heap->end_address = start + size;			
++		//printf("Making first Hole\n");	
++		//This should be inserted into the ordered array.	
+ 		first_hole->size = t_heap->end_address - start;
+ 		first_hole->magic = HEAP_MAGIC;
+-		first_hole->is_hole = 1; /*TRUE*/
++		first_hole->is_hole = 1; /*TRUE*/			
+ 		return t_heap;
+ 	}
+ 	else printf("ERROR\n");
+@@ -61,6 +60,7 @@
+ 
+ unsigned int new_malloc(unsigned int size){
+ 	if(n_heap==0) {
++		//I have no heap defined, i continue to use address_cur.
+ 		unsigned int tmp;
+ 		printf("No heap defined starting from: %d and %x...\n", &end, address_cur);
+ 		tmp = address_cur; 
+@@ -69,9 +69,16 @@
+ 		return tmp;
+ 	}
+ 	else {
++		//If i have a heap, then i have vm management enabled, and i can call alloc...
++		void* new_address = new_alloc(size, 1, n_heap);
+ 		printf("Heap defined\n");
+ 		printf("Start Address: %u End Address: %u\n", n_heap->start_address, n_heap->end_address);
++		if(n_heap->start_address==0) printf("erroso\n");
+ 		return 0;
+ 	}
+ 	return 0;
+ }
++
++void *new_alloc(unsigned int size, unsigned short int p_aligned, new_heap_t *t_heap){
++	printf("Step by step\n");
++}
+
+Modified: trunk/misc/ordered_array.c
+===================================================================
+--- trunk/misc/ordered_array.c	2010-10-12 20:43:40 UTC (rev 302)
++++ trunk/misc/ordered_array.c	2010-10-16 20:41:44 UTC (rev 303)
+@@ -55,11 +55,11 @@
+     /* Questa parte e' memsettbile dopo che sara' fatta */
+     printf("SizeMax: %d\n", tmp_array.size_max);
+     i=0;    
+-    while(i < tmp_array.size_max){
++    /*while(i < tmp_array.size_max){
+ 		tmp_array.array[i] = 0x0;
+ 		i++;
+-	}
+-    //memset(tmp_array.array, 0, tmp_array.size_max);
++	}*/
++    memset(tmp_array.array, 0, tmp_array.size_max);
+     return tmp_array;
+ }
+ 
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-10-12 20:43:40 UTC (rev 302)
++++ trunk/shell/testing.c	2010-10-16 20:41:44 UTC (rev 303)
+@@ -100,11 +100,11 @@
+ }
+ 
+ void try_newheap(){
+-	printf("Testing the new heap (in development)\n");
+-	printf("First step: testing a new heap...\n");
+-	new_heap(HEAP_START_ADDRESS, HEAP_START_SIZE);
++	//printf("Testing the new heap (in development)\n");
++	//printf("First step: testing a new heap...\n");
++	//new_heap(HEAP_START_ADDRESS, HEAP_START_SIZE);
+ 	printf("Second step: trying new_malloc...\n");
+-	new_malloc(sizeof(new_heap_t));
++	new_malloc(sizeof(new_heap_t));	
+ 	printf("DONE\n");
+ }
+ 
+
+
+
+From finarfin at mail.berlios.de  Sun Oct 17 16:21:18 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun, 17 Oct 2010 16:21:18 +0200
+Subject: [Dreamos-dev] r304 - in trunk: . boot include/mem mem misc
+Message-ID: <20101017142118.4137F481067@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-10-17 16:21:18 +0200 (Sun, 17 Oct 2010)
+New Revision: 304
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/include/mem/kheap.h
+   trunk/mem/heap.c
+   trunk/mem/kheap.c
+   trunk/mem/paging.c
+   trunk/misc/ordered_array.c
+Log:
+Corretta make_heap in kheap.c 
+Attualmente bisogna utilizzare la kmalloc nell'allocazione del nuovo 
+heap. 
+Aggiunti commenti stile doxygen.
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/mem/kheap.h
+===================================================================
+--- trunk/include/mem/kheap.h	2010-10-16 20:41:44 UTC (rev 303)
++++ trunk/include/mem/kheap.h	2010-10-17 14:21:18 UTC (rev 304)
+@@ -26,7 +26,6 @@
+ #define KHEAP_H
+ 
+ #include <ordered_array.h>
+-extern unsigned int address_cur;
+ 
+ /*!  \struct heap_node_t
+      \brief Struttura dati che mantiene le informazioni su locazioni occupate e libere di memoria
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-10-16 20:41:44 UTC (rev 303)
++++ trunk/mem/heap.c	2010-10-17 14:21:18 UTC (rev 304)
+@@ -32,6 +32,7 @@
+ 
+ 
+ void init_newmem(){
++	n_heap =0;
+ 	n_heap = (new_heap_t*)new_heap(HEAP_START_ADDRESS, HEAP_INDEX_SIZE);
+ 	//printf("Start_address: %u End Address: %u\n", n_heap->start_address, n_heap->end_address);		
+ }
+@@ -41,7 +42,9 @@
+ }
+ 
+ new_heap_t *new_heap(unsigned int start, unsigned int size){
++	/*Actually we need to use kmalloc!*/
+ 	new_heap_t* t_heap =(new_heap_t*) kmalloc(sizeof(new_heap_t));	
++	printf("Kmalloc: %x\n", t_heap);
+ 	if(start%0x1000 == 0){		
+ 		header_t *first_hole = (header_t*)start;		
+ 		t_heap->index = new_array((void*)start,size, &header_t_less_than);
+@@ -62,18 +65,18 @@
+ 	if(n_heap==0) {
+ 		//I have no heap defined, i continue to use address_cur.
+ 		unsigned int tmp;
+-		printf("No heap defined starting from: %d and %x...\n", &end, address_cur);
++		printf("No heap defined starting %x...\n", address_cur);
+ 		tmp = address_cur; 
+-		address_cur = address_cur+size;
+-		printf("New address: %x\n", tmp);
++		address_cur += size;
++		printf("New address: %x\n", address_cur);
+ 		return tmp;
+ 	}
+ 	else {
+ 		//If i have a heap, then i have vm management enabled, and i can call alloc...
+-		void* new_address = new_alloc(size, 1, n_heap);
++		void* new_address = new_alloc(size, 1, n_heap);		
+ 		printf("Heap defined\n");
+ 		printf("Start Address: %u End Address: %u\n", n_heap->start_address, n_heap->end_address);
+-		if(n_heap->start_address==0) printf("erroso\n");
++		printf("See address_cur value: %x\n", address_cur);
+ 		return 0;
+ 	}
+ 	return 0;
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2010-10-16 20:41:44 UTC (rev 303)
++++ trunk/mem/kheap.c	2010-10-17 14:21:18 UTC (rev 304)
+@@ -43,7 +43,7 @@
+    if(kheap!=0) {
+      if (size>0) return (void *) alloc(size, kheap);
+    }
+-   else {            
++   else {   	 
+      temp = address_cur;
+      address_cur+=size;
+    }
+@@ -86,17 +86,18 @@
+ 
+     new_heap = (heap_t*)KHEAP_LIST_ADDRESS;
+     node_address = KHEAP_LIST_ADDRESS + sizeof(heap_t);        
+-//     new_heap = (heap_t*)kmalloc(sizeof(heap_t));
+-//     first_node = (heap_node_t*)alloc_node();
++	//new_heap = (heap_t*)kmalloc(sizeof(heap_t));
++	//first_node = (heap_node_t*)alloc_node();
+     first_node = (heap_node_t*)node_address;    
+     node_address = node_address + sizeof(heap_node_t);    
+-    first_node->start_address = (unsigned int)&end;
+-    //printf("Test\n");
++    //first_node->start_address = (unsigned int)&end;
++    first_node->start_address = (unsigned int)address_cur;
+     first_node->size = size;
+     first_node->next = NULL;
+ 
+     new_heap->free_nodes = NULL;
+-    new_heap->max_size = tot_mem-(unsigned int) &end;
++    //new_heap->max_size = tot_mem-(unsigned int) &end;
++    new_heap->max_size = tot_mem-(unsigned int) address_cur;
+     new_heap->free_list = first_node;
+     new_heap->used_list = NULL;
+     new_heap->free_nodes = NULL;    
+@@ -184,7 +185,7 @@
+    #ifdef DEBUG
+    printf("Prev_node: %d \n", prev_node->start_address);
+    printf("New Address: %d ", new_node->start_address);    
+-   #endif   
++   #endif         
+    return (void *)new_node->start_address;
+ }
+ 
+@@ -298,7 +299,7 @@
+ {
+    int count=0;   
+    while (list) {
+-     printf ("%d) Node_address: %d, Current->start_address: %d size: %d\n", count++, list,list->start_address, list->size);     
++     printf ("%u) Node_address: %u, Current->start_address: %u size: %u\n", count++, list,list->start_address, list->size);     
+      list = (heap_node_t*)list->next;
+    }
+    printf ("\n");
+@@ -316,3 +317,4 @@
+     toadd->next = kheap->free_nodes;
+     kheap->free_nodes = toadd;        
+ }
++
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2010-10-16 20:41:44 UTC (rev 303)
++++ trunk/mem/paging.c	2010-10-17 14:21:18 UTC (rev 304)
+@@ -276,7 +276,6 @@
+ 	if (pt_entry == 0) {
+ 		//Si configura una entry della pagetable.
+ 	    new_p = request_pages (1, ADD_LIST);
+-	    if(new_p==4468736) printf("Eccolo qua lo stronzo\n");
+ 	    set_pagetable_entry_ric (pdir, ptable, (unsigned int)new_p, PD_PRESENT|SUPERVISOR|WRITE, 0);
+ 	    #ifdef DEBUG
+ 	    printf ("Nuova entry dopo la mappatura: %d\n", get_pagetable_entry (pdir, ptable));
+
+Modified: trunk/misc/ordered_array.c
+===================================================================
+--- trunk/misc/ordered_array.c	2010-10-16 20:41:44 UTC (rev 303)
++++ trunk/misc/ordered_array.c	2010-10-17 14:21:18 UTC (rev 304)
+@@ -36,33 +36,34 @@
+ }
+ 
+ /**
+-  * Crea un nuovo ordered_array
++  * Create a new  ordered_array
+   * @author Ivan Gualandri
+   * @version 1.0
+-  * @param start Indirizzo di inizio del nostro array 
+-  * @param size grandezza massima dell'array
++  * @param start Start address of our new array 
++  * @param size Max size of array
+   * @return Pointer to a new ordered_array_t
+   */
+ ordered_array_t new_array(void* start, unsigned int size, lessthan_predicate_t predicate){
+-    int i;
+-    //printf("Make array code goes here...\n");        
+     ordered_array_t tmp_array;
+-    tmp_array.array = (type_t*)start;
+-    //printf("Address: %u\n", &tmp_array);
++    tmp_array.array = (type_t*)start;    
+     tmp_array.size_max = size;
+     tmp_array.size = 0;	    
+     tmp_array.less_than = predicate;    
+     /* Questa parte e' memsettbile dopo che sara' fatta */
+     printf("SizeMax: %d\n", tmp_array.size_max);
+-    i=0;    
+-    /*while(i < tmp_array.size_max){
+-		tmp_array.array[i] = 0x0;
+-		i++;
+-	}*/
++
+     memset(tmp_array.array, 0, tmp_array.size_max);
+     return tmp_array;
+ }
+ 
++/**
++  * Insert an element into ordered_array
++  * @author Ivan Gualandri
++  * @version 1.0
++  * @param elem Element to be inserted
++  * @param array Array where we insert our new element
++  * @return void
++  */
+ void insert_array(void_t elem, ordered_array_t* array){
+     int i;
+     i=0;
+
+
+
+From finarfin at mail.berlios.de  Sun Oct 17 19:24:41 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun, 17 Oct 2010 19:24:41 +0200
+Subject: [Dreamos-dev] r305 - in trunk: . boot include/mem mem misc
+Message-ID: <20101017172441.B455E481067@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-10-17 19:24:41 +0200 (Sun, 17 Oct 2010)
+New Revision: 305
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/include/mem/heap.h
+   trunk/mem/heap.c
+   trunk/misc/ordered_array.c
+Log:
+Iniziato sviluppo di insert_array.
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/mem/heap.h
+===================================================================
+--- trunk/include/mem/heap.h	2010-10-17 14:21:18 UTC (rev 304)
++++ trunk/include/mem/heap.h	2010-10-17 17:24:41 UTC (rev 305)
+@@ -67,5 +67,5 @@
+ 
+ unsigned int new_malloc(unsigned int);
+ 
+-static short int header_t_less_than(void *,void *);
++short int header_t_less_than(void *,void *);
+ #endif
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-10-17 14:21:18 UTC (rev 304)
++++ trunk/mem/heap.c	2010-10-17 17:24:41 UTC (rev 305)
+@@ -37,14 +37,13 @@
+ 	//printf("Start_address: %u End Address: %u\n", n_heap->start_address, n_heap->end_address);		
+ }
+ 
+-static short int header_t_less_than(void *a,void *b){
++short int header_t_less_than(void *a,void *b){
+ 	return (((header_t*)a)->size < ((header_t*)b)->size)?1:0;
+ }
+ 
+ new_heap_t *new_heap(unsigned int start, unsigned int size){
+ 	/*Actually we need to use kmalloc!*/
+-	new_heap_t* t_heap =(new_heap_t*) kmalloc(sizeof(new_heap_t));	
+-	printf("Kmalloc: %x\n", t_heap);
++	new_heap_t* t_heap =(new_heap_t*) kmalloc(sizeof(new_heap_t));		
+ 	if(start%0x1000 == 0){		
+ 		header_t *first_hole = (header_t*)start;		
+ 		t_heap->index = new_array((void*)start,size, &header_t_less_than);
+@@ -55,6 +54,7 @@
+ 		first_hole->size = t_heap->end_address - start;
+ 		first_hole->magic = HEAP_MAGIC;
+ 		first_hole->is_hole = 1; /*TRUE*/			
++		insert_array((void*) first_hole, &t_heap->index);
+ 		return t_heap;
+ 	}
+ 	else printf("ERROR\n");
+
+Modified: trunk/misc/ordered_array.c
+===================================================================
+--- trunk/misc/ordered_array.c	2010-10-17 14:21:18 UTC (rev 304)
++++ trunk/misc/ordered_array.c	2010-10-17 17:24:41 UTC (rev 305)
+@@ -49,7 +49,6 @@
+     tmp_array.size_max = size;
+     tmp_array.size = 0;	    
+     tmp_array.less_than = predicate;    
+-    /* Questa parte e' memsettbile dopo che sara' fatta */
+     printf("SizeMax: %d\n", tmp_array.size_max);
+ 
+     memset(tmp_array.array, 0, tmp_array.size_max);
+@@ -72,5 +71,6 @@
+     //sistemato il codice.
+     while(i<array->size)
+         i++;
+-    if(i==array->size) array->array[++i] = elem;
++    if(i==array->size) array->array[i++] = elem;
++    printf("Test header_less_than: %d\n", header_t_less_than(elem, array->array[i-1]));
+ }
+
+
+
+From finarfin at mail.berlios.de  Sun Oct 17 21:13:41 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun, 17 Oct 2010 21:13:41 +0200
+Subject: [Dreamos-dev] r306 - in trunk: . boot misc
+Message-ID: <20101017191341.1895C481067@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-10-17 21:13:40 +0200 (Sun, 17 Oct 2010)
+New Revision: 306
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/misc/ordered_array.c
+Log:
+Aggiunto controllo tramite header_t_less_than in insert_array
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/misc/ordered_array.c
+===================================================================
+--- trunk/misc/ordered_array.c	2010-10-17 17:24:41 UTC (rev 305)
++++ trunk/misc/ordered_array.c	2010-10-17 19:13:40 UTC (rev 306)
+@@ -69,8 +69,10 @@
+     //Qui va un ciclo tipo: che termina o quando l'elemento va inserito in coda, o quando trova
+     //la sua posizione dove mettersi. && array->array[i].size>=elem->size Questa e' l'idea, ma va 
+     //sistemato il codice.
+-    while(i<array->size)
++    while(i<array->size && header_t_less_than(array->array[i], elem)){
++		printf("Ci passo?\n");
+         i++;
++	}
+     if(i==array->size) array->array[i++] = elem;
+     printf("Test header_less_than: %d\n", header_t_less_than(elem, array->array[i-1]));
+ }
+
+
+
+From finarfin at mail.berlios.de  Sun Oct 17 22:34:00 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun, 17 Oct 2010 22:34:00 +0200
+Subject: [Dreamos-dev] r307 - in trunk: . boot misc
+Message-ID: <20101017203400.AF42C481067@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-10-17 22:34:00 +0200 (Sun, 17 Oct 2010)
+New Revision: 307
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/misc/ordered_array.c
+Log:
+In insert_array, ora l'elemento viene inserito nella sua posizione 
+corretta, mantenendo il vettore in ordine ascendente.
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/misc/ordered_array.c
+===================================================================
+--- trunk/misc/ordered_array.c	2010-10-17 19:13:40 UTC (rev 306)
++++ trunk/misc/ordered_array.c	2010-10-17 20:34:00 UTC (rev 307)
+@@ -74,5 +74,16 @@
+         i++;
+ 	}
+     if(i==array->size) array->array[i++] = elem;
++    else {
++		type_t tmp = array->array[i];
++		array->array[i] = elem;
++		while(i < array->size){
++			i++;
++			type_t tmp2 = array->array[i];			
++			array->array[i] = tmp;
++			tmp = tmp2;			
++		}
++		array->size++;
++	}
+     printf("Test header_less_than: %d\n", header_t_less_than(elem, array->array[i-1]));
+ }
+
+
+
+From finarfin at mail.berlios.de  Tue Oct 19 23:34:53 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Tue, 19 Oct 2010 23:34:53 +0200
+Subject: [Dreamos-dev] r308 - in trunk: . boot include/misc misc
+Message-ID: <20101019213453.BEF56480480@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-10-19 23:34:53 +0200 (Tue, 19 Oct 2010)
+New Revision: 308
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/include/misc/ordered_array.h
+   trunk/misc/ordered_array.c
+Log:
+Aggiunta funzione print_array con scopo di debug.
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/misc/ordered_array.h
+===================================================================
+--- trunk/include/misc/ordered_array.h	2010-10-17 20:34:00 UTC (rev 307)
++++ trunk/include/misc/ordered_array.h	2010-10-19 21:34:53 UTC (rev 308)
+@@ -46,4 +46,5 @@
+ void destroy_array(ordered_array_t*);
+ type_t get_array(int, ordered_array_t*);
+ void remove_array(int, ordered_array_t*);
++void print_array(ordered_array_t*);
+ #endif
+
+Modified: trunk/misc/ordered_array.c
+===================================================================
+--- trunk/misc/ordered_array.c	2010-10-17 20:34:00 UTC (rev 307)
++++ trunk/misc/ordered_array.c	2010-10-19 21:34:53 UTC (rev 308)
+@@ -86,4 +86,14 @@
+ 		array->size++;
+ 	}
+     printf("Test header_less_than: %d\n", header_t_less_than(elem, array->array[i-1]));
++    print_array(array);
+ }
++
++void print_array(ordered_array_t* array){
++	int i=0;
++	printf("Print\n");
++	while(i<array->size+1){
++		printf("Val: %d: %u\n", i, array->array[i]);
++		i++;
++	}
++}
+
+
+
+From finarfin at mail.berlios.de  Thu Oct 21 23:37:05 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Thu, 21 Oct 2010 23:37:05 +0200
+Subject: [Dreamos-dev] r309 - trunk/misc
+Message-ID: <20101021213705.F3D14480EDE@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-10-21 23:37:05 +0200 (Thu, 21 Oct 2010)
+New Revision: 309
+
+Modified:
+   trunk/misc/ordered_array.c
+Log:
+Aggiunta funzione get_array.
+
+
+Modified: trunk/misc/ordered_array.c
+===================================================================
+--- trunk/misc/ordered_array.c	2010-10-19 21:34:53 UTC (rev 308)
++++ trunk/misc/ordered_array.c	2010-10-21 21:37:05 UTC (rev 309)
+@@ -69,8 +69,7 @@
+     //Qui va un ciclo tipo: che termina o quando l'elemento va inserito in coda, o quando trova
+     //la sua posizione dove mettersi. && array->array[i].size>=elem->size Questa e' l'idea, ma va 
+     //sistemato il codice.
+-    while(i<array->size && header_t_less_than(array->array[i], elem)){
+-		printf("Ci passo?\n");
++    while(i<array->size && header_t_less_than(array->array[i], elem)){		
+         i++;
+ 	}
+     if(i==array->size) array->array[i++] = elem;
+@@ -84,10 +83,26 @@
+ 			tmp = tmp2;			
+ 		}
+ 		array->size++;
+-	}
+-    printf("Test header_less_than: %d\n", header_t_less_than(elem, array->array[i-1]));
++	}    
+     print_array(array);
+ }
++/**
++  * Get an element from ordered_array
++  * @author Ivan Gualandri
++  * @version 1.0
++  * @param index index of element we want to read
++  * @param array Array where we read requested element
++  * @return type_t Element required if available, otherwise PANIC.
++  */
++type_t get_array(int index, ordered_array_t* t_array){
++	if(i < array->size){
++		return array->array[index];
++	}
++	else {		
++		printf("PANIC");
++		while(1)
++	}
++}
+ 
+ void print_array(ordered_array_t* array){
+ 	int i=0;
+
+
+
+From finarfin at mail.berlios.de  Sun Oct 24 17:23:52 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun, 24 Oct 2010 17:23:52 +0200
+Subject: [Dreamos-dev] r310 - in trunk: . boot hardware include include/mem
+	include/misc mem misc
+Message-ID: <20101024152352.7E18D480EDC@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-10-24 17:23:52 +0200 (Sun, 24 Oct 2010)
+New Revision: 310
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/hardware/pic8259.c
+   trunk/include/mem/heap.h
+   trunk/include/misc/ordered_array.h
+   trunk/include/version.h
+   trunk/mem/heap.c
+   trunk/misc/ordered_array.c
+Log:
+Aggiunta locate_ordered_array. 
+Aggiunte stampe di debug. 
+Iniziato sviluppod di alloc.
+Aggiunta remove_array.
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/hardware/pic8259.c
+===================================================================
+--- trunk/hardware/pic8259.c	2010-10-21 21:37:05 UTC (rev 309)
++++ trunk/hardware/pic8259.c	2010-10-24 15:23:52 UTC (rev 310)
+@@ -84,10 +84,7 @@
+     enable_IRQ(KEYBOARD);    
+     enable_IRQ(TIMER);
+     enable_IRQ(TO_SLAVE_PIC);
+-   
+-    //init_idt();
+-    //init_gdt();
+-
++          
+     setup_IRQ();
+     
+         i=0;
+
+Modified: trunk/include/mem/heap.h
+===================================================================
+--- trunk/include/mem/heap.h	2010-10-21 21:37:05 UTC (rev 309)
++++ trunk/include/mem/heap.h	2010-10-24 15:23:52 UTC (rev 310)
+@@ -28,6 +28,7 @@
+ #define HEAP_START_SIZE 0x100000
+ #define HEAP_INDEX_SIZE 0x20000
+ #define HEAP_MAGIC 0x12893457
++#define PAGE_ALIGNED 1
+ 
+ #include <ordered_array.h>
+ 
+@@ -45,10 +46,10 @@
+     \brief Contiene le informazioni relative alle locazioni di memoria 
+  */
+ typedef struct {
+-	int magic; /*!<For header identification*/
++	unsigned int magic; /*!<For header identification*/	
+ 	short int is_hole; /*!<1 se si tratta di un hole 0 se si tratta di un block*/
+ 	int size;  /*!<Total size of the block (including header and footer)*/
+-} header_t;
++}__attribute__((packed)) header_t;
+ 
+ /*! \struct footer_t 
+     \brief Contiene altre informazioni relative alle locazioni di memoria 
+@@ -66,6 +67,6 @@
+ void init_newmem();
+ 
+ unsigned int new_malloc(unsigned int);
+-
++static short int locate_smallest_hole(unsigned int, unsigned short int, new_heap_t*);
+ short int header_t_less_than(void *,void *);
+ #endif
+
+Modified: trunk/include/misc/ordered_array.h
+===================================================================
+--- trunk/include/misc/ordered_array.h	2010-10-21 21:37:05 UTC (rev 309)
++++ trunk/include/misc/ordered_array.h	2010-10-24 15:23:52 UTC (rev 310)
+@@ -25,8 +25,6 @@
+ #ifndef ORDERED_ARRAY_H
+ #define ORDERED_ARRAY_H
+ 
+-/*#include <ordered_array.h>*/
+-
+ typedef void* void_t;
+ typedef void* type_t;
+ typedef short int (*lessthan_predicate_t)(type_t,type_t);
+@@ -35,7 +33,7 @@
+      \brief Struttura dati che un vettore ordinato.
+  */
+ typedef struct {
+-    type_t* array; /**< Il vettore che sara' ordinato*/
++    type_t *array; /**< Il vettore che sara' ordinato*/
+     unsigned int size; /**< La dimensione attuale*/
+     unsigned int size_max; /**< La dimensione massima*/
+     lessthan_predicate_t less_than;
+@@ -43,7 +41,6 @@
+ 
+ ordered_array_t new_array(void*, unsigned int, lessthan_predicate_t);
+ void insert_array(void_t, ordered_array_t*);
+-void destroy_array(ordered_array_t*);
+ type_t get_array(int, ordered_array_t*);
+ void remove_array(int, ordered_array_t*);
+ void print_array(ordered_array_t*);
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2010-10-21 21:37:05 UTC (rev 309)
++++ trunk/include/version.h	2010-10-24 15:23:52 UTC (rev 310)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "3"
+ #define EXTRAVERSION "-trunk"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r291"
++#define REV_NUM "-r310"
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-10-21 21:37:05 UTC (rev 309)
++++ trunk/mem/heap.c	2010-10-24 15:23:52 UTC (rev 310)
+@@ -33,8 +33,7 @@
+ 
+ void init_newmem(){
+ 	n_heap =0;
+-	n_heap = (new_heap_t*)new_heap(HEAP_START_ADDRESS, HEAP_INDEX_SIZE);
+-	//printf("Start_address: %u End Address: %u\n", n_heap->start_address, n_heap->end_address);		
++	n_heap = (new_heap_t*)new_heap(HEAP_START_ADDRESS, HEAP_INDEX_SIZE);	
+ }
+ 
+ short int header_t_less_than(void *a,void *b){
+@@ -48,11 +47,9 @@
+ 		header_t *first_hole = (header_t*)start;		
+ 		t_heap->index = new_array((void*)start,size, &header_t_less_than);
+ 		t_heap->start_address = start;
+-		t_heap->end_address = start + size;			
+-		//printf("Making first Hole\n");	
+-		//This should be inserted into the ordered array.	
+-		first_hole->size = t_heap->end_address - start;
+-		first_hole->magic = HEAP_MAGIC;
++		t_heap->end_address = start + size;					
++		first_hole->size = t_heap->end_address - start;		
++		first_hole->magic = HEAP_MAGIC;		
+ 		first_hole->is_hole = 1; /*TRUE*/			
+ 		insert_array((void*) first_hole, &t_heap->index);
+ 		return t_heap;
+@@ -73,7 +70,7 @@
+ 	}
+ 	else {
+ 		//If i have a heap, then i have vm management enabled, and i can call alloc...
+-		void* new_address = new_alloc(size, 1, n_heap);		
++		void* new_address = new_alloc(size, PAGE_ALIGNED, n_heap);	
+ 		printf("Heap defined\n");
+ 		printf("Start Address: %u End Address: %u\n", n_heap->start_address, n_heap->end_address);
+ 		printf("See address_cur value: %x\n", address_cur);
+@@ -83,5 +80,17 @@
+ }
+ 
+ void *new_alloc(unsigned int size, unsigned short int p_aligned, new_heap_t *t_heap){
+-	printf("Step by step\n");
++	unsigned int real_size = size +sizeof(header_t) + sizeof(footer_t);	
++	printf("Size of:\n\theader_t: %d\n\tfooter_t: %d\n\treal_size: %d\n\tsize: %d\n", sizeof(header_t), sizeof(footer_t), real_size, size);	
++	//unsigned int min_index = locate_smallest_hole(real_size, PAGE_ALIGNED, t_heap);
+ }
++
++static short int locate_smallest_hole(unsigned int size, unsigned short int p_align, new_heap_t* in_heap){
++	unsigned int index = 0; 
++	printf("Size index: %d\n", in_heap->index.size);
++	while(index < in_heap->index.size){
++		header_t *header = (header_t *)get_array(index, &in_heap->index);
++		printf("Header: %u\n", header->magic);
++		index++;
++	}
++}
+
+Modified: trunk/misc/ordered_array.c
+===================================================================
+--- trunk/misc/ordered_array.c	2010-10-21 21:37:05 UTC (rev 309)
++++ trunk/misc/ordered_array.c	2010-10-24 15:23:52 UTC (rev 310)
+@@ -63,28 +63,38 @@
+   * @param array Array where we insert our new element
+   * @return void
+   */
+-void insert_array(void_t elem, ordered_array_t* array){
++void insert_array(type_t elem, ordered_array_t* t_array){
+     int i;
+     i=0;
+     //Qui va un ciclo tipo: che termina o quando l'elemento va inserito in coda, o quando trova
+-    //la sua posizione dove mettersi. && array->array[i].size>=elem->size Questa e' l'idea, ma va 
++    //la sua posizione dove mettersi. && t_array->t_array[i].size>=elem->size Questa e' l'idea, ma va 
+     //sistemato il codice.
+-    while(i<array->size && header_t_less_than(array->array[i], elem)){		
++    while(i<t_array->size && header_t_less_than(t_array->array[i], elem)){				
+         i++;
+ 	}
+-    if(i==array->size) array->array[i++] = elem;
++    if(i==t_array->size){
++		//header_t* hel = (header_t*) elem;
++		//printf("i = t_arraysize\n");				
++		//printf("elem->magic: %d:  %u\n", i, hel->magic);
++		t_array->array[t_array->size] = elem;
++		t_array->size++;		
++		//printf("elem->magic: %d:  %u\n", i, hel->magic);
++		//printf("elem: %u\n", elem);		
++		//printf("t_array: %u\n", t_array->array[0]);
++	}
+     else {
+-		type_t tmp = array->array[i];
+-		array->array[i] = elem;
+-		while(i < array->size){
++		printf("insert in the middle\n");
++		type_t tmp = t_array->array[i];
++		t_array->array[i] = elem;
++		while(i < t_array->size){
+ 			i++;
+-			type_t tmp2 = array->array[i];			
+-			array->array[i] = tmp;
++			type_t tmp2 = t_array->array[i];			
++			t_array->array[i] = tmp;
+ 			tmp = tmp2;			
+ 		}
+-		array->size++;
++		t_array->size++;
+ 	}    
+-    print_array(array);
++    print_array(t_array);
+ }
+ /**
+   * Get an element from ordered_array
+@@ -95,19 +105,34 @@
+   * @return type_t Element required if available, otherwise PANIC.
+   */
+ type_t get_array(int index, ordered_array_t* t_array){
+-	if(i < array->size){
+-		return array->array[index];
++	if(index < t_array->size){
++		return t_array->array[index];
+ 	}
+ 	else {		
+ 		printf("PANIC");
+-		while(1)
++		while(1);
+ 	}
+ }
+ 
++/**
++  * Remove an element from ordered_array
++  * @author Ivan Gualandri
++  * @version 1.0
++  * @param index index of element we want to read
++  * @param array Array where we remove requested element
++  * @return void
++  */
++void remove_array(int index, ordered_array_t* t_array){	
++	while(index < t_array->size){
++		t_array->array[index] = t_array->array[index+1];
++		index++;
++	}
++	t_array->size--;
++}
++
+ void print_array(ordered_array_t* array){
+-	int i=0;
+-	printf("Print\n");
+-	while(i<array->size+1){
++	int i=0;	
++	while(i<array->size){
+ 		printf("Val: %d: %u\n", i, array->array[i]);
+ 		i++;
+ 	}
+
+
+
+From finarfin at mail.berlios.de  Sun Oct 24 20:45:44 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun, 24 Oct 2010 20:45:44 +0200
+Subject: [Dreamos-dev] r311 - in trunk: . boot include/mem mem misc
+Message-ID: <20101024184544.8156A48107E@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-10-24 20:45:44 +0200 (Sun, 24 Oct 2010)
+New Revision: 311
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/include/mem/heap.h
+   trunk/mem/heap.c
+   trunk/misc/ordered_array.c
+Log:
+Sostituito memset con un ciclo per inizializzare l'array in new_array.
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/mem/heap.h
+===================================================================
+--- trunk/include/mem/heap.h	2010-10-24 15:23:52 UTC (rev 310)
++++ trunk/include/mem/heap.h	2010-10-24 18:45:44 UTC (rev 311)
+@@ -67,6 +67,6 @@
+ void init_newmem();
+ 
+ unsigned int new_malloc(unsigned int);
+-static short int locate_smallest_hole(unsigned int, unsigned short int, new_heap_t*);
++short int locate_smallest_hole(unsigned int, unsigned short int, new_heap_t*);
+ short int header_t_less_than(void *,void *);
+ #endif
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-10-24 15:23:52 UTC (rev 310)
++++ trunk/mem/heap.c	2010-10-24 18:45:44 UTC (rev 311)
+@@ -52,6 +52,8 @@
+ 		first_hole->magic = HEAP_MAGIC;		
+ 		first_hole->is_hole = 1; /*TRUE*/			
+ 		insert_array((void*) first_hole, &t_heap->index);
++		//get_array(0, &t_heap->index);
++		//locate_smallest_hole(size, PAGE_ALIGNED,&t_heap->index);
+ 		return t_heap;
+ 	}
+ 	else printf("ERROR\n");
+@@ -79,18 +81,19 @@
+ 	return 0;
+ }
+ 
+-void *new_alloc(unsigned int size, unsigned short int p_aligned, new_heap_t *t_heap){
++void *new_alloc(unsigned int size, unsigned short int p_aligned, new_heap_t* t_heap){
+ 	unsigned int real_size = size +sizeof(header_t) + sizeof(footer_t);	
+ 	printf("Size of:\n\theader_t: %d\n\tfooter_t: %d\n\treal_size: %d\n\tsize: %d\n", sizeof(header_t), sizeof(footer_t), real_size, size);	
+ 	//unsigned int min_index = locate_smallest_hole(real_size, PAGE_ALIGNED, t_heap);
++	//get_array(0, &t_heap->index);
+ }
+ 
+-static short int locate_smallest_hole(unsigned int size, unsigned short int p_align, new_heap_t* in_heap){
++short int locate_smallest_hole(unsigned int size, unsigned short int p_align, new_heap_t* in_heap){
+ 	unsigned int index = 0; 
+ 	printf("Size index: %d\n", in_heap->index.size);
+ 	while(index < in_heap->index.size){
+ 		header_t *header = (header_t *)get_array(index, &in_heap->index);
+-		printf("Header: %u\n", header->magic);
++		printf("Header: 0x%x\tSize: %d\n", header->magic, header->size);
+ 		index++;
+ 	}
+ }
+
+Modified: trunk/misc/ordered_array.c
+===================================================================
+--- trunk/misc/ordered_array.c	2010-10-24 15:23:52 UTC (rev 310)
++++ trunk/misc/ordered_array.c	2010-10-24 18:45:44 UTC (rev 311)
+@@ -45,13 +45,17 @@
+   */
+ ordered_array_t new_array(void* start, unsigned int size, lessthan_predicate_t predicate){
+     ordered_array_t tmp_array;
++    int i=0;
+     tmp_array.array = (type_t*)start;    
+     tmp_array.size_max = size;
+     tmp_array.size = 0;	    
+     tmp_array.less_than = predicate;    
+     printf("SizeMax: %d\n", tmp_array.size_max);
+-
+-    memset(tmp_array.array, 0, tmp_array.size_max);
++	while(i < tmp_array.size_max){
++		tmp_array.array = 0x0;
++		i++;
++	}
++    //memset(tmp_array.array, 0, tmp_array.size_max);
+     return tmp_array;
+ }
+ 
+@@ -73,17 +77,15 @@
+         i++;
+ 	}
+     if(i==t_array->size){
+-		//header_t* hel = (header_t*) elem;
+-		//printf("i = t_arraysize\n");				
+-		//printf("elem->magic: %d:  %u\n", i, hel->magic);
++		/*header_t* hel;
++		printf("i = t_arraysize\n");*/
+ 		t_array->array[t_array->size] = elem;
+ 		t_array->size++;		
+-		//printf("elem->magic: %d:  %u\n", i, hel->magic);
+-		//printf("elem: %u\n", elem);		
+-		//printf("t_array: %u\n", t_array->array[0]);
++		//hel = (header_t*) t_array->array[0];
++		//printf("array: %u\n",t_array->array[0]);				
+ 	}
+     else {
+-		printf("insert in the middle\n");
++		//printf("insert in the middle\n");
+ 		type_t tmp = t_array->array[i];
+ 		t_array->array[i] = elem;
+ 		while(i < t_array->size){
+@@ -106,6 +108,7 @@
+   */
+ type_t get_array(int index, ordered_array_t* t_array){
+ 	if(index < t_array->size){
++		printf("Value: %u", (type_t*)t_array->array[0]);
+ 		return t_array->array[index];
+ 	}
+ 	else {		
+
+
+

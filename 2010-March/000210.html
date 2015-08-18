@@ -1,0 +1,177 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r207 - in trunk: . fs include/sys shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-March/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r207%20-%20in%20trunk%3A%20.%20fs%20include/sys%20shell&In-Reply-To=%3C201003051531.o25FVDH4025807%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000209.html">
+   <LINK REL="Next"  HREF="000211.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r207 - in trunk: . fs include/sys shell</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r207%20-%20in%20trunk%3A%20.%20fs%20include/sys%20shell&In-Reply-To=%3C201003051531.o25FVDH4025807%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r207 - in trunk: . fs include/sys shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Fri Mar  5 16:31:13 CET 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000209.html">[Dreamos-dev] r206 - in trunk: . drivers
+</A></li>
+        <LI>Next message: <A HREF="000211.html">[Dreamos-dev] r208 - in trunk: . include/shell shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#210">[ date ]</a>
+              <a href="thread.html#210">[ thread ]</a>
+              <a href="subject.html#210">[ subject ]</a>
+              <a href="author.html#210">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-03-05 16:30:57 +0100 (Fri, 05 Mar 2010)
+New Revision: 207
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/initrd.c
+   trunk/include/sys/dirent.h
+   trunk/initfs
+   trunk/shell/commands.c
+   trunk/start.sh
+Log:
+Modificato initfs, ora contiene 2 mountpoint oltre che i files
+Modificato start.sh per inserire 2 mountpoint di test
+Ora se l'elemento letto da ls e' un mountpoint lo colora di verde
+
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-03-03 15:38:15 UTC (rev 206)
++++ trunk/fs/initrd.c	2010-03-05 15:30:57 UTC (rev 207)
+@@ -78,6 +78,7 @@
+ 	if(dirp-&gt;cur_entry &lt; nfiles){	
+ 		fs_type = (initrd_file_t *)(module_start + sizeof(initrd_t));	
+ 		dirp-&gt;entry.d_ino =  dirp-&gt;cur_entry;
++		dirp-&gt;entry.d_type = fs_type[dirp-&gt;cur_entry].file_type;
+ 		strcpy(dirp-&gt;entry.d_name, fs_type[dirp-&gt;cur_entry].fileName);	
+ 		//printf(&quot;%s\n&quot;, dirp-&gt;entry.d_name);
+ 		dirp-&gt;cur_entry++;
+
+Modified: trunk/include/sys/dirent.h
+===================================================================
+--- trunk/include/sys/dirent.h	2010-03-03 15:38:15 UTC (rev 206)
++++ trunk/include/sys/dirent.h	2010-03-05 15:30:57 UTC (rev 207)
+@@ -28,6 +28,7 @@
+ */
+ struct dirent {
+ 	ino_t d_ino;
++	int d_type;
+ 	char d_name[NAME_MAX+1];
+ };
+ 
+
+Modified: trunk/initfs
+===================================================================
+(Binary files differ)
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-03-03 15:38:15 UTC (rev 206)
++++ trunk/shell/commands.c	2010-03-05 15:30:57 UTC (rev 207)
+@@ -370,9 +370,11 @@
+ 			i++;
+ 		}*/
+ 		struct dirent* cur_dir_entry;
+-		cur_dir_entry = readdir(dirp);
++		cur_dir_entry = readdir(dirp);		
+ 		while(cur_dir_entry!=NULL){			
++			if(cur_dir_entry-&gt;d_type == FS_MOUNTPOINT) _kcolor(BRIGHT_GREEN);
+ 			printf(&quot;%s\n&quot;, cur_dir_entry-&gt;d_name);
++			_kcolor(WHITE);			
+ 			cur_dir_entry = readdir(dirp);
+ 		}
+ 		closedir(dirp);
+@@ -403,20 +405,29 @@
+ 
+ void cd( ){
+ 	char *relpath;		
++	DIR *dirp=NULL;
+ 	if(argc != 2) {
+ 		printf(&quot;Bad usage. Try 'ls -l' and then 'cd dir'.\n&quot;);
+ 		return;
+ 	} else {
+ 		int i=0;
+ 		int rel_size = 0;		
+-		i = get_mountpoint_id(argv[1]);		
++		i = get_mountpoint_id(argv[1]);
++		dirp=opendir(argv[1]);
++		if(dirp!=NULL){
++			printf(&quot;good\n&quot;);
++			closedir(dirp);
++		}
++		else printf(&quot;bad\n&quot;);
+ 		//printf(&quot;path: %s\n&quot;, argv[1]);
+ 		rel_size = strlen(argv[1]) - strlen(mountpoint_list[i].mountpoint);
+ 		if(i == -1) {			
+ 			printf(&quot;cd: %s: No such file or directory\n&quot;, argv[1]);
+ 			return;
+ 		}
+-		else strcpy(current_user.cur_path, argv[1]);
++		else {
++			strcpy(current_user.cur_path, argv[1]);
++		}
+ 		if(rel_size &gt;0){
+ 			relpath = get_rel_path(i, argv[1]);
+ 			free(relpath);
+
+Modified: trunk/start.sh
+===================================================================
+--- trunk/start.sh	2010-03-03 15:38:15 UTC (rev 206)
++++ trunk/start.sh	2010-03-05 15:30:57 UTC (rev 207)
+@@ -129,7 +129,7 @@
+   echo &quot;--------------------------------------------- &quot;
+   echo &quot;Launching FS Creating script in progress..&quot;
+   echo &quot;&quot;
+-  utils/initfscp `find files/* -exec echo {} +;` initfs
++  utils/initfscp -m mp -m test `find files/* -exec echo {} +;` initfs
+   echo &quot;done.&quot;
+   $MAKE_FS
+   #su -c &quot;mount -o loop boot/grub.img boot/os &amp;&amp; rm -rf boot/os/initfs &amp;&amp; cp initfs boot/os/initfs &amp;&amp; umount boot/os&quot;
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000209.html">[Dreamos-dev] r206 - in trunk: . drivers
+</A></li>
+	<LI>Next message: <A HREF="000211.html">[Dreamos-dev] r208 - in trunk: . include/shell shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#210">[ date ]</a>
+              <a href="thread.html#210">[ thread ]</a>
+              <a href="subject.html#210">[ subject ]</a>
+              <a href="author.html#210">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

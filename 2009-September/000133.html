@@ -1,0 +1,153 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r131 - in trunk: . hardware include/fs shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-September/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r131%20-%20in%20trunk%3A%20.%20hardware%20include/fs%20shell&In-Reply-To=%3C200909082056.n88KuGjH003982%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000132.html">
+   <LINK REL="Next"  HREF="000134.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r131 - in trunk: . hardware include/fs shell</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r131%20-%20in%20trunk%3A%20.%20hardware%20include/fs%20shell&In-Reply-To=%3C200909082056.n88KuGjH003982%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r131 - in trunk: . hardware include/fs shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Tue Sep  8 22:56:16 CEST 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000132.html">[Dreamos-dev] r130 - in trunk: . include/shell shell
+</A></li>
+        <LI>Next message: <A HREF="000134.html">[Dreamos-dev] r132 - in trunk: include sys
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#133">[ date ]</a>
+              <a href="thread.html#133">[ thread ]</a>
+              <a href="subject.html#133">[ subject ]</a>
+              <a href="author.html#133">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-09-08 22:56:15 +0200 (Tue, 08 Sep 2009)
+New Revision: 131
+
+Modified:
+   trunk/dreamos.img
+   trunk/hardware/pic8259.c
+   trunk/include/fs/vfs.h
+   trunk/kernel.c
+   trunk/shell/commands.c
+Log:
+Eliminato static da struct a_b nel comando tester che impediva il corretto boot.
+
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/hardware/pic8259.c
+===================================================================
+--- trunk/hardware/pic8259.c	2009-09-08 13:20:49 UTC (rev 130)
++++ trunk/hardware/pic8259.c	2009-09-08 20:56:15 UTC (rev 131)
+@@ -79,14 +79,15 @@
+ 
+     outportb(MASTER_PORT_1, 0xFF);
+ 	outportb(SLAVE_PORT_1,  0xFF);
+-
++		
+     //outportb (0xFC, MASTER_PORT_1);
+-    enable_IRQ(KEYBOARD);
++    enable_IRQ(KEYBOARD);    
+     enable_IRQ(TIMER);
+     enable_IRQ(TO_SLAVE_PIC);
+    
+     setup_IRQ();
+     asm(&quot;sti&quot;);
++                    
+     i=0;
+     while(i&lt;16){
+         shareHandler[i] = NULL;
+
+Modified: trunk/include/fs/vfs.h
+===================================================================
+--- trunk/include/fs/vfs.h	2009-09-08 13:20:49 UTC (rev 130)
++++ trunk/include/fs/vfs.h	2009-09-08 20:56:15 UTC (rev 131)
+@@ -53,7 +53,7 @@
+ 		unsigned int start_address; /**&lt; Indirizzo di partenza del FileSystem*/
+ 		int dev_id; /**&lt; Device ID*/		
+ 		struct super_node_operations operations;
+-		//struct directory_operations dir_op;
++		struct directory_operations dir_op;
+ };
+ 
+ struct file_descriptor {
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2009-09-08 13:20:49 UTC (rev 130)
++++ trunk/kernel.c	2009-09-08 20:56:15 UTC (rev 131)
+@@ -80,14 +80,13 @@
+     set_memorysize((boot_info-&gt;mem_upper+boot_info-&gt;mem_lower)*1024);
+     init_mem();    
+     _kputs(LNG_PIC8259);
+-    init_IRQ();
++    init_IRQ();    
+     asm(&quot;sti&quot;);
+     _kprintOK();   
+     init_paging();    
+     printf(LNG_PIT8253);
+     configure_PIT ();
+-    _kprintOK();    
+-
++    _kprintOK();    	
+     printf(&quot;Memory (upper) amount-&gt; %d kb \n&quot;, boot_info-&gt;mem_upper);
+     printf(&quot;Memory (lower) amount-&gt; %d kb \n&quot;, boot_info-&gt;mem_lower);
+ 
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-09-08 13:20:49 UTC (rev 130)
++++ trunk/shell/commands.c	2009-09-08 20:56:15 UTC (rev 131)
+@@ -405,7 +405,7 @@
+ 
+ void tester(){
+ 	int i = 0;
+-	static struct a_b testing[MAX_TEST] = { 
++	struct a_b testing[MAX_TEST] = { 
+ 					{ &quot;try_kmalloc&quot;, try_kmalloc },
+ 					{ &quot;try_strtok&quot;, try_strtok },
+ 					{ &quot;do_fault&quot;, do_fault },
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000132.html">[Dreamos-dev] r130 - in trunk: . include/shell shell
+</A></li>
+	<LI>Next message: <A HREF="000134.html">[Dreamos-dev] r132 - in trunk: include sys
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#133">[ date ]</a>
+              <a href="thread.html#133">[ thread ]</a>
+              <a href="subject.html#133">[ subject ]</a>
+              <a href="author.html#133">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

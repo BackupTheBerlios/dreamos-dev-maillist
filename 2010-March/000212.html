@@ -1,0 +1,181 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r209 - in trunk: . fs include/shell shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-March/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r209%20-%20in%20trunk%3A%20.%20fs%20include/shell%20shell&In-Reply-To=%3C201003082024.o28KOhG0032313%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000211.html">
+   <LINK REL="Next"  HREF="000213.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r209 - in trunk: . fs include/shell shell</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r209%20-%20in%20trunk%3A%20.%20fs%20include/shell%20shell&In-Reply-To=%3C201003082024.o28KOhG0032313%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r209 - in trunk: . fs include/shell shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Mon Mar  8 21:24:43 CET 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000211.html">[Dreamos-dev] r208 - in trunk: . include/shell shell
+</A></li>
+        <LI>Next message: <A HREF="000213.html">[Dreamos-dev] r210 - in trunk: . files shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#212">[ date ]</a>
+              <a href="thread.html#212">[ thread ]</a>
+              <a href="subject.html#212">[ subject ]</a>
+              <a href="author.html#212">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-03-08 21:24:33 +0100 (Mon, 08 Mar 2010)
+New Revision: 209
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/fs/initrd.c
+   trunk/include/shell/commands.h
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+Log:
+Modificato il nome del comando cat in more
+Ora la more legge i files presenti nel fs se corredati del solo path 
+assoluto.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2010-03-07 22:50:44 UTC (rev 208)
++++ trunk/fs/fcntl.c	2010-03-08 20:24:33 UTC (rev 209)
+@@ -42,7 +42,7 @@
+ 	va_start(ap, oflags);
+ 	ret_fd = 0;
+ 	while(ret_fd &lt; _SC_OPEN_MAX){
+-		if(fd_list[ret_fd].mountpoint_id == -1) printf(&quot;%d &quot;, ret_fd);		
++		//if(fd_list[ret_fd].mountpoint_id == -1) printf(&quot;%d &quot;, ret_fd);		
+ 		ret_fd++;
+ 	}
+ 	prova = va_arg(ap, int);
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-03-07 22:50:44 UTC (rev 208)
++++ trunk/fs/initrd.c	2010-03-08 20:24:33 UTC (rev 209)
+@@ -100,7 +100,7 @@
+ 				if(module_var[j].file_type == FS_DIRECTORY || module_var[j].file_type == FS_MOUNTPOINT)
+ 					return -1;
+ 				ird_descriptors[cur_irdfd].file_descriptor	= j;
+-				printf(&quot;%s Found. Size: %d FS fd val: %d - ID File val: %d\n&quot;, path, module_var[j].length, cur_irdfd, ird_descriptors[cur_irdfd].file_descriptor);
++				//printf(&quot;%s Found. Size: %d FS fd val: %d - ID File val: %d\n&quot;, path, module_var[j].length, cur_irdfd, ird_descriptors[cur_irdfd].file_descriptor);
+ 				ret_fd = cur_irdfd;				
+ 				return cur_irdfd++; 
+ 		}
+
+Modified: trunk/include/shell/commands.h
+===================================================================
+--- trunk/include/shell/commands.h	2010-03-07 22:50:44 UTC (rev 208)
++++ trunk/include/shell/commands.h	2010-03-08 20:24:33 UTC (rev 209)
+@@ -53,7 +53,7 @@
+ void whoami();
+ void tester();
+ void pwd();	
+-void cat();
++void more();
+ 
+ struct devel {
+ 	const char cmd_testname[CMD_LEN];
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-03-07 22:50:44 UTC (rev 208)
++++ trunk/shell/commands.c	2010-03-08 20:24:33 UTC (rev 209)
+@@ -23,6 +23,7 @@
+ #include &lt;mouse.h&gt;
+ #include &lt;vfs.h&gt;
+ #include &lt;testing.h&gt;
++#include &lt;fcntl.h&gt;
+ 
+ struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
+ userenv_t current_user;
+@@ -403,11 +404,26 @@
+ 	}
+ }
+ 
+-void cat(){
++void more(){
+ 	if(argc==1) 
+-		printf(&quot;Usage:\n\t cat filename\nfor read a file\n&quot;);
++		printf(&quot;Usage:\n\t more filename\nfor read a file\n&quot;);
+ 	else {
+-		if(argc&lt;3) printf(&quot;File to open: %s\n&quot;, argv[1]);
++		if(argc&lt;3) {
++			int i;
++			char buf;
++			//printf(&quot;File to open: %s\n&quot;, argv[1]);
++			i = open(argv[1], O_RDONLY, 42);
++			if(i&gt;-1) {
++				int j=0;		
++				while(read(i, &amp;buf, 1)!=NULL) {
++					putchar(buf);			
++					j++;
++				}	
++				putchar('\n');			
++				close(i);
++			}		
++		}
++		else printf(&quot;too many arguments\n&quot;);
+ 	}
+ }
+ 
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2010-03-07 22:50:44 UTC (rev 208)
++++ trunk/shell/shell.c	2010-03-08 20:24:33 UTC (rev 209)
+@@ -95,7 +95,7 @@
+ 	{ &quot;whoami&quot;,   whoami},
+ 	{ &quot;tester&quot;, tester},	
+ 	{ &quot;pwd&quot;, pwd},
+-	{ &quot;cat&quot;, cat},
++	{ &quot;more&quot;, more},
+   };
+ 
+   int i = 0;
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000211.html">[Dreamos-dev] r208 - in trunk: . include/shell shell
+</A></li>
+	<LI>Next message: <A HREF="000213.html">[Dreamos-dev] r210 - in trunk: . files shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#212">[ date ]</a>
+              <a href="thread.html#212">[ thread ]</a>
+              <a href="subject.html#212">[ subject ]</a>
+              <a href="author.html#212">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

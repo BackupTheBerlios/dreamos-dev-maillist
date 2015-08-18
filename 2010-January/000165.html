@@ -1,0 +1,261 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r163 - in trunk: . utils
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-January/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r163%20-%20in%20trunk%3A%20.%20utils&In-Reply-To=%3C201001031606.o03G6OhD024617%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000164.html">
+   <LINK REL="Next"  HREF="000166.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r163 - in trunk: . utils</H1>
+    <B>osiris_h4ck at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r163%20-%20in%20trunk%3A%20.%20utils&In-Reply-To=%3C201001031606.o03G6OhD024617%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r163 - in trunk: . utils">osiris_h4ck at mail.berlios.de
+       </A><BR>
+    <I>Sun Jan  3 17:06:24 CET 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000164.html">[Dreamos-dev] r162 - trunk/boot
+</A></li>
+        <LI>Next message: <A HREF="000166.html">[Dreamos-dev] r164 - trunk/utils
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#165">[ date ]</a>
+              <a href="thread.html#165">[ thread ]</a>
+              <a href="subject.html#165">[ subject ]</a>
+              <a href="author.html#165">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: osiris_h4ck
+Date: 2010-01-03 17:06:24 +0100 (Sun, 03 Jan 2010)
+New Revision: 163
+
+Modified:
+   trunk/Makefile
+   trunk/start.sh
+   trunk/utils/Makefile
+   trunk/utils/initfscp.c
+Log:
+- Apportate varie modifiche ai Makefile per renderli piu` performanti e inglobare il programma utils/initfscp per la creazione del filesystem
+- Aggiornato lo start.sh e sistemato con le nuove funzioni dei Makefile
+
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2010-01-03 12:02:15 UTC (rev 162)
++++ trunk/Makefile	2010-01-03 16:06:24 UTC (rev 163)
+@@ -69,6 +69,7 @@
+ 
+ kernel.bin: $(OBJ)
+ 	ld -static --oformat elf32-i386 --output=kernel.bin --script=kernel.lds bl.img $(OBJ) -Ttext 0x100000 -Map kernel.map
++	make -f utils/Makefile
+ 
+ kernel.o: kernel.c
+ fs/vfs.o: fs/vfs.c
+@@ -102,6 +103,12 @@
+ sys/utsname.o: sys/utsname.c
+ sys/dirent.o: sys/dirent.c
+ 
++utils:
++	make -f utils/Makefile
++	
++filesystem:
++	su -c &quot;mount -o loop boot/grub.img boot/os &amp;&amp; cp initfs boot/os/initfs &amp;&amp; umount boot/os&quot;
++	
+ img:
+ 	su -c &quot;mount -o loop boot/grub.img boot/os &amp;&amp; cp dreamos.img boot/os/boot/grub/ &amp;&amp; umount boot/os&quot;
+ 
+@@ -117,6 +124,7 @@
+ clean:
+ 	rm -f *.img *.bin *.map initfs
+ 	rm -f $(OBJ)
++	rm -rf utils/initfscp
+ 
+ install:
+ 	mkfs.ext2 /dev/fd0
+@@ -131,5 +139,3 @@
+ en:
+ 	cp include/lng/en.h include/use.h
+ 	
+-initfs:
+-	su -c &quot;mount -o loop boot/grub.img boot/os &amp;&amp; rm -rf boot/os/initfs &amp;&amp; cp initfs boot/os/initfs &amp;&amp; umount boot/os&quot;
+
+Modified: trunk/start.sh
+===================================================================
+--- trunk/start.sh	2010-01-03 12:02:15 UTC (rev 162)
++++ trunk/start.sh	2010-01-03 16:06:24 UTC (rev 163)
+@@ -10,7 +10,7 @@
+ CLEAN=&quot;make clean&quot;
+ MAKE=&quot;make&quot;
+ MAKE_IMG=&quot;make img&quot;
+-MAKE_FS=&quot;make initfs&quot;
++MAKE_FS=&quot;make filesystem&quot;
+ 
+ if [ &quot;$1&quot; != &quot;--compile&quot; ]; then
+ 
+@@ -131,8 +131,8 @@
+   echo &quot;&quot;
+   utils/initfscp `find files/* -exec echo {} +;` initfs
+   echo &quot;done.&quot;
+-  #$MAKE_FS
+-  su -c &quot;mount -o loop boot/grub.img boot/os &amp;&amp; rm -rf boot/os/initfs &amp;&amp; cp initfs boot/os/initfs &amp;&amp; umount boot/os&quot;
++  $MAKE_FS
++  #su -c &quot;mount -o loop boot/grub.img boot/os &amp;&amp; rm -rf boot/os/initfs &amp;&amp; cp initfs boot/os/initfs &amp;&amp; umount boot/os&quot;
+   echo &quot;--------------------------------------------- &quot;
+   echo &quot;FS Created and added to boot/grub.img&quot;
+   echo &quot;---------------------------------------------&quot;
+@@ -182,8 +182,7 @@
+ 	 echo &quot;&quot;
+          utils/initfscp `find files/* -exec echo {} +;` initfs
+          echo &quot;done.&quot;
+-         #$MAKE_FS
+-         su -c &quot;mount -o loop boot/grub.img boot/os &amp;&amp; rm -rf boot/os/initfs &amp;&amp; cp initfs boot/os/initfs &amp;&amp; umount boot/os&quot;
++         $MAKE_FS
+          echo &quot;--------------------------------------------- &quot;
+          echo &quot;FS Created and added to boot/grub.img&quot;
+          echo &quot;---------------------------------------------&quot;
+@@ -207,7 +206,7 @@
+ 		  echo &quot;-----------------------&gt;&quot;                 
+ 	  fi  
+ 
+-	$VERS &amp;&amp; $CLEAN &amp;&amp; $MAKE &amp;&amp; $MAKE_IMG
++	$VERS &amp;&amp; $CLEAN &amp;&amp; $MAKE &amp;&amp; $MAKE_IMG &amp;&amp; $MAKE_FS
+ 	bochs -f .bochsrc -q
+ 	exit
+ 
+@@ -215,7 +214,7 @@
+ 
+ elif [ &quot;$2&quot; == &quot;floppy_install&quot; ]; then
+ 
+-  $VERS &amp;&amp; $CLEAN &amp;&amp; $MAKE &amp;&amp; $MAKE_IMG
++  $VERS &amp;&amp; $CLEAN &amp;&amp; $MAKE &amp;&amp; $MAKE_IMG &amp;&amp; $MAKE_FS
+   echo &quot;---------------------- &quot;
+   echo &quot;Installation in progres..&quot;
+   su -c &quot;make install&quot;
+@@ -225,7 +224,7 @@
+ 
+ elif [ &quot;$2&quot; == &quot;grub&quot; ]; then
+ 
+-  $VERS &amp;&amp; $CLEAN &amp;&amp; $MAKE &amp;&amp; $MAKE_IMG
++  $VERS &amp;&amp; $CLEAN &amp;&amp; $MAKE &amp;&amp; $MAKE_IMG &amp;&amp; $MAKE_FS
+   echo &quot;--------------------------------------------- &quot;
+   echo &quot;Launching grub installer script in progress..&quot;
+   su -c &quot;python grub.py&quot;
+@@ -242,7 +241,7 @@
+ 
+ 
+ elif [ &quot;$2&quot; == &quot;create_iso&quot; ]; then
+-  $VERS &amp;&amp; $CLEAN &amp;&amp; $MAKE &amp;&amp; $MAKE_IMG
++  $VERS &amp;&amp; $CLEAN &amp;&amp; $MAKE &amp;&amp; $MAKE_IMG &amp;&amp; $MAKE_FS
+   echo &quot;--------------------------------------------- &quot;
+   echo &quot;Launching ISO Creation script in progress..&quot;
+   echo &quot;&quot;
+
+Modified: trunk/utils/Makefile
+===================================================================
+--- trunk/utils/Makefile	2010-01-03 12:02:15 UTC (rev 162)
++++ trunk/utils/Makefile	2010-01-03 16:06:24 UTC (rev 163)
+@@ -1,9 +1,9 @@
+ CC = gcc
+-FILE = initfscp.c
+-OUTPUT = initfscp
++FILE = utils/initfscp.c
++OUTPUT = utils/initfscp
+ 
+ all:
+-	$(CC) $(FILE) -I./include -o $(OUTPUT)
++	$(CC) $(FILE) -I./utils/include -o $(OUTPUT)
+ 
+ clean:
+ 	rm -rf $(OUTPUT)
+
+Modified: trunk/utils/initfscp.c
+===================================================================
+--- trunk/utils/initfscp.c	2010-01-03 12:02:15 UTC (rev 162)
++++ trunk/utils/initfscp.c	2010-01-03 16:06:24 UTC (rev 163)
+@@ -39,6 +39,7 @@
+ 			printf(&quot;Size of headers: %d %d\n\n&quot;, sizeof(struct initrd_file_t)*32, sizeof(initrd_file_t));
+ 			printf(&quot;Clearing headers structures &quot;);
+ 			offset = sizeof(struct initrd_file_t) * 32 + sizeof(int);
++			
+ 			for (i=0; i&lt;MAX_FILES; i++){
+ 				headers[i].magic = 0xBF;
+ 				strcpy(headers[i].fileName, &quot;&quot;);
+@@ -46,7 +47,7 @@
+ 				headers[i].offset = 0;
+ 				headers[i].length = 0;
+ 			}			
+-			printf(&quot;\e[33,44mDONE\e[0m\n\n&quot;);			
++			printf(&quot;[ \033[1;33mDONE\e[0m ]\n\n&quot;);	
+ 			printf(&quot;Number of files to copy %d\n&quot;, nfiles);
+ 			printf(&quot;FileSystem name: %s\n\n&quot;, argv[argc-1]);
+ 			printf(&quot;Creating File headers\n&quot;);			
+@@ -57,7 +58,7 @@
+ 				if(fd == NULL){
+ 					 printf(&quot;Error one or more files not found\n&quot;);
+ 					 // Debug
+-      					 printf(&quot;Nome del file: --&gt;%s&lt;--\n&quot;,argv[i+1]);
++      					 printf(&quot;Name of file: --&gt;%s&lt;--\n&quot;,argv[i+1]);
+ 					 return -1;
+ 				 }
+ 				else {
+@@ -70,12 +71,13 @@
+ 					offset += headers[i].length;
+ 				}				
+ 			}
+-			printf(&quot;\e[33,44mDONE\e[0m\n\n&quot;);
++
++			printf(&quot;[ \033[1;33mDONE\e[0m ]\n\n&quot;);		
+ 			i=0;
+ 			printf(&quot;Copying headers to %s filesystem  &quot;, argv[argc-1]);		
+ 			fwrite(&amp;nfiles, sizeof(int), 1, fsdest);
+ 			fwrite(headers, sizeof(struct initrd_file_t), 32, fsdest);
+-			printf(&quot;\e[33,44mDONE\e[0m\n\n&quot;);			
++			printf(&quot;[ \033[1;33mDONE\e[0m ]\n\n&quot;);	
+ 			printf(&quot;Copying data to %s filesystem\n&quot;, argv[argc-1]);		
+ 			for(i=0; i&lt;argc - 2; i++){
+ 				FILE *fd2;
+@@ -86,7 +88,7 @@
+ 				fwrite(buffer, 1, headers[i].length, fsdest);
+ 				printf(&quot;\t\tFileName: %s Length: %d offset: %d\n&quot;, headers[i].fileName, headers[i].length, headers[i].offset);
+ 			}
+-			printf(&quot;\e[33,44mDONE\e[0m\n\n&quot;);
++			printf(&quot;[ \033[1;33mDONE\e[0m ]\n\n&quot;);	
+ 			fclose(fsdest);
+ 		}		
+ 	}	
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000164.html">[Dreamos-dev] r162 - trunk/boot
+</A></li>
+	<LI>Next message: <A HREF="000166.html">[Dreamos-dev] r164 - trunk/utils
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#165">[ date ]</a>
+              <a href="thread.html#165">[ thread ]</a>
+              <a href="subject.html#165">[ subject ]</a>
+              <a href="author.html#165">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

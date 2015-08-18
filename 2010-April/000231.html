@@ -1,0 +1,260 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r228 - in trunk: . fs include/shell shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-April/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r228%20-%20in%20trunk%3A%20.%20fs%20include/shell%20shell&In-Reply-To=%3C201004162134.o3GLYkXW030728%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000230.html">
+   <LINK REL="Next"  HREF="000232.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r228 - in trunk: . fs include/shell shell</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r228%20-%20in%20trunk%3A%20.%20fs%20include/shell%20shell&In-Reply-To=%3C201004162134.o3GLYkXW030728%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r228 - in trunk: . fs include/shell shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Fri Apr 16 23:34:46 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000230.html">[Dreamos-dev] r227 - in trunk: . fs include/fs shell
+</A></li>
+        <LI>Next message: <A HREF="000232.html">[Dreamos-dev] r229 - in trunk: include/shell shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#231">[ date ]</a>
+              <a href="thread.html#231">[ thread ]</a>
+              <a href="subject.html#231">[ subject ]</a>
+              <a href="author.html#231">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-04-16 23:34:38 +0200 (Fri, 16 Apr 2010)
+New Revision: 228
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/fs/initrd.c
+   trunk/fs/vfs.c
+   trunk/include/shell/testing.h
+   trunk/shell/commands.c
+   trunk/shell/testing.c
+Log:
+In open ora path non viene piu modificata come variabile durante la 
+funzione.
+Ora il parametro o_creat crea un file nel filesystem, se possibile.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2010-04-14 22:05:08 UTC (rev 227)
++++ trunk/fs/fcntl.c	2010-04-16 21:34:38 UTC (rev 228)
+@@ -42,17 +42,16 @@
+ 	int mpid;
+ 	int ret_fd;
+ 	int error = 0;
++	char *newpath;
+ 	va_list ap;
+ 	va_start(ap, oflags);
+ 	ret_fd = 0;	
+-	
++	//printf(&quot;Path: %s\n&quot;, path);	
+ 	prova = va_arg(ap, int);
++	newpath = kmalloc(CURPATH_LEN * sizeof(char));
++	memset(newpath, '\0', CURPATH_LEN);
+ 	cur_fd=0;
+ 	if(cur_fd == _SC_OPEN_MAX) cur_fd = 0;			
+-	if(oflags&amp;O_CREAT) {
+-		printf(&quot;O_CREAT Flag\n&quot;);
+-		return -1;
+-	}
+ 
+ 	while(fd_list[cur_fd].mountpoint_id != -1 &amp;&amp; cur_fd &lt; _SC_OPEN_MAX){
+ 		//printf(&quot;%d %d\n&quot;, cur_fd, fd_list[cur_fd].mountpoint_id);		
+@@ -62,19 +61,21 @@
+ 		printf(&quot;No more file descriptors available\n&quot;);
+ 		return -1;
+ 	}
+-	error = get_abs_path((char*) path);
+-    mpid = get_mountpoint_id((char*) path);		
++	strcpy(newpath, path);	
++	error = get_abs_path((char*) newpath);
++	//printf(&quot;After get_abs: %s %s\n&quot;, newpath, current_user.cur_path);
++    mpid = get_mountpoint_id((char*) newpath);		
+ 	//printf(&quot;Cur_fd: %d\n&quot;,cur_fd);
+ 	if(mpid &gt;-1) {
+ 		fd_list[cur_fd].mountpoint_id = mpid;				
+-		path = get_rel_path(mpid, path);		
++		newpath = get_rel_path(mpid, (char *)newpath);		
+ 	} else {
+ 		printf(&quot;That path doesn't exist\n&quot;);
+ 		va_end(ap);
+ 		return -1;
+ 	}
+ 	if( mpid &gt; -1 &amp;&amp; mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open != NULL){
+-			fd_list[cur_fd].fs_spec_id = (int) mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open(path, oflags);
++			fd_list[cur_fd].fs_spec_id = (int) mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open(newpath, oflags);
+ 		if(fd_list[cur_fd].fs_spec_id == -1){
+ 			printf(&quot;No file's Found\n&quot;);
+ 			va_end(ap);
+@@ -91,7 +92,7 @@
+ 	fd_list[cur_fd].flags_mask = oflags;
+ 	ret_fd = cur_fd;
+ 	cur_fd++;
+-	free((void*)path);
++	free(newpath);
+ 	return ret_fd;
+ }
+ 
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-04-14 22:05:08 UTC (rev 227)
++++ trunk/fs/initrd.c	2010-04-16 21:34:38 UTC (rev 228)
+@@ -24,6 +24,7 @@
+ #include &lt;string.h&gt;
+ #include &lt;vfs.h&gt;
+ #include &lt;kheap.h&gt;
++#include &lt;fcntl.h&gt;
+ #include &lt;sys/stat.h&gt;
+ 
+ char *module_start;
+@@ -101,8 +102,22 @@
+ 		while(ird_descriptors[i].file_descriptor!=-1 &amp;&amp; i &lt; MAX_INITRD_DESCRIPTORS) i++;			
+ 		cur_irdfd = i;
+ 	}
+-	while (j &lt; fs_specs-&gt;nfiles) {
+-		if(!strcmp(path, module_var[j].fileName)){
++	if(flags&amp;O_CREAT) {
++		printf(&quot;O_CREAT Flag\n&quot;);
++		if(fs_specs-&gt;nfiles &lt; MAX_FILES ){			
++			module_var[fs_specs-&gt;nfiles].magic=0xBF;
++			strcpy(module_var[fs_specs-&gt;nfiles].fileName, path);
++			module_var[fs_specs-&gt;nfiles].file_type = FS_FILE;
++			module_var[fs_specs-&gt;nfiles].uid = 1;
++			module_var[fs_specs-&gt;nfiles].offset = 0;
++			fs_specs-&gt;nfiles++;
++			return cur_irdfd++; 
++		}
++		return -1;
++	}
++	else {
++		while (j &lt; fs_specs-&gt;nfiles) {
++			if(!strcmp(path, module_var[j].fileName)){
+ 				if(module_var[j].file_type == FS_DIRECTORY || module_var[j].file_type == FS_MOUNTPOINT)
+ 					return -1;
+ 				ird_descriptors[cur_irdfd].file_descriptor	= j;
+@@ -111,8 +126,9 @@
+ 				//printf(&quot;ret_fd: %d --- %d\n&quot;, cur_irdfd, j);
+ 				ird_descriptors[cur_irdfd].cur_pos = 0;
+ 				return cur_irdfd++; 
++			}
++			j++;
+ 		}
+-		j++;
+ 	}
+ 	return -1;	
+ }
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2010-04-14 22:05:08 UTC (rev 227)
++++ trunk/fs/vfs.c	2010-04-16 21:34:38 UTC (rev 228)
+@@ -151,14 +151,15 @@
+   * @param char* path percorso del file da aprire  
+   *
+   * Dato un path ne estrae il percorso assoluto (a partire da quello corrente)
+-  * @return Path assoluto  
++  * @return error code  
+   */
+ int get_abs_path(char *path){
+-		if(path[0]!='/') {
++		if(path[0]!='/') {			
+ 		char abspath[CURPATH_LEN];
+ 		int abs_size = 0;
+-		abs_size = strlen(current_user.cur_path);
++		abs_size = strlen(current_user.cur_path);		
+ 		memset(abspath, '\0', CURPATH_LEN);
++		//printf(&quot;Abs: %s\n&quot;, abspath);
+ 		strcpy(abspath, current_user.cur_path);
+ 		if(abspath[abs_size-1] == '/')
+ 			strncat(abspath, path, strlen(path));
+
+Modified: trunk/include/shell/testing.h
+===================================================================
+--- trunk/include/shell/testing.h	2010-04-14 22:05:08 UTC (rev 227)
++++ trunk/include/shell/testing.h	2010-04-16 21:34:38 UTC (rev 228)
+@@ -25,7 +25,7 @@
+ void help_tester();
+ void try_module();
+ void try_open();
+-void try_fsinit();
++void try_ocreat();
+ void try_syscall();
+ void show_fd();
+ void test_stat();
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-04-14 22:05:08 UTC (rev 227)
++++ trunk/shell/commands.c	2010-04-16 21:34:38 UTC (rev 228)
+@@ -494,7 +494,7 @@
+ 					{ &quot;try_strtok&quot;, try_strtok },
+ 					{ &quot;do_fault&quot;, do_fault },
+ 					{ &quot;try_printmem&quot;, try_printmem },
+-					{ &quot;try_ocreat&quot;, try_fsinit },
++					{ &quot;try_ocreat&quot;, try_ocreat },
+ 					{ &quot;try_open&quot;, try_open},					
+ 					{ &quot;try_syscall&quot;, try_syscall},
+ 					{ &quot;show_fd&quot;, show_fd},
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-04-14 22:05:08 UTC (rev 227)
++++ trunk/shell/testing.c	2010-04-16 21:34:38 UTC (rev 228)
+@@ -155,7 +155,7 @@
+ 	printf(&quot;\n&quot;);
+ }
+ 
+-void try_fsinit(){
++void try_ocreat(){
+ 	//printf(&quot;Number of files present: %d\n&quot;, initfs_init());
+ 	open(&quot;pippo&quot;, O_RDWR|O_CREAT);
+ }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000230.html">[Dreamos-dev] r227 - in trunk: . fs include/fs shell
+</A></li>
+	<LI>Next message: <A HREF="000232.html">[Dreamos-dev] r229 - in trunk: include/shell shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#231">[ date ]</a>
+              <a href="thread.html#231">[ thread ]</a>
+              <a href="subject.html#231">[ subject ]</a>
+              <a href="author.html#231">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

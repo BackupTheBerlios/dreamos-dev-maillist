@@ -1,0 +1,223 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r222 - in trunk: . fs include/sys shell sys
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-April/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r222%20-%20in%20trunk%3A%20.%20fs%20include/sys%20shell%20sys&In-Reply-To=%3C201004072218.o37MI9t0015817%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000224.html">
+   <LINK REL="Next"  HREF="000226.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r222 - in trunk: . fs include/sys shell sys</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r222%20-%20in%20trunk%3A%20.%20fs%20include/sys%20shell%20sys&In-Reply-To=%3C201004072218.o37MI9t0015817%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r222 - in trunk: . fs include/sys shell sys">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Thu Apr  8 00:18:09 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000224.html">[Dreamos-dev] r221 - in trunk: . fs sys
+</A></li>
+        <LI>Next message: <A HREF="000226.html">[Dreamos-dev] r223 - in trunk: . fs include/fs shell sys
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#225">[ date ]</a>
+              <a href="thread.html#225">[ thread ]</a>
+              <a href="subject.html#225">[ subject ]</a>
+              <a href="author.html#225">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-04-08 00:17:54 +0200 (Thu, 08 Apr 2010)
+New Revision: 222
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/initrd.c
+   trunk/include/sys/stat.h
+   trunk/include/sys/types.h
+   trunk/shell/commands.c
+   trunk/shell/testing.c
+   trunk/sys/stat.c
+Log:
+Aggiunti altri valori a struct stat. 
+Aggiornato comando test_stat in tester
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-04-06 21:23:24 UTC (rev 221)
++++ trunk/fs/initrd.c	2010-04-07 22:17:54 UTC (rev 222)
+@@ -139,8 +139,21 @@
+ }
+ 
+ int initrd_stat(char* path, struct stat *buf){
+-	printf(&quot;Initrd stat function\n&quot;);
+-	buf-&gt;st_uid = 33;	
++	int i;
++	initrd_file_t *module_var;
++	module_var = fs_headers;
++	i=0;
++	while(i&lt;MAX_INITRD_DESCRIPTORS){
++		if(!strcmp(path, module_var[i].fileName)) {
++			printf(&quot;Found\n&quot;);		
++			buf-&gt;st_uid = module_var[i].uid;
++			buf-&gt;st_size = module_var[i].length;
++			break;
++		}
++		i++;
++	}
++	printf(&quot;Initrd stat function\n&quot;);	
++	//buf-&gt;st_uid = 33;	
+ 	return 0;
+ }
+ 
+
+Modified: trunk/include/sys/stat.h
+===================================================================
+--- trunk/include/sys/stat.h	2010-04-06 21:23:24 UTC (rev 221)
++++ trunk/include/sys/stat.h	2010-04-07 22:17:54 UTC (rev 222)
+@@ -29,6 +29,8 @@
+ 	
+ 	uid_t     st_uid; /**&lt; user id del file*/	
+ 	gid_t     st_gid; /**&lt; group id del file*/
++	
++	off_t	  st_size; /**&lt; Dimensione del file */
+ };
+ 
+ 
+
+Modified: trunk/include/sys/types.h
+===================================================================
+--- trunk/include/sys/types.h	2010-04-06 21:23:24 UTC (rev 221)
++++ trunk/include/sys/types.h	2010-04-07 22:17:54 UTC (rev 222)
+@@ -23,6 +23,7 @@
+ typedef unsigned int dev_t;
+ typedef unsigned int uid_t;
+ typedef unsigned int gid_t;
++typedef unsigned int off_t;
+ 
+ typedef unsigned int mode_t;
+ typedef int ssize_t;
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-04-06 21:23:24 UTC (rev 221)
++++ trunk/shell/commands.c	2010-04-07 22:17:54 UTC (rev 222)
+@@ -24,6 +24,7 @@
+ #include &lt;vfs.h&gt;
+ #include &lt;testing.h&gt;
+ #include &lt;fcntl.h&gt;
++#include &lt;stat.h&gt;
+ 
+ struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
+ userenv_t current_user;
+@@ -356,16 +357,16 @@
+ 
+ void ls() {
+ 	int i=0, j=0;
+-	//int flag = 0;
++	int flag = 0;
+ 	DIR *dirp;
+ 	while ( strcmp(mountpoint_list[i].mountpoint, &quot;&quot;) ) {
+          	j++;
+ 		i++;
+ 	}
+-	i = 0;	
+-	//if(if argc &gt; 1 &amp;&amp; strcmp(argv[1], &quot;-l&quot;) == 0) flag =1;
++	i = 0;		
+ 	dirp = opendir(current_user.cur_path);
+ 	if(dirp!=NULL){
++		if(argc &gt; 1 &amp;&amp; strcmp(argv[1], &quot;-l&quot;) == 0) flag =1;
+ 		/*while(i&lt;j){
+ 			if(strcmp(mountpoint_list[i].mountpoint, current_user.cur_path)){
+ 				
+@@ -374,7 +375,8 @@
+ 		}*/
+ 		struct dirent* cur_dir_entry;
+ 		cur_dir_entry = readdir(dirp);		
+-		while(cur_dir_entry!=NULL){			
++		while(cur_dir_entry!=NULL){
++			//struct stat 			
+ 			if(cur_dir_entry-&gt;d_type == FS_MOUNTPOINT) _kcolor(BRIGHT_GREEN);
+ 			printf(&quot;%s\n&quot;, cur_dir_entry-&gt;d_name);
+ 			_kcolor(WHITE);			
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-04-06 21:23:24 UTC (rev 221)
++++ trunk/shell/testing.c	2010-04-07 22:17:54 UTC (rev 222)
+@@ -188,6 +188,8 @@
+ 	printf(&quot;Testing stat functions\n&quot;);
+ 	stats = (struct stat*) kmalloc(sizeof(struct stat));
+ 	stat(&quot;/README&quot;, stats);
+-	printf(&quot;%d\n&quot;, stats-&gt;st_dev);	
++	printf(&quot;Device_id: %d\n&quot;, stats-&gt;st_dev);	
++	printf(&quot;Size: %d\n&quot;, stats-&gt;st_size);
++	printf(&quot;Uid: %d\n&quot;, stats-&gt;st_uid);
+ 	free(stats);	
+ }
+
+Modified: trunk/sys/stat.c
+===================================================================
+--- trunk/sys/stat.c	2010-04-06 21:23:24 UTC (rev 221)
++++ trunk/sys/stat.c	2010-04-07 22:17:54 UTC (rev 222)
+@@ -25,16 +25,17 @@
+ int stat(const char *path, struct stat *buf){
+ 	int mp_id;
+ 	mp_id = 0;
+-	mp_id = get_mountpoint_id((char*) path);	
+-	printf(&quot;%d\n&quot;, mp_id);
++	mp_id = get_mountpoint_id((char*) path);
++	if(path[0] == '/');
++	//printf(&quot;%d\n&quot;, mp_id);
+ 	buf-&gt;st_dev = mp_id;
+ 	if(mountpoint_list[mp_id].stat_op.stat!=NULL) {
+ 		path = get_rel_path(mp_id, path);
+-		printf(&quot;Absolute path: %s\n&quot;, path);
++		//printf(&quot;Absolute path: %s\n&quot;, path);
+ 		mountpoint_list[mp_id].stat_op.stat((char*)path, buf);	
+ 	}
+ 	else printf(&quot;Null\n&quot;);
+-	printf(&quot;%d\n&quot;, buf-&gt;st_uid);
++	//printf(&quot;%d\n&quot;, buf-&gt;st_uid);
+ 	return 0;
+ }
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000224.html">[Dreamos-dev] r221 - in trunk: . fs sys
+</A></li>
+	<LI>Next message: <A HREF="000226.html">[Dreamos-dev] r223 - in trunk: . fs include/fs shell sys
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#225">[ date ]</a>
+              <a href="thread.html#225">[ thread ]</a>
+              <a href="subject.html#225">[ subject ]</a>
+              <a href="author.html#225">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

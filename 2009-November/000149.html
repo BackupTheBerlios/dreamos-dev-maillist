@@ -1,0 +1,130 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r147 - in trunk: . fs include shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-November/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r147%20-%20in%20trunk%3A%20.%20fs%20include%20shell&In-Reply-To=%3C200911282325.nASNPdj8020973%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   
+   
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r147 - in trunk: . fs include shell</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r147%20-%20in%20trunk%3A%20.%20fs%20include%20shell&In-Reply-To=%3C200911282325.nASNPdj8020973%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r147 - in trunk: . fs include shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun Nov 29 00:25:39 CET 2009</I>
+    <P><UL>
+        
+        
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#149">[ date ]</a>
+              <a href="thread.html#149">[ thread ]</a>
+              <a href="subject.html#149">[ subject ]</a>
+              <a href="author.html#149">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-11-29 00:25:38 +0100 (Sun, 29 Nov 2009)
+New Revision: 147
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/include/version.h
+   trunk/shell/testing.c
+   trunk/start.sh
+Log:
+Aggiornato numero di versione in version.h
+Corretti alcuni errori di ortografia in start.sh
+Piccolo aggiornamento della OPEN
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2009-10-12 21:02:05 UTC (rev 146)
++++ trunk/fs/fcntl.c	2009-11-28 23:25:38 UTC (rev 147)
+@@ -44,7 +44,9 @@
+ 		fd_list[cur_fd].mountpoint_id = get_mountpoint_id(path);
+ 		printf(&quot;Mpoint id: %d\n&quot;, fd_list[cur_fd].mountpoint_id);
+ 		if(mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open != NULL)
+-			mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open(path, oflags);		
++			mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open(path, oflags);
++		else 
++			printf(&quot;No OPEN services found here\n&quot;);
+ 		cur_fd++;
+ 	}	
+ 	va_end(ap);
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-10-12 21:02:05 UTC (rev 146)
++++ trunk/include/version.h	2009-11-28 23:25:38 UTC (rev 147)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL &quot;2.0&quot;
+ #define EXTRAVERSION &quot;-trunk&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r139&quot;
++#define REV_NUM &quot;-r144&quot;
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2009-10-12 21:02:05 UTC (rev 146)
++++ trunk/shell/testing.c	2009-11-28 23:25:38 UTC (rev 147)
+@@ -132,5 +132,5 @@
+ 	printf(&quot;Please insert a path: &quot;);
+ 	//appoggio = gets();
+ 	scanf(&quot;%s&quot;, appoggio);	
+-	open(appoggio, 0, 42);
++	open(appoggio, O_RDONLY, 42);
+ }
+
+Modified: trunk/start.sh
+===================================================================
+--- trunk/start.sh	2009-10-12 21:02:05 UTC (rev 146)
++++ trunk/start.sh	2009-11-28 23:25:38 UTC (rev 147)
+@@ -174,7 +174,7 @@
+ 		  make en                          
+ 		  echo &quot;-----------------------&gt;&quot;  
+ 	  else                                     
+-		  echo &quot;Warning: No language traslation declared!&quot;
++		  echo &quot;Warning: No language translation declared!&quot;
+ 		  echo &quot;-----------------------&gt;&quot;                 
+ 	  fi  
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	
+	
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#149">[ date ]</a>
+              <a href="thread.html#149">[ thread ]</a>
+              <a href="subject.html#149">[ subject ]</a>
+              <a href="author.html#149">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

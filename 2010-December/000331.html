@@ -1,0 +1,90 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r328 - in trunk: . mem
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-December/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r328%20-%20in%20trunk%3A%20.%20mem&In-Reply-To=%3C20101229222805.30025480781%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000330.html">
+   <LINK REL="Next"  HREF="000332.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r328 - in trunk: . mem</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r328%20-%20in%20trunk%3A%20.%20mem&In-Reply-To=%3C20101229222805.30025480781%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r328 - in trunk: . mem">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Wed Dec 29 23:28:04 CET 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000330.html">[Dreamos-dev] r327 - in trunk: . mem
+</A></li>
+        <LI>Next message: <A HREF="000332.html">[Dreamos-dev] r329 - in trunk: include/mem mem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#331">[ date ]</a>
+              <a href="thread.html#331">[ thread ]</a>
+              <a href="subject.html#331">[ subject ]</a>
+              <a href="author.html#331">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-12-29 23:28:04 +0100 (Wed, 29 Dec 2010)
+New Revision: 328
+
+Modified:
+   trunk/dreamos.img
+   trunk/mem/heap.c
+Log:
+new_free settato header come hole.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-12-16 22:21:27 UTC (rev 327)
++++ trunk/mem/heap.c	2010-12-29 22:28:04 UTC (rev 328)
+@@ -221,4 +221,8 @@
+ 	}
+ 	header_t* header = (header_t*)(address - sizeof(header_t));
+ 	footer_t* footer = (footer_t*)(address + header-&gt;size - sizeof(footer_t));
++	/**Set header as a hole*/
++	header-&gt;is_hole = HEAP_HOLE;
++	char to_add = 1;
++	/**TODO: unify left and unify right*/
+ }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000330.html">[Dreamos-dev] r327 - in trunk: . mem
+</A></li>
+	<LI>Next message: <A HREF="000332.html">[Dreamos-dev] r329 - in trunk: include/mem mem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#331">[ date ]</a>
+              <a href="thread.html#331">[ thread ]</a>
+              <a href="subject.html#331">[ subject ]</a>
+              <a href="author.html#331">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

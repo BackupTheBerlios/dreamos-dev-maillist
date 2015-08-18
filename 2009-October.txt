@@ -1,0 +1,508 @@
+From finarfin at mail.berlios.de  Tue Oct  6 18:47:32 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Tue, 6 Oct 2009 18:47:32 +0200
+Subject: [Dreamos-dev] r143 - in trunk: . boot fs shell
+Message-ID: <200910061647.n96GlWkX004533@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-10-06 18:47:22 +0200 (Tue, 06 Oct 2009)
+New Revision: 143
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/fs/vfs.c
+   trunk/shell/commands.c
+   trunk/shell/testing.c
+Log:
+Corretto comando cd.
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2009-09-28 18:06:02 UTC (rev 142)
++++ trunk/fs/fcntl.c	2009-10-06 16:47:22 UTC (rev 143)
+@@ -22,6 +22,7 @@
+ #include <stdio.h>
+ 
+ int cur_fd;
++file_descriptor_t fd_list[_SC_OPEN_MAX];
+ int  open(const char *path, int flags,  ...){
+ 	int prova;
+ 	va_list ap;
+@@ -29,7 +30,12 @@
+ 	
+ 	prova = va_arg(ap, int);
+ 	printf("Prova vale: %d e il path: %s e cur_fd: %d\n", prova,path,cur_fd);
+-	cur_fd++;
++	if(cur_fd >= _SC_OPEN_MAX) cur_fd=0;
++	else {		
++		fd_list[cur_fd].mountpoint_id = get_mountpoint_id(path);
++		printf("Mpoint id: %d\n", fd_list[cur_fd].mountpoint_id);
++		cur_fd++;
++	}	
+ 	va_end(ap);
+ }
+ 
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2009-09-28 18:06:02 UTC (rev 142)
++++ trunk/fs/vfs.c	2009-10-06 16:47:22 UTC (rev 143)
+@@ -95,17 +95,16 @@
+ 
+ int get_mountpoint_id(char *path){
+        int i = 0;
+-       int last;
+-	   last = -1;	   	 
++       int last=-1;
+        while(i<MAX_MOUNTPOINT ){
+                        if(!_kstrncmp(path, mountpoint_list[i].mountpoint, strlen(mountpoint_list[i].mountpoint))) {                 
+ 							   if(strlen(mountpoint_list[i].mountpoint) > strlen(mountpoint_list[last].mountpoint) && i>0)  
+                                		last = i;
+-							   else last = i;
++							   else if(i==0) last = i;
+                        }					   					   
+                        i++;
+-               }
+-			   if(last!=-1) printf("Changing dir %s\n", mountpoint_list[last].mountpoint, last);
++               }               
++			   if(last!=-1) printf("Changing dir %s\n", mountpoint_list[last].mountpoint, last);			   
+                return last;
+ }
+ 
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-09-28 18:06:02 UTC (rev 142)
++++ trunk/shell/commands.c	2009-10-06 16:47:22 UTC (rev 143)
+@@ -385,10 +385,10 @@
+ 	} else {
+ 		int i=0;
+ 		int rel_size = 0;		
+-		i = get_mountpoint_id(argv[1]);
++		i = get_mountpoint_id(argv[1]);		
+ 		//printf("path: %s\n", argv[1]);
+ 		rel_size = strlen(argv[1]) - strlen(mountpoint_list[i].mountpoint);
+-		if(i == -1 || (i==0  && strcmp("/", argv[1]))) {			
++		if(i == -1) {			
+ 			printf("cd: %s: No such file or directory\n", argv[1]);
+ 			return;
+ 		}
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2009-09-28 18:06:02 UTC (rev 142)
++++ trunk/shell/testing.c	2009-10-06 16:47:22 UTC (rev 143)
+@@ -25,6 +25,7 @@
+ #include <testing.h>
+ #include <multiboot.h>
+ #include <kernel.h>
++#include <fcntl.h>
+ 
+ //multiboot_info_t *boot_informations;
+ char *module_start;
+@@ -121,5 +122,8 @@
+ }
+ 
+ void try_open(){
+-	open("Prova", 0, 42);
++	char appoggio[50];
++	printf("Please insert a path: ");
++	scanf("%s", appoggio);
++	open(appoggio, 0, 42);
+ }
+
+
+
+From finarfin at mail.berlios.de  Fri Oct  9 21:43:42 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Fri, 9 Oct 2009 21:43:42 +0200
+Subject: [Dreamos-dev] r144 - in trunk: . fs include include/fs
+Message-ID: <200910091943.n99JhgBJ007880@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-10-09 21:43:40 +0200 (Fri, 09 Oct 2009)
+New Revision: 144
+
+Modified:
+   trunk/bl.img
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/fs/initrd.c
+   trunk/fs/vfs.c
+   trunk/include/fs/initrd.h
+   trunk/include/fs/vfs.h
+   trunk/include/version.h
+Log:
+Aggiunta anche una funzione dummy_open.
+La open ora chiama la funzione open specifica del fs se presente
+Aggiornato numero versione
+
+
+Modified: trunk/bl.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2009-10-06 16:47:22 UTC (rev 143)
++++ trunk/fs/fcntl.c	2009-10-09 19:43:40 UTC (rev 144)
+@@ -23,10 +23,12 @@
+ 
+ int cur_fd;
+ file_descriptor_t fd_list[_SC_OPEN_MAX];
+-int  open(const char *path, int flags,  ...){
++struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
++
++int  open(const char *path, int oflags,  ...){
+ 	int prova;
+ 	va_list ap;
+-	va_start(ap, flags);
++	va_start(ap, oflags);
+ 	
+ 	prova = va_arg(ap, int);
+ 	printf("Prova vale: %d e il path: %s e cur_fd: %d\n", prova,path,cur_fd);
+@@ -34,6 +36,8 @@
+ 	else {		
+ 		fd_list[cur_fd].mountpoint_id = get_mountpoint_id(path);
+ 		printf("Mpoint id: %d\n", fd_list[cur_fd].mountpoint_id);
++		if(mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open != NULL)
++			mountpoint_list[get_mountpoint_id(path)].operations.open(path, 0);		
+ 		cur_fd++;
+ 	}	
+ 	va_end(ap);
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2009-10-06 16:47:22 UTC (rev 143)
++++ trunk/fs/initrd.c	2009-10-09 19:43:40 UTC (rev 144)
+@@ -28,3 +28,7 @@
+ 	printf("Sono una dummy_opendir, ti piaccio? path: %s\n", path);
+ 	return NULL;
+ }
++
++int dummy_open(char *path, int flags){
++	printf("Hi, i'm a dummy open. And i do nothing!!!\n");
++}
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2009-10-06 16:47:22 UTC (rev 143)
++++ trunk/fs/vfs.c	2009-10-09 19:43:40 UTC (rev 144)
+@@ -51,10 +51,12 @@
+  		mountpoint_list[i].gid = 0;
+  		mountpoint_list[i].pmask = 0;
+  		mountpoint_list[i].dev_id = 0;
+-	 	mountpoint_list[i].start_address = 0;
+-	 	//mountpoint_list[0].dir_op.opendir_f = NULL;	
++	 	mountpoint_list[i].start_address = 0;	 	
+ 	 	mountpoint_list[i].dir_op.opendir_f = fake_opendir;
+-	 	//mountpoint_list[i].operations = NULL;
++		mountpoint_list[i].operations.open = NULL;
++		mountpoint_list[i].operations.close = NULL;
++		mountpoint_list[i].operations.read = NULL;
++		mountpoint_list[i].operations.write = NULL;
+  		i++;
+ 	}
+ 	
+@@ -65,6 +67,7 @@
+  	mountpoint_list[0].dev_id = 0;
+  	mountpoint_list[0].start_address = 0;
+  	mountpoint_list[0].dir_op.opendir_f = dummy_opendir;
++ 	mountpoint_list[0].operations.open = dummy_open;
+  	//mountpoint_list[0].operations = kmalloc(sizeof(struct super_node_operations));
+ 
+ 	strcpy(mountpoint_list[1].mountpoint,"/dev"); 	
+
+Modified: trunk/include/fs/initrd.h
+===================================================================
+--- trunk/include/fs/initrd.h	2009-10-06 16:47:22 UTC (rev 143)
++++ trunk/include/fs/initrd.h	2009-10-09 19:43:40 UTC (rev 144)
+@@ -36,4 +36,5 @@
+ 
+ void dummy();
+ DIR *dummy_opendir(const char *);
++int dummy_open(char *, int );
+ #endif
+
+Modified: trunk/include/fs/vfs.h
+===================================================================
+--- trunk/include/fs/vfs.h	2009-10-06 16:47:22 UTC (rev 143)
++++ trunk/include/fs/vfs.h	2009-10-09 19:43:40 UTC (rev 144)
+@@ -37,7 +37,7 @@
+ 
+ struct super_node_operations {
+ 	/*Qui vanno i puntatori alle funzioni sul supernode*/
+-	void (*open)(char *, int );
++	void (*open)(const char *, int );
+ 	void (*close)(int);
+ 	int (*read)(int, void*, size_t);
+ 	int (*write)(int, void*, size_t);
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-10-06 16:47:22 UTC (rev 143)
++++ trunk/include/version.h	2009-10-09 19:43:40 UTC (rev 144)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "2.0"
+ #define EXTRAVERSION "-trunk"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r138"
++#define REV_NUM "-r139"
+
+
+
+From finarfin at mail.berlios.de  Sun Oct 11 23:30:14 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Sun, 11 Oct 2009 23:30:14 +0200
+Subject: [Dreamos-dev] r145 - in trunk: . fs include/fs include/libc shell
+	sys
+Message-ID: <200910112130.n9BLUEK0026183@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-10-11 23:30:13 +0200 (Sun, 11 Oct 2009)
+New Revision: 145
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/fs/initrd.c
+   trunk/include/fs/initrd.h
+   trunk/include/libc/stdio.h
+   trunk/shell/testing.c
+   trunk/sys/dirent.c
+Log:
+Modificeh a open
+Aggiunta funzione dumm_open per test sulla open
+Sistemato comando try_open
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2009-10-09 19:43:40 UTC (rev 144)
++++ trunk/fs/fcntl.c	2009-10-11 21:30:13 UTC (rev 145)
+@@ -37,7 +37,7 @@
+ 		fd_list[cur_fd].mountpoint_id = get_mountpoint_id(path);
+ 		printf("Mpoint id: %d\n", fd_list[cur_fd].mountpoint_id);
+ 		if(mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open != NULL)
+-			mountpoint_list[get_mountpoint_id(path)].operations.open(path, 0);		
++			mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open(path, oflags);		
+ 		cur_fd++;
+ 	}	
+ 	va_end(ap);
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2009-10-09 19:43:40 UTC (rev 144)
++++ trunk/fs/initrd.c	2009-10-11 21:30:13 UTC (rev 145)
+@@ -29,6 +29,6 @@
+ 	return NULL;
+ }
+ 
+-int dummy_open(char *path, int flags){
++int dummy_open(const char *path, int flags){
+ 	printf("Hi, i'm a dummy open. And i do nothing!!!\n");
+ }
+
+Modified: trunk/include/fs/initrd.h
+===================================================================
+--- trunk/include/fs/initrd.h	2009-10-09 19:43:40 UTC (rev 144)
++++ trunk/include/fs/initrd.h	2009-10-11 21:30:13 UTC (rev 145)
+@@ -36,5 +36,5 @@
+ 
+ void dummy();
+ DIR *dummy_opendir(const char *);
+-int dummy_open(char *, int );
++int dummy_open(const char *, int );
+ #endif
+
+Modified: trunk/include/libc/stdio.h
+===================================================================
+--- trunk/include/libc/stdio.h	2009-10-09 19:43:40 UTC (rev 144)
++++ trunk/include/libc/stdio.h	2009-10-11 21:30:13 UTC (rev 145)
+@@ -33,5 +33,6 @@
+ int printf (const char *, ...);
+ int puts (char *s);
+ int scanf (const char *, ...);
++char *gets ();
+ 
+ #endif
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2009-10-09 19:43:40 UTC (rev 144)
++++ trunk/shell/testing.c	2009-10-11 21:30:13 UTC (rev 145)
+@@ -123,7 +123,14 @@
+ 
+ void try_open(){
+ 	char appoggio[50];
++	int i;
++	i=0;
++	while(i<50){
++		appoggio[i] = '\0';
++		i++;
++	}
+ 	printf("Please insert a path: ");
+-	scanf("%s", appoggio);
++	//appoggio = gets();
++	scanf("%s", appoggio);	
+ 	open(appoggio, 0, 42);
+ }
+
+Modified: trunk/sys/dirent.c
+===================================================================
+--- trunk/sys/dirent.c	2009-10-09 19:43:40 UTC (rev 144)
++++ trunk/sys/dirent.c	2009-10-11 21:30:13 UTC (rev 145)
+@@ -22,6 +22,7 @@
+ #include <string.h>
+ #include <stddef.h>
+ #include <vfs.h>
++#include <fismem.h>
+ 
+ struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
+ 
+
+
+
+From finarfin at mail.berlios.de  Mon Oct 12 23:02:05 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Mon, 12 Oct 2009 23:02:05 +0200
+Subject: [Dreamos-dev] r146 - in trunk: . fs include/fs include/sys sys
+Message-ID: <200910122102.n9CL25qe018402@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-10-12 23:02:05 +0200 (Mon, 12 Oct 2009)
+New Revision: 146
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/fs/initrd.c
+   trunk/include/fs/initrd.h
+   trunk/include/fs/vfs.h
+   trunk/include/sys/unistd.h
+   trunk/sys/dirent.c
+Log:
+Spostato header di close.
+Aggiustati include in dirent.c
+
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2009-10-11 21:30:13 UTC (rev 145)
++++ trunk/fs/fcntl.c	2009-10-12 21:02:05 UTC (rev 146)
+@@ -25,7 +25,14 @@
+ file_descriptor_t fd_list[_SC_OPEN_MAX];
+ struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
+ 
+-int  open(const char *path, int oflags,  ...){
++/**
++  * @author Ivan Gualandri
++  * @param char* path percorso del file da aprire
++  * @param int oflags parametri di apertura
++  *
++  * Dato un path viene aperto se presente, e si torna il numero di descrittore che lo contiene
++  */
++int open(const char *path, int oflags,  ...){
+ 	int prova;
+ 	va_list ap;
+ 	va_start(ap, oflags);
+@@ -41,5 +48,6 @@
+ 		cur_fd++;
+ 	}	
+ 	va_end(ap);
++	return cur_fd;
+ }
+ 
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2009-10-11 21:30:13 UTC (rev 145)
++++ trunk/fs/initrd.c	2009-10-12 21:02:05 UTC (rev 146)
+@@ -29,6 +29,6 @@
+ 	return NULL;
+ }
+ 
+-int dummy_open(const char *path, int flags){
+-	printf("Hi, i'm a dummy open. And i do nothing!!!\n");
++int dummy_open(const char *path, int flags, ...){
++	printf("Hi, i'm a dummy open. And i do nothing!!! path: %s\n", path);
+ }
+
+Modified: trunk/include/fs/initrd.h
+===================================================================
+--- trunk/include/fs/initrd.h	2009-10-11 21:30:13 UTC (rev 145)
++++ trunk/include/fs/initrd.h	2009-10-12 21:02:05 UTC (rev 146)
+@@ -36,5 +36,5 @@
+ 
+ void dummy();
+ DIR *dummy_opendir(const char *);
+-int dummy_open(const char *, int );
++int dummy_open(const char *, int, ... );
+ #endif
+
+Modified: trunk/include/fs/vfs.h
+===================================================================
+--- trunk/include/fs/vfs.h	2009-10-11 21:30:13 UTC (rev 145)
++++ trunk/include/fs/vfs.h	2009-10-12 21:02:05 UTC (rev 146)
+@@ -70,7 +70,7 @@
+ extern struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
+ 
+ //void open_vfs (struct inode *);
+-void close (int);
++//void close (int);
+ int get_mountpoint_id(char *);
+ char* get_rel_path(int, char*);
+ int open_dir(char *);
+
+Modified: trunk/include/sys/unistd.h
+===================================================================
+--- trunk/include/sys/unistd.h	2009-10-11 21:30:13 UTC (rev 145)
++++ trunk/include/sys/unistd.h	2009-10-12 21:02:05 UTC (rev 146)
+@@ -21,4 +21,6 @@
+ 
+ #define _SC_OPEN_MAX 10
+ 
++int close(int);
++
+ #endif
+
+Modified: trunk/sys/dirent.c
+===================================================================
+--- trunk/sys/dirent.c	2009-10-11 21:30:13 UTC (rev 145)
++++ trunk/sys/dirent.c	2009-10-12 21:02:05 UTC (rev 146)
+@@ -22,7 +22,7 @@
+ #include <string.h>
+ #include <stddef.h>
+ #include <vfs.h>
+-#include <fismem.h>
++#include <kheap.h>
+ 
+ struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
+ 
+
+
+

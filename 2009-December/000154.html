@@ -1,0 +1,247 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r152 - in trunk: . fs include/fs include/shell shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-December/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r152%20-%20in%20trunk%3A%20.%20fs%20include/fs%20include/shell%20shell&In-Reply-To=%3C200912291547.nBTFl7xr017076%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000153.html">
+   <LINK REL="Next"  HREF="000155.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r152 - in trunk: . fs include/fs include/shell shell</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r152%20-%20in%20trunk%3A%20.%20fs%20include/fs%20include/shell%20shell&In-Reply-To=%3C200912291547.nBTFl7xr017076%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r152 - in trunk: . fs include/fs include/shell shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Tue Dec 29 16:47:07 CET 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000153.html">[Dreamos-dev] r151 - in trunk: . fs
+</A></li>
+        <LI>Next message: <A HREF="000155.html">[Dreamos-dev] r153 - in trunk: . fs include/fs utils utils/include
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#154">[ date ]</a>
+              <a href="thread.html#154">[ thread ]</a>
+              <a href="subject.html#154">[ subject ]</a>
+              <a href="author.html#154">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-12-29 16:47:06 +0100 (Tue, 29 Dec 2009)
+New Revision: 152
+
+Modified:
+   trunk/bl.img
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/fs/initrd.c
+   trunk/fs/unistd.c
+   trunk/fs/vfs.c
+   trunk/include/fs/initrd.h
+   trunk/include/shell/testing.h
+   trunk/shell/commands.c
+   trunk/shell/testing.c
+Log:
+Aggiunta prima bozza di close
+Aggiunta funzione di initfs (servira per calcolare la dimensione del fs 
+initrd) initfs_init
+Aggiunto comando di test tester try_fsinit che chiama initfs_init
+In vfs_init a start_address di / messo il valore di module_start
+Aggiornato help di  tester
+
+
+Modified: trunk/bl.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2009-12-06 22:38:06 UTC (rev 151)
++++ trunk/fs/fcntl.c	2009-12-29 15:47:06 UTC (rev 152)
+@@ -31,6 +31,7 @@
+   * @param int oflags parametri di apertura
+   *
+   * Dato un path viene aperto se presente, e si torna il numero di descrittore che lo contiene
++  * @todo Inserire gestione flags
+   */
+ int open(const char *path, int oflags,  ...){
+ 	int prova;
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2009-12-06 22:38:06 UTC (rev 151)
++++ trunk/fs/initrd.c	2009-12-29 15:47:06 UTC (rev 152)
+@@ -25,10 +25,21 @@
+ 
+ extern char *module_start;
+ 
++initrd_t fs_specs;
++
+ void dummy(){
+ 	printf(&quot;Qui solo per una prova\n&quot;);
+ }	
+ 
++int initfs_init(){
++	char *module_var;
++	module_var = module_start;
++	
++	printf(&quot;Number of files present: &quot;);
++	putchar(module_var[0]);
++	printf(&quot;\n&quot;);
++}
++
+ DIR *initfs_opendir(const char *path){
+ 	printf(&quot;Sono una dummy_opendir, ti piaccio? path: %s\n&quot;, path);
+ 	return NULL;
+
+Modified: trunk/fs/unistd.c
+===================================================================
+--- trunk/fs/unistd.c	2009-12-06 22:38:06 UTC (rev 151)
++++ trunk/fs/unistd.c	2009-12-29 15:47:06 UTC (rev 152)
+@@ -33,3 +33,15 @@
+ 	else
+ 		printf(&quot;No READ Found for that file system\n&quot;);
+ }
++
++int close(int fildes){
++	if (fd_list[fildes].fs_spec_id &gt;= 0){
++		fd_list[fildes].fs_spec_id = -1;
++		fd_list[fildes].mountpoint_id = -1;
++		return 0;
++	}
++	else
++		return -1;
++
++return 0;
++}
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2009-12-06 22:38:06 UTC (rev 151)
++++ trunk/fs/vfs.c	2009-12-29 15:47:06 UTC (rev 152)
+@@ -26,6 +26,7 @@
+ #include &lt;unistd.h&gt;
+ #include &lt;initrd.h&gt;
+ #include &lt;dirent.h&gt;
++#include &lt;kernel.h&gt;
+ 
+ struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
+ file_descriptor_t fd_list[_SC_OPEN_MAX];
+@@ -65,7 +66,7 @@
+  	mountpoint_list[0].gid = 0;
+  	mountpoint_list[0].pmask = 0;
+  	mountpoint_list[0].dev_id = 0;
+- 	mountpoint_list[0].start_address = 0;
++ 	mountpoint_list[0].start_address = module_start;
+  	mountpoint_list[0].dir_op.opendir_f = initfs_opendir;
+  	mountpoint_list[0].operations.open = initfs_open;
+  	mountpoint_list[0].operations.read = initfs_read;
+
+Modified: trunk/include/fs/initrd.h
+===================================================================
+--- trunk/include/fs/initrd.h	2009-12-06 22:38:06 UTC (rev 151)
++++ trunk/include/fs/initrd.h	2009-12-29 15:47:06 UTC (rev 152)
+@@ -36,7 +36,11 @@
+ 	unsigned int length;
+ };
+ 
++typedef struct initrd_t initrd_t;
++
++extern initrd_t fs_specs;
+ void dummy();
++int initfs_init();
+ DIR *initfs_opendir(const char *);
+ int initfs_open(const char *, int, ...);
+ ssize_t initfs_read(int, void *, size_t);
+
+Modified: trunk/include/shell/testing.h
+===================================================================
+--- trunk/include/shell/testing.h	2009-12-06 22:38:06 UTC (rev 151)
++++ trunk/include/shell/testing.h	2009-12-29 15:47:06 UTC (rev 152)
+@@ -25,5 +25,5 @@
+ void help_tester();
+ void try_module();
+ void try_open();
+-
++void try_fsinit();
+ #endif
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-12-06 22:38:06 UTC (rev 151)
++++ trunk/shell/commands.c	2009-12-29 15:47:06 UTC (rev 152)
+@@ -414,6 +414,7 @@
+ 					{ &quot;try_printmem&quot;, try_printmem },
+ 					{ &quot;try_module&quot;, try_module },
+ 					{ &quot;try_open&quot;, try_open},
++					{ &quot;try_fsinit&quot;, try_fsinit},
+ 					{ &quot;--help&quot;, help_tester },
+ 					};
+ 	if (argc != 2) {
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2009-12-06 22:38:06 UTC (rev 151)
++++ trunk/shell/testing.c	2009-12-29 15:47:06 UTC (rev 152)
+@@ -26,6 +26,7 @@
+ #include &lt;multiboot.h&gt;
+ #include &lt;kernel.h&gt;
+ #include &lt;fcntl.h&gt;
++#include &lt;initrd.h&gt;
+ 
+ //multiboot_info_t *boot_informations;
+ char *module_start;
+@@ -107,6 +108,7 @@
+ 		&quot;  -&gt; try_printmem      - Print used locations of memory\n&quot;
+ 		&quot;  -&gt; try_module        - Read the content of the memory zone loaded in module, aka initfs \n&quot;
+ 		&quot;  -&gt; try_open          - Function to test open() &amp; stdarg() \n&quot;
++		&quot;  -&gt; try_fsinit          - Function to test the initialization of initrd\n&quot;
+ 		);	
+ }
+ 
+@@ -136,3 +138,7 @@
+ 	i = open(appoggio, O_RDONLY, 42);
+ 	read(i, prova, 1);
+ }
++
++void try_fsinit(){
++	initfs_init();
++}
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000153.html">[Dreamos-dev] r151 - in trunk: . fs
+</A></li>
+	<LI>Next message: <A HREF="000155.html">[Dreamos-dev] r153 - in trunk: . fs include/fs utils utils/include
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#154">[ date ]</a>
+              <a href="thread.html#154">[ thread ]</a>
+              <a href="subject.html#154">[ subject ]</a>
+              <a href="author.html#154">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

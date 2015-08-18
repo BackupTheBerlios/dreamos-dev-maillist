@@ -1,0 +1,110 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r371 - in trunk: . boot mem
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2011-June/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r371%20-%20in%20trunk%3A%20.%20boot%20mem&In-Reply-To=%3C20110608183911.1298748130A%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000373.html">
+   <LINK REL="Next"  HREF="000375.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r371 - in trunk: . boot mem</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r371%20-%20in%20trunk%3A%20.%20boot%20mem&In-Reply-To=%3C20110608183911.1298748130A%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r371 - in trunk: . boot mem">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Wed Jun  8 20:39:10 CEST 2011</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000373.html">[Dreamos-dev] r370 - in trunk: . boot mem shell
+</A></li>
+        <LI>Next message: <A HREF="000375.html">[Dreamos-dev] r372 - in trunk: . boot mem shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#374">[ date ]</a>
+              <a href="thread.html#374">[ thread ]</a>
+              <a href="subject.html#374">[ subject ]</a>
+              <a href="author.html#374">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2011-06-08 20:39:10 +0200 (Wed, 08 Jun 2011)
+New Revision: 371
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/mem/paging.c
+Log:
+Added free_logical_page
+Cleaned screen output
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2011-06-08 17:38:02 UTC (rev 370)
++++ trunk/mem/paging.c	2011-06-08 18:39:10 UTC (rev 371)
+@@ -175,9 +175,9 @@
+     unsigned int *mod_address;    
+     mod_address = (unsigned int *)((0XFFC00000|(pd_entry&lt;&lt;12))+(pt_entry*4));
+     *mod_address = (base&amp;0xFFFFF000)|opt1|opt2;
+-    //#ifdef DEBUG
++    #ifdef DEBUG
+     printf(&quot;value for entry n.: %d is: %x\n&quot;, pt_entry,mod_address);
+-    //#endif
++    #endif
+ }
+ 
+ /**
+@@ -339,5 +339,10 @@
+ }
+ 
+ void free_logical_page(unsigned int address){
++	unsigned int pdir = 0;
++	unsigned int ptable = 0;
++	pdir = BITRANGE (address, 22, 31);
++    ptable = BITRANGE (address, 12, 21);
++    set_pagetable_entry_ric(pdir, ptable ,0x00000000, PD_PRESENT|SUPERVISOR|WRITE, 0);		
+ 	return;
+ }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000373.html">[Dreamos-dev] r370 - in trunk: . boot mem shell
+</A></li>
+	<LI>Next message: <A HREF="000375.html">[Dreamos-dev] r372 - in trunk: . boot mem shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#374">[ date ]</a>
+              <a href="thread.html#374">[ thread ]</a>
+              <a href="subject.html#374">[ subject ]</a>
+              <a href="author.html#374">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

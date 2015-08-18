@@ -1,0 +1,166 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r180 - in trunk: . fs include/fs
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-January/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r180%20-%20in%20trunk%3A%20.%20fs%20include/fs&In-Reply-To=%3C201001102306.o0AN6TJF032480%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000181.html">
+   <LINK REL="Next"  HREF="000183.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r180 - in trunk: . fs include/fs</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r180%20-%20in%20trunk%3A%20.%20fs%20include/fs&In-Reply-To=%3C201001102306.o0AN6TJF032480%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r180 - in trunk: . fs include/fs">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Mon Jan 11 00:06:29 CET 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000181.html">[Dreamos-dev] r179 - trunk/utils
+</A></li>
+        <LI>Next message: <A HREF="000183.html">[Dreamos-dev] r181 - trunk
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#182">[ date ]</a>
+              <a href="thread.html#182">[ thread ]</a>
+              <a href="subject.html#182">[ subject ]</a>
+              <a href="author.html#182">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-01-11 00:06:29 +0100 (Mon, 11 Jan 2010)
+New Revision: 180
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/initrd.c
+   trunk/fs/unistd.c
+   trunk/fs/vfs.c
+   trunk/include/fs/initrd.h
+Log:
+Aggiunta initrd_close
+Inserita anche nella struttura dati che gestiste il mountpoint / (che 
+contiene l'initrd)
+Ora la close chiama l'omonima funzione relativa al mountpoint ove si 
+trova il file aperto.
+Entrambe le close sono da terinare. 
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-01-10 16:55:52 UTC (rev 179)
++++ trunk/fs/initrd.c	2010-01-10 23:06:29 UTC (rev 180)
+@@ -54,11 +54,21 @@
+ int initfs_open(const char *path, int flags, ...){
+ 	initrd_file_t *module_var;
+ 	int j = 0;
+-	module_var = fs_headers;	
++	int ret_fd = -1;
++	module_var = fs_headers;
++	if(cur_irdfd &gt;= MAX_INITRD_DESCRIPTORS) cur_irdfd=0;
+ 	while (j &lt; fs_specs-&gt;nfiles) {
+ 		if(!strcmp(path, module_var[j].fileName)){
+ 				ird_descriptors[cur_irdfd].file_descriptor	= j;
+ 				printf(&quot;%s Found. Size: %d FS fd val: %d - ID File val: %d\n&quot;, path, module_var[j].length, cur_irdfd, ird_descriptors[cur_irdfd].file_descriptor);
++				ret_fd = cur_irdfd;
++				/*while(ird_descriptors[++cur_irdfd].file_descriptor != -1){
++					if(cur_irdfd &gt;= MAX_INITRD_DESCRIPTORS) cur_irdfd = 0;
++					else if(cur_irdfd == ret_fd) {
++						printf(&quot;No more file descriptors available\n&quot;);
++						return -1;
++					}
++				}*/
+ 				return cur_irdfd++; 
+ 		}
+ 		j++;
+@@ -81,3 +91,7 @@
+ 	}	
+ 	return nbyte;
+ }
++
++int initrd_close(int fildes){
++	ird_descriptors[fildes].file_descriptor = -1;
++}
+
+Modified: trunk/fs/unistd.c
+===================================================================
+--- trunk/fs/unistd.c	2010-01-10 16:55:52 UTC (rev 179)
++++ trunk/fs/unistd.c	2010-01-10 23:06:29 UTC (rev 180)
+@@ -37,9 +37,15 @@
+ }
+ 
+ int close(int fildes){
++	int mp_id;
++	int fs_fd;
++	mp_id = fd_list[fildes].mountpoint_id;
++	fs_fd = fd_list[fildes].fs_spec_id;
+ 	if (fd_list[fildes].fs_spec_id &gt;= 0){
++		if(mountpoint_list[mp_id].operations.close !=NULL)
++			mountpoint_list[mp_id].operations.close(fs_fd);		
+ 		fd_list[fildes].fs_spec_id = -1;
+-		fd_list[fildes].mountpoint_id = -1;
++		fd_list[fildes].mountpoint_id = -1;				
+ 		return 0;
+ 	}
+ 	else
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2010-01-10 16:55:52 UTC (rev 179)
++++ trunk/fs/vfs.c	2010-01-10 23:06:29 UTC (rev 180)
+@@ -69,6 +69,7 @@
+  	mountpoint_list[0].start_address = module_start;
+  	mountpoint_list[0].dir_op.opendir_f = initfs_opendir;
+  	mountpoint_list[0].operations.open = initfs_open;
++ 	mountpoint_list[0].operations.close = initrd_close;
+  	mountpoint_list[0].operations.read = initfs_read;
+  	//mountpoint_list[0].operations = kmalloc(sizeof(struct super_node_operations));
+ 
+
+Modified: trunk/include/fs/initrd.h
+===================================================================
+--- trunk/include/fs/initrd.h	2010-01-10 16:55:52 UTC (rev 179)
++++ trunk/include/fs/initrd.h	2010-01-10 23:06:29 UTC (rev 180)
+@@ -62,4 +62,5 @@
+ DIR *initfs_opendir(const char *);
+ int initfs_open(const char *, int, ...);
+ ssize_t initfs_read(int, void *, size_t);
++int initrd_close(int);
+ #endif
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000181.html">[Dreamos-dev] r179 - trunk/utils
+</A></li>
+	<LI>Next message: <A HREF="000183.html">[Dreamos-dev] r181 - trunk
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#182">[ date ]</a>
+              <a href="thread.html#182">[ thread ]</a>
+              <a href="subject.html#182">[ subject ]</a>
+              <a href="author.html#182">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

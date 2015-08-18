@@ -1,0 +1,216 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r289 - in trunk: . include/mem include/misc	include/shell mem shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-September/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r289%20-%20in%20trunk%3A%20.%20include/mem%20include/misc%0A%09include/shell%20mem%20shell&In-Reply-To=%3C20100901213927.DA726480FC4%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000291.html">
+   <LINK REL="Next"  HREF="000293.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r289 - in trunk: . include/mem include/misc	include/shell mem shell</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r289%20-%20in%20trunk%3A%20.%20include/mem%20include/misc%0A%09include/shell%20mem%20shell&In-Reply-To=%3C20100901213927.DA726480FC4%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r289 - in trunk: . include/mem include/misc	include/shell mem shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Wed Sep  1 23:39:27 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000291.html">[Dreamos-dev] r288 - in trunk: . include/mem include/misc mem
+</A></li>
+        <LI>Next message: <A HREF="000293.html">[Dreamos-dev] r290 - in trunk: . fs mem shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#292">[ date ]</a>
+              <a href="thread.html#292">[ thread ]</a>
+              <a href="subject.html#292">[ subject ]</a>
+              <a href="author.html#292">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-09-01 23:39:27 +0200 (Wed, 01 Sep 2010)
+New Revision: 289
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/mem/heap.h
+   trunk/include/misc/ordered_array.h
+   trunk/include/shell/testing.h
+   trunk/mem/heap.c
+   trunk/shell/commands.c
+   trunk/shell/testing.c
+Log:
+Aggiunta new_malloc, per ora solo definita con alcuni test all'interno.
+Aggiunto comando try_newheap di tester per portare avanti i test durante lo sviluppo.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/mem/heap.h
+===================================================================
+--- trunk/include/mem/heap.h	2010-08-31 22:02:20 UTC (rev 288)
++++ trunk/include/mem/heap.h	2010-09-01 21:39:27 UTC (rev 289)
+@@ -24,8 +24,8 @@
+ #ifndef __HEAP_H
+ #define __HEAP_H
+ 
+-#define KHEAP_START_ADDRESS 0xD0000000
+-#define KHEAP_START_SIZE 0x100000
++#define HEAP_START_ADDRESS 0xD0000000
++#define HEAP_START_SIZE 0x100000
+ 
+ #include &lt;ordered_array.h&gt;
+ 
+@@ -55,7 +55,10 @@
+ 	header_t *header;/*!&lt; Pointer to the block header*/
+ } footer_t;
+ 
++
+ void new_heap(unsigned int, unsigned int);
+-void *new_alloc(unsigned int size, unsigned short int page_align, heap_t heap);
++void *new_alloc(unsigned int, unsigned short int, new_heap_t);
+ void new_free();
++
++unsigned int new_malloc(unsigned int);
+ #endif
+
+Modified: trunk/include/misc/ordered_array.h
+===================================================================
+--- trunk/include/misc/ordered_array.h	2010-08-31 22:02:20 UTC (rev 288)
++++ trunk/include/misc/ordered_array.h	2010-09-01 21:39:27 UTC (rev 289)
+@@ -28,7 +28,9 @@
+ /*#include &lt;ordered_array.h&gt;*/
+ 
+ typedef void* void_t;
++typedef void* type_t;
+ typedef short int (*lessthan_predicate_t)(type_t,type_t);
++
+ /*!  \struct ordered_array_t
+      \brief Struttura dati che un vettore ordinato.
+  */
+@@ -39,9 +41,6 @@
+     lessthan_predicate_t less_than;
+ }ordered_array_t;
+ 
+-typedef void* type_t;
+-
+-
+ ordered_array_t new_array(void_t, unsigned int, unsigned int);
+ void insert_array(void_t, ordered_array_t*);
+ void destroy_array(ordered_array_t*);
+
+Modified: trunk/include/shell/testing.h
+===================================================================
+--- trunk/include/shell/testing.h	2010-08-31 22:02:20 UTC (rev 288)
++++ trunk/include/shell/testing.h	2010-09-01 21:39:27 UTC (rev 289)
+@@ -31,5 +31,6 @@
+ void show_fd();
+ void test_stat();
+ void try_shadow();
++void try_newheap();
+ 
+ #endif
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-08-31 22:02:20 UTC (rev 288)
++++ trunk/mem/heap.c	2010-09-01 21:39:27 UTC (rev 289)
+@@ -22,6 +22,21 @@
+  */
+ 
+ #include &lt;heap.h&gt;
++#include &lt;stdio.h&gt;
+ 
++extern unsigned int end;
++new_heap_t *n_heap=0;
+ void new_heap(unsigned int start, unsigned int size){
++	new_heap_t* t_heap = new_malloc(sizeof(new_heap_t));
++	if(start%0x1000 == 0) printf(&quot;all right\n&quot;);
++	else printf(&quot;ERROR\n&quot;);
+ }
++
++unsigned int new_malloc(unsigned int size){
++	if(n_heap==0) {
++		printf(&quot;No heap defined starting from: %d ...\n&quot;, &amp;end);
++	}
++	else {
++		printf(&quot;Heap defined\n&quot;);
++	}
++}
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-08-31 22:02:20 UTC (rev 288)
++++ trunk/shell/commands.c	2010-09-01 21:39:27 UTC (rev 289)
+@@ -526,6 +526,7 @@
+ 					{ &quot;test_stat&quot;, test_stat},
+ 					{ &quot;try_check&quot;, try_check},
+ 					{ &quot;try_shadow&quot;, try_shadow},
++					{ &quot;try_newheap&quot;, try_newheap},
+ 					{ &quot;--help&quot;, help_tester },
+ 					};
+ 	if (argc != 2) {
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-08-31 22:02:20 UTC (rev 288)
++++ trunk/shell/testing.c	2010-09-01 21:39:27 UTC (rev 289)
+@@ -29,6 +29,7 @@
+ #include &lt;initrd.h&gt;
+ #include &lt;unistd.h&gt;
+ #include &lt;user_shell.h&gt;
++#include &lt;heap.h&gt;
+ 
+ //multiboot_info_t *boot_informations;
+ char *module_start;
+@@ -98,6 +99,15 @@
+ 	print_heap_list(kheap-&gt;used_list);
+ }
+ 
++void try_newheap(){
++	printf(&quot;Testing the new heap (in development)\n&quot;);
++	printf(&quot;First step: testing a new heap...\n&quot;);
++	new_heap(HEAP_START_ADDRESS, HEAP_START_SIZE);
++	printf(&quot;Second step: trying new_malloc...\n&quot;);
++	new_malloc(0);
++	printf(&quot;DONE\n&quot;);
++}
++
+ void help_tester()
+ {
+ 	printf(&quot;Testing functions.. &quot;);
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000291.html">[Dreamos-dev] r288 - in trunk: . include/mem include/misc mem
+</A></li>
+	<LI>Next message: <A HREF="000293.html">[Dreamos-dev] r290 - in trunk: . fs mem shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#292">[ date ]</a>
+              <a href="thread.html#292">[ thread ]</a>
+              <a href="subject.html#292">[ subject ]</a>
+              <a href="author.html#292">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

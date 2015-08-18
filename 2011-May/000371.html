@@ -1,0 +1,158 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r368 - in trunk: . boot mem shell tasks
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2011-May/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r368%20-%20in%20trunk%3A%20.%20boot%20mem%20shell%20tasks&In-Reply-To=%3C20110528212023.2B18B4813BD%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000370.html">
+   
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r368 - in trunk: . boot mem shell tasks</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r368%20-%20in%20trunk%3A%20.%20boot%20mem%20shell%20tasks&In-Reply-To=%3C20110528212023.2B18B4813BD%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r368 - in trunk: . boot mem shell tasks">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sat May 28 23:20:22 CEST 2011</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000370.html">[Dreamos-dev] r367 - in trunk: . mem
+</A></li>
+        
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#371">[ date ]</a>
+              <a href="thread.html#371">[ thread ]</a>
+              <a href="subject.html#371">[ subject ]</a>
+              <a href="author.html#371">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2011-05-28 23:20:22 +0200 (Sat, 28 May 2011)
+New Revision: 368
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/mem/paging.c
+   trunk/shell/testing.c
+   trunk/tasks/task_utils.c
+Log:
+map_kernel now maps 8 pages for pdir, and ptable. 
+map_page: if pagedir entry is 0, then assign it an map it. 
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2011-05-24 19:21:44 UTC (rev 367)
++++ trunk/mem/paging.c	2011-05-28 21:20:22 UTC (rev 368)
+@@ -293,7 +293,7 @@
+   * @param logic_address Indirizzo logico
+   * @return none
+   */
+-void map_address(unsigned int fis_addres, unsigned int logic_address){
++void map_address(unsigned int fis_address, unsigned int logic_address){
+ 	/** questa funzione estrapoler&#224; pdentry e ptentry dal logical address e vi mapper&#224; fis_address*/
+ 	//set_pagedir_entry_ric(1023, fis_address, PD_PRESENT|SUPERVISOR, 0);
+ 	unsigned int pdir, ptable;
+@@ -312,10 +312,10 @@
+ 		unsigned int *new_pagetable;		
+ 		new_pagetable = create_pageTable();
+ 		set_pagedir_entry_ric(pdir, (unsigned int)new_pagetable, PD_PRESENT|SUPERVISOR, 0);
++		set_pagetable_entry_ric(pdir, ptable, fis_address, PD_PRESENT|SUPERVISOR, 0);
+ 	} else {
+ 		printf(&quot;Else TODO\n&quot;);
+-		set_pagetable_entry_ric(pdir, ptable ,fis_addres, PD_PRESENT|SUPERVISOR|WRITE, 0);
+-		//set_pagetable_entry(ptable, fis_address, PD_PRESENT|SUPERVISOR|WRITE, 0);
++		set_pagetable_entry_ric(pdir, ptable ,fis_address, PD_PRESENT|SUPERVISOR|WRITE, 0);		
+ 	}
+ 	return;
+ }
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2011-05-24 19:21:44 UTC (rev 367)
++++ trunk/shell/testing.c	2011-05-28 21:20:22 UTC (rev 368)
+@@ -29,6 +29,7 @@
+ #include &lt;initrd.h&gt;
+ #include &lt;unistd.h&gt;
+ #include &lt;user_shell.h&gt;
++#include &lt;task_utils.h&gt;
+ #ifdef LATEST
+ #include &lt;heap.h&gt;
+ #endif
+@@ -256,5 +257,6 @@
+ void try_mapaddress(){
+ 	printf(&quot;Testing map_address\n&quot;);
+ 	map_address(0x0010000, kmalloc(sizeof(int)));
++	//map_kernel();
+ 	return;
+ }
+
+Modified: trunk/tasks/task_utils.c
+===================================================================
+--- trunk/tasks/task_utils.c	2011-05-24 19:21:44 UTC (rev 367)
++++ trunk/tasks/task_utils.c	2011-05-28 21:20:22 UTC (rev 368)
+@@ -35,14 +35,22 @@
+    */
+ unsigned int map_kernel(){
+ 	unsigned int *logic_pd_address = kmalloc(8*4096);
++	unsigned int *logic_pt_address = kmalloc(8*4096);
+ 	unsigned int *pagedir;
+ 	unsigned int *pagetable;
++	int i=0;	
+ 	pagedir = create_pageDir();
+ 	pagetable = create_pageTable();	
+ 	//set_pagedir_entry_ric(1023, fis_address, PD_PRESENT|SUPERVISOR, 0);
+ 	/*new_pd_node-&gt;start_address = (heap_node_t*) pagedir;
+ 	new_pd_node-&gt;size = 8 * 4096;*/
+-	map_address(pagedir, logic_pd_address);
++	while(i &lt; 8){
++		map_address(pagedir, logic_pd_address);
++		map_address(pagetable, logic_pt_address);
++		pagedir+=4096;
++		pagetable+=4096;
++		i++;
++	}
+ 	//set_pagedir_entry_ric(0, (unsigned int)current_page_table, PD_PRESENT|SUPERVISOR|WRITE,0);    
+ 	
+ 	return 0;
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000370.html">[Dreamos-dev] r367 - in trunk: . mem
+</A></li>
+	
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#371">[ date ]</a>
+              <a href="thread.html#371">[ thread ]</a>
+              <a href="subject.html#371">[ subject ]</a>
+              <a href="author.html#371">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

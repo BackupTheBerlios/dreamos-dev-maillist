@@ -1,0 +1,227 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r223 - in trunk: . fs include/fs shell sys
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-April/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r223%20-%20in%20trunk%3A%20.%20fs%20include/fs%20shell%20sys&In-Reply-To=%3C201004081440.o38EelUv023305%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000225.html">
+   <LINK REL="Next"  HREF="000227.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r223 - in trunk: . fs include/fs shell sys</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r223%20-%20in%20trunk%3A%20.%20fs%20include/fs%20shell%20sys&In-Reply-To=%3C201004081440.o38EelUv023305%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r223 - in trunk: . fs include/fs shell sys">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Thu Apr  8 16:40:47 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000225.html">[Dreamos-dev] r222 - in trunk: . fs include/sys shell sys
+</A></li>
+        <LI>Next message: <A HREF="000227.html">[Dreamos-dev] r224 - in trunk: . fs shell sys
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#226">[ date ]</a>
+              <a href="thread.html#226">[ thread ]</a>
+              <a href="subject.html#226">[ subject ]</a>
+              <a href="author.html#226">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-04-08 16:40:39 +0200 (Thu, 08 Apr 2010)
+New Revision: 223
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/fs/vfs.c
+   trunk/include/fs/vfs.h
+   trunk/shell/testing.c
+   trunk/sys/dirent.c
+   trunk/sys/stat.c
+Log:
+fixati alcuni problemi da get_abs_path
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2010-04-07 22:17:54 UTC (rev 222)
++++ trunk/fs/fcntl.c	2010-04-08 14:40:39 UTC (rev 223)
+@@ -41,6 +41,7 @@
+ 	int prova;
+ 	int mpid;
+ 	int ret_fd;
++	int error = 0;
+ 	va_list ap;
+ 	va_start(ap, oflags);
+ 	ret_fd = 0;	
+@@ -57,7 +58,7 @@
+ 		printf(&quot;No more file descriptors available\n&quot;);
+ 		return -1;
+ 	}
+-	path=get_abs_path((char*) path);
++	error = get_abs_path((char*) path);
+     mpid = get_mountpoint_id((char*) path);		
+ 	//printf(&quot;Cur_fd: %d\n&quot;,cur_fd);
+ 	if(mpid &gt;-1) {
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2010-04-07 22:17:54 UTC (rev 222)
++++ trunk/fs/vfs.c	2010-04-08 14:40:39 UTC (rev 223)
+@@ -151,10 +151,9 @@
+   * @param char* path percorso del file da aprire  
+   *
+   * Dato un path ne estrae il percorso assoluto (a partire da quello corrente)
+-  * @return Path assoluto
+-  * @todo Inserire gestione flags
++  * @return Path assoluto  
+   */
+-char *get_abs_path(char *path){
++int get_abs_path(char *path){
+ 		if(path[0]!='/') {
+ 		char abspath[CURPATH_LEN];
+ 		int abs_size = 0;
+@@ -166,8 +165,10 @@
+ 		else {
+ 			strncat(abspath, &quot;/&quot;, strlen(path));
+ 			strncat(abspath, path, strlen(path));
+-		}			
+-		return abspath;
++		}
++		//printf(&quot;abspath: %s\n&quot;, abspath);
++		strcpy(path, abspath);				
++		return strlen(path);
+ 	}
+-	else return path;
++	else return 0;
+ }
+
+Modified: trunk/include/fs/vfs.h
+===================================================================
+--- trunk/include/fs/vfs.h	2010-04-07 22:17:54 UTC (rev 222)
++++ trunk/include/fs/vfs.h	2010-04-08 14:40:39 UTC (rev 223)
+@@ -90,7 +90,7 @@
+ int open_dir(char *);
+ int read (int, void*, size_t);
+ int write (int, void*, size_t);
+-char *get_abs_path(char *);
++int get_abs_path(char *);
+ void vfs_init();
+ 
+ #endif
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-04-07 22:17:54 UTC (rev 222)
++++ trunk/shell/testing.c	2010-04-08 14:40:39 UTC (rev 223)
+@@ -187,7 +187,7 @@
+ 	struct stat *stats;
+ 	printf(&quot;Testing stat functions\n&quot;);
+ 	stats = (struct stat*) kmalloc(sizeof(struct stat));
+-	stat(&quot;/README&quot;, stats);
++	stat(&quot;README&quot;, stats);
+ 	printf(&quot;Device_id: %d\n&quot;, stats-&gt;st_dev);	
+ 	printf(&quot;Size: %d\n&quot;, stats-&gt;st_size);
+ 	printf(&quot;Uid: %d\n&quot;, stats-&gt;st_uid);
+
+Modified: trunk/sys/dirent.c
+===================================================================
+--- trunk/sys/dirent.c	2010-04-07 22:17:54 UTC (rev 222)
++++ trunk/sys/dirent.c	2010-04-08 14:40:39 UTC (rev 223)
+@@ -35,9 +35,11 @@
+   */
+ DIR *opendir(const char *path){
+ 	int mpoint_id = 0;
++	int error = 0;
++	//char tmp_path[CURPATH_LEN];
+ 	char* rel_path;	
+ 	DIR* pdir;
+-	path=get_abs_path((char*)path);
++	error=get_abs_path((char*)path);
+ 	//printf(&quot;%s\n&quot;, path);
+ 	mpoint_id = get_mountpoint_id((char*)path);
+ 	rel_path = get_rel_path(mpoint_id, path);	
+
+Modified: trunk/sys/stat.c
+===================================================================
+--- trunk/sys/stat.c	2010-04-07 22:17:54 UTC (rev 222)
++++ trunk/sys/stat.c	2010-04-08 14:40:39 UTC (rev 223)
+@@ -18,15 +18,30 @@
+ 
+ #include &lt;vfs.h&gt;
+ #include &lt;stdio.h&gt;
++#include &lt;shell.h&gt;
++#include &lt;stdio.h&gt;
++#include &lt;string.h&gt;
+ #include &lt;sys/stat.h&gt;
+ 
+ struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
+ 
+ int stat(const char *path, struct stat *buf){
++	char tmp_path[CURPATH_LEN];	
+ 	int mp_id;
+ 	mp_id = 0;
++	strcpy(tmp_path, path);
++	printf(&quot;Tmp Path: %s\n&quot;, tmp_path);
++	if(path[0] != '/'){		
++		get_abs_path((char*) tmp_path);		
++		printf(&quot;Path: %s\n&quot;, tmp_path);
++		printf(&quot;Arg Path: %s\n&quot;, path);
++	}
++	
+ 	mp_id = get_mountpoint_id((char*) path);
+-	if(path[0] == '/');
++	if(mp_id == -1) {
++		printf(&quot;No file\n&quot;);
++		return -1;
++	}
+ 	//printf(&quot;%d\n&quot;, mp_id);
+ 	buf-&gt;st_dev = mp_id;
+ 	if(mountpoint_list[mp_id].stat_op.stat!=NULL) {
+@@ -34,7 +49,7 @@
+ 		//printf(&quot;Absolute path: %s\n&quot;, path);
+ 		mountpoint_list[mp_id].stat_op.stat((char*)path, buf);	
+ 	}
+-	else printf(&quot;Null\n&quot;);
++	//else printf(&quot;Null\n&quot;);
+ 	//printf(&quot;%d\n&quot;, buf-&gt;st_uid);
+ 	return 0;
+ }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000225.html">[Dreamos-dev] r222 - in trunk: . fs include/sys shell sys
+</A></li>
+	<LI>Next message: <A HREF="000227.html">[Dreamos-dev] r224 - in trunk: . fs shell sys
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#226">[ date ]</a>
+              <a href="thread.html#226">[ thread ]</a>
+              <a href="subject.html#226">[ subject ]</a>
+              <a href="author.html#226">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

@@ -1,0 +1,233 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r353 - in trunk: . boot include/mem mem
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2011-March/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r353%20-%20in%20trunk%3A%20.%20boot%20include/mem%20mem&In-Reply-To=%3C20110314213914.38C454814E6%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000355.html">
+   <LINK REL="Next"  HREF="000357.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r353 - in trunk: . boot include/mem mem</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r353%20-%20in%20trunk%3A%20.%20boot%20include/mem%20mem&In-Reply-To=%3C20110314213914.38C454814E6%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r353 - in trunk: . boot include/mem mem">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Mon Mar 14 22:39:13 CET 2011</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000355.html">[Dreamos-dev] r352 - in trunk: . boot include/mem mem shell
+</A></li>
+        <LI>Next message: <A HREF="000357.html">[Dreamos-dev] r354 - in trunk: . boot fs hardware include/mem mem	shell sys
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#356">[ date ]</a>
+              <a href="thread.html#356">[ thread ]</a>
+              <a href="subject.html#356">[ subject ]</a>
+              <a href="author.html#356">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2011-03-14 22:39:13 +0100 (Mon, 14 Mar 2011)
+New Revision: 353
+
+Modified:
+   trunk/Makefile
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/include/mem/heap.h
+   trunk/include/mem/kheap.h
+   trunk/kernel.c
+   trunk/mem/heap.c
+   trunk/mem/kheap.c
+   trunk/mem/paging.c
+Log:
+Added in Makefile option for choose memory manager.
+Actually available two options: LEGACY and LATEST (broken)
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2011-03-14 21:10:29 UTC (rev 352)
++++ trunk/Makefile	2011-03-14 21:39:13 UTC (rev 353)
+@@ -6,7 +6,7 @@
+ VERSION = 0
+ PATCHLEVEL = 3
+ EXTRAVERSION = -trunk
+-
++MEMORY = LEGACY 
+ include Makefile.am
+ 
+ CFLAGS = -nostdlib\
+@@ -29,7 +29,8 @@
+ 	 -I./include/misc\
+ 	 -I./include/fs\
+ 	 -I./include/sys \
+-	 -DBOCHS_DEBUG
++	 -DBOCHS_DEBUG\
++	 -D$(MEMORY)
+ 
+ OBJ = kernel.o\
+       io/video.o\
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/mem/heap.h
+===================================================================
+--- trunk/include/mem/heap.h	2011-03-14 21:10:29 UTC (rev 352)
++++ trunk/include/mem/heap.h	2011-03-14 21:39:13 UTC (rev 353)
+@@ -76,7 +76,7 @@
+ short int header_t_less_than(void *,void *);
+ 
+ void n_free(unsigned int);
+-#ifdef OLD_MEM_DISABLED
++#ifdef LATEST
+ void* kmalloc(unsigned int);
+ void free(void*);
+ #endif
+
+Modified: trunk/include/mem/kheap.h
+===================================================================
+--- trunk/include/mem/kheap.h	2011-03-14 21:10:29 UTC (rev 352)
++++ trunk/include/mem/kheap.h	2011-03-14 21:39:13 UTC (rev 353)
+@@ -49,14 +49,16 @@
+ extern heap_t *kheap;
+ 
+ heap_t* make_heap(unsigned int);
+-void* kmalloc(unsigned int);
+ //void kfree(unsigned int);
+ void try_alloc();
+ heap_node_t* alloc_node();
+ void free_node(heap_node_t*);
+ 
+ void* alloc(unsigned int, heap_t*);
++#ifdef LEGACY
++void* kmalloc(unsigned int);
+ void free (void *);
++#endif
+ 
+ void print_heap_list (heap_node_t *);
+ 
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2011-03-14 21:10:29 UTC (rev 352)
++++ trunk/kernel.c	2011-03-14 21:39:13 UTC (rev 353)
+@@ -98,7 +98,9 @@
+     asm(&quot;sti&quot;);
+     _kprintOK();   
+     init_paging();
+-
++    #ifdef LATEST
++    init_newmem();
++	#endif
+     /*
+     init_newmem();     
+     try_newheap();
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2011-03-14 21:10:29 UTC (rev 352)
++++ trunk/mem/heap.c	2011-03-14 21:39:13 UTC (rev 353)
+@@ -272,7 +272,7 @@
+ 	new_free((void*)address, n_heap);
+ }
+ 
+-#ifdef OLD_MEM_DISABLED
++#ifdef LATEST
+ void* kmalloc(unsigned int size){
+ 	return (void *)	new_malloc(size);
+ }
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2011-03-14 21:10:29 UTC (rev 352)
++++ trunk/mem/kheap.c	2011-03-14 21:39:13 UTC (rev 353)
+@@ -37,6 +37,7 @@
+ unsigned int address_cur = (unsigned int) &end;
+ unsigned int node_address;
+ 
++#ifdef LEGACY
+ void* kmalloc(unsigned int size)
+ {
+    unsigned int temp;
+@@ -49,7 +50,7 @@
+    }
+      return (void *) temp;
+ }
+-
++#endif
+ /* Test procedure (&quot;try_heap&quot; shell command&quot;) */
+ void try_alloc()
+ {
+@@ -220,6 +221,7 @@
+   * @param Start_address of the block
+   * @return none
+   */
++#ifdef LEGACY
+ void free (void *location)
+ {
+   heap_node_t *busy = kheap-&gt;used_list;
+@@ -288,7 +290,7 @@
+ 
+ //     printf (&quot;Address not found in list\n&quot;);
+ }
+-
++#endif
+ /**
+   * Print a heap list
+   * @author shainer
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2011-03-14 21:10:29 UTC (rev 352)
++++ trunk/mem/paging.c	2011-03-14 21:39:13 UTC (rev 353)
+@@ -84,7 +84,9 @@
+     load_pdbr((unsigned int)current_page_dir);
+ 	//set_pagetable_entry_ric(1019, 512 ,0xFEE00000, SUPERVISOR|PD_PRESENT|WRITE, 0);
+ 	//set_pagetable_entry_ric(1019, 0 ,0xFEC00000, SUPERVISOR|PD_PRESENT|WRITE, 0);	
++    #ifdef LEGACY
+     kheap = make_heap(tot_mem - ((unsigned int) &amp;end));    
++    #endif
+ }
+ 
+ /**
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000355.html">[Dreamos-dev] r352 - in trunk: . boot include/mem mem shell
+</A></li>
+	<LI>Next message: <A HREF="000357.html">[Dreamos-dev] r354 - in trunk: . boot fs hardware include/mem mem	shell sys
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#356">[ date ]</a>
+              <a href="thread.html#356">[ thread ]</a>
+              <a href="subject.html#356">[ subject ]</a>
+              <a href="author.html#356">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

@@ -1,0 +1,160 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r239 - in trunk: . fs include/fs shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-April/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r239%20-%20in%20trunk%3A%20.%20fs%20include/fs%20shell&In-Reply-To=%3C201004252142.o3PLgL9W022173%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000241.html">
+   <LINK REL="Next"  HREF="000243.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r239 - in trunk: . fs include/fs shell</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r239%20-%20in%20trunk%3A%20.%20fs%20include/fs%20shell&In-Reply-To=%3C201004252142.o3PLgL9W022173%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r239 - in trunk: . fs include/fs shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun Apr 25 23:42:21 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000241.html">[Dreamos-dev] r238 - in trunk: . fs
+</A></li>
+        <LI>Next message: <A HREF="000243.html">[Dreamos-dev] r240 - in trunk: . fs include/io io libc shell sys
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#242">[ date ]</a>
+              <a href="thread.html#242">[ thread ]</a>
+              <a href="subject.html#242">[ subject ]</a>
+              <a href="author.html#242">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-04-25 23:42:13 +0200 (Sun, 25 Apr 2010)
+New Revision: 239
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/initrd.c
+   trunk/include/fs/fcntl.h
+   trunk/shell/testing.c
+Log:
+Ora la printf puo' stampare anche i numeri negativi.
+Andra sistemata ancora la kntos ma ora almeno i numeri negativi sono 
+visualizzabili
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-04-22 21:04:07 UTC (rev 238)
++++ trunk/fs/initrd.c	2010-04-25 21:42:13 UTC (rev 239)
+@@ -122,22 +122,24 @@
+ 			j++;
+ 		}
+ 		if(flags&amp;O_CREAT) {
+-		printf(&quot;O_CREAT Flag\n&quot;);
+-		if(fs_specs-&gt;nfiles &lt; MAX_FILES ){			
+-			module_var[fs_specs-&gt;nfiles].magic=0xBF;
+-			strcpy(module_var[fs_specs-&gt;nfiles].fileName, path);
+-			module_var[fs_specs-&gt;nfiles].file_type = FS_FILE;
+-			module_var[fs_specs-&gt;nfiles].uid = 1;
+-			module_var[fs_specs-&gt;nfiles].offset = ++fs_end;
+-			module_var[fs_specs-&gt;nfiles].length = 0;
+-			ird_descriptors[cur_irdfd].file_descriptor	= fs_specs-&gt;nfiles;
+-			ird_descriptors[cur_irdfd].cur_pos = 0;
+-			fs_specs-&gt;nfiles++;
+-			return cur_irdfd++; 
++			printf(&quot;O_CREAT Flag\n&quot;);
++			if(fs_specs-&gt;nfiles &lt; MAX_FILES ){			
++				module_var[fs_specs-&gt;nfiles].magic=0xBF;
++				strcpy(module_var[fs_specs-&gt;nfiles].fileName, path);
++				module_var[fs_specs-&gt;nfiles].file_type = FS_FILE;
++				module_var[fs_specs-&gt;nfiles].uid = 1;
++				module_var[fs_specs-&gt;nfiles].offset = ++fs_end;
++				module_var[fs_specs-&gt;nfiles].length = 0;
++				ird_descriptors[cur_irdfd].file_descriptor	= fs_specs-&gt;nfiles;
++				ird_descriptors[cur_irdfd].cur_pos = 0;
++				fs_specs-&gt;nfiles++;
++				if(flags&amp;O_APPEND) printf(&quot;Appendiamoci\n&quot;);
++				else printf(&quot;Pero' non ci appendiamo\n&quot;);
++				return cur_irdfd++; 
++			}
++			return -1;
+ 		}
+-		return -1;
+ 	}
+-	}
+ 	return -1;	
+ }
+ 
+
+Modified: trunk/include/fs/fcntl.h
+===================================================================
+--- trunk/include/fs/fcntl.h	2010-04-22 21:04:07 UTC (rev 238)
++++ trunk/include/fs/fcntl.h	2010-04-25 21:42:13 UTC (rev 239)
+@@ -21,11 +21,12 @@
+ 
+ #include &lt;sys/types.h&gt;
+ 
+-#define O_RDONLY	00000000
+-#define O_WRONLY    00000001
+-#define O_RDWR      00000002
++#define O_RDONLY	0x00
++#define O_WRONLY    0x01
++#define O_RDWR      0x02
+ 
+-#define O_CREAT		00000004
++#define O_CREAT		0x04
++#define O_APPEND	0x08
+ 
+ 
+ int  creat(const char *, mode_t);
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-04-22 21:04:07 UTC (rev 238)
++++ trunk/shell/testing.c	2010-04-25 21:42:13 UTC (rev 239)
+@@ -158,7 +158,7 @@
+ void try_ocreat(){
+ 	int fd=0;
+ 	//printf(&quot;Number of files present: %d\n&quot;, initfs_init());
+-	fd = open(&quot;pippo&quot;, O_RDWR|O_CREAT);	
++	fd = open(&quot;pippo&quot;, O_RDWR|O_CREAT|O_APPEND);	
+ 	if(fd&gt;=0) write(fd, &quot;buffo buffer&quot;, strlen(&quot;buffo buffer&quot;));
+ 	else printf(&quot;Error?\n&quot;);
+ 	close(fd);	
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000241.html">[Dreamos-dev] r238 - in trunk: . fs
+</A></li>
+	<LI>Next message: <A HREF="000243.html">[Dreamos-dev] r240 - in trunk: . fs include/io io libc shell sys
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#242">[ date ]</a>
+              <a href="thread.html#242">[ thread ]</a>
+              <a href="subject.html#242">[ subject ]</a>
+              <a href="author.html#242">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

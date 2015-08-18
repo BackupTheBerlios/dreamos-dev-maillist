@@ -1,0 +1,142 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r155 - trunk/utils
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-December/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r155%20-%20trunk/utils&In-Reply-To=%3C200912302053.nBUKrfSu012572%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000156.html">
+   <LINK REL="Next"  HREF="000158.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r155 - trunk/utils</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r155%20-%20trunk/utils&In-Reply-To=%3C200912302053.nBUKrfSu012572%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r155 - trunk/utils">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Wed Dec 30 21:53:41 CET 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000156.html">[Dreamos-dev] r154 - trunk/utils
+</A></li>
+        <LI>Next message: <A HREF="000158.html">[Dreamos-dev] r156 - in trunk: . boot fs include/fs shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#157">[ date ]</a>
+              <a href="thread.html#157">[ thread ]</a>
+              <a href="subject.html#157">[ subject ]</a>
+              <a href="author.html#157">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-12-30 21:53:41 +0100 (Wed, 30 Dec 2009)
+New Revision: 155
+
+Modified:
+   trunk/utils/initfscp.c
+Log:
+Aggiunta copia dei files.
+Aggiunte scritte colorate.
+Sistemato layout.
+
+
+
+Modified: trunk/utils/initfscp.c
+===================================================================
+--- trunk/utils/initfscp.c	2009-12-30 19:52:47 UTC (rev 154)
++++ trunk/utils/initfscp.c	2009-12-30 20:53:41 UTC (rev 155)
+@@ -20,6 +20,7 @@
+ #include &lt;string.h&gt;
+ #include &lt;initfscp.h&gt;
+ 
++
+ int main(int argc, char* argv[]){
+ 	unsigned int offset;
+ 	if(argc &lt;= 1) usage(argv[0]);
+@@ -33,6 +34,7 @@
+ 			fsdest = fopen(argv[argc-1], &quot;w&quot;);
+ 			if(fsdest == NULL) printf(&quot;Could not create FileSystem\n&quot;);
+ 			printf(&quot;Welcome to Dreamos initfs file copier tool\n&quot;);
++			printf(&quot;Size of headers: %d\n\n&quot;, sizeof(struct initrd_file_t)*32);
+ 			printf(&quot;Clearing headers structures &quot;);
+ 			offset = sizeof(struct initrd_file_t) * 32;
+ 			for (i=0; i&lt;MAX_FILES; i++){
+@@ -42,10 +44,10 @@
+ 				headers[i].offset = 0;
+ 				headers[i].length = 0;
+ 			}			
+-			printf(&quot;\t\tDONE\n&quot;);			
++			printf(&quot;\e[33,44mDONE\e[0m\n\n&quot;);			
+ 			printf(&quot;Number of files to copy %d\n&quot;, argc - 2);
+-			printf(&quot;FileSystem name: %s\n&quot;, argv[argc-1]);
+-			printf(&quot;Creating File headers\n\n&quot;);			
++			printf(&quot;FileSystem name: %s\n\n&quot;, argv[argc-1]);
++			printf(&quot;Creating File headers\n&quot;);			
+ 			i=0;
+ 			for(i=0; i&lt; argc - 2; i++){
+ 				FILE *fd;
+@@ -57,19 +59,29 @@
+ 				else {
+ 					strcpy(headers[i].fileName, argv[i+1]);
+ 					fseek(fd, 0, SEEK_END);
+-					printf(&quot;File %s Found! Size: %d\n&quot;, argv[i+1], ftell(fd));				
++					printf(&quot;\tFile %s Found! Size: %d\n&quot;, argv[i+1], ftell(fd));				
+ 					headers[i].length = ftell(fd);
+ 					headers[i].offset = offset;
+ 					fclose(fd);
+ 					offset += headers[i].length;
+ 				}				
+ 			}
+-			printf(&quot;\t\tDONE\n&quot;);
++			printf(&quot;\e[33,44mDONE\e[0m\n\n&quot;);
+ 			i=0;
++			printf(&quot;Copying headers to %s filesystem  &quot;, argv[argc-1]);		
+ 			fwrite(headers, sizeof(struct initrd_file_t), 32, fsdest);
++			printf(&quot;\e[33,44mDONE\e[0m\n\n&quot;);			
++			printf(&quot;Copying data to %s filesystem\n&quot;, argv[argc-1]);		
+ 			for(i=0; i&lt;argc - 2; i++){
+-				printf(&quot;FileName: %s Length: %d offset: %d\n&quot;, headers[i].fileName, headers[i].length, headers[i].offset);
++				FILE *fd2;
++				char *buffer;
++				fd2=fopen(argv[i+1], &quot;r+&quot;);
++				buffer = (unsigned char*) malloc(headers[i].length);
++				fread(buffer, 1, headers[i].length, fd2);
++				fwrite(buffer, 1, headers[i].length, fsdest);
++				printf(&quot;\t\tFileName: %s Length: %d offset: %d\n&quot;, headers[i].fileName, headers[i].length, headers[i].offset);
+ 			}
++			printf(&quot;\e[33,44mDONE\e[0m\n\n&quot;);
+ 			fclose(fsdest);
+ 		}		
+ 	}	
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000156.html">[Dreamos-dev] r154 - trunk/utils
+</A></li>
+	<LI>Next message: <A HREF="000158.html">[Dreamos-dev] r156 - in trunk: . boot fs include/fs shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#157">[ date ]</a>
+              <a href="thread.html#157">[ thread ]</a>
+              <a href="subject.html#157">[ subject ]</a>
+              <a href="author.html#157">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

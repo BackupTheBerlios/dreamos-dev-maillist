@@ -1,0 +1,2548 @@
+From finarfin at mail.berlios.de  Wed Sep  2 20:28:29 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Wed, 2 Sep 2009 20:28:29 +0200
+Subject: [Dreamos-dev] r126 - in trunk: . shell sys
+Message-ID: <200909021828.n82ISTqi023005@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-09-02 20:28:28 +0200 (Wed, 02 Sep 2009)
+New Revision: 126
+
+Modified:
+   trunk/dreamos.img
+   trunk/shell/commands.c
+   trunk/sys/dirent.c
+Log:
+Iniziata stesura opendir.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-08-30 18:27:01 UTC (rev 125)
++++ trunk/shell/commands.c	2009-09-02 18:28:28 UTC (rev 126)
+@@ -442,6 +442,7 @@
+ 			free(relpath);
+ 		}
+ 	}
++	opendir(argv[1]);
+ }
+ 
+ void whoami(){
+
+Modified: trunk/sys/dirent.c
+===================================================================
+--- trunk/sys/dirent.c	2009-08-30 18:27:01 UTC (rev 125)
++++ trunk/sys/dirent.c	2009-09-02 18:28:28 UTC (rev 126)
+@@ -19,7 +19,14 @@
+ #include <dirent.h>
+ #include <sys/types.h>
+ #include <stdio.h>
++#include <vfs.h>
+ 
++
+ DIR *opendir(const char *path){
+-	printf("Prova\n");
++	int mpoint_id = 0;
++	char* rel_path;
++
++	mpoint_id = get_mountpoint_id(path);
++	rel_path = get_rel_path(mpoint_id, path);
++	printf("%d - %s\n", mpoint_id, rel_path);	
+ }
+
+
+
+From finarfin at mail.berlios.de  Mon Sep  7 21:14:10 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Mon, 7 Sep 2009 21:14:10 +0200
+Subject: [Dreamos-dev] r127 - in trunk: . fs include/fs sys
+Message-ID: <200909071914.n87JEAOJ028160@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-09-07 21:14:08 +0200 (Mon, 07 Sep 2009)
+New Revision: 127
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/vfs.c
+   trunk/include/fs/vfs.h
+   trunk/sys/dirent.c
+Log:
+Pulizia del codice di vfs.c
+Aggiunta struttura dati directory_operation
+Corretti aluni prototipi di funzione
+Eliminata struttura dati inode in quanto non utilizzata
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2009-09-02 18:28:28 UTC (rev 126)
++++ trunk/fs/vfs.c	2009-09-07 19:14:08 UTC (rev 127)
+@@ -37,7 +37,7 @@
+  		mountpoint_list[i].pmask = 0;
+  		mountpoint_list[i].dev_id = 0;
+ 	 	mountpoint_list[i].start_address = 0;
+-	 	mountpoint_list[i].operations = NULL;
++	 	//mountpoint_list[i].operations = NULL;
+  		i++;
+ 	}
+ 	
+@@ -47,7 +47,7 @@
+  	mountpoint_list[0].pmask = 0;
+  	mountpoint_list[0].dev_id = 0;
+  	mountpoint_list[0].start_address = 0;
+- 	mountpoint_list[0].operations = kmalloc(sizeof(struct super_node_operations));
++ 	//mountpoint_list[0].operations = kmalloc(sizeof(struct super_node_operations));
+ 
+ 	strcpy(mountpoint_list[1].mountpoint,"/dev"); 	
+ 	mountpoint_list[1].uid = 0;
+@@ -55,7 +55,7 @@
+  	mountpoint_list[1].pmask = 0;
+  	mountpoint_list[1].dev_id = 0;
+  	mountpoint_list[1].start_address = 0;
+- 	mountpoint_list[1].operations = kmalloc(sizeof(struct super_node_operations));
++ 	//mountpoint_list[1].operations = kmalloc(sizeof(struct super_node_operations));
+ 	
+ 	strcpy(mountpoint_list[2].mountpoint,"/dev/video"); 	
+ 	mountpoint_list[2].uid = 0;
+@@ -63,7 +63,7 @@
+  	mountpoint_list[2].pmask = 0;
+  	mountpoint_list[2].dev_id = 0;
+  	mountpoint_list[2].start_address = 0;
+- 	mountpoint_list[2].operations = kmalloc(sizeof(struct super_node_operations));
++ 	//mountpoint_list[2].operations = kmalloc(sizeof(struct super_node_operations));
+ 	
+ 	strcpy(mountpoint_list[3].mountpoint,"/root");
+  	mountpoint_list[3].uid = 0;
+@@ -71,15 +71,10 @@
+  	mountpoint_list[3].pmask = 0;
+  	mountpoint_list[3].dev_id = 0;
+  	mountpoint_list[3].start_address = 0;
+- 	mountpoint_list[3].operations = kmalloc(sizeof(struct super_node_operations));
++ 	//mountpoint_list[3].operations = kmalloc(sizeof(struct super_node_operations));
+ 
+ }
+ 
+-void open_vfs (struct inode *node){
+-	if(node->read!=0) printf("read node");
+-	else return;
+-}
+-
+ int get_mountpoint_id(char *path){
+        int i = 0;
+        int last;
+
+Modified: trunk/include/fs/vfs.h
+===================================================================
+--- trunk/include/fs/vfs.h	2009-09-02 18:28:28 UTC (rev 126)
++++ trunk/include/fs/vfs.h	2009-09-07 19:14:08 UTC (rev 127)
+@@ -18,28 +18,28 @@
+ #ifndef _VFS_H
+ #define _VFS_H
+ 
++#include <dirent.h>
++#include <stddef.h>
++
+ #define MAX_MOUNTPOINT 10
+ #define MAX_FD 255
+ 
+ #define FS_FILE 0x01
+ #define FS_DIRECTORY 0x02
+ 
+-struct inode {
+-	char filename[256];
+-	int type;
+- 	int length;
+-	struct inode *parent;
+ 
+-	/* Inutili per adesso */
+-	int uid;
+-	int gid;
+-	int pmask;
++struct directory_operations {
++	DIR* (*opendir_f)(const char *);
++	int (*closedir_f)(DIR *dirp);
++	struct dirent* (*readdir_f)(DIR *dirp);
++};
+ 
+- 	/* puntatori a funzione */
+-	void (*open)(struct inode *);
+-	void (*close)(struct inode *);
+-	int (*read)(struct inode *, int, int, int *);
+-	int (*write)(struct inode *, int, int, int *);
++struct super_node_operations {
++	/*Qui vanno i puntatori alle funzioni sul supernode*/
++	void (*open)(char *, int );
++	void (*close)(int);
++	int (*read)(int, void*, size_t);
++	int (*write)(int, void*, size_t);
+ };
+ 
+ /*!  \struct mountpoint_t
+@@ -52,7 +52,8 @@
+ 		unsigned int gid; /**< Group ID*/
+ 		unsigned int start_address; /**< Indirizzo di partenza del FileSystem*/
+ 		int dev_id; /**< Device ID*/		
+-		struct super_node_operations *operations;
++		struct super_node_operations operations;
++		//struct directory_operations dir_op;
+ };
+ 
+ struct file_descriptor {
+@@ -60,24 +61,16 @@
+ 	int mountpoint_id;
+ };
+ 
+-struct super_node_operations {
+-	/*Qui vanno i puntatori alle funzioni sul supernode*/
+-	void (*open)(char *r_path, int o_flags);
+-	void (*close)(int);
+-	/*t (*read)(stct inode *, int, int, int *);
+-	int (*write)(struct inode *, int, int, int *);*/
+-};
+-
+-extern struct inode *root;
++//extern struct inode *root;
+ extern struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
+ 
+-void open_vfs (struct inode *);
+-void close (struct inode *);
++//void open_vfs (struct inode *);
++void close (int);
+ int get_mountpoint_id(char *);
+ char* get_rel_path(int, char*);
+ int open_dir(char *);
+-int read (struct inode *, int, int, int *);
+-int write (struct inode *, int, int, int *);
++int read (int, void*, size_t);
++int write (int, void*, size_t);
+ 
+ void vfs_init();
+ 
+
+Modified: trunk/sys/dirent.c
+===================================================================
+--- trunk/sys/dirent.c	2009-09-02 18:28:28 UTC (rev 126)
++++ trunk/sys/dirent.c	2009-09-07 19:14:08 UTC (rev 127)
+@@ -19,6 +19,7 @@
+ #include <dirent.h>
+ #include <sys/types.h>
+ #include <stdio.h>
++#include <string.h>
+ #include <vfs.h>
+ 
+ 
+@@ -28,5 +29,9 @@
+ 
+ 	mpoint_id = get_mountpoint_id(path);
+ 	rel_path = get_rel_path(mpoint_id, path);
++	if(rel_path[0] == '\0' || (strlen(rel_path)==1 && rel_path[0]=='/')) {
++		printf("mountpoint open root\n");
++	} else{
+ 	printf("%d - %s\n", mpoint_id, rel_path);	
++	}
+ }
+
+
+
+From osiris_h4ck at mail.berlios.de  Tue Sep  8 11:20:23 2009
+From: osiris_h4ck at mail.berlios.de (osiris_h4ck at BerliOS)
+Date: Tue, 8 Sep 2009 11:20:23 +0200
+Subject: [Dreamos-dev] r128 - in trunk: . include include/libc include/shell
+	io libc shell
+Message-ID: <200909080920.n889KNrm013351@sheep.berlios.de>
+
+Author: osiris_h4ck
+Date: 2009-09-08 11:20:21 +0200 (Tue, 08 Sep 2009)
+New Revision: 128
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/libc/stdio.h
+   trunk/include/shell/commands.h
+   trunk/include/version.h
+   trunk/io/video.c
+   trunk/libc/stdio.c
+   trunk/libc/string.c
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+Log:
+- Effettuate varie modifiche a librerie
+- Preparato sostituto a putchar e putc ma in fase di completamento percio' sotto commento
+- Riscritta funzione strtok() che e' possibile testare nella shell con il comando 'test'
+
+
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/libc/stdio.h
+===================================================================
+--- trunk/include/libc/stdio.h	2009-09-07 19:14:08 UTC (rev 127)
++++ trunk/include/libc/stdio.h	2009-09-08 09:20:21 UTC (rev 128)
+@@ -28,7 +28,7 @@
+ 
+ #define MAX_DIGITS_IN_INTEGER 11
+ 
+-void putchar (char);
++void putchar (char ch);
+ int atoi (const char *);
+ int printf (const char *, ...);
+ int puts (char *s);
+
+Modified: trunk/include/shell/commands.h
+===================================================================
+--- trunk/include/shell/commands.h	2009-09-07 19:14:08 UTC (rev 127)
++++ trunk/include/shell/commands.h	2009-09-08 09:20:21 UTC (rev 128)
+@@ -49,5 +49,5 @@
+ void ls();
+ void cd();
+ void whoami();
+-void try_strcpy();
++void test();
+ #endif
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-09-07 19:14:08 UTC (rev 127)
++++ trunk/include/version.h	2009-09-08 09:20:21 UTC (rev 128)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "2.0"
+ #define EXTRAVERSION "-trunk"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r124"
++#define REV_NUM "-r127"
+
+Modified: trunk/io/video.c
+===================================================================
+--- trunk/io/video.c	2009-09-07 19:14:08 UTC (rev 127)
++++ trunk/io/video.c	2009-09-08 09:20:21 UTC (rev 128)
+@@ -50,6 +50,21 @@
+   *VIDEO_PTR++ = VIDEO_CLR;
+   _kshiftAll();
+   _ksetcursauto();
++/*
++  while(c != 0) {
++	if ( c=='\n' )
++		_knewline();
++	else if ( c=='\t' )
++		_ktab();
++	//else if(c=='\033')
++	//	_kcolor(++c);	NON STAMPA CORRETTAMENTE I COLORI
++	else if( c=='\b' )
++		_kbackspace();
++	else if ( c=='\r' )
++		_kminline();
++	c++;
++  }
++*/
+ }
+ 
+ void _kputs(char *s)
+
+Modified: trunk/libc/stdio.c
+===================================================================
+--- trunk/libc/stdio.c	2009-09-07 19:14:08 UTC (rev 127)
++++ trunk/libc/stdio.c	2009-09-08 09:20:21 UTC (rev 128)
+@@ -36,10 +36,7 @@
+ #define LEFT 1
+ #define RIGHT 0
+ 
+-char *VIDEO_MEMZ = (char*) 0xb8000,
+-	 *VIDEO_PTRZ = (char*) 0xb8000,
+-	 VIDEO_CLRZ = 0x7;
+-	 
++char *VIDEO_RAM = (char*) 0xb8000, *VIDEO_PTRZ = (char*) 0xb8000, VIDEO_CLRZ = 0x7;
+ int last_Xz=0, last_Yz=0;
+ 
+ /* 
+@@ -63,17 +60,18 @@
+ /*
+  * Print a character
+  */
++
+ void putchar (char ch)
+ {
+-   /*asm ("movl $0x0, %%eax\n"
+-	"int $80\n\t"
+-	:: "b" (ch));*/
+ 	char s[2];
+ 	s[0] = ch;
+ 	s[1] = '\0';
+ 	_kputs(s);
++	//_kputc(ch); 
++
+ }
+ 
++
+ /*
+  * Convert a string to an integer
+  */
+
+Modified: trunk/libc/string.c
+===================================================================
+--- trunk/libc/string.c	2009-09-07 19:14:08 UTC (rev 127)
++++ trunk/libc/string.c	2009-09-08 09:20:21 UTC (rev 128)
+@@ -203,44 +203,49 @@
+  * If str is NULL, the scanning will continue for the previous string
+  * It can be bettered
+  */
+-char *strtok (char *str, const char *delim)
++
++char *strtok(char *s, const char *delim)
+ {
+-    int dim = strlen(delim);
+-    static char *token;
+-    char *point, *start;
+-    char *p;
+-    int i=0;
+- 
+-    if (str!=NULL)
+-	token = str;
++  const char *spanp;
++  int c, sc;
++  char *tok;
++  static char *last;
+ 
+-    start = token; // save the beginning of the string
+-    if ((point = strstr(start, delim)))
+-    {
+-        /* it takes "token" just first the delimitator */
+-	while (token != point)
+-	  token++;
+ 
+-        /* p will contains all the chars until the delimitator */
+-	while (start != point)
+-          p[i++] = *start++;
+-        p[i] = 0;
++  if (s == NULL && (s = last) == NULL)
++    return (NULL);
+ 
+-        token += dim; // delete the delimitator, otherwise it will come up in the next call
+-        return p;
+-    }
++ cont:
++  c = *s++;
++  for (spanp = delim; (sc = *spanp++) != 0;) {
++    if (c == sc)
++      goto cont;
++  }
+ 
+-    /* The last token, if there is no final delimitator */
+-    if (token) {
+-      do {
+-       p[i] = token[i];
+-      } while (token[i++]);
+-      p[i] = 0;
+-      return p;
+-    }
+-    return NULL;
++  if (c == 0) {             
++    last = NULL;
++    return (NULL);
++  }
++  tok = s - 1;
++
++  for (;;) {
++    c = *s++;
++    spanp = delim;
++    do {
++      if ((sc = *spanp++) == c) {
++        if (c == 0)
++          s = NULL;
++        else
++          s[-1] = 0;
++        last = s;
++        return (tok);
++      }
++    } while (sc != 0);
++  }
++
+ }
+ 
++
+ /*
+  * Concatenate n characters of src to dest
+  */
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-09-07 19:14:08 UTC (rev 127)
++++ trunk/shell/commands.c	2009-09-08 09:20:21 UTC (rev 128)
+@@ -57,40 +57,38 @@
+ void help()
+ {
+   printf ("Available commands:\n");
+-  printf("help       - See the 'help' list to learn the DreamOS commands now available\n"
+-         "clear      - Clear the screen\n"
+-		 "poweroff   - Turn off the machine\n"
+-         "kmalloc    - Test a basic kmalloc function\n"
+-         "do_fault   - Test a page_fault\n"
+-         "aalogo     - Show an ascii art logo\n"
+-         "uname      - Print kernel version, try uname --help for more info\n"
+-         "printmem   - Print used locations of memory\n"
+-         "credits    - Show DreamOS credits\n"
+-	 	 "sleep      - pause DreamOS for a particular number of seconds\n"
+-	 	 "cpuid      - Show cpu identification informations\n"
+-	 	 "date       - Show date and time\n"
+-	  	 "echo       - Print some lines of text\n"
+-	 	 "drv_load   - Tool to load and kill drivers\n"
+-		 "ls         - Tool for listing dir - not complete-\n"
+-		 "cd         - Change dir - not complete-\n"
+-		 "try_strcpy - Try strcpy function\n"
+-		 "whoami     - Show the current user name\n");
++  printf(
++	"help          - See the 'help' list to learn the DreamOS commands now available\n"
++	"clear         - Clear the screen\n"
++	"poweroff      - Turn off the machine\n"
++	"kmalloc       - Test a basic kmalloc function\n"
++	"do_fault      - Test a page_fault\n"
++	"aalogo        - Show an ascii art logo\n"
++	"uname         - Print kernel version, try uname --help for more info\n"
++	"printmem      - Print used locations of memory\n"
++	"credits       - Show DreamOS credits\n"
++	"sleep         - pause DreamOS for a particular number of seconds\n"
++	"cpuid         - Show cpu identification informations\n"
++	"date          - Show date and time\n"
++	"echo          - Print some lines of text\n"
++	"drv_load      - Tool to load and kill drivers\n"
++	"ls            - Tool for listing dir - not complete-\n"
++	"cd            - Change dir - not complete-\n"
++	"whoami        - Show the current user name\n"
++	"test          - Try some functions, now 'strtok'\n"
++	);
+ }
+ 
+ void echo()
+ {
+-    /*int c;
+-    for (c = 1; c < argc; c++)
+-        printf ("%s ", argv[c]);
+-    printf ("\n");*/
+     if ( argc == 1 ) {
+          printf("");
+     } else {
+ 		while ( --argc > 0 ) {
+ 		printf("%s ",*++argv);
+-        }
+-   }
+-   printf("\n");
++		}
++	}
++    printf("\n");
+ }
+ 
+ void poweroff()
+@@ -168,9 +166,9 @@
+ {
+   printf("Uname function allow you to see the kernel and system information.\n");
+   printf("Function avaibles:\n");
+-  printf("1) '-a'   - Kernel version and processor type\n"
+-  	 "2) '-r'   - Only the kernel version\n"
+-  	 "3) '-i'   - All info of system and kernel\n");	
++  printf("1) -a   - Kernel version and processor type\n"
++  	   "2) -r   - Only the kernel version\n"
++	   "3) -i   - All info of system and kernel\n");	
+ }
+ 
+ void uname_info()
+@@ -178,11 +176,11 @@
+   printf("\n:==========: :System info: :==========:\n\n");
+ 	
+   // Kernel info
+-  printf( "Version: '%s'\n"
+-	  "Patchlevel: '%s'\n"
+-	  "Extraversion: '%s'\n"
+-	  "Name: '%s'\n"
+-	  "Revision: '%s'\n",VERSION,PATCHLEVEL,EXTRAVERSION,NAME,REV_NUM);
++  printf( "Version: %s\n"
++	  "Patchlevel: %s\n"
++	  "Extraversion: %s\n"
++	  "Name: %s\n"
++	  "Revision: %s\n",VERSION,PATCHLEVEL,EXTRAVERSION,NAME,REV_NUM);
+ 
+   // CPU Info
+   _kputs (LNG_CPU);
+@@ -243,7 +241,7 @@
+   _kcolor('\011');
+   _kputs("Developers:\n");
+   _kcolor('\012');
+-  _kputs("Osiris - Diego Stamigni \n\n");
++  _kputs("Lord Osiris - Diego Stamigni \n\n");
+   _kcolor('\011');
+   _kputs("Contributors:\n");
+   _kcolor('\012');
+@@ -448,3 +446,17 @@
+ void whoami(){
+ 	printf("%s\n", current_user.username);
+ }
++
++void test(){
++	char *s = "Hello World";
++	char *p;
++	
++	printf("Stringa completa: %s\n"
++		 "Stringa spezzata: \n" ,s);
++	
++	p = strtok(s, " ");
++	while (p != NULL) {
++		printf("%s\n", p);
++		p = strtok(NULL, " ");
++	}
++}
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-09-07 19:14:08 UTC (rev 127)
++++ trunk/shell/shell.c	2009-09-08 09:20:21 UTC (rev 128)
+@@ -93,6 +93,7 @@
+ 	{ "ls",       ls},
+ 	{ "cd",       cd},
+ 	{ "whoami",   whoami},
++	{ "test", test},
+         };
+ 
+   int i = 0;
+
+
+
+From osiris_h4ck at mail.berlios.de  Tue Sep  8 12:39:02 2009
+From: osiris_h4ck at mail.berlios.de (osiris_h4ck at BerliOS)
+Date: Tue, 8 Sep 2009 12:39:02 +0200
+Subject: [Dreamos-dev] r129 - in trunk: . libc
+Message-ID: <200909081039.n88Ad2xv026039@sheep.berlios.de>
+
+Author: osiris_h4ck
+Date: 2009-09-08 12:38:55 +0200 (Tue, 08 Sep 2009)
+New Revision: 129
+
+Modified:
+   trunk/dreamos.img
+   trunk/libc/string.c
+   trunk/start.sh
+Log:
+- Fixati bugs in strcpy() e strncpy() di string.h che sono state totalmente riscritte da 0
+- Preparamento de 'Sistema di Testing'
+
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/libc/string.c
+===================================================================
+--- trunk/libc/string.c	2009-09-08 09:20:21 UTC (rev 128)
++++ trunk/libc/string.c	2009-09-08 10:38:55 UTC (rev 129)
+@@ -29,30 +29,30 @@
+ /*
+  * Copy n characters from src to dest, returning dest
+  */
+-char *strncpy (char *dest, register const char *src, 
+-	register size_t n)
++char *strncpy (char *dest, register const char *src, register size_t n)
+ {
+-    register int i;
+-	if ( n > 0 ) {
+-		for (i = 0; i < n; i++)
+-			dest[i] = src[i];
++  if (n != 0) {
++	char *d = dest;
++	const char *s = src;
++	do {
++		if ((*d++ = *s++) == 0) {
++			while (--n != 0)
++				*d++ = 0;
++				break;
++			}
++		} while (--n != 0);
+ 	}
+-    return dest;
++	return dest;
+ }
+ 
+ char *strcpy (char *dest, const char *src)
+ {
+-  int i;
+-  int k = 0;
+-  k=strlen(src);
++	char *save = dest;
++	for (; (*dest = *src); ++src, ++dest);
++	return save;
++}
+ 
+-  for (i=0; i<k; i++)  	
+-    *(dest+i) = *(src+i);
+-  dest[i] = '\0';
+ 
+-  return dest;
+-}
+-
+ /*
+  * Return the number of a string's characters
+  */
+
+Modified: trunk/start.sh
+===================================================================
+--- trunk/start.sh	2009-09-08 09:20:21 UTC (rev 128)
++++ trunk/start.sh	2009-09-08 10:38:55 UTC (rev 129)
+@@ -111,8 +111,7 @@
+   echo "--------------------------------------------- "
+   echo "Launching ISO Creating script in progress.."
+   echo ""
+-  mkisofs -o dreamos-image.iso -A DreamOS -b boot/grub.img `pwd`
+-  mv dreamos-image.iso ISO/dreamos-image.iso
++  mkisofs -o ISO/dreamos-image.iso -A DreamOS -b boot/grub.img `pwd`
+   echo "done."
+   echo "--------------------------------------------- "
+   echo "ISO Created in ISO/"
+@@ -219,7 +218,6 @@
+   echo "Launching ISO Creating script in progress.."
+   echo ""
+   mkisofs -o ISO/dreamos-image.iso -A DreamOS -b boot/grub.img `pwd`
+-  #mv dreamos-image.iso ISO/dreamos-image.iso
+   echo "done."
+   echo "--------------------------------------------- "
+   echo "ISO Created in ISO/"
+
+
+
+From osiris_h4ck at mail.berlios.de  Tue Sep  8 15:20:50 2009
+From: osiris_h4ck at mail.berlios.de (osiris_h4ck at BerliOS)
+Date: Tue, 8 Sep 2009 15:20:50 +0200
+Subject: [Dreamos-dev] r130 - in trunk: . include/shell shell
+Message-ID: <200909081320.n88DKoac025427@sheep.berlios.de>
+
+Author: osiris_h4ck
+Date: 2009-09-08 15:20:49 +0200 (Tue, 08 Sep 2009)
+New Revision: 130
+
+Added:
+   trunk/include/shell/testing.h
+   trunk/shell/testing.c
+Modified:
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/include/shell/commands.h
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+Log:
+- Creato sotto sistema di testing, 'tester --help' nella shell di DreamOS per maggiori info su questa nuova features
+- Effettuata pulizia codice
+- Aggiunti file testing.h/testing.c rispettivamente in include/shell e shell/ che contengono le funzioni di testing
+
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2009-09-08 10:38:55 UTC (rev 129)
++++ trunk/Makefile	2009-09-08 13:20:49 UTC (rev 130)
+@@ -55,6 +55,7 @@
+       hardware/8253.o\
+       shell/shell.o\
+       shell/commands.o\
++      shell/testing.o\
+       sys/utsname.o\
+       sys/dirent.o
+ 
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/shell/commands.h
+===================================================================
+--- trunk/include/shell/commands.h	2009-09-08 10:38:55 UTC (rev 129)
++++ trunk/include/shell/commands.h	2009-09-08 13:20:49 UTC (rev 130)
+@@ -23,7 +23,9 @@
+ #ifndef __COMMANDS_H
+ #define __COMMANDS_H
+ 
++#include <shell.h>
+ #include <kheap.h>
++#define MAX_TEST 10
+ 
+ int argc;
+ char **argv;
+@@ -49,5 +51,11 @@
+ void ls();
+ void cd();
+ void whoami();
+-void test();
++void tester();
++
++struct a_b {
++	const char cmd_testname[CMD_LEN];
++	void (*func)(void);
++};
++
+ #endif
+
+Added: trunk/include/shell/testing.h
+===================================================================
+--- trunk/include/shell/testing.h	2009-09-08 10:38:55 UTC (rev 129)
++++ trunk/include/shell/testing.h	2009-09-08 13:20:49 UTC (rev 130)
+@@ -0,0 +1,23 @@
++/*
++ * Shell.h
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2 of the License, or
++ *  (at your option) any later version.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++ 
++ 
++void try_strtok();
++void try_kmalloc();
++void try_printmem(void);
++void do_fault();
++void help_tester();
+\ No newline at end of file
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-09-08 10:38:55 UTC (rev 129)
++++ trunk/shell/commands.c	2009-09-08 13:20:49 UTC (rev 130)
+@@ -22,6 +22,7 @@
+ #include <sys/utsname.h>
+ #include <mouse.h>
+ #include <vfs.h>
++#include <testing.h>
+ 
+ struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
+ userenv_t current_user;
+@@ -61,11 +62,8 @@
+ 	"help          - See the 'help' list to learn the DreamOS commands now available\n"
+ 	"clear         - Clear the screen\n"
+ 	"poweroff      - Turn off the machine\n"
+-	"kmalloc       - Test a basic kmalloc function\n"
+-	"do_fault      - Test a page_fault\n"
+ 	"aalogo        - Show an ascii art logo\n"
+ 	"uname         - Print kernel version, try uname --help for more info\n"
+-	"printmem      - Print used locations of memory\n"
+ 	"credits       - Show DreamOS credits\n"
+ 	"sleep         - pause DreamOS for a particular number of seconds\n"
+ 	"cpuid         - Show cpu identification informations\n"
+@@ -75,7 +73,7 @@
+ 	"ls            - Tool for listing dir - not complete-\n"
+ 	"cd            - Change dir - not complete-\n"
+ 	"whoami        - Show the current user name\n"
+-	"test          - Try some functions, now 'strtok'\n"
++	"tester        - Try some functions, 'tester --help' for more info'\n"
+ 	);
+ }
+ 
+@@ -100,50 +98,6 @@
+   while(1);
+ }
+ 
+-void kmalloc_try()
+-{
+-  int *b, *c, *d;
+-  int i = 0;
+-
+-  printf("Kmalloc try: ... ");
+-  //print_heap_list (kheap->free_list);
+-  b = (int *)kmalloc(15 * sizeof(int));
+-  c = (int *)kmalloc(10 * sizeof(int));
+-  d = (int *)kmalloc(15 * sizeof(int));
+-  printf("Address obtained: %d %d %d\n", b, c, d);
+-  
+-  while(i < 15) {
+-    b[i] = i*2;
+-    if(i < 10) c[i] = i*3;
+-    d[i] = i*2;
+-    i++;
+-  }
+-  i = 0;
+-
+-  while(i < 15) {
+-    printf("b[%d] = %d d[%d] = %d ",i, b[i], i,d[i]);
+-    if(i < 10) printf("c[%d] = %d\n", i, c[i]);
+-    else printf("\n");
+-    i++;
+-  }
+-  printf("Navigating used list...\n");
+-  print_heap_list (kheap->used_list);
+-  free (b);
+-  free (c);
+-  free (d);
+-}
+-
+-void do_fault()
+-{
+-  int *prova;
+-
+-  printf ("Genero un pagefault scrivendo 10 nella locazione 0xa0000000...\n");
+-  prova = (int *)0xa0000000;
+-  *prova = 10;
+-
+-  printf ("Contenuto della locazione 0xa0000000 dopo l'intervento dell'handler: %d\n", *prova);
+-}
+-
+ void uname_cmd()
+ {
+   struct utsname *infos;
+@@ -225,12 +179,12 @@
+ 
+   printf("\n:==========: :===========: :==========:\n\n");
+ }
+-
++/*
+ void printmem(void)
+ {
+   print_heap_list(kheap->used_list);
+ }
+-
++*/
+ void credits(void)
+ {
+   _kcolor('\011');
+@@ -313,7 +267,7 @@
+     }
+   }
+ 
+-  printf ("----- CPUID Information -----\n");
++  printf ("----- CPU ID Information -----\n");
+   if (strcmp(sinfo->brand_string, "Reserved") != 0)
+     printf ("%s\n", sinfo->brand_string);
+   printf ("Vendor: %s\n", sinfo->cpu_vendor);
+@@ -330,7 +284,7 @@
+       if (sinfo->cpuid_edx_flags[i] == 1)
+         printf ("%s\n", edx_features[i]);
+     }
+-    printf ("--------------------------\n");
++    printf ("---------------------------\n");
+   }
+ }
+ 
+@@ -384,10 +338,10 @@
+      else
+ 	{
+ 	 	if ( (_kstrncmp (argv[1], "-r", 2) == 0) && (_kstrncmp (argv[2], "mouse", 5) == -1) )
+-	 	   printf("FATAL: Driver %s not found.\n", argv[2]); 
++			printf("FATAL: Driver %s not found.\n", argv[2]); 
+ 	
+-		 else
+-	    	 printf("FATAL: Driver %s not found.\n", argv[1]);
++		else
++			printf("FATAL: Driver %s not found.\n", argv[1]);
+ 	 }
+ 
+    }
+@@ -425,8 +379,10 @@
+ 
+ void cd( ){
+ 	char *relpath;	
+-	if(argc != 2) printf("Bad usage. Try 'ls -l' and then 'cd dir'.\n");
+-	else {
++	if(argc != 2) {
++		printf("Bad usage. Try 'ls -l' and then 'cd dir'.\n");
++		return;
++	} else {
+ 		int i=0;
+ 		int rel_size = 0;		
+ 		i = get_mountpoint_id(argv[1]);
+@@ -447,16 +403,28 @@
+ 	printf("%s\n", current_user.username);
+ }
+ 
+-void test(){
+-	char *s = "Hello World";
+-	char *p;
+-	
+-	printf("Stringa completa: %s\n"
+-		 "Stringa spezzata: \n" ,s);
+-	
+-	p = strtok(s, " ");
+-	while (p != NULL) {
+-		printf("%s\n", p);
+-		p = strtok(NULL, " ");
++void tester(){
++	int i = 0;
++	static struct a_b testing[MAX_TEST] = { 
++					{ "try_kmalloc", try_kmalloc },
++					{ "try_strtok", try_strtok },
++					{ "do_fault", do_fault },
++					{ "try_printmem", try_printmem },
++					{ "--help", help_tester },
++					};
++	if (argc != 2) {
++		printf ("Bad usage. Try '%s --help' for more info about the usage.\n", argv[0]);
++		return;
++	} else { 
++		for ( i = 0 ; i <= MAX_TEST ; i++) {
++			if ( (strcmp(argv[1], testing[i].cmd_testname) ) == NULL ) {
++				 (testing[i].func)();
++				break;
++			} 
++		}
++		if ( i > MAX_TEST ) {
++			printf("Error: %s not found.\n", argv[1]);
++			//return;
++		}
+ 	}
+ }
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-09-08 10:38:55 UTC (rev 129)
++++ trunk/shell/shell.c	2009-09-08 13:20:49 UTC (rev 130)
+@@ -39,7 +39,7 @@
+ #include <clock.h>
+ #include <sys/utsname.h>
+ 
+-#define NUM_COM 20
++#define NUM_COM 30
+ 
+ userenv_t current_user;
+ /*
+@@ -78,10 +78,7 @@
+ 	{ "aalogo",   aalogo      },
+ 	{ "clear",    _kclear     },
+ 	{ "poweroff", poweroff    },
+-	{ "kmalloc",  kmalloc_try },
+-	{ "do_fault", do_fault    },
+ 	{ "uname",    uname_cmd   },
+-	{ "printmem", printmem    },
+ 	{ "credits",  credits     },
+ 	{ "sleep",    sleep_cmd   },
+ 	{ "cpuid",    cpuid 	  },
+@@ -93,7 +90,7 @@
+ 	{ "ls",       ls},
+ 	{ "cd",       cd},
+ 	{ "whoami",   whoami},
+-	{ "test", test},
++	{ "tester", tester},
+         };
+ 
+   int i = 0;
+@@ -117,12 +114,9 @@
+   
+   for (;;)
+   {
+-    //printf("[%s]~:%s# ",current_user.username, current_user.cur_path);
+-    //_kcolor(4);
+     printf("%s~:%s# ", current_user.username, 
+ 				  current_user.cur_path,
+ 				  current_user.username);
+-    //_kcolor(7);
+     scanf("%254s",cmd);
+         
+     /* elimina eventuali spazi all'inizio del comando */
+
+Added: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2009-09-08 10:38:55 UTC (rev 129)
++++ trunk/shell/testing.c	2009-09-08 13:20:49 UTC (rev 130)
+@@ -0,0 +1,103 @@
++#include <commands.h>
++#include <multiboot.h>
++#include <kernel.h>
++#include <stddef.h>
++#include <video.h>
++#include <pic8259.h>
++#include <8253.h>
++#include <gdt.h>
++#include <idt.h>
++#include <cpuid.h>
++#include <stdio.h>
++#include <string.h>
++#include <fismem.h>
++#include <io.h>
++#include <keyboard.h>
++#include <paging.h>
++#include <use.h>
++#include <shell.h>
++#include <version.h>
++#include <cpuid.h>
++#include <clock.h>
++#include <sys/utsname.h>
++#include <mouse.h>
++#include <vfs.h>
++#include <testing.h>
++
++void try_strtok()
++{
++	char *s = "Hello World";
++	char *p;
++	
++	printf("Stringa completa: %s\n"
++		 "Stringa spezzata: \n" ,s);
++	
++	p = strtok(s, " ");
++	while (p != NULL) {
++		printf("%s\n", p);
++		p = strtok(NULL, " ");
++	}
++}
++
++void try_kmalloc()
++{
++	int *b, *c, *d;
++	int i = 0;
++
++	printf("Kmalloc try: ... ");
++	//print_heap_list (kheap->free_list);
++	b = (int *)kmalloc(15 * sizeof(int));
++	c = (int *)kmalloc(10 * sizeof(int));
++	d = (int *)kmalloc(15 * sizeof(int));
++	printf("Address obtained: %d %d %d\n", b, c, d);
++  
++	while(i < 15) {
++		b[i] = i*2;
++		if(i < 10) c[i] = i*3;
++		d[i] = i*2;
++		i++;
++	}
++	i = 0;
++
++	while(i < 15) {
++		printf("b[%d] = %d d[%d] = %d ",i, b[i], i,d[i]);
++		if(i < 10) printf("c[%d] = %d\n", i, c[i]);
++		else printf("\n");
++		i++;
++	}
++	
++	printf("Navigating used list...\n");
++	print_heap_list (kheap->used_list);
++	free (b);
++	free (c);
++	free (d);
++}
++
++void do_fault()
++{
++	int *prova;
++
++	printf ("Genero un pagefault scrivendo 10 nella locazione 0xa0000000...\n");
++	prova = (int *)0xa0000000;
++	*prova = 10;
++	printf ("Contenuto della locazione 0xa0000000 dopo l'intervento dell'handler: %d\n", *prova);
++}
++
++void try_printmem(void)
++{
++	print_heap_list(kheap->used_list);
++}
++
++void help_tester()
++{
++	printf("Testing functions.. ");
++	_kcolor(4);
++	printf("Warning: for developers only!\n");
++	_kcolor(7);
++	printf(
++		"  -> try_kmalloc       - Test a basic kmalloc() function\n"
++		"  -> do_fault          - Test a page_fault\n"
++		"  -> try_strtok        - Test strtok() function in string.h\n"
++		"  -> try_printmem      - Print used locations of memory\n"
++		);	
++}
+\ No newline at end of file
+
+
+
+From finarfin at mail.berlios.de  Tue Sep  8 22:56:16 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Tue, 8 Sep 2009 22:56:16 +0200
+Subject: [Dreamos-dev] r131 - in trunk: . hardware include/fs shell
+Message-ID: <200909082056.n88KuGjH003982@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-09-08 22:56:15 +0200 (Tue, 08 Sep 2009)
+New Revision: 131
+
+Modified:
+   trunk/dreamos.img
+   trunk/hardware/pic8259.c
+   trunk/include/fs/vfs.h
+   trunk/kernel.c
+   trunk/shell/commands.c
+Log:
+Eliminato static da struct a_b nel comando tester che impediva il corretto boot.
+
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/hardware/pic8259.c
+===================================================================
+--- trunk/hardware/pic8259.c	2009-09-08 13:20:49 UTC (rev 130)
++++ trunk/hardware/pic8259.c	2009-09-08 20:56:15 UTC (rev 131)
+@@ -79,14 +79,15 @@
+ 
+     outportb(MASTER_PORT_1, 0xFF);
+ 	outportb(SLAVE_PORT_1,  0xFF);
+-
++		
+     //outportb (0xFC, MASTER_PORT_1);
+-    enable_IRQ(KEYBOARD);
++    enable_IRQ(KEYBOARD);    
+     enable_IRQ(TIMER);
+     enable_IRQ(TO_SLAVE_PIC);
+    
+     setup_IRQ();
+     asm("sti");
++                    
+     i=0;
+     while(i<16){
+         shareHandler[i] = NULL;
+
+Modified: trunk/include/fs/vfs.h
+===================================================================
+--- trunk/include/fs/vfs.h	2009-09-08 13:20:49 UTC (rev 130)
++++ trunk/include/fs/vfs.h	2009-09-08 20:56:15 UTC (rev 131)
+@@ -53,7 +53,7 @@
+ 		unsigned int start_address; /**< Indirizzo di partenza del FileSystem*/
+ 		int dev_id; /**< Device ID*/		
+ 		struct super_node_operations operations;
+-		//struct directory_operations dir_op;
++		struct directory_operations dir_op;
+ };
+ 
+ struct file_descriptor {
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2009-09-08 13:20:49 UTC (rev 130)
++++ trunk/kernel.c	2009-09-08 20:56:15 UTC (rev 131)
+@@ -80,14 +80,13 @@
+     set_memorysize((boot_info->mem_upper+boot_info->mem_lower)*1024);
+     init_mem();    
+     _kputs(LNG_PIC8259);
+-    init_IRQ();
++    init_IRQ();    
+     asm("sti");
+     _kprintOK();   
+     init_paging();    
+     printf(LNG_PIT8253);
+     configure_PIT ();
+-    _kprintOK();    
+-
++    _kprintOK();    	
+     printf("Memory (upper) amount-> %d kb \n", boot_info->mem_upper);
+     printf("Memory (lower) amount-> %d kb \n", boot_info->mem_lower);
+ 
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-09-08 13:20:49 UTC (rev 130)
++++ trunk/shell/commands.c	2009-09-08 20:56:15 UTC (rev 131)
+@@ -405,7 +405,7 @@
+ 
+ void tester(){
+ 	int i = 0;
+-	static struct a_b testing[MAX_TEST] = { 
++	struct a_b testing[MAX_TEST] = { 
+ 					{ "try_kmalloc", try_kmalloc },
+ 					{ "try_strtok", try_strtok },
+ 					{ "do_fault", do_fault },
+
+
+
+From finarfin at mail.berlios.de  Mon Sep 14 23:04:49 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Mon, 14 Sep 2009 23:04:49 +0200
+Subject: [Dreamos-dev] r132 - in trunk: include sys
+Message-ID: <200909142104.n8EL4nru016490@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-09-14 23:04:48 +0200 (Mon, 14 Sep 2009)
+New Revision: 132
+
+Modified:
+   trunk/include/kernel.h
+   trunk/sys/dirent.c
+Log:
+Modificato numero versione nella schermata di avvio
+Aggiunta definizione di closedir in dirent.c
+
+
+Modified: trunk/include/kernel.h
+===================================================================
+--- trunk/include/kernel.h	2009-09-08 20:56:15 UTC (rev 131)
++++ trunk/include/kernel.h	2009-09-14 21:04:48 UTC (rev 132)
+@@ -29,7 +29,7 @@
+ asmlinkage void _start(struct multiboot_info*);
+ int main_loop(struct multiboot_info*);
+ 
+-#define DREAMOS_VER "DreamOS ver 0.1.3 - trunk"
++#define DREAMOS_VER "DreamOS ver 0.2.0 - trunk"
+ #define SITEURL "www.dreamos.org"
+ 
+ #endif
+
+Modified: trunk/sys/dirent.c
+===================================================================
+--- trunk/sys/dirent.c	2009-09-08 20:56:15 UTC (rev 131)
++++ trunk/sys/dirent.c	2009-09-14 21:04:48 UTC (rev 132)
+@@ -22,6 +22,7 @@
+ #include <string.h>
+ #include <vfs.h>
+ 
++struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
+ 
+ DIR *opendir(const char *path){
+ 	int mpoint_id = 0;
+@@ -31,7 +32,13 @@
+ 	rel_path = get_rel_path(mpoint_id, path);
+ 	if(rel_path[0] == '\0' || (strlen(rel_path)==1 && rel_path[0]=='/')) {
+ 		printf("mountpoint open root\n");
++		//mountpoint_list[mpoint_id].dir_op.opendir_f("/");
+ 	} else{
+-	printf("%d - %s\n", mpoint_id, rel_path);	
++	printf("%d - %s\n", mpoint_id, rel_path);
++		//mountpoint_list[mpoint_id].dir_op.opendir_f(rel_path);
+ 	}
+ }
++int closedir(DIR *dirp){
++	printf("Closing directory\n");
++	//free(dirp);
++}
+
+
+
+From finarfin at mail.berlios.de  Wed Sep 16 23:14:07 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Wed, 16 Sep 2009 23:14:07 +0200
+Subject: [Dreamos-dev] r133 - in trunk: . fs include/fs sys
+Message-ID: <200909162114.n8GLE7co005889@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-09-16 23:13:53 +0200 (Wed, 16 Sep 2009)
+New Revision: 133
+
+Modified:
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/fs/initrd.c
+   trunk/fs/vfs.c
+   trunk/include/fs/initrd.h
+   trunk/sys/dirent.c
+Log:
+Aggiunto file initrd.c e initrd.h conterranno un semplice filesystem.
+AGgiornato makefile.
+Modifiche a dirent.c
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2009-09-14 21:04:48 UTC (rev 132)
++++ trunk/Makefile	2009-09-16 21:13:53 UTC (rev 133)
+@@ -35,6 +35,7 @@
+       drivers/mouse.o\
+ 	  fs/vfs.o\
+ 	  fs/fcntl.o\
++	  fs/initrd.o\
+       libc/ctype.o\
+       libc/string.o\
+       io/io.o\
+@@ -71,6 +72,7 @@
+ kernel.o: kernel.c
+ fs/vfs.o: fs/vfs.c
+ fs/fcntl.o: fs/fcntl.c
++fs/initrd.o: fs/initrd.c
+ io/video.o: io/video.c
+ io/io.o: io/io.c
+ processore/gdt.o: processore/gdt.c
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2009-09-14 21:04:48 UTC (rev 132)
++++ trunk/fs/initrd.c	2009-09-16 21:13:53 UTC (rev 133)
+@@ -16,8 +16,13 @@
+  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+ 
++#include <stdio.h>
+ #include <initrd.h>
+ 
+ void dummy(){
+ 	printf("Qui solo per una prova\n");
+ }	
++
++DIR *dummy_opendir(const char *path){
++	printf("Sono una dummy_opendir, ti piaccio?\n");
++}
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2009-09-14 21:04:48 UTC (rev 132)
++++ trunk/fs/vfs.c	2009-09-16 21:13:53 UTC (rev 133)
+@@ -24,6 +24,7 @@
+ #include <string.h>
+ #include <kheap.h>
+ #include <unistd.h>
++#include <initrd.h>
+ 
+ struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
+ 
+@@ -47,6 +48,7 @@
+  	mountpoint_list[0].pmask = 0;
+  	mountpoint_list[0].dev_id = 0;
+  	mountpoint_list[0].start_address = 0;
++ 	mountpoint_list[0].dir_op.opendir_f = dummy_opendir;
+  	//mountpoint_list[0].operations = kmalloc(sizeof(struct super_node_operations));
+ 
+ 	strcpy(mountpoint_list[1].mountpoint,"/dev"); 	
+
+Modified: trunk/include/fs/initrd.h
+===================================================================
+--- trunk/include/fs/initrd.h	2009-09-14 21:04:48 UTC (rev 132)
++++ trunk/include/fs/initrd.h	2009-09-16 21:13:53 UTC (rev 133)
+@@ -17,9 +17,11 @@
+  */
+ 
+ #ifndef INITRD_H
+-
++#define INITRD_H
+ #define FILENAME_LENGTH 64
+ 
++#include <dirent.h>
++
+ struct initrd_t{
+ 	int nfiles;
+ };
+@@ -32,4 +34,5 @@
+ };
+ 
+ void dummy();
++DIR *dummy_opendir(const char *);
+ #endif
+
+Modified: trunk/sys/dirent.c
+===================================================================
+--- trunk/sys/dirent.c	2009-09-14 21:04:48 UTC (rev 132)
++++ trunk/sys/dirent.c	2009-09-16 21:13:53 UTC (rev 133)
+@@ -32,7 +32,7 @@
+ 	rel_path = get_rel_path(mpoint_id, path);
+ 	if(rel_path[0] == '\0' || (strlen(rel_path)==1 && rel_path[0]=='/')) {
+ 		printf("mountpoint open root\n");
+-		//mountpoint_list[mpoint_id].dir_op.opendir_f("/");
++		mountpoint_list[mpoint_id].dir_op.opendir_f("/");
+ 	} else{
+ 	printf("%d - %s\n", mpoint_id, rel_path);
+ 		//mountpoint_list[mpoint_id].dir_op.opendir_f(rel_path);
+
+
+
+From finarfin at mail.berlios.de  Thu Sep 17 21:39:26 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Thu, 17 Sep 2009 21:39:26 +0200
+Subject: [Dreamos-dev] r134 - in trunk: . fs sys
+Message-ID: <200909171939.n8HJdQxG008591@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-09-17 21:39:26 +0200 (Thu, 17 Sep 2009)
+New Revision: 134
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/vfs.c
+   trunk/sys/dirent.c
+Log:
+Corretto bug in opendir
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2009-09-16 21:13:53 UTC (rev 133)
++++ trunk/fs/vfs.c	2009-09-17 19:39:26 UTC (rev 134)
+@@ -38,6 +38,7 @@
+  		mountpoint_list[i].pmask = 0;
+  		mountpoint_list[i].dev_id = 0;
+ 	 	mountpoint_list[i].start_address = 0;
++	 	mountpoint_list[0].dir_op.opendir_f = NULL;	
+ 	 	//mountpoint_list[i].operations = NULL;
+  		i++;
+ 	}
+
+Modified: trunk/sys/dirent.c
+===================================================================
+--- trunk/sys/dirent.c	2009-09-16 21:13:53 UTC (rev 133)
++++ trunk/sys/dirent.c	2009-09-17 19:39:26 UTC (rev 134)
+@@ -20,6 +20,7 @@
+ #include <sys/types.h>
+ #include <stdio.h>
+ #include <string.h>
++#include <stddef.h>
+ #include <vfs.h>
+ 
+ struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
+@@ -32,9 +33,9 @@
+ 	rel_path = get_rel_path(mpoint_id, path);
+ 	if(rel_path[0] == '\0' || (strlen(rel_path)==1 && rel_path[0]=='/')) {
+ 		printf("mountpoint open root\n");
+-		mountpoint_list[mpoint_id].dir_op.opendir_f("/");
++		if(mountpoint_list[mpoint_id].dir_op.opendir_f!=NULL) mountpoint_list[mpoint_id].dir_op.opendir_f("/");
+ 	} else{
+-	printf("%d - %s\n", mpoint_id, rel_path);
++		printf("%d - %s\n", mpoint_id, rel_path);
+ 		//mountpoint_list[mpoint_id].dir_op.opendir_f(rel_path);
+ 	}
+ }
+
+
+
+From finarfin at mail.berlios.de  Thu Sep 17 22:35:53 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Thu, 17 Sep 2009 22:35:53 +0200
+Subject: [Dreamos-dev] r135 - in trunk: . fs sys
+Message-ID: <200909172035.n8HKZrPO013947@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-09-17 22:35:51 +0200 (Thu, 17 Sep 2009)
+New Revision: 135
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/initrd.c
+   trunk/sys/dirent.c
+Log:
+Riveduta la porzione gia sviluppata di opendir.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2009-09-17 19:39:26 UTC (rev 134)
++++ trunk/fs/initrd.c	2009-09-17 20:35:51 UTC (rev 135)
+@@ -17,6 +17,7 @@
+  */
+ 
+ #include <stdio.h>
++#include <stddef.h>
+ #include <initrd.h>
+ 
+ void dummy(){
+@@ -24,5 +25,6 @@
+ }	
+ 
+ DIR *dummy_opendir(const char *path){
+-	printf("Sono una dummy_opendir, ti piaccio?\n");
++	printf("Sono una dummy_opendir, ti piaccio? path: %s\n", path);
++	return NULL;
+ }
+
+Modified: trunk/sys/dirent.c
+===================================================================
+--- trunk/sys/dirent.c	2009-09-17 19:39:26 UTC (rev 134)
++++ trunk/sys/dirent.c	2009-09-17 20:35:51 UTC (rev 135)
+@@ -30,14 +30,15 @@
+ 	char* rel_path;
+ 
+ 	mpoint_id = get_mountpoint_id(path);
+-	rel_path = get_rel_path(mpoint_id, path);
+-	if(rel_path[0] == '\0' || (strlen(rel_path)==1 && rel_path[0]=='/')) {
+-		printf("mountpoint open root\n");
+-		if(mountpoint_list[mpoint_id].dir_op.opendir_f!=NULL) mountpoint_list[mpoint_id].dir_op.opendir_f("/");
+-	} else{
+-		printf("%d - %s\n", mpoint_id, rel_path);
+-		//mountpoint_list[mpoint_id].dir_op.opendir_f(rel_path);
++	rel_path = get_rel_path(mpoint_id, path);	
++	printf("%d - %s\n", mpoint_id, rel_path);
++	if(mountpoint_list[mpoint_id].dir_op.opendir_f!=NULL) {
++		return mountpoint_list[mpoint_id].dir_op.opendir_f(rel_path);
+ 	}
++	else {
++		printf("Could not open_dir no function found\n");
++		return NULL;
++	}
+ }
+ int closedir(DIR *dirp){
+ 	printf("Closing directory\n");
+
+
+
+From finarfin at mail.berlios.de  Sun Sep 20 23:31:19 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Sun, 20 Sep 2009 23:31:19 +0200
+Subject: [Dreamos-dev] r136 - in trunk: . boot fs include include/shell
+	include/sys shell sys
+Message-ID: <200909202131.n8KLVJ76030236@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-09-20 23:30:33 +0200 (Sun, 20 Sep 2009)
+New Revision: 136
+
+Added:
+   trunk/boot/grub.img
+Removed:
+   trunk/boot/grub.img
+Modified:
+   trunk/dreamos.img
+   trunk/fs/vfs.c
+   trunk/include/kernel.h
+   trunk/include/shell/testing.h
+   trunk/include/sys/dirent.h
+   trunk/kernel.c
+   trunk/shell/commands.c
+   trunk/shell/testing.c
+   trunk/sys/dirent.c
+Log:
+Aggiornato grub.img con un file caricato da grub come modulo
+Aggiunta opzione try_module al comando tester
+Alcune migliorie alla opendir 
+Creazione funzioni placeholder per la opendir dei vari mountpoint
+Controllo numero moduli caricati da grub nell'avvio
+
+
+Deleted: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Added: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+
+Property changes on: trunk/boot/grub.img
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2009-09-17 20:35:51 UTC (rev 135)
++++ trunk/fs/vfs.c	2009-09-20 21:30:33 UTC (rev 136)
+@@ -25,6 +25,7 @@
+ #include <kheap.h>
+ #include <unistd.h>
+ #include <initrd.h>
++#include <dirent.h>
+ 
+ struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
+ 
+@@ -38,7 +39,8 @@
+  		mountpoint_list[i].pmask = 0;
+  		mountpoint_list[i].dev_id = 0;
+ 	 	mountpoint_list[i].start_address = 0;
+-	 	mountpoint_list[0].dir_op.opendir_f = NULL;	
++	 	//mountpoint_list[0].dir_op.opendir_f = NULL;	
++	 	mountpoint_list[i].dir_op.opendir_f = fake_opendir;
+ 	 	//mountpoint_list[i].operations = NULL;
+  		i++;
+ 	}
+
+Modified: trunk/include/kernel.h
+===================================================================
+--- trunk/include/kernel.h	2009-09-17 20:35:51 UTC (rev 135)
++++ trunk/include/kernel.h	2009-09-20 21:30:33 UTC (rev 136)
+@@ -26,7 +26,10 @@
+ #define _KERNEL_H
+ 
+ #define asmlinkage __attribute__((regparm(0)))
++
++extern multiboot_info_t *boot_informations;
+ asmlinkage void _start(struct multiboot_info*);
++extern char *module_start;
+ int main_loop(struct multiboot_info*);
+ 
+ #define DREAMOS_VER "DreamOS ver 0.2.0 - trunk"
+
+Modified: trunk/include/shell/testing.h
+===================================================================
+--- trunk/include/shell/testing.h	2009-09-17 20:35:51 UTC (rev 135)
++++ trunk/include/shell/testing.h	2009-09-20 21:30:33 UTC (rev 136)
+@@ -20,4 +20,5 @@
+ void try_kmalloc();
+ void try_printmem(void);
+ void do_fault();
+-void help_tester();
+\ No newline at end of file
++void help_tester();
++void try_module();
+
+Modified: trunk/include/sys/dirent.h
+===================================================================
+--- trunk/include/sys/dirent.h	2009-09-17 20:35:51 UTC (rev 135)
++++ trunk/include/sys/dirent.h	2009-09-20 21:30:33 UTC (rev 136)
+@@ -50,5 +50,5 @@
+ void           rewinddir(DIR *);
+ void           seekdir(DIR *, long int);
+ long int       telldir(DIR *);
+-
++DIR* fake_opendir (const char *);
+ #endif
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2009-09-17 20:35:51 UTC (rev 135)
++++ trunk/kernel.c	2009-09-20 21:30:33 UTC (rev 136)
+@@ -47,6 +47,7 @@
+ unsigned int *current_page_table;
+ extern unsigned int end;
+ multiboot_info_t *boot_informations;
++char *module_start;
+ asmlinkage void _start(struct multiboot_info *boot_info)
+ {
+     boot_informations = boot_info;    
+@@ -95,10 +96,12 @@
+     get_cpuid (sinfo);
+         
+     vfs_init();
+-
++	if(boot_info->mods_count > 0) printf("Found n. %d Modules\n", boot_info->mods_count);	
++	module_start = *((unsigned int*)boot_info->mods_addr);
++	//printf("Address of module: 0x%x\n", tmp);
+     printf("\n");
+     printf("----\n");
+-    printf(LNG_SHELL);
++    printf(LNG_SHELL);    
+     _kprintOK();
+ 		printf("[+] Address: 0x%x\n", &end);		   	        
+ 		printf("\n\n");
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-09-17 20:35:51 UTC (rev 135)
++++ trunk/shell/commands.c	2009-09-20 21:30:33 UTC (rev 136)
+@@ -410,6 +410,7 @@
+ 					{ "try_strtok", try_strtok },
+ 					{ "do_fault", do_fault },
+ 					{ "try_printmem", try_printmem },
++					{ "try_module", try_module },
+ 					{ "--help", help_tester },
+ 					};
+ 	if (argc != 2) {
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2009-09-17 20:35:51 UTC (rev 135)
++++ trunk/shell/testing.c	2009-09-20 21:30:33 UTC (rev 136)
+@@ -23,7 +23,12 @@
+ #include <mouse.h>
+ #include <vfs.h>
+ #include <testing.h>
++#include <multiboot.h>
++#include <kernel.h>
+ 
++//multiboot_info_t *boot_informations;
++char *module_start;
++
+ void try_strtok()
+ {
+ 	char *s = "Hello World";
+@@ -100,4 +105,15 @@
+ 		"  -> try_strtok        - Test strtok() function in string.h\n"
+ 		"  -> try_printmem      - Print used locations of memory\n"
+ 		);	
+-}
+\ No newline at end of file
++}
++
++void try_module(){
++	int j=0;
++	char* mod_address;
++	mod_address = module_start;	
++	while(j<36){
++		_kputc(mod_address[j]);
++		j++;
++	}
++	_kputs("\n");
++}
+
+Modified: trunk/sys/dirent.c
+===================================================================
+--- trunk/sys/dirent.c	2009-09-17 20:35:51 UTC (rev 135)
++++ trunk/sys/dirent.c	2009-09-20 21:30:33 UTC (rev 136)
+@@ -40,7 +40,12 @@
+ 		return NULL;
+ 	}
+ }
++
+ int closedir(DIR *dirp){
+ 	printf("Closing directory\n");
+-	//free(dirp);
++	free(dirp);
+ }
++
++DIR* fake_opendir (const char *path){
++	printf("One day, when i will grow up, i could open that path: %s\n", path);
++}
+
+
+
+From finarfin at mail.berlios.de  Wed Sep 23 22:36:42 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Wed, 23 Sep 2009 22:36:42 +0200
+Subject: [Dreamos-dev] r137 - in trunk: . fs include include/fs
+	include/shell include/sys shell
+Message-ID: <200909232036.n8NKagc8004098@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-09-23 22:36:41 +0200 (Wed, 23 Sep 2009)
+New Revision: 137
+
+Added:
+   trunk/fs/initfs
+Modified:
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/include/fs/fcntl.h
+   trunk/include/shell/testing.h
+   trunk/include/sys/types.h
+   trunk/include/version.h
+   trunk/shell/commands.c
+   trunk/shell/testing.c
+Log:
+Aggiunto file initfs in fs/ per ora file di testo
+Aggiunto comando test try_open
+Aggiunti alcuni prototipi e define in fcntl.h
+
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2009-09-20 21:30:33 UTC (rev 136)
++++ trunk/fs/fcntl.c	2009-09-23 20:36:41 UTC (rev 137)
+@@ -17,8 +17,15 @@
+  */
+  
+ #include <fcntl.h>
++#include <stdarg.h>
++#include <stdio.h>
+ 
+-int  open(const char *path, int flags, ...){
+-	printf("Tmp\n");
++int  open(const char *path, int flags,  ...){
++	int prova;
++	va_list ap;
++	va_start(ap, flags);
++	
++	prova = va_arg(ap, int);
++	printf("Prov vale: %d e il path: %s\n", prova,path);
+ }
+ 
+
+Added: trunk/fs/initfs
+===================================================================
+--- trunk/fs/initfs	2009-09-20 21:30:33 UTC (rev 136)
++++ trunk/fs/initfs	2009-09-23 20:36:41 UTC (rev 137)
+@@ -0,0 +1,4 @@
++informazioni a buffo per non lasciare
++un file da 0 byte.....
++
++boh
+
+Modified: trunk/include/fs/fcntl.h
+===================================================================
+--- trunk/include/fs/fcntl.h	2009-09-20 21:30:33 UTC (rev 136)
++++ trunk/include/fs/fcntl.h	2009-09-23 20:36:41 UTC (rev 137)
+@@ -19,6 +19,14 @@
+ #ifndef _FCNTL_H
+ #define _FCNTL_H
+ 
++#include <sys/types.h>
+ 
++#define O_RDONLY	00000000
++#define O_WRONLY    00000001
++#define O_RDWR      00000002
++
++int  creat(const char *, mode_t);
++int  fcntl(int, int, ...);
+ int  open(const char *, int, ...);
++
+ #endif
+
+Modified: trunk/include/shell/testing.h
+===================================================================
+--- trunk/include/shell/testing.h	2009-09-20 21:30:33 UTC (rev 136)
++++ trunk/include/shell/testing.h	2009-09-23 20:36:41 UTC (rev 137)
+@@ -15,10 +15,15 @@
+  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+  
+- 
++#ifndef TESTING_H
++#define TESTING_H
++
+ void try_strtok();
+ void try_kmalloc();
+ void try_printmem(void);
+ void do_fault();
+ void help_tester();
+ void try_module();
++void try_open();
++
++#endif
+
+Modified: trunk/include/sys/types.h
+===================================================================
+--- trunk/include/sys/types.h	2009-09-20 21:30:33 UTC (rev 136)
++++ trunk/include/sys/types.h	2009-09-23 20:36:41 UTC (rev 137)
+@@ -22,4 +22,6 @@
+ typedef unsigned int ino_t;
+ typedef unsigned int dev_t;
+ 
++typedef unsigned int mode_t;
++
+ #endif
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-09-20 21:30:33 UTC (rev 136)
++++ trunk/include/version.h	2009-09-23 20:36:41 UTC (rev 137)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "2.0"
+ #define EXTRAVERSION "-trunk"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r127"
++#define REV_NUM "-r131"
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-09-20 21:30:33 UTC (rev 136)
++++ trunk/shell/commands.c	2009-09-23 20:36:41 UTC (rev 137)
+@@ -411,6 +411,7 @@
+ 					{ "do_fault", do_fault },
+ 					{ "try_printmem", try_printmem },
+ 					{ "try_module", try_module },
++					{ "try_open", try_open},
+ 					{ "--help", help_tester },
+ 					};
+ 	if (argc != 2) {
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2009-09-20 21:30:33 UTC (rev 136)
++++ trunk/shell/testing.c	2009-09-23 20:36:41 UTC (rev 137)
+@@ -111,9 +111,13 @@
+ 	int j=0;
+ 	char* mod_address;
+ 	mod_address = module_start;	
+-	while(j<36){
+-		_kputc(mod_address[j]);
++	while(j<101){
++		putchar(mod_address[j]);
+ 		j++;
+ 	}
+ 	_kputs("\n");
+ }
++
++void try_open(){
++	open("Prova", 0, 42);
++}
+
+
+
+From finarfin at mail.berlios.de  Wed Sep 23 22:41:15 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Wed, 23 Sep 2009 22:41:15 +0200
+Subject: [Dreamos-dev] r138 - in trunk: . shell
+Message-ID: <200909232041.n8NKfFsL004345@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-09-23 22:41:15 +0200 (Wed, 23 Sep 2009)
+New Revision: 138
+
+Modified:
+   trunk/dreamos.img
+   trunk/shell/commands.c
+Log:
+Correzione di bug di CD.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-09-23 20:36:41 UTC (rev 137)
++++ trunk/shell/commands.c	2009-09-23 20:41:15 UTC (rev 138)
+@@ -388,8 +388,10 @@
+ 		i = get_mountpoint_id(argv[1]);
+ 		//printf("path: %s\n", argv[1]);
+ 		rel_size = strlen(argv[1]) - strlen(mountpoint_list[i].mountpoint);
+-		if(i == -1 || (i==0  && strcmp("/", argv[1]))) 
++		if(i == -1 || (i==0  && strcmp("/", argv[1]))) {			
+ 			printf("cd: %s: No such file or directory\n", argv[1]);
++			return;
++		}
+ 		else strcpy(current_user.cur_path, argv[1]);
+ 		if(rel_size >0){
+ 			relpath = get_rel_path(i, argv[1]);
+
+
+
+From osiris_h4ck at mail.berlios.de  Thu Sep 24 11:00:03 2009
+From: osiris_h4ck at mail.berlios.de (osiris_h4ck at BerliOS)
+Date: Thu, 24 Sep 2009 11:00:03 +0200
+Subject: [Dreamos-dev] r139 - in trunk: . include shell
+Message-ID: <200909240900.n8O903eD000954@sheep.berlios.de>
+
+Author: osiris_h4ck
+Date: 2009-09-24 10:59:59 +0200 (Thu, 24 Sep 2009)
+New Revision: 139
+
+Modified:
+   trunk/bl.img
+   trunk/dreamos.img
+   trunk/grub.py
+   trunk/include/version.h
+   trunk/shell/testing.c
+Log:
+- Aggiornato grub.py per l'uso di 'module /path/to/initfs'
+- Sistemato help_testing() con l'aggiunta dei nuovi comandi
+
+
+
+Modified: trunk/bl.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/grub.py
+===================================================================
+--- trunk/grub.py	2009-09-23 20:41:15 UTC (rev 138)
++++ trunk/grub.py	2009-09-24 08:59:59 UTC (rev 139)
+@@ -37,7 +37,7 @@
+ print "Inserire il mountpoint:",
+ mp = raw_input()
+ cwd = os.getcwd() + "/dreamos.img"
+-
++initFS = os.getcwd() + "fs/initfs"
+ if mp == "/":
+ 	path = cwd
+ else:
+@@ -53,6 +53,7 @@
+ 	print "| Title: DreamOS v0." + patchlevel + "-" + trunk +"                                     |"
+ 	print "| Root: " + partition + "                                  		|"
+ 	print "| Kernel: " + cwd +"	|"
++	print "| Module: " + initFS +" |"
+ 	print "+---------------------------------------------------------------+"
+ 
+ 	print "Procedere alla scrittura? (y/n):",
+@@ -62,7 +63,7 @@
+ 	fd.write("\nsplashimage=" + partition + "/boot/grub/grub2.xpm.gz\n\n")
+ 	fd.write("\ntitle\tDreamOS v0." + patchlevel + "-" + trunk +"")
+ 	fd.write("\nroot\t" + partition)
+-	fd.write("\nkernel\t" + cwd)
++	fd.write("\nkernel\t" + cwd + "\tmodule\t" + initFS)
+ 	fd.write("\nboot\n")
+ 	fd.close()
+ 	print ""
+@@ -82,6 +83,7 @@
+ 	print "| Title: DreamOS v0." + patchlevel + "-" + trunk +"                                     |"
+ 	print "| Root: " + partition + "                                  		|"
+ 	print "| Kernel: " + cwd +"	|"
++	print "| Module: " + initFS +"          |"
+ 	print "+---------------------------------------------------------------+"
+ 
+ 	print "Procedere alla scrittura? (y/n):",
+@@ -90,7 +92,7 @@
+ if answer3 == 'y':
+ 	fd.write("\ntitle\tDreamOS v0." + patchlevel + "-" + trunk +"")
+ 	fd.write("\nroot\t" + partition)
+-	fd.write("\nkernel\t" + cwd)
++	fd.write("\nkernel\t" + cwd + "\tmodule\t" + initFS)
+ 	fd.write("\nboot\n")
+ 	fd.close()
+ 	print ""
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-09-23 20:41:15 UTC (rev 138)
++++ trunk/include/version.h	2009-09-24 08:59:59 UTC (rev 139)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "2.0"
+ #define EXTRAVERSION "-trunk"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r131"
++#define REV_NUM "-r138"
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2009-09-23 20:41:15 UTC (rev 138)
++++ trunk/shell/testing.c	2009-09-24 08:59:59 UTC (rev 139)
+@@ -104,6 +104,8 @@
+ 		"  -> do_fault          - Test a page_fault\n"
+ 		"  -> try_strtok        - Test strtok() function in string.h\n"
+ 		"  -> try_printmem      - Print used locations of memory\n"
++		"  -> try_module        - Read the content of the memory zone loaded in module, aka initfs \n"
++		"  -> try_open          - Function to test open() & stdarg() \n"
+ 		);	
+ }
+ 
+
+
+
+From finarfin at mail.berlios.de  Sun Sep 27 10:31:48 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Sun, 27 Sep 2009 10:31:48 +0200
+Subject: [Dreamos-dev] r140 - in trunk: . include mem shell
+Message-ID: <200909270831.n8R8Vmqa020054@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-09-27 10:31:46 +0200 (Sun, 27 Sep 2009)
+New Revision: 140
+
+Modified:
+   trunk/bl.img
+   trunk/dreamos.img
+   trunk/include/kernel.h
+   trunk/kernel.c
+   trunk/mem/fismem.c
+   trunk/mem/kheap.c
+   trunk/shell/testing.c
+Log:
+Segnata come occupata in memoria logica zona del modulo
+Modificato il valore del ciclo di try_module
+
+
+Modified: trunk/bl.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/kernel.h
+===================================================================
+--- trunk/include/kernel.h	2009-09-24 08:59:59 UTC (rev 139)
++++ trunk/include/kernel.h	2009-09-27 08:31:46 UTC (rev 140)
+@@ -25,9 +25,12 @@
+ #ifndef _KERNEL_H
+ #define _KERNEL_H
+ 
++#include <multiboot.h>
+ #define asmlinkage __attribute__((regparm(0)))
+ 
+ extern multiboot_info_t *boot_informations;
++//extern char *module_start;
++extern unsigned int module_end;
+ asmlinkage void _start(struct multiboot_info*);
+ extern char *module_start;
+ int main_loop(struct multiboot_info*);
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2009-09-24 08:59:59 UTC (rev 139)
++++ trunk/kernel.c	2009-09-27 08:31:46 UTC (rev 140)
+@@ -48,6 +48,7 @@
+ extern unsigned int end;
+ multiboot_info_t *boot_informations;
+ char *module_start;
++unsigned int module_end;
+ asmlinkage void _start(struct multiboot_info *boot_info)
+ {
+     boot_informations = boot_info;    
+@@ -59,6 +60,8 @@
+ {
+     _kclear();
+     syscall_init();
++    module_start = *((unsigned int*)boot_info->mods_addr);
++	module_end = *((unsigned int*)(boot_info->mods_addr+4));
+     _kcolor('\012');
+     _kputs(DREAMOS_VER);
+     _kcolor('\007');
+@@ -96,9 +99,8 @@
+     get_cpuid (sinfo);
+         
+     vfs_init();
+-	if(boot_info->mods_count > 0) printf("Found n. %d Modules\n", boot_info->mods_count);	
+-	module_start = *((unsigned int*)boot_info->mods_addr);
+-	//printf("Address of module: 0x%x\n", tmp);
++	if(boot_info->mods_count > 0) printf("Found n. %d Modules\n", boot_info->mods_count);		
++	printf("Address of module: 0x%x - 0x%d\n", *((unsigned int*)boot_info->mods_addr),module_end-(unsigned int) module_start);
+     printf("\n");
+     printf("----\n");
+     printf(LNG_SHELL);    
+
+Modified: trunk/mem/fismem.c
+===================================================================
+--- trunk/mem/fismem.c	2009-09-24 08:59:59 UTC (rev 139)
++++ trunk/mem/fismem.c	2009-09-27 08:31:46 UTC (rev 140)
+@@ -218,38 +218,6 @@
+ 
+ size_t calcola_memoria()
+ {
+-/*    unsigned int *mem_position;
+-    asm("cli");
+-    outportb(0xFF, MASTER_PORT_1);                     //Disabilito gli interrupt hardware
+-    outportb(0xFF, SLAVE_PORT_1);
+-    mem_position = (unsigned int*) BASE_MEM;
+-    *mem_position = VALUE_MEM;
+-
+-      while(*mem_position == VALUE_MEM)
+-      {
+-
+-            *mem_position = ANTI_VALUE_MEM;
+-            asm("": : :"memory");
+-
+-            	 if (*mem_position == ANTI_VALUE_MEM)
+-		 {
+-              	 	  *mem_position += OFFSET_MEM;
+-                	  asm("": : :"memory");
+-            	 }
+-	    
+-            else 
+-		break;
+-
+-            asm("": : :"memory");
+-    }
+-
+-
+-    outportb(master_cur_mask, MASTER_PORT_1);         //Abilito gli interrupt hardware
+-    outportb(slave_cur_mask, SLAVE_PORT_1);
+-    asm("sti");
+-    mem_position = 16777216;
+-    tot_mem = (unsigned long) mem_position;
+-    return (unsigned long) mem_position;*/
+     return tot_mem;
+ }
+ 
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2009-09-24 08:59:59 UTC (rev 139)
++++ trunk/mem/kheap.c	2009-09-27 08:31:46 UTC (rev 140)
+@@ -28,6 +28,7 @@
+ #include <ordered_list.h>
+ #include <stddef.h>
+ #include <stdio.h>
++#include <kernel.h>
+ #define KHEAP_LIST_ADDRESS 0xC0000000
+ 
+ // #define DEBUG 1
+@@ -37,6 +38,8 @@
+ heap_t *kheap_tmp;
+ unsigned int address_cur = (unsigned int) &end;
+ unsigned int node_address;
++char *module_start;
++unsigned int module_end;
+ 
+ void* kmalloc(unsigned int size)
+ {
+@@ -83,6 +86,7 @@
+     heap_t* new_heap;
+     heap_node_t* first_node;
+ 	heap_node_t* apic_node;
++	heap_node_t* module_node;
+ 
+     new_heap = (heap_t*)KHEAP_LIST_ADDRESS;
+     node_address = KHEAP_LIST_ADDRESS + sizeof(heap_t);
+@@ -113,6 +117,10 @@
+ 	apic_node->size = 4096;
+ 	apic_node->next = NULL;
+ 	insert_list (apic_node, &(new_heap->used_list));
++	module_node = alloc_node();
++	module_node->start_address = (unsigned int)module_start;
++	module_node->size = module_end - (unsigned int)module_start;	
++	insert_list(module_node, &(new_heap->used_list));
+     return (heap_t*) new_heap;
+ }
+     
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2009-09-24 08:59:59 UTC (rev 139)
++++ trunk/shell/testing.c	2009-09-27 08:31:46 UTC (rev 140)
+@@ -113,7 +113,7 @@
+ 	int j=0;
+ 	char* mod_address;
+ 	mod_address = module_start;	
+-	while(j<101){
++	while(j<67){
+ 		putchar(mod_address[j]);
+ 		j++;
+ 	}
+
+
+
+From finarfin at mail.berlios.de  Sun Sep 27 18:24:04 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Sun, 27 Sep 2009 18:24:04 +0200
+Subject: [Dreamos-dev] r141 - in trunk: . shell
+Message-ID: <200909271624.n8RGO4JH032661@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-09-27 18:24:03 +0200 (Sun, 27 Sep 2009)
+New Revision: 141
+
+Modified:
+   trunk/dreamos.img
+   trunk/shell/testing.c
+   trunk/start.sh
+Log:
+Corretti alcuni errori linguistici in start.sh
+Corretto valore di try_module, nel ciclo di stampa
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2009-09-27 08:31:46 UTC (rev 140)
++++ trunk/shell/testing.c	2009-09-27 16:24:03 UTC (rev 141)
+@@ -113,7 +113,7 @@
+ 	int j=0;
+ 	char* mod_address;
+ 	mod_address = module_start;	
+-	while(j<67){
++	while(j<66){
+ 		putchar(mod_address[j]);
+ 		j++;
+ 	}
+
+Modified: trunk/start.sh
+===================================================================
+--- trunk/start.sh	2009-09-27 08:31:46 UTC (rev 140)
++++ trunk/start.sh	2009-09-27 16:24:03 UTC (rev 141)
+@@ -87,7 +87,7 @@
+ elif [ "$1" == "floppy_install" ]; then
+ 
+   echo "---------------------- "
+-  echo "Installing in progres.."
++  echo "Installation in progres.."
+   su -c "make install"
+   echo "done."
+   echo "---------------------- "
+@@ -145,17 +145,17 @@
+   if [ "$2" == "qemu" ]; then
+ 
+ 	  if [ "$3" == "it" ]; then
+-		  echo "Ok! Language '$2' imposted, done."
++		  echo "Setting up Language '$2', done."
+ 		  make it                          
+ 		  echo "----------------------->"  
+ 
+ 	  elif [ "$3" == "en" ]; then
+-		  echo "Ok! Language '$2' imposted, done."
++		  echo "Setting up Language '$2', done."
+ 		  make en                          
+ 		  echo "----------------------->"  
+ 		
+ 	  else                                     
+-		  echo "Warning: No language traslation declared!"
++		  echo "Warning: No language translation declared!"
+ 		  echo "----------------------->"                 
+ 	  fi   
+ 	 $VERS && $CLEAN && $MAKE && $MAKE_IMG
+@@ -165,12 +165,12 @@
+   elif [ "$2" == "bochs" ]; then
+ 
+ 	  if [ "$3" == "it" ]; then
+-		  echo "Ok! Language '$3' imposted, done."
++		  echo "Setting up Language '$3', done."
+ 		  make it                          
+ 		  echo "----------------------->"  
+ 		  
+ 	  elif [ "$3" == "en" ]; then
+-		  echo "Ok! Language '$3' imposted, done."
++		  echo "Setting up Language '$3', done."
+ 		  make en                          
+ 		  echo "----------------------->"  
+ 	  else                                     
+@@ -188,7 +188,7 @@
+ 
+   $VERS && $CLEAN && $MAKE && $MAKE_IMG
+   echo "---------------------- "
+-  echo "Installing in progres.."
++  echo "Installation in progres.."
+   su -c "make install"
+   echo "done."
+   echo "---------------------- "
+@@ -215,7 +215,7 @@
+ elif [ "$2" == "create_iso" ]; then
+   $VERS && $CLEAN && $MAKE && $MAKE_IMG
+   echo "--------------------------------------------- "
+-  echo "Launching ISO Creating script in progress.."
++  echo "Launching ISO Creation script in progress.."
+   echo ""
+   mkisofs -o ISO/dreamos-image.iso -A DreamOS -b boot/grub.img `pwd`
+   echo "done."
+
+
+
+From finarfin at mail.berlios.de  Mon Sep 28 20:06:03 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Mon, 28 Sep 2009 20:06:03 +0200
+Subject: [Dreamos-dev] r142 - in trunk: . fs include/fs include/sys
+Message-ID: <200909281806.n8SI633D029814@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-09-28 20:06:02 +0200 (Mon, 28 Sep 2009)
+New Revision: 142
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/fs/vfs.c
+   trunk/include/fs/initrd.h
+   trunk/include/fs/vfs.h
+   trunk/include/sys/unistd.h
+Log:
+Aggiunto tipo file_descriptor_t a partire da struct file_descriptor
+Aggiunto cur_fd come indicatore del prossimo filedescriptor disponibile
+Il comando try_open ora aumenta il valroe di cur_fd ad ogni chiamata.
+Cambiato il valore di _SC_OPEN_MAX
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2009-09-27 16:24:03 UTC (rev 141)
++++ trunk/fs/fcntl.c	2009-09-28 18:06:02 UTC (rev 142)
+@@ -16,16 +16,20 @@
+  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+  
++#include <vfs.h>
+ #include <fcntl.h>
+ #include <stdarg.h>
+ #include <stdio.h>
+ 
++int cur_fd;
+ int  open(const char *path, int flags,  ...){
+ 	int prova;
+ 	va_list ap;
+ 	va_start(ap, flags);
+ 	
+ 	prova = va_arg(ap, int);
+-	printf("Prov vale: %d e il path: %s\n", prova,path);
++	printf("Prova vale: %d e il path: %s e cur_fd: %d\n", prova,path,cur_fd);
++	cur_fd++;
++	va_end(ap);
+ }
+ 
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2009-09-27 16:24:03 UTC (rev 141)
++++ trunk/fs/vfs.c	2009-09-28 18:06:02 UTC (rev 142)
+@@ -28,10 +28,23 @@
+ #include <dirent.h>
+ 
+ struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
++file_descriptor_t fd_list[_SC_OPEN_MAX];
++int cur_fd;
+ 
+ void vfs_init(){
+-	int i=0;
+- 	printf("\nPreparing VFS\n");
++	int i,j;
++	i=0;
++	j=0;
++	cur_fd=0;
++	
++	printf("\nPreparing VFS\n"); 	
++
++	while (j<_SC_OPEN_MAX){
++		fd_list[j].fs_spec_id = 0;
++		fd_list[j].mountpoint_id =0;
++		j++;
++	}
++ 	
+  	while(i<MAX_MOUNTPOINT) {
+  		strcpy(mountpoint_list[i].mountpoint,"");
+  		mountpoint_list[i].uid = 0;
+
+Modified: trunk/include/fs/initrd.h
+===================================================================
+--- trunk/include/fs/initrd.h	2009-09-27 16:24:03 UTC (rev 141)
++++ trunk/include/fs/initrd.h	2009-09-28 18:06:02 UTC (rev 142)
+@@ -18,10 +18,11 @@
+ 
+ #ifndef INITRD_H
+ #define INITRD_H
+-#define FILENAME_LENGTH 64
+ 
+ #include <dirent.h>
+ 
++#define FILENAME_LENGTH 64
++
+ struct initrd_t{
+ 	int nfiles;
+ };
+
+Modified: trunk/include/fs/vfs.h
+===================================================================
+--- trunk/include/fs/vfs.h	2009-09-27 16:24:03 UTC (rev 141)
++++ trunk/include/fs/vfs.h	2009-09-28 18:06:02 UTC (rev 142)
+@@ -20,6 +20,7 @@
+ 
+ #include <dirent.h>
+ #include <stddef.h>
++#include <unistd.h>
+ 
+ #define MAX_MOUNTPOINT 10
+ #define MAX_FD 255
+@@ -62,6 +63,10 @@
+ };
+ 
+ //extern struct inode *root;
++typedef struct file_descriptor file_descriptor_t;
++
++extern int cur_fd;
++extern file_descriptor_t fd_list[_SC_OPEN_MAX];
+ extern struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
+ 
+ //void open_vfs (struct inode *);
+
+Modified: trunk/include/sys/unistd.h
+===================================================================
+--- trunk/include/sys/unistd.h	2009-09-27 16:24:03 UTC (rev 141)
++++ trunk/include/sys/unistd.h	2009-09-28 18:06:02 UTC (rev 142)
+@@ -19,6 +19,6 @@
+ #ifndef __UNISTD_H
+ #define __UNISTD_H
+ 
+-#define _SC_OPEN_MAX 5
++#define _SC_OPEN_MAX 10
+ 
+ #endif
+
+
+

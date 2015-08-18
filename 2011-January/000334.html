@@ -1,0 +1,118 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r331 - in trunk: . mem
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2011-January/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r331%20-%20in%20trunk%3A%20.%20mem&In-Reply-To=%3C20110104222730.62935480553%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000333.html">
+   <LINK REL="Next"  HREF="000335.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r331 - in trunk: . mem</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r331%20-%20in%20trunk%3A%20.%20mem&In-Reply-To=%3C20110104222730.62935480553%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r331 - in trunk: . mem">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Tue Jan  4 23:27:30 CET 2011</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000333.html">[Dreamos-dev] r330 - in trunk: . mem
+</A></li>
+        <LI>Next message: <A HREF="000335.html">[Dreamos-dev] r332 - in trunk: . boot utils utils/eltorito_iso
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#334">[ date ]</a>
+              <a href="thread.html#334">[ thread ]</a>
+              <a href="subject.html#334">[ subject ]</a>
+              <a href="author.html#334">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2011-01-04 23:27:30 +0100 (Tue, 04 Jan 2011)
+New Revision: 331
+
+Modified:
+   trunk/dreamos.img
+   trunk/mem/heap.c
+Log:
+Terminata new_free. 
+Next steps: tests, e se tutto va bene la 0.3 si avvicina!!
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2011-01-02 22:56:28 UTC (rev 330)
++++ trunk/mem/heap.c	2011-01-04 22:27:30 UTC (rev 331)
+@@ -186,7 +186,7 @@
+ }
+ 
+ unsigned int contract(unsigned int new_size, new_heap_t *t_heap){
+-	printf(&quot;PlaceHolder for new function contract\n&quot;);
++	//printf(&quot;PlaceHolder for new function contract\n&quot;);
+ 	if(new_size&amp;0x1000){
+         new_size &amp;= 0x1000;
+         new_size += 0x1000;
+@@ -252,5 +252,25 @@
+ 			i++;
+ 		if(i&lt;t_heap-&gt;index.size) remove_array(i, &amp;t_heap-&gt;index);		
+ 	}
+-	
++	/**We must check if we aren't at the end of memory*/
++	if(((unsigned int)footer + sizeof(footer_t)) == t_heap-&gt;end_address){
++		unsigned int old_size = t_heap-&gt;end_address - t_heap-&gt;start_address;
++		unsigned int new_size = contract((unsigned int)header - t_heap-&gt;start_address, t_heap);
++		/**We need to resize?*/
++		if(header-&gt;size - (old_size-new_size) &gt; 0){
++			footer = (footer_t *) (unsigned int)header + header-&gt;size - sizeof(footer_t);
++			footer-&gt;magic = HEAP_MAGIC;
++			footer-&gt;header = header;
++		}
++		else {
++			unsigned int i = 0;
++			while(i&lt;t_heap-&gt;index.size &amp;&amp; get_array(i, &amp;t_heap-&gt;index)!=(void_t*)right_header)
++				i++;
++			if(i &lt; t_heap-&gt;index.size)
++				remove_array(i, &amp;t_heap-&gt;index);
++		}
++	}
++	if(to_add == 1) {
++			insert_array((void_t*) header, &amp;t_heap-&gt;index);
++	}	
+ }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000333.html">[Dreamos-dev] r330 - in trunk: . mem
+</A></li>
+	<LI>Next message: <A HREF="000335.html">[Dreamos-dev] r332 - in trunk: . boot utils utils/eltorito_iso
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#334">[ date ]</a>
+              <a href="thread.html#334">[ thread ]</a>
+              <a href="subject.html#334">[ subject ]</a>
+              <a href="author.html#334">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

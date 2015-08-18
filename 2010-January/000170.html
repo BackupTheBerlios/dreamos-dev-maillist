@@ -1,0 +1,194 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r168 - in trunk: . fs include/fs include/libc
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-January/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r168%20-%20in%20trunk%3A%20.%20fs%20include/fs%20include/libc&In-Reply-To=%3C201001081753.o08HrFas002847%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000169.html">
+   <LINK REL="Next"  HREF="000171.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r168 - in trunk: . fs include/fs include/libc</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r168%20-%20in%20trunk%3A%20.%20fs%20include/fs%20include/libc&In-Reply-To=%3C201001081753.o08HrFas002847%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r168 - in trunk: . fs include/fs include/libc">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Fri Jan  8 18:53:15 CET 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000169.html">[Dreamos-dev] r167 - in trunk: . fs include include/fs shell sys
+</A></li>
+        <LI>Next message: <A HREF="000171.html">[Dreamos-dev] r169 - trunk/boot
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#170">[ date ]</a>
+              <a href="thread.html#170">[ thread ]</a>
+              <a href="subject.html#170">[ subject ]</a>
+              <a href="author.html#170">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-01-08 18:53:08 +0100 (Fri, 08 Jan 2010)
+New Revision: 168
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/initrd.c
+   trunk/fs/unistd.c
+   trunk/include/fs/initrd.h
+   trunk/include/libc/stdio.h
+Log:
+Aggiunto EOF in stdio.h
+Completata una bozza di initfs_read (Da pulire e sistemare)
+Sistemati alcuni valori nella open.
+Ora dreamOS legge i FILES
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-01-07 22:40:20 UTC (rev 167)
++++ trunk/fs/initrd.c	2010-01-08 17:53:08 UTC (rev 168)
+@@ -23,7 +23,7 @@
+ #include &lt;types.h&gt;
+ #include &lt;string.h&gt;
+ 
+-extern char *module_start;
++char *module_start;
+ initrd_t *fs_specs;
+ initrd_file_t* fs_headers;
+ initrd_fd ird_descriptors[MAX_INITRD_DESCRIPTORS];
+@@ -59,7 +59,7 @@
+ 		if(!strcmp(path, module_var[j].fileName)){
+ 				ird_descriptors[cur_irdfd].file_descriptor	= j;
+ 				printf(&quot;%s Found. Size: %d FS fd val: %d - ID File val: %d\n&quot;, path, module_var[j].length, cur_irdfd, ird_descriptors[cur_irdfd].file_descriptor);
+-				return cur_irdfd++;
++				return cur_irdfd++; 
+ 		}
+ 		j++;
+ 	}
+@@ -67,6 +67,18 @@
+ }
+ 
+ ssize_t initfs_read(int fildes, void *buf, size_t nbyte){
+-	printf(&quot;Hi i'm a dummy read... do you like me?\n&quot;);
++	char *file_start;
++	int lfd, file_size;	
++	int j=0;
++	lfd = ird_descriptors[fildes].file_descriptor;
++	file_size = fs_headers[lfd].length;
++	file_start = (char *) (module_start	+ fs_headers[lfd].offset);
++	printf(&quot;Hi i'm a dummy read... The file id is: %d\n&quot;, ird_descriptors[fildes].file_descriptor);
++	printf(&quot;try to read something...\n&quot;);
++	while(j&lt;file_size){
++		putchar(file_start[j]);
++		j++;
++	}
++	putchar('\n');	
+ 	return nbyte;
+ }
+
+Modified: trunk/fs/unistd.c
+===================================================================
+--- trunk/fs/unistd.c	2010-01-07 22:40:20 UTC (rev 167)
++++ trunk/fs/unistd.c	2010-01-08 17:53:08 UTC (rev 168)
+@@ -26,10 +26,12 @@
+ 
+ ssize_t read(int fildes, void *buf, size_t nbyte){
+ 	int mp_id = 0;
++	int fs_fd;
+ 	mp_id = fd_list[fildes].mountpoint_id;
+-	printf(&quot;Mpoint id: %d\n&quot;, mp_id);
++	fs_fd = fd_list[fildes].fs_spec_id;
++	printf(&quot;Mpoint id: %d Fs_fd: %d\n&quot;, mp_id, fs_fd);
+ 	if (mountpoint_list[mp_id].operations.read != NULL)
+-		mountpoint_list[mp_id].operations.read(mp_id, buf, 1);
++		mountpoint_list[mp_id].operations.read(fs_fd, buf, 1);
+ 	else
+ 		printf(&quot;No READ Found for that file system\n&quot;);
+ }
+
+Modified: trunk/include/fs/initrd.h
+===================================================================
+--- trunk/include/fs/initrd.h	2010-01-07 22:40:20 UTC (rev 167)
++++ trunk/include/fs/initrd.h	2010-01-08 17:53:08 UTC (rev 168)
+@@ -26,13 +26,15 @@
+ #define MAX_FILES 32
+ #define MAX_INITRD_DESCRIPTORS 10
+ 
+-/*! Contiene il numero dei files contenuti nel filesystem initrd.
++/*! \struct initrd_t
++    \brief Contiene il numero dei files contenuti nel filesystem initrd.
+  */
+ struct initrd_t{
+ 	int nfiles; /*!&lt; Numero Files letti*/
+ };
+ 
+-/*! Contiene le informazioni relative ai singoli files contenuti in initrd
++/*! \struct initrd_file_t 
++    \brief Contiene le informazioni relative ai singoli files contenuti in initrd
+  */
+ struct initrd_file_t{
+ 	int magic; /*!&lt; Numero usato come delimitatore da settare a 0xBF*/
+@@ -42,7 +44,8 @@
+ 	unsigned int length; /*!&lt; Dimensione del File */
+ };
+ 
+-/*! File Descriptor relativo ai files aperti.
++/*! \struct initrd_fd 
++    \brief File Descriptor relativo ai files aperti.
+  */
+ struct initrd_fd{
+ 	int file_descriptor;
+
+Modified: trunk/include/libc/stdio.h
+===================================================================
+--- trunk/include/libc/stdio.h	2010-01-07 22:40:20 UTC (rev 167)
++++ trunk/include/libc/stdio.h	2010-01-08 17:53:08 UTC (rev 168)
+@@ -28,6 +28,10 @@
+ 
+ #define MAX_DIGITS_IN_INTEGER 11
+ 
++#ifndef EOF
++#define EOF (-1)
++#endif
++
+ void putchar (char ch);
+ int atoi (const char *);
+ int printf (const char *, ...);
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000169.html">[Dreamos-dev] r167 - in trunk: . fs include include/fs shell sys
+</A></li>
+	<LI>Next message: <A HREF="000171.html">[Dreamos-dev] r169 - trunk/boot
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#170">[ date ]</a>
+              <a href="thread.html#170">[ thread ]</a>
+              <a href="subject.html#170">[ subject ]</a>
+              <a href="author.html#170">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

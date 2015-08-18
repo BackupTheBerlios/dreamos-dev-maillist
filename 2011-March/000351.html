@@ -1,0 +1,120 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r348 - in trunk: . boot include/mem shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2011-March/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r348%20-%20in%20trunk%3A%20.%20boot%20include/mem%20shell&In-Reply-To=%3C20110309211120.C1703481479%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000350.html">
+   <LINK REL="Next"  HREF="000352.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r348 - in trunk: . boot include/mem shell</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r348%20-%20in%20trunk%3A%20.%20boot%20include/mem%20shell&In-Reply-To=%3C20110309211120.C1703481479%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r348 - in trunk: . boot include/mem shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Wed Mar  9 22:11:20 CET 2011</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000350.html">[Dreamos-dev] r347 - in trunk: . boot include/mem mem
+</A></li>
+        <LI>Next message: <A HREF="000352.html">[Dreamos-dev] r349 - in trunk: . boot mem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#351">[ date ]</a>
+              <a href="thread.html#351">[ thread ]</a>
+              <a href="subject.html#351">[ subject ]</a>
+              <a href="author.html#351">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2011-03-09 22:11:20 +0100 (Wed, 09 Mar 2011)
+New Revision: 348
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/include/mem/heap.h
+   trunk/shell/testing.c
+Log:
+Corrected new_free header problems. 
+Updated try_newheap in testing.c
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/mem/heap.h
+===================================================================
+--- trunk/include/mem/heap.h	2011-03-09 20:25:58 UTC (rev 347)
++++ trunk/include/mem/heap.h	2011-03-09 21:11:20 UTC (rev 348)
+@@ -67,7 +67,7 @@
+ 
+ void *new_alloc(unsigned int, unsigned short int, new_heap_t*);
+ void expand(unsigned int, new_heap_t*);
+-void new_free();
++void new_free(void*, new_heap_t*);
+ void init_newmem();
+ 
+ unsigned int new_malloc(unsigned int);
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2011-03-09 20:25:58 UTC (rev 347)
++++ trunk/shell/testing.c	2011-03-09 21:11:20 UTC (rev 348)
+@@ -114,13 +114,13 @@
+ 	//printf(&quot;testB - testA = %u&quot;, testB - testA);
+ 	testC=new_malloc(8);
+ 	printf(&quot;-Address of testC Hex: 0x%x\n&quot;, testC);
+-	new_free(testC);
+-	new_free(testB);
++	n_free(testC);
++	n_free(testB);
+ 	unsigned int testD;
+ 	testD = new_malloc(12);
+ 	printf(&quot;-Address of testD Hex: 0x%x\n&quot;, testD);
+-	new_free(testA);
+-	new_free(testD);
++	n_free(testA);
++	n_free(testD);
+ 	printf(&quot;DONE\n&quot;);
+ }
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000350.html">[Dreamos-dev] r347 - in trunk: . boot include/mem mem
+</A></li>
+	<LI>Next message: <A HREF="000352.html">[Dreamos-dev] r349 - in trunk: . boot mem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#351">[ date ]</a>
+              <a href="thread.html#351">[ thread ]</a>
+              <a href="subject.html#351">[ subject ]</a>
+              <a href="author.html#351">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

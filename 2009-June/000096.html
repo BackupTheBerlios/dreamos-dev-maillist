@@ -1,0 +1,614 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r95 - in trunk: . drivers include include/drivers	include/io include/lng include/shell io shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-June/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r95%20-%20in%20trunk%3A%20.%20drivers%20include%20include/drivers%0A%09include/io%20include/lng%20include/shell%20io%20shell&In-Reply-To=%3C200906161739.n5GHdSne031216%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000095.html">
+   <LINK REL="Next"  HREF="000097.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r95 - in trunk: . drivers include include/drivers	include/io include/lng include/shell io shell</H1>
+    <B>osiris_h4ck at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r95%20-%20in%20trunk%3A%20.%20drivers%20include%20include/drivers%0A%09include/io%20include/lng%20include/shell%20io%20shell&In-Reply-To=%3C200906161739.n5GHdSne031216%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r95 - in trunk: . drivers include include/drivers	include/io include/lng include/shell io shell">osiris_h4ck at mail.berlios.de
+       </A><BR>
+    <I>Tue Jun 16 19:39:28 CEST 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000095.html">[Dreamos-dev] r94 - trunk/mem
+</A></li>
+        <LI>Next message: <A HREF="000097.html">[Dreamos-dev] [Git]dreamos branch, master,	updated. bde943252c05877fa9e7e4cf87e6e10cf1821329
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#96">[ date ]</a>
+              <a href="thread.html#96">[ thread ]</a>
+              <a href="subject.html#96">[ subject ]</a>
+              <a href="author.html#96">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: osiris_h4ck
+Date: 2009-06-16 19:39:19 +0200 (Tue, 16 Jun 2009)
+New Revision: 95
+
+Modified:
+   trunk/.bochsrc
+   trunk/dreamos.img
+   trunk/drivers/mouse.c
+   trunk/include/drivers/mouse.h
+   trunk/include/io/video.h
+   trunk/include/lng/en.h
+   trunk/include/lng/it.h
+   trunk/include/shell/commands.h
+   trunk/include/use.h
+   trunk/include/version.h
+   trunk/io/video.c
+   trunk/kernel.c
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+Log:
+Bene! Nuova rev -&gt; grandi novita'! Vediamole insieme:
+
+1) Aggiunto comando modprobe da shell che gestisce l'init e il de-init del driver del mouse
+2) Aggiunte alcune funzioni comode per lo stampo delle coordinate del mouse
+3) Aggiunto '\r' per le stampe
+4) Il mouse ora muove il cursore e stampa le coordinate
+5) Bloccato per il momento la funziona di monitoraggio dei tasti del mouse premuti per un piccolo
+   problema che a breve sara'risolto.
+
+                                                                                        Lord Osiris
+                                                                                  <A HREF="https://lists.berlios.de/mailman/listinfo/dreamos-dev">osiris at Devils.com</A>
+                                                                        or <A HREF="https://lists.berlios.de/mailman/listinfo/dreamos-dev">diego.stamigni at linux.com</A>
+
+
+Modified: trunk/.bochsrc
+===================================================================
+--- trunk/.bochsrc	2009-06-16 17:12:54 UTC (rev 94)
++++ trunk/.bochsrc	2009-06-16 17:39:19 UTC (rev 95)
+@@ -16,8 +16,8 @@
+ # NOTE: if you use the &quot;wx&quot; configuration interface, you must also use
+ # the &quot;wx&quot; display library.
+ #=======================================================================
+-#config_interface: textconfig
+-config_interface: wx
++config_interface: textconfig
++#config_interface: wx
+ 
+ #=======================================================================
+ # DISPLAY_LIBRARY
+@@ -59,7 +59,7 @@
+ #display_library: sdl, options=&quot;fullscreen&quot; # startup in fullscreen mode
+ #display_library: term
+ #display_library: win32, options=&quot;legacyF12&quot; # use F12 to toggle mouse
+-display_library: wx
++#display_library: wx
+ #display_library: x, options=&quot;gui_debug&quot;
+ #display_library: x
+ #=======================================================================
+@@ -85,9 +85,9 @@
+ # The default is 32MB, most OS's won't need more than that.
+ # The maximum amount of memory supported is 2048Mb.
+ #=======================================================================
+-#megs: 256
++megs: 512
+ #megs: 128
+-megs: 64
++#megs: 64
+ #megs: 32
+ #megs: 16
+ #megs: 8
+@@ -541,7 +541,7 @@
+ #   mouse: enabled=1, type=serial
+ #   mouse: enabled=0
+ #=======================================================================
+-mouse: enabled=1, type=ps2
++#mouse: enabled=1, type=ps2
+ 
+ #=======================================================================
+ # private_colormap: Request that the GUI create and use it's own
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/drivers/mouse.c
+===================================================================
+--- trunk/drivers/mouse.c	2009-06-16 17:12:54 UTC (rev 94)
++++ trunk/drivers/mouse.c	2009-06-16 17:39:19 UTC (rev 95)
+@@ -51,8 +51,16 @@
+ 	mouse_read();
+ 	add_IRQ_handler(12, mouse_IRQhandler);
+ 	enable_IRQ(12);
++	_kprintOK();
+ }
+ 
++void mouse_dead()
++{
++	printf(LNG_MOUSE_REMOVE);
++	disable_IRQ(12);
++	_kprintOK();
++}
++
+ void mouse_waitcmd(unsigned char type)
+ {
+ 	register unsigned int _time_out=100000;
+@@ -99,26 +107,90 @@
+ 	static unsigned char cycle = 0;
+ 	static char mouse_bytes[3];
+ 	mouse_bytes[cycle++] = inportb(0x60);
+-	char x, y;
+- 
+-	// Debug, se viene visualizzato questo messagio, il driver worka!
+-//	_kputs(&quot;\nCi sono!\n&quot;);
++	// dichiariamo le due variabili che conterranno le coordinate
++	// e inizializziamole a 0
++	signed long int MousePositionX = 0, MousePositionY = 0;
++      
++	// e alliniamolo al centro!
++	// non va bene _SCR_H e _SCR_W
++	//MousePositionX=(_SCR_H/2)-(_SCR_W/2);
++	//MousePositionY=(_SCR_H/2)-(_SCR_W/2);
++	MousePositionX=(800/2)-(800/2);
++	MousePositionY=(800/2)-(600/2);
+ 
+ 	if (cycle == 3) {
+-	cycle = 0; 
++	  cycle = 0; 
+ 
+-	if ((mouse_bytes[0] &amp; 0x80) || (mouse_bytes[0] &amp; 0x40))
+-	  return;
+-	if (!(mouse_bytes[0] &amp; 0x20))
+-	   y |= 0xFFFFFF00;
+-	if (!(mouse_bytes[0] &amp; 0x10))
+-	  x |= 0xFFFFFF00;
+-	if (mouse_bytes[0] &amp; 0x4)
+-	    printf(LNG_MOUSE_MID);
+-	if (mouse_bytes[0] &amp; 0x2)
+-	    printf(LNG_MOUSE_RIGHT);
+-	if (mouse_bytes[0] &amp; 0x1)
+-	    printf(LNG_MOUSE_LEFT);
++//	if ((mouse_bytes[0] &amp; 0x80) || (mouse_bytes[0] &amp; 0x40))
++//	  return;
++
++	// coordinate x stanno in mouse_bytes[1] e
++	// le coordinate y stanno in mouse_bytes[2]
++	// direzione (0=destra, 1=sinitra)
++
++	if((mouse_bytes[0] &amp; 0x07)==0) // 0x07 forse non &#232; un valore corretto
++	//if((mouse_bytes[0] &amp; 0x40)==0)
++	{
++	  //if((mouse_bytes[0] &amp; 0x05)==0) // 0x05 forse non &#232; un valore corretto
++	  if((mouse_bytes[0] &amp; 0x10)==0)
++	  {
++	      MousePositionX+=mouse_bytes[1];
++	  } else {
++	      MousePositionX-=mouse_bytes[1];
++	  }
++	} else //overflow
++	  MousePositionX+=mouse_bytes[1]/2;
++   
++	// direzioni (0=su, 1=sotto)
++	if((mouse_bytes[0] &amp; 0x08)==0) // 0x08 forse non &#232; un valore corretto
++	//if((mouse_bytes[0] &amp; 0x80)==0)
++	{
++	  //if((mouse_bytes[0] &amp; 0x06)==0) // 0x06 forse non &#232; un valore corretto
++	  if((mouse_bytes[0] &amp; 0x20)==0)
++	  {
++	      MousePositionY-=mouse_bytes[2];
++	  } else {
++	      MousePositionY+=mouse_bytes[2];
++	  }
++	} else  // overflow
++	    MousePositionY-=mouse_bytes[2]/2;
++	
++	// manteniamo il cursore entro i limiti 
++	// per uno schermo 800x600
++	// per MousePositionX
++	if(MousePositionX&gt;=800-16) 
++	  MousePositionX=800-16;
++
++	if(MousePositionX&lt;=0)
++	  MousePositionX=0;
++
++	// e per MousePositionY
++	if(MousePositionY&gt;=600-24)
++	  MousePositionY=600-24;
++
++	if(MousePositionY&lt;=0)
++	  MousePositionY=0;
++
++	// stampa la posizione
++	printf(&quot;\rx: %d | y: %d&quot;, MousePositionX, MousePositionY);
++
++	// e muove il cursore 
++	_ksetcursor(MousePositionX, MousePositionY);
++/*
++	// Qui &#232; si rilevato un problema, se il mouse si muove
++	// vengono rilevati tasti premuti..
++
++	// Rilevo i tasti premuti..
++	if (mouse_bytes[0] &amp; 0x4) 
++	    printf(LNG_MOUSE_MID);  // Centrale premuto
++
++	else if (mouse_bytes[0] &amp; 0x2) 
++	    printf(LNG_MOUSE_RIGHT);  // Destro premuto
++
++	else if (mouse_bytes[0] &amp; 0x1) 
++	    printf(LNG_MOUSE_LEFT);  // Sinistro premuto
++*/
+ 	}
++
+ } //End
+ 
+
+Modified: trunk/include/drivers/mouse.h
+===================================================================
+--- trunk/include/drivers/mouse.h	2009-06-16 17:12:54 UTC (rev 94)
++++ trunk/include/drivers/mouse.h	2009-06-16 17:39:19 UTC (rev 95)
+@@ -58,5 +58,6 @@
+  * 0 per ricevere
+  **/
+ 
++void mouse_dead();
+ void mouse_IRQhandler();
+ #endif /* _MOUSE_H_ */
+
+Modified: trunk/include/io/video.h
+===================================================================
+--- trunk/include/io/video.h	2009-06-16 17:12:54 UTC (rev 94)
++++ trunk/include/io/video.h	2009-06-16 17:39:19 UTC (rev 95)
+@@ -42,6 +42,7 @@
+ void _ktab();
+ void _kclear();
+ void _knewline();
++void _kminline();
+ void _kprintOK();
+ int _kgetline();
+ int _kgetcolumn();
+
+Modified: trunk/include/lng/en.h
+===================================================================
+--- trunk/include/lng/en.h	2009-06-16 17:12:54 UTC (rev 94)
++++ trunk/include/lng/en.h	2009-06-16 17:39:19 UTC (rev 95)
+@@ -32,6 +32,7 @@
+ #define LNG_USER_R &quot;[x] Please, insert your username :)\n&quot;
+ #define LNG_UNKNOWN_CMD &quot;Unknown command:&quot;
+ #define LNG_MOUSE_SETUP &quot;Setting up mouse driver..&quot;
++#define LNG_MOUSE_REMOVE &quot;Setting down mouse driver..&quot;
+ #define LNG_MOUSE_MID &quot;\n[+] Mouse driver: central key pressed!&quot;
+ #define LNG_MOUSE_RIGHT  &quot;\n[+] Mouse driver: right key pressed!&quot;
+ #define LNG_MOUSE_LEFT  &quot;\n[+] Mouse driver: left key pressed!&quot;
+
+Modified: trunk/include/lng/it.h
+===================================================================
+--- trunk/include/lng/it.h	2009-06-16 17:12:54 UTC (rev 94)
++++ trunk/include/lng/it.h	2009-06-16 17:39:19 UTC (rev 95)
+@@ -33,6 +33,7 @@
+ #define LNG_USER_R &quot;[x] Per favore, inserisci il nome utente :)\n&quot;
+ #define LNG_UNKNOWN_CMD &quot;Comando sconosciuto:&quot;
+ #define LNG_MOUSE_SETUP &quot;Inizializzo il driver del mouse..&quot;
++#define LNG_MOUSE_REMOVE &quot;Disattivo il driver del mouse..&quot;
+ #define LNG_MOUSE_MID &quot;\n[+] Mouse driver: rilevato tasto centrale premuto!&quot;
+ #define LNG_MOUSE_RIGHT &quot;\n[+] Mouse driver: rilevato tasto destro premuto!&quot;
+ #define LNG_MOUSE_LEFT &quot;\n[+] Mouse driver: rilevato tasto sinistro premuto!&quot;
+
+Modified: trunk/include/shell/commands.h
+===================================================================
+--- trunk/include/shell/commands.h	2009-06-16 17:12:54 UTC (rev 94)
++++ trunk/include/shell/commands.h	2009-06-16 17:39:19 UTC (rev 95)
+@@ -45,4 +45,5 @@
+ void sleep_cmd();
+ void cpuid();
+ void answer();
++void modprobe();
+ #endif
+
+Modified: trunk/include/use.h
+===================================================================
+--- trunk/include/use.h	2009-06-16 17:12:54 UTC (rev 94)
++++ trunk/include/use.h	2009-06-16 17:39:19 UTC (rev 95)
+@@ -1,5 +1,5 @@
+ /*
+- * En.h
++ * It.h
+  *  This program is free software; you can redistribute it and/or modify
+  *  it under the terms of the GNU General Public License as published by
+  *  the Free Software Foundation; either version 2 of the License, or
+@@ -14,55 +14,58 @@
+  *  along with this program; if not, write to the Free Software
+  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+-#ifndef _EN_H_
+-#define _EN_H_
+ 
+-#define LNG_SITE &quot;\nSite: &quot;
+-#define LNG_GDT &quot;Initialize GDT   &quot;
+-#define LNG_IDT &quot;Initialize IDT   &quot;
+-#define LNG_PAGING &quot;Enabling Paging: &quot;
+-#define LNG_PIT8253 &quot;Initialize PIT    &quot;
+-#define LNG_PIC8259 &quot;Initialize PIC8259    &quot;
+-#define LNG_CPU &quot;\nCPU: &quot;
+-#define LNG_FREERAM &quot;Free RAM:&quot;
+-#define LNG_FREEPAGE &quot;\t- Number free page:&quot;
+-#define LNG_BITMAP &quot;\t- Number bitmap's elements:&quot;
+-#define LNG_SHELL &quot;Loading the shell&quot;
+-#define LNG_USER &quot;[?] Enter your username: &quot;
+-#define LNG_USER_R &quot;[x] Please, insert your username :)\n&quot;
+-#define LNG_UNKNOWN_CMD &quot;Unknown command:&quot;
+-#define LNG_MOUSE_SETUP &quot;Setting up mouse driver..&quot;
+-#define LNG_MOUSE_MID &quot;\n[+] Mouse driver: central key pressed!&quot;
+-#define LNG_MOUSE_RIGHT  &quot;\n[+] Mouse driver: right key pressed!&quot;
+-#define LNG_MOUSE_LEFT  &quot;\n[+] Mouse driver: left key pressed!&quot;
+-#define LNG_WELCOME &quot;\t\t.: Welcome to DreamOS :.\n\n&quot;
++#ifndef _IT_H_
++#define _IT_H_
+ 
++#define LNG_SITE &quot;\nSito: &quot;
++#define LNG_GDT &quot;Inizializzo GDT   &quot;
++#define LNG_IDT &quot;Inizializzo IDT   &quot;
++#define LNG_PAGING &quot;Abilito Paging: &quot;
++#define LNG_PIT8253 &quot;Inizializzo PIT    &quot;
++#define LNG_PIC8259 &quot;Inizializzo PIC8259    &quot;
++#define LNG_CPU &quot;\nProcessore: &quot;
++#define LNG_FREERAM &quot;Ram Disposizione:&quot;
++#define LNG_FREEPAGE &quot;\t- Numero Pagine a disposizione:&quot;
++#define LNG_BITMAP &quot;\t- Numero elementi della bitmap:&quot;
++#define LNG_SHELL &quot;Carico la shell&quot;
++#define LNG_USER &quot;[?] Inserisci il nome utente: &quot;
++#define LNG_USER_R &quot;[x] Per favore, inserisci il nome utente :)\n&quot;
++#define LNG_UNKNOWN_CMD &quot;Comando sconosciuto:&quot;
++#define LNG_MOUSE_SETUP &quot;Inizializzo il driver del mouse..&quot;
++#define LNG_MOUSE_REMOVE &quot;Disattivo il driver del mouse..&quot;
++#define LNG_MOUSE_MID &quot;\n[+] Mouse driver: rilevato tasto centrale premuto!&quot;
++#define LNG_MOUSE_RIGHT &quot;\n[+] Mouse driver: rilevato tasto destro premuto!&quot;
++#define LNG_MOUSE_LEFT &quot;\n[+] Mouse driver: rilevato tasto sinistro premuto!&quot;
++#define LNG_WELCOME &quot;\t\t.: Benvenuto in DreamOS :.\n\n&quot;
++
+ // DATE ME NOE!
+-// MONTHS
+-#define LNG_DATE_JAN &quot;January&quot;
+-#define LNG_DATE_FEB &quot;February&quot;
+-#define LNG_DATE_MAR &quot;March&quot;
+-#define LNG_DATE_APR &quot;April&quot;
+-#define LNG_DATE_MAY &quot;May&quot;
+-#define LNG_DATE_JUN &quot;June&quot;
+-#define LNG_DATE_JUL &quot;July&quot;
+-#define LNG_DATE_AUG &quot;August&quot;
+-#define LNG_DATE_SEP &quot;September&quot;
+-#define LNG_DATE_OCT &quot;October&quot;
+-#define LNG_DATE_NOV &quot;November&quot;
+-#define LNG_DATE_DEC &quot;December&quot;
+-// DAYS
+-#define LNG_DAY_SUN &quot;Sunday&quot;
+-#define LNG_DAY_MON &quot;Monday&quot;
+-#define LNG_DAY_TUE &quot;Tuesday&quot;
+-#define LNG_DAY_WED &quot;Wednesday&quot;
+-#define LNG_DAY_THU &quot;Thursday&quot;
+-#define LNG_DAY_FRI &quot;Friday&quot;
+-#define LNG_DAY_SAT &quot;Saturday&quot;
+-// HOURS
+-#define LNG_HOUR_SUMM &quot;Summer hour&quot;
+-#define LNG_HOUR_WINT &quot;Winter hour&quot;
+-#define LNG_TIMESTAMP &quot;It's &quot;
+-#define LNG_TIMESTAMP2 &quot; of &quot;
+-#define LNG_TIMESTAMP3 &quot; of &quot;
++// MESI: sereno variabile in tutto il nord Italia
++#define LNG_DATE_JAN &quot;Gennaio&quot;
++#define LNG_DATE_FEB &quot;Febbraio&quot;
++#define LNG_DATE_MAR &quot;Marzo&quot;
++#define LNG_DATE_APR &quot;Aprile&quot;
++#define LNG_DATE_MAY &quot;Maggio&quot;
++#define LNG_DATE_JUN &quot;Giugno&quot;
++#define LNG_DATE_JUL &quot;Luglio&quot;
++#define LNG_DATE_AUG &quot;Agosto&quot;
++#define LNG_DATE_SEP &quot;Settembre&quot;
++#define LNG_DATE_OCT &quot;Ottobre&quot;
++#define LNG_DATE_NOV &quot;Novembre&quot;
++#define LNG_DATE_DEC &quot;Dicembre&quot;
++// GIORNI: Foschia in Sardegna e coste tirreniche
++#define LNG_DAY_SUN &quot;Domenica&quot;
++#define LNG_DAY_MON &quot;Lunedi&quot;
++#define LNG_DAY_TUE &quot;Martedi&quot;
++#define LNG_DAY_WED &quot;Mercoledi&quot;
++#define LNG_DAY_THU &quot;Giovedi&quot;
++#define LNG_DAY_FRI &quot;Venerdi&quot;
++#define LNG_DAY_SAT &quot;Sabato&quot;
++// ORE: Tutto il resto si becca un bel maltempo.
++#define LNG_HOUR_SUMM &quot;Ora legale&quot;
++#define LNG_HOUR_WINT &quot;Ora solare&quot;
++#define LNG_TIMESTAMP &quot;Sono le &quot;
++#define LNG_TIMESTAMP2 &quot; del &quot;
++#define LNG_TIMESTAMP3 &quot; di &quot;
++
+ #endif
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-06-16 17:12:54 UTC (rev 94)
++++ trunk/include/version.h	2009-06-16 17:39:19 UTC (rev 95)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL &quot;1.2&quot;
+ #define EXTRAVERSION &quot;-trunk&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r90&quot;
++#define REV_NUM &quot;-r93&quot;
+
+Modified: trunk/io/video.c
+===================================================================
+--- trunk/io/video.c	2009-06-16 17:12:54 UTC (rev 94)
++++ trunk/io/video.c	2009-06-16 17:39:19 UTC (rev 95)
+@@ -63,6 +63,8 @@
+       _ktab();
+     else if(*s=='\b')
+       _kbackspace();
++    else if (*s=='\r')
++      _kminline();
+     else
+       _kputc(*s);
+     s++;
+@@ -147,6 +149,16 @@
+ }
+ 
+ /*
++ * Move to the up line (the effect of \n character)
++ */
++void _kminline()
++{	
++    VIDEO_PTR = VIDEO_MEM + ((((VIDEO_PTR - VIDEO_MEM) / (_SCR_W * 2)) - 1) * (_SCR_W * 2));
++    _knewline();
++    _kshiftAll();
++    _ksetcursauto();
++}
++/*
+  * Move the cursor to the correct position
+  */
+ void _ksetcursor(unsigned int x, unsigned int y)
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2009-06-16 17:12:54 UTC (rev 94)
++++ trunk/kernel.c	2009-06-16 17:39:19 UTC (rev 95)
+@@ -86,9 +86,7 @@
+     printf(LNG_PIT8253);
+     configure_PIT ();
+     _kprintOK();    
+-	/* Driver mouse init */    
+-	mouse_init();
+-	_kprintOK();
++
+     printf(&quot;Memory (upper) amount-&gt; %d kb \n&quot;, boot_info-&gt;mem_upper);
+     printf(&quot;Memory (lower) amount-&gt; %d kb \n&quot;, boot_info-&gt;mem_lower);
+ 
+@@ -97,6 +95,11 @@
+     get_cpuid (sinfo);
+         
+ 
++    /* Driver mouse init */
++    //mouse_init();
++    //_kprintOK();
++    // NON IMPOSTATELO, ORA VIENE GESTITO DA MODPROBE l'INIT! */
++
+     printf(&quot;\n&quot;);
+     printf(&quot;----\n&quot;);
+     printf(LNG_SHELL);
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-06-16 17:12:54 UTC (rev 94)
++++ trunk/shell/commands.c	2009-06-16 17:39:19 UTC (rev 95)
+@@ -20,6 +20,7 @@
+ #include &lt;cpuid.h&gt;
+ #include &lt;clock.h&gt;
+ #include &lt;sys/utsname.h&gt;
++#include &lt;mouse.h&gt;
+ 
+ void aalogo()
+ {
+@@ -64,7 +65,8 @@
+ 	 &quot;sleep     - pause DreamOS for a particular number of seconds\n&quot;
+ 	 &quot;cpuid     - Show cpu identification informations\n&quot;
+ 	 &quot;date      - Show date and time\n&quot;
+-	 &quot;echo      - Print some lines of text\n&quot;);
++	 &quot;echo      - Print some lines of text\n&quot;
++	 &quot;modprobe  - Tool to load and kill modules\n&quot;);
+ }
+ 
+ void echo()
+@@ -322,3 +324,51 @@
+   printf(&quot;42\n&quot;);
+ }
+ 
++void modprobe(void)
++{
++  if (argc &lt; 2)
++      printf(&quot;No module inserted or bad usage! Type modprobe --help for the usage.\n&quot;);
++  
++  else
++  {
++      if ( argv[2] != NULL &amp;&amp; (_kstrncmp (argv[1], &quot;-r&quot;, 2) == 0) &amp;&amp; 
++	  (_kstrncmp (argv[2], &quot;mouse&quot;, 5) == 0) )
++      {
++	  printf(&quot;Removing %s..\n&quot;, argv[2]);
++	  mouse_dead();
++      }
++      /* per ora lo impostiamo cos&#236;, static,
++      tanto non abbiamo nessun altro modulo, per ora.. */
++      else if (_kstrncmp (argv[1], &quot;mouse&quot;, 5) == 0)
++      {
++	 /* enabling mouse */
++	 mouse_init();
++       }
++
++      else if (_kstrncmp (argv[1], &quot;--help&quot;, 6) == 0)
++      {
++	  printf(&quot;---------------------------------------------------\n&quot;
++		 &quot;Module tool to load and kill modules\n&quot;
++		 &quot;Simple to use, just type:\n&quot;
++		 &quot;\n&quot;
++		 &quot;Usage: %s -&lt;options&gt; module_name\n&quot;
++		 &quot;\t-&gt; %s module_name     - to load module\n&quot;
++		 &quot;\t-&gt; %s -r module_name  - to kill module\n&quot;
++		  &quot;---------------------------------------------------\n&quot;
++		  , argv[0], argv[0], argv[0]);
++      }
++
++      else
++	 if ( (_kstrncmp (argv[1], &quot;-r&quot;, 2) == 0) &amp;&amp; (_kstrncmp (argv[2], &quot;mouse&quot;, 5) == -1) )
++	 {   printf(&quot;FATAL: Module %s not found.\n&quot;, argv[2]); }
++	
++	 else
++	     printf(&quot;FATAL: Module %s not found.\n&quot;, argv[1]);
++
++   }
++
++
++}
++
++
++
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-06-16 17:12:54 UTC (rev 94)
++++ trunk/shell/shell.c	2009-06-16 17:39:19 UTC (rev 95)
+@@ -93,6 +93,7 @@
+ 	{ &quot;echo&quot;,     echo 	  },
+ 	{ &quot;help&quot;,     help	  },
+ 	{ &quot;answer&quot;,   answer  },
++	{ &quot;modprobe&quot;, modprobe},
+         };
+ 
+   int i = 0;
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000095.html">[Dreamos-dev] r94 - trunk/mem
+</A></li>
+	<LI>Next message: <A HREF="000097.html">[Dreamos-dev] [Git]dreamos branch, master,	updated. bde943252c05877fa9e7e4cf87e6e10cf1821329
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#96">[ date ]</a>
+              <a href="thread.html#96">[ thread ]</a>
+              <a href="subject.html#96">[ subject ]</a>
+              <a href="author.html#96">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

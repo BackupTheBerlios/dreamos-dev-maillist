@@ -1,0 +1,128 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] [Git]dreamos branch, master,	updated. bde943252c05877fa9e7e4cf87e6e10cf1821329
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-June/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20%5BGit%5Ddreamos%20branch%2C%20master%2C%0A%09updated.%20bde943252c05877fa9e7e4cf87e6e10cf1821329&In-Reply-To=%3C200906162121.n5GLLEx0020875%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000096.html">
+   <LINK REL="Next"  HREF="000098.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] [Git]dreamos branch, master,	updated. bde943252c05877fa9e7e4cf87e6e10cf1821329</H1>
+    <B>dreamos-dev at lists.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20%5BGit%5Ddreamos%20branch%2C%20master%2C%0A%09updated.%20bde943252c05877fa9e7e4cf87e6e10cf1821329&In-Reply-To=%3C200906162121.n5GLLEx0020875%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] [Git]dreamos branch, master,	updated. bde943252c05877fa9e7e4cf87e6e10cf1821329">dreamos-dev at lists.berlios.de
+       </A><BR>
+    <I>Tue Jun 16 23:21:14 CEST 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000096.html">[Dreamos-dev] r95 - in trunk: . drivers include include/drivers	include/io include/lng include/shell io shell
+</A></li>
+        <LI>Next message: <A HREF="000098.html">[Dreamos-dev] r96 - in trunk: . drivers include mem shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#97">[ date ]</a>
+              <a href="thread.html#97">[ thread ]</a>
+              <a href="subject.html#97">[ subject ]</a>
+              <a href="author.html#97">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>This is an automated email from the git hooks/post-receive script. It was
+generated because a ref change was pushed to the repository containing
+the project &quot;dreamos&quot;.
+
+The branch, master has been updated
+       via  bde943252c05877fa9e7e4cf87e6e10cf1821329 (commit)
+      from  e7d34974e49fe88eba9891955f6100ec096fdc27 (commit)
+
+Those revisions listed above that are new to this repository have
+not appeared on any other notification email; so we list those
+revisions in full, below.
+
+- Log -----------------------------------------------------------------
+commit bde943252c05877fa9e7e4cf87e6e10cf1821329
+Author: crowley &lt;<A HREF="https://lists.berlios.de/mailman/listinfo/dreamos-dev">crowley at azraphel.homenet.telecomitalia.it</A>&gt;
+Date:   Tue Jun 16 23:03:13 2009 +0200
+
+    Aggiornato all'ultima rev svn
+
+-----------------------------------------------------------------------
+
+Summary of changes:
+ Makefile                      |   24 +++++-
+ README                        |    2 +
+ doc/HOWTO_use_grub_script     |   17 ++++
+ doc/Starting_script_HOWTO.txt |   56 ++++++++++++
+ dreamos.img                   |  Bin 49829 -&gt; 54596 bytes
+ drivers/keyboard.c            |   14 ++--
+ drivers/mouse.c               |  196 ++++++++++++++++++++++++++++++++++++++++
+ grub.py                       |   64 +++++++++++++
+ hardware/8253.c               |    6 +-
+ hardware/pic8259.c            |   47 ++++------
+ include/drivers/mouse.h       |   63 +++++++++++++
+ include/hardware/pic8259.h    |    3 +-
+ include/io/io.h               |    7 +-
+ include/io/video.h            |    1 +
+ include/libc/stddef.h         |   10 ++-
+ include/lng/en.h              |    6 ++
+ include/lng/it.h              |    6 ++
+ include/misc/debug.h          |    2 +-
+ include/shell/commands.h      |    1 +
+ include/use.h                 |    6 ++
+ include/version.h             |    2 +-
+ io/io.c                       |    8 +-
+ io/video.c                    |   23 +++++-
+ kernel.c                      |   19 +++--
+ libc/stdio.c                  |    9 ++-
+ libc/string.c                 |   12 ++-
+ mem/kheap.c                   |    7 +-
+ mem/paging.c                  |    9 ++-
+ misc/clock.c                  |   28 +++---
+ misc/debug.c                  |    8 ++-
+ processore/handlers.c         |   52 +++++------
+ shell/commands.c              |   63 ++++++++++++--
+ shell/shell.c                 |   53 ++++++------
+ start.sh                      |  198 +++++++++++++++++++++++++++++++++++++----
+ 34 files changed, 858 insertions(+), 164 deletions(-)
+ create mode 100644 doc/HOWTO_use_grub_script
+ create mode 100644 doc/Starting_script_HOWTO.txt
+ create mode 100644 drivers/mouse.c
+ create mode 100644 grub.py
+ create mode 100644 include/drivers/mouse.h
+
+
+hooks/post-receive
+-- 
+dreamos
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000096.html">[Dreamos-dev] r95 - in trunk: . drivers include include/drivers	include/io include/lng include/shell io shell
+</A></li>
+	<LI>Next message: <A HREF="000098.html">[Dreamos-dev] r96 - in trunk: . drivers include mem shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#97">[ date ]</a>
+              <a href="thread.html#97">[ thread ]</a>
+              <a href="subject.html#97">[ subject ]</a>
+              <a href="author.html#97">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

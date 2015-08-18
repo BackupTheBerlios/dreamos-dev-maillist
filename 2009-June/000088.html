@@ -1,0 +1,309 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r87 - in trunk: . doc hardware include/hardware	processore shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-June/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r87%20-%20in%20trunk%3A%20.%20doc%20hardware%20include/hardware%0A%09processore%20shell&In-Reply-To=%3C200906062137.n56Lb1Ee002551%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000087.html">
+   <LINK REL="Next"  HREF="000089.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r87 - in trunk: . doc hardware include/hardware	processore shell</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r87%20-%20in%20trunk%3A%20.%20doc%20hardware%20include/hardware%0A%09processore%20shell&In-Reply-To=%3C200906062137.n56Lb1Ee002551%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r87 - in trunk: . doc hardware include/hardware	processore shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sat Jun  6 23:37:01 CEST 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000087.html">[Dreamos-dev] r86 - in trunk: . boot include libc misc
+</A></li>
+        <LI>Next message: <A HREF="000089.html">[Dreamos-dev] r88 - in trunk: . include
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#88">[ date ]</a>
+              <a href="thread.html#88">[ thread ]</a>
+              <a href="subject.html#88">[ subject ]</a>
+              <a href="author.html#88">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-06-06 23:37:00 +0200 (Sat, 06 Jun 2009)
+New Revision: 87
+
+Added:
+   trunk/doc/HOWTO_use_grub_script
+   trunk/grub.py
+Modified:
+   trunk/README
+   trunk/dreamos.img
+   trunk/hardware/pic8259.c
+   trunk/include/hardware/pic8259.h
+   trunk/processore/handlers.c
+   trunk/shell/shell.c
+Log:
+Aggiunto LPT1 alla enum irq_types, che mancava
+AGgiunto script per l'aggiunta di una entry grub per dreamos
+Aggiungo readme per l'utilizzo dello script
+Pulizia codice da commenti inutili in pic8259.c
+Risoluzione bug #15810 relativo alla sleep.
+
+
+
+Modified: trunk/README
+===================================================================
+--- trunk/README	2009-06-02 20:12:24 UTC (rev 86)
++++ trunk/README	2009-06-06 21:37:00 UTC (rev 87)
+@@ -29,6 +29,8 @@
+ 
+ e dai contributori:
+ 
++vinc94
++tk0
+ Osiris
+ Celeron
+ Hamcha
+
+Added: trunk/doc/HOWTO_use_grub_script
+===================================================================
+--- trunk/doc/HOWTO_use_grub_script	2009-06-02 20:12:24 UTC (rev 86)
++++ trunk/doc/HOWTO_use_grub_script	2009-06-06 21:37:00 UTC (rev 87)
+@@ -0,0 +1,17 @@
++######################################################
++# Come usare lo script per generare un'entry di GRUB #
++######################################################
++
++1. Inserire la partizione dei sorgenti
++Questo significa dire al programma in quale partizione si trova la vostra directory dei sorgenti.
++Ad esempio se siete su /dev/hda2, dovrete inserire hda2
++
++2. Inserire il mountpoint
++Tale partizione ha un mountpoint (se non lo conoscete, date da shell il comando mount senza argomenti oppure date uno sguardo in /etc/fstab). Ad esempio potr&#224; essere / o anche /home/vostroutente se tenete la home directory in una partizione separata.
++
++3. Attenzione al path
++Il path dell'immagine di dreamos sar&#224; calcolato automaticamente, ma per fare questo lo script dev'essere nella stessa directory dell'immagine.
++Dopodich&#233; vi basta confermare ed avere la vostra entry nel file menu.lst
++
++ATTENZIONE: Usatelo solo se sapete cosa state facendo. Lo script e' stato testato e funziona, ma non rispondiamo di eventuali blocchi del vostro computer.
++
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Added: trunk/grub.py
+===================================================================
+--- trunk/grub.py	2009-06-02 20:12:24 UTC (rev 86)
++++ trunk/grub.py	2009-06-06 21:37:00 UTC (rev 87)
+@@ -0,0 +1,52 @@
++#GrubScript ver 0.1
++import sys
++import os
++
++def grub_hd(pn):
++	letter = pn[2]
++	nump = int(pn[3]) - 1
++	alphanum = { 'a':0, 'b':1, 'c':2, 'd':3, 'e':4, 'f':5 }
++    	
++	res = &quot;(hd&quot; + str(alphanum[letter]) + &quot;,&quot; + str(nump) + &quot;)&quot;
++	return res
++
++def sub_mount(mp, cwd):
++	count = 0
++	
++	for x in mp:
++		if mp[count] == cwd[count]:
++			count+=1
++	return cwd[count:]
++
++# Manca il controllo errori
++fd = open(&quot;/boot/grub/menu.lst&quot;, &quot;a&quot;)
++
++print &quot;--------------------DreamOS v0.1.2 Grub Autogen--------------------&quot;
++print &quot;Inserire la partizione dei sorgenti:&quot;,
++pn = raw_input()
++partition = grub_hd(pn)
++
++print &quot;Inserire il mountpoint:&quot;,
++mp = raw_input()
++cwd = os.getcwd() + &quot;/dreamos.img&quot;
++
++if mp == &quot;/&quot;:
++	path = cwd
++else:
++	cwd = sub_mount(mp, cwd)
++	
++print &quot;+---------------------------------INFO----------------------------------+&quot;
++print &quot;| Title: DreamOS v0.1.2 trunk                                           |&quot;
++print &quot;| Root: &quot; + partition + &quot;                                                         |&quot;
++print &quot;| Kernel: &quot; + cwd
++print &quot;+-----------------------------------------------------------------------+&quot;
++print &quot;Procedere alla scrittura? (y/n):&quot;,
++answer = raw_input()
++
++if answer == 'y':
++	fd.write(&quot;\ntitle\tDreamOS v0.1.2 trunk&quot;)
++	fd.write(&quot;\nroot\t&quot; + partition)
++	fd.write(&quot;\nkernel\t&quot; + cwd)
++	fd.write(&quot;\nboot\n&quot;)
++
++fd.close()
+
+Modified: trunk/hardware/pic8259.c
+===================================================================
+--- trunk/hardware/pic8259.c	2009-06-02 20:12:24 UTC (rev 86)
++++ trunk/hardware/pic8259.c	2009-06-06 21:37:00 UTC (rev 87)
+@@ -83,12 +83,8 @@
+     outportb(0xFF,SLAVE_PORT_1);
+ 
+     outportb (0xFC, MASTER_PORT_1);
+-//&lt;&lt;&lt;&lt;&lt;&lt;&lt; .mine
+-    //enable_IRQ (0);
+-//=======
+- //     enable_IRQ (0);
+-//&gt;&gt;&gt;&gt;&gt;&gt;&gt; .r13
+ 
++
+     setup_IRQ();
+     asm(&quot;sti&quot;);
+     i=0;
+@@ -214,9 +210,6 @@
+             tmpHandler = tmpHandler-&gt;next;
+             tmpHandler-&gt;next = NULL;
+             tmpHandler-&gt;IRQ_func = func;
+-            #ifdef DEBUG
+-    //         printf(&quot;
+-            #endif
+         }
+     }
+     else return; 
+
+Modified: trunk/include/hardware/pic8259.h
+===================================================================
+--- trunk/include/hardware/pic8259.h	2009-06-02 20:12:24 UTC (rev 86)
++++ trunk/include/hardware/pic8259.h	2009-06-06 21:37:00 UTC (rev 87)
+@@ -50,6 +50,7 @@
+     COM1_3,
+     LPT2,
+     FLOPPY,
++    LPT1,
+     REAL_TIME_CLOCK,
+     AVAILABLE_1,
+     AVAILABLE_2,
+
+Modified: trunk/processore/handlers.c
+===================================================================
+--- trunk/processore/handlers.c	2009-06-02 20:12:24 UTC (rev 86)
++++ trunk/processore/handlers.c	2009-06-06 21:37:00 UTC (rev 87)
+@@ -165,27 +165,19 @@
+     irqn = get_current_irq();  
+     IRQ_s* tmpHandler; 
+     if(irqn&gt;=0) {
+-//       switch(irqn){
+-// 	case 1: 
+-// 	  PIT_handler();
+-// 	  break;
+-// 	case 2:
+-// 	  keyboard_isr();
+-// 	  break;
+-//       }
+-         tmpHandler = shareHandler[irqn];
+-	 if(tmpHandler!=0) {
+-	    tmpHandler-&gt;IRQ_func();
+-	    #ifdef DEBUG
+-	    printf(&quot;2 - IRQ_func: %d, %d\n&quot;, tmpHandler-&gt;IRQ_func, tmpHandler);
+-	    #endif
+-	    while(tmpHandler-&gt;next!=NULL) {
+-	      tmpHandler = tmpHandler-&gt;next;                           
+-	      #ifdef DEBUG
+-	      printf(&quot;1 - IRQ_func (_prova): %d, %d\n&quot;, tmpHandler-&gt;IRQ_func, tmpHandler);
+-	      #endif
+-	      if(tmpHandler!=0) tmpHandler-&gt;IRQ_func();
+-	    }
++        tmpHandler = shareHandler[irqn];
++		if(tmpHandler!=0) {
++	    	tmpHandler-&gt;IRQ_func();
++	    	#ifdef DEBUG
++	    		printf(&quot;2 - IRQ_func: %d, %d\n&quot;, tmpHandler-&gt;IRQ_func, tmpHandler);
++	    	#endif
++	    	while(tmpHandler-&gt;next!=NULL) {
++	      		tmpHandler = tmpHandler-&gt;next;                           
++	      		#ifdef DEBUG
++	      			printf(&quot;1 - IRQ_func (_prova): %d, %d\n&quot;, tmpHandler-&gt;IRQ_func, tmpHandler);
++	      		#endif
++	      		if(tmpHandler!=0) tmpHandler-&gt;IRQ_func();
++	    	}
+ 	  } else printf(&quot;irqn: %d\n&quot;, irqn);
+     }
+     else printf(&quot;IRQ N: %d E' arrivato qualcosa che non so gestire &quot;, irqn);
+@@ -201,9 +193,4 @@
+ 	while(1);
+ }
+ 
+-/*void _prova(){
+-    #ifdef DEBUG
+-    _kputs(&quot;Shared 1\n&quot;);
+-    #endif    
+-}*/
+ 
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-06-02 20:12:24 UTC (rev 86)
++++ trunk/shell/shell.c	2009-06-06 21:37:00 UTC (rev 87)
+@@ -39,7 +39,7 @@
+ #include &lt;clock.h&gt;
+ #include &lt;sys/utsname.h&gt;
+ 
+-#define NUM_COM 14
++#define NUM_COM 15
+ 
+ struct cmd {
+ 	const char cmdname[CMD_LEN];
+@@ -87,11 +87,12 @@
+ 	{ &quot;uname&quot;,    uname_cmd   },
+ 	{ &quot;printmem&quot;, printmem    },
+ 	{ &quot;credits&quot;,  credits     },
+-	{ &quot;sleep&quot;,    sleep       },
++	{ &quot;sleep&quot;,    sleep_cmd   },
+ 	{ &quot;cpuid&quot;,    cpuid 	  },
+ 	{ &quot;date&quot;,     date 	  },
+ 	{ &quot;echo&quot;,     echo 	  },
+ 	{ &quot;help&quot;,     help	  },
++	{ &quot;answer&quot;,   answer  },
+         };
+ 
+   int i = 0;
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000087.html">[Dreamos-dev] r86 - in trunk: . boot include libc misc
+</A></li>
+	<LI>Next message: <A HREF="000089.html">[Dreamos-dev] r88 - in trunk: . include
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#88">[ date ]</a>
+              <a href="thread.html#88">[ thread ]</a>
+              <a href="subject.html#88">[ subject ]</a>
+              <a href="author.html#88">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

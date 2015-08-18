@@ -1,0 +1,1234 @@
+From finarfin at mail.berlios.de  Wed Dec  2 00:10:21 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Wed, 2 Dec 2009 00:10:21 +0100
+Subject: [Dreamos-dev] r148 - in trunk: . fs include/fs shell
+Message-ID: <200912012310.nB1NALeU012087@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-12-02 00:10:21 +0100 (Wed, 02 Dec 2009)
+New Revision: 148
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/initfs
+   trunk/fs/initrd.c
+   trunk/include/fs/vfs.h
+   trunk/shell/testing.c
+Log:
+Aggiunti commenti doxygen per struct file_descriptor
+Aggiunta lettura contenuto di initfs dalla open.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initfs
+===================================================================
+--- trunk/fs/initfs	2009-11-28 23:25:38 UTC (rev 147)
++++ trunk/fs/initfs	2009-12-01 23:10:21 UTC (rev 148)
+@@ -1,4 +1,4 @@
+-informazioni a buffo per non lasciare
+-un file da 0 byte.....
+-
+-boh
++1 informazioni a buffo per non lasciare
++2 un file da 0 byte.....
++3
++4 boh
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2009-11-28 23:25:38 UTC (rev 147)
++++ trunk/fs/initrd.c	2009-12-01 23:10:21 UTC (rev 148)
+@@ -19,7 +19,10 @@
+ #include <stdio.h>
+ #include <stddef.h>
+ #include <initrd.h>
++#include <multiboot.h>
+ 
++extern char *module_start;
++
+ void dummy(){
+ 	printf("Qui solo per una prova\n");
+ }	
+@@ -30,5 +33,13 @@
+ }
+ 
+ int dummy_open(const char *path, int flags, ...){
++	char *module_var;
++	int j = 0;
++	module_var = module_start;
+ 	printf("Hi, i'm a dummy open. And i do nothing!!! path: %s\n", path);
++	while (j < 74) {
++		putchar(module_var[j]);
++		j++;
++	}
++	_kputs("\n");
+ }
+
+Modified: trunk/include/fs/vfs.h
+===================================================================
+--- trunk/include/fs/vfs.h	2009-11-28 23:25:38 UTC (rev 147)
++++ trunk/include/fs/vfs.h	2009-12-01 23:10:21 UTC (rev 148)
+@@ -57,9 +57,13 @@
+ 		struct directory_operations dir_op;
+ };
+ 
++/*!  \struct file_descriptor
++     \brief Struttura dati che le informazioni su di un file aperto
++ */
++
+ struct file_descriptor {
+-	int fs_spec_id;
+-	int mountpoint_id;
++	int fs_spec_id; /**< Il descrittore del file interno del FileSystem*/
++	int mountpoint_id; /**< L'id del mountpoint nel quale si trova il file */
+ };
+ 
+ //extern struct inode *root;
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2009-11-28 23:25:38 UTC (rev 147)
++++ trunk/shell/testing.c	2009-12-01 23:10:21 UTC (rev 148)
+@@ -114,7 +114,7 @@
+ 	int j=0;
+ 	char* mod_address;
+ 	mod_address = module_start;	
+-	while(j<66){
++	while(j<74){
+ 		putchar(mod_address[j]);
+ 		j++;
+ 	}
+
+
+
+From finarfin at mail.berlios.de  Wed Dec  2 23:39:04 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Wed, 2 Dec 2009 23:39:04 +0100
+Subject: [Dreamos-dev] r149 - in trunk: . fs include/fs include/sys shell
+Message-ID: <200912022239.nB2Md47p029002@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-12-02 23:39:03 +0100 (Wed, 02 Dec 2009)
+New Revision: 149
+
+Added:
+   trunk/fs/unistd.c
+Modified:
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/include/fs/initrd.h
+   trunk/include/sys/types.h
+   trunk/include/sys/unistd.h
+   trunk/shell/testing.c
+Log:
+Aggiunto file unistd.c
+Iniziata stesura di read
+Aggiornato makefile.
+Aggiunti tipo: ssize_t.
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2009-12-01 23:10:21 UTC (rev 148)
++++ trunk/Makefile	2009-12-02 22:39:03 UTC (rev 149)
+@@ -36,6 +36,7 @@
+ 	  fs/vfs.o\
+ 	  fs/fcntl.o\
+ 	  fs/initrd.o\
++	  fs/unistd.o\
+       libc/ctype.o\
+       libc/string.o\
+       io/io.o\
+@@ -73,6 +74,7 @@
+ fs/vfs.o: fs/vfs.c
+ fs/fcntl.o: fs/fcntl.c
+ fs/initrd.o: fs/initrd.c
++fs/unistd.o: fs/unistd.c
+ io/video.o: io/video.c
+ io/io.o: io/io.c
+ processore/gdt.o: processore/gdt.c
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Added: trunk/fs/unistd.c
+===================================================================
+--- trunk/fs/unistd.c	2009-12-01 23:10:21 UTC (rev 148)
++++ trunk/fs/unistd.c	2009-12-02 22:39:03 UTC (rev 149)
+@@ -0,0 +1,24 @@
++/*
++ * Dreamos
++ * unistd.c
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++#include <unistd.h>
++#include <stdio.h>
++
++ssize_t read(int fildes, void *buf, size_t nbyte){
++	printf("Hi, i'm a read(), if you wanna see me at work.... stay tuned :D\n");
++}
+
+Modified: trunk/include/fs/initrd.h
+===================================================================
+--- trunk/include/fs/initrd.h	2009-12-01 23:10:21 UTC (rev 148)
++++ trunk/include/fs/initrd.h	2009-12-02 22:39:03 UTC (rev 149)
+@@ -28,6 +28,7 @@
+ };
+ 
+ struct initrd_file_t{
++	int magic;
+ 	char fileName[FILENAME_LENGTH];
+ 	int  uid;
+ 	unsigned int offset;
+
+Modified: trunk/include/sys/types.h
+===================================================================
+--- trunk/include/sys/types.h	2009-12-01 23:10:21 UTC (rev 148)
++++ trunk/include/sys/types.h	2009-12-02 22:39:03 UTC (rev 149)
+@@ -23,5 +23,7 @@
+ typedef unsigned int dev_t;
+ 
+ typedef unsigned int mode_t;
++typedef int ssize_t;
++//typedef unsigned int size_t;
+ 
+ #endif
+
+Modified: trunk/include/sys/unistd.h
+===================================================================
+--- trunk/include/sys/unistd.h	2009-12-01 23:10:21 UTC (rev 148)
++++ trunk/include/sys/unistd.h	2009-12-02 22:39:03 UTC (rev 149)
+@@ -19,8 +19,12 @@
+ #ifndef __UNISTD_H
+ #define __UNISTD_H
+ 
++#include <types.h>
++#include <stddef.h>
++
+ #define _SC_OPEN_MAX 10
+ 
++ssize_t read(int , void *, size_t);
+ int close(int);
+ 
+ #endif
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2009-12-01 23:10:21 UTC (rev 148)
++++ trunk/shell/testing.c	2009-12-02 22:39:03 UTC (rev 149)
+@@ -123,6 +123,7 @@
+ 
+ void try_open(){
+ 	char appoggio[50];
++	char *prova;
+ 	int i;
+ 	i=0;
+ 	while(i<50){
+@@ -132,5 +133,6 @@
+ 	printf("Please insert a path: ");
+ 	//appoggio = gets();
+ 	scanf("%s", appoggio);	
+-	open(appoggio, O_RDONLY, 42);
++	i = open(appoggio, O_RDONLY, 42);
++	read(i, prova, 1);
+ }
+
+
+
+From finarfin at mail.berlios.de  Thu Dec  3 23:30:14 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Thu, 3 Dec 2009 23:30:14 +0100
+Subject: [Dreamos-dev] r150 - in trunk: . fs include/fs
+Message-ID: <200912032230.nB3MUEiA013177@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-12-03 23:30:13 +0100 (Thu, 03 Dec 2009)
+New Revision: 150
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/fs/initrd.c
+   trunk/fs/unistd.c
+   trunk/fs/vfs.c
+   trunk/include/fs/initrd.h
+Log:
+Aggiunte le definizioni di read per initfs.
+Sostituiti in initfs i nomi di funzione dummy_* con initfs_*
+Iniziata initfs_read (per ora stampa solo l'id del mountpoint)
+In open: cur_fd ora si incrementa nel return.
+
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2009-12-02 22:39:03 UTC (rev 149)
++++ trunk/fs/fcntl.c	2009-12-03 22:30:13 UTC (rev 150)
+@@ -46,10 +46,9 @@
+ 		if(mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open != NULL)
+ 			mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open(path, oflags);
+ 		else 
+-			printf("No OPEN services found here\n");
+-		cur_fd++;
++			printf("No OPEN services found here\n");		
+ 	}	
+ 	va_end(ap);
+-	return cur_fd;
++	return cur_fd++;
+ }
+ 
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2009-12-02 22:39:03 UTC (rev 149)
++++ trunk/fs/initrd.c	2009-12-03 22:30:13 UTC (rev 150)
+@@ -20,6 +20,8 @@
+ #include <stddef.h>
+ #include <initrd.h>
+ #include <multiboot.h>
++#include <unistd.h>
++#include <types.h>
+ 
+ extern char *module_start;
+ 
+@@ -27,12 +29,12 @@
+ 	printf("Qui solo per una prova\n");
+ }	
+ 
+-DIR *dummy_opendir(const char *path){
++DIR *initfs_opendir(const char *path){
+ 	printf("Sono una dummy_opendir, ti piaccio? path: %s\n", path);
+ 	return NULL;
+ }
+ 
+-int dummy_open(const char *path, int flags, ...){
++int initfs_open(const char *path, int flags, ...){
+ 	char *module_var;
+ 	int j = 0;
+ 	module_var = module_start;
+@@ -43,3 +45,8 @@
+ 	}
+ 	_kputs("\n");
+ }
++
++ssize_t initfs_read(int fildes, void *buf, size_t nbyte){
++	printf("Hi i'm a dummy read... do you like me?\n");
++	return nbyte;
++}
+
+Modified: trunk/fs/unistd.c
+===================================================================
+--- trunk/fs/unistd.c	2009-12-02 22:39:03 UTC (rev 149)
++++ trunk/fs/unistd.c	2009-12-03 22:30:13 UTC (rev 150)
+@@ -18,7 +18,14 @@
+ 
+ #include <unistd.h>
+ #include <stdio.h>
++#include <fcntl.h>
++#include <vfs.h>
+ 
++struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
++file_descriptor_t fd_list[_SC_OPEN_MAX];
++
+ ssize_t read(int fildes, void *buf, size_t nbyte){
+-	printf("Hi, i'm a read(), if you wanna see me at work.... stay tuned :D\n");
++	int mp_id = 0;
++	mp_id = fd_list[fildes].mountpoint_id;
++	printf("Mpoint id: %d\n", mp_id);
+ }
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2009-12-02 22:39:03 UTC (rev 149)
++++ trunk/fs/vfs.c	2009-12-03 22:30:13 UTC (rev 150)
+@@ -66,8 +66,8 @@
+  	mountpoint_list[0].pmask = 0;
+  	mountpoint_list[0].dev_id = 0;
+  	mountpoint_list[0].start_address = 0;
+- 	mountpoint_list[0].dir_op.opendir_f = dummy_opendir;
+- 	mountpoint_list[0].operations.open = dummy_open;
++ 	mountpoint_list[0].dir_op.opendir_f = initfs_opendir;
++ 	mountpoint_list[0].operations.open = initfs_open;
+  	//mountpoint_list[0].operations = kmalloc(sizeof(struct super_node_operations));
+ 
+ 	strcpy(mountpoint_list[1].mountpoint,"/dev"); 	
+
+Modified: trunk/include/fs/initrd.h
+===================================================================
+--- trunk/include/fs/initrd.h	2009-12-02 22:39:03 UTC (rev 149)
++++ trunk/include/fs/initrd.h	2009-12-03 22:30:13 UTC (rev 150)
+@@ -20,6 +20,7 @@
+ #define INITRD_H
+ 
+ #include <dirent.h>
++#include <unistd.h>
+ 
+ #define FILENAME_LENGTH 64
+ 
+@@ -36,6 +37,7 @@
+ };
+ 
+ void dummy();
+-DIR *dummy_opendir(const char *);
+-int dummy_open(const char *, int, ... );
++DIR *initfs_opendir(const char *);
++int initfs_open(const char *, int, ...);
++ssize_t initfs_read(int, void *, size_t);
+ #endif
+
+
+
+From finarfin at mail.berlios.de  Sun Dec  6 23:38:07 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Sun, 6 Dec 2009 23:38:07 +0100
+Subject: [Dreamos-dev] r151 - in trunk: . fs
+Message-ID: <200912062238.nB6Mc7rT001555@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-12-06 23:38:06 +0100 (Sun, 06 Dec 2009)
+New Revision: 151
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/unistd.c
+   trunk/fs/vfs.c
+Log:
+In read aggiunti controlli sull'esistenza della read specifica del FS.
+Aggiunta una read di prova in initfs che stampa solo una stringa per ora
+
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/unistd.c
+===================================================================
+--- trunk/fs/unistd.c	2009-12-03 22:30:13 UTC (rev 150)
++++ trunk/fs/unistd.c	2009-12-06 22:38:06 UTC (rev 151)
+@@ -28,4 +28,8 @@
+ 	int mp_id = 0;
+ 	mp_id = fd_list[fildes].mountpoint_id;
+ 	printf("Mpoint id: %d\n", mp_id);
++	if (mountpoint_list[mp_id].operations.read != NULL)
++		mountpoint_list[mp_id].operations.read(mp_id, buf, 1);
++	else
++		printf("No READ Found for that file system\n");
+ }
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2009-12-03 22:30:13 UTC (rev 150)
++++ trunk/fs/vfs.c	2009-12-06 22:38:06 UTC (rev 151)
+@@ -68,6 +68,7 @@
+  	mountpoint_list[0].start_address = 0;
+  	mountpoint_list[0].dir_op.opendir_f = initfs_opendir;
+  	mountpoint_list[0].operations.open = initfs_open;
++ 	mountpoint_list[0].operations.read = initfs_read;
+  	//mountpoint_list[0].operations = kmalloc(sizeof(struct super_node_operations));
+ 
+ 	strcpy(mountpoint_list[1].mountpoint,"/dev"); 	
+
+
+
+From finarfin at mail.berlios.de  Tue Dec 29 16:47:07 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Tue, 29 Dec 2009 16:47:07 +0100
+Subject: [Dreamos-dev] r152 - in trunk: . fs include/fs include/shell shell
+Message-ID: <200912291547.nBTFl7xr017076@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-12-29 16:47:06 +0100 (Tue, 29 Dec 2009)
+New Revision: 152
+
+Modified:
+   trunk/bl.img
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/fs/initrd.c
+   trunk/fs/unistd.c
+   trunk/fs/vfs.c
+   trunk/include/fs/initrd.h
+   trunk/include/shell/testing.h
+   trunk/shell/commands.c
+   trunk/shell/testing.c
+Log:
+Aggiunta prima bozza di close
+Aggiunta funzione di initfs (servira per calcolare la dimensione del fs 
+initrd) initfs_init
+Aggiunto comando di test tester try_fsinit che chiama initfs_init
+In vfs_init a start_address di / messo il valore di module_start
+Aggiornato help di  tester
+
+
+Modified: trunk/bl.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2009-12-06 22:38:06 UTC (rev 151)
++++ trunk/fs/fcntl.c	2009-12-29 15:47:06 UTC (rev 152)
+@@ -31,6 +31,7 @@
+   * @param int oflags parametri di apertura
+   *
+   * Dato un path viene aperto se presente, e si torna il numero di descrittore che lo contiene
++  * @todo Inserire gestione flags
+   */
+ int open(const char *path, int oflags,  ...){
+ 	int prova;
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2009-12-06 22:38:06 UTC (rev 151)
++++ trunk/fs/initrd.c	2009-12-29 15:47:06 UTC (rev 152)
+@@ -25,10 +25,21 @@
+ 
+ extern char *module_start;
+ 
++initrd_t fs_specs;
++
+ void dummy(){
+ 	printf("Qui solo per una prova\n");
+ }	
+ 
++int initfs_init(){
++	char *module_var;
++	module_var = module_start;
++	
++	printf("Number of files present: ");
++	putchar(module_var[0]);
++	printf("\n");
++}
++
+ DIR *initfs_opendir(const char *path){
+ 	printf("Sono una dummy_opendir, ti piaccio? path: %s\n", path);
+ 	return NULL;
+
+Modified: trunk/fs/unistd.c
+===================================================================
+--- trunk/fs/unistd.c	2009-12-06 22:38:06 UTC (rev 151)
++++ trunk/fs/unistd.c	2009-12-29 15:47:06 UTC (rev 152)
+@@ -33,3 +33,15 @@
+ 	else
+ 		printf("No READ Found for that file system\n");
+ }
++
++int close(int fildes){
++	if (fd_list[fildes].fs_spec_id >= 0){
++		fd_list[fildes].fs_spec_id = -1;
++		fd_list[fildes].mountpoint_id = -1;
++		return 0;
++	}
++	else
++		return -1;
++
++return 0;
++}
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2009-12-06 22:38:06 UTC (rev 151)
++++ trunk/fs/vfs.c	2009-12-29 15:47:06 UTC (rev 152)
+@@ -26,6 +26,7 @@
+ #include <unistd.h>
+ #include <initrd.h>
+ #include <dirent.h>
++#include <kernel.h>
+ 
+ struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
+ file_descriptor_t fd_list[_SC_OPEN_MAX];
+@@ -65,7 +66,7 @@
+  	mountpoint_list[0].gid = 0;
+  	mountpoint_list[0].pmask = 0;
+  	mountpoint_list[0].dev_id = 0;
+- 	mountpoint_list[0].start_address = 0;
++ 	mountpoint_list[0].start_address = module_start;
+  	mountpoint_list[0].dir_op.opendir_f = initfs_opendir;
+  	mountpoint_list[0].operations.open = initfs_open;
+  	mountpoint_list[0].operations.read = initfs_read;
+
+Modified: trunk/include/fs/initrd.h
+===================================================================
+--- trunk/include/fs/initrd.h	2009-12-06 22:38:06 UTC (rev 151)
++++ trunk/include/fs/initrd.h	2009-12-29 15:47:06 UTC (rev 152)
+@@ -36,7 +36,11 @@
+ 	unsigned int length;
+ };
+ 
++typedef struct initrd_t initrd_t;
++
++extern initrd_t fs_specs;
+ void dummy();
++int initfs_init();
+ DIR *initfs_opendir(const char *);
+ int initfs_open(const char *, int, ...);
+ ssize_t initfs_read(int, void *, size_t);
+
+Modified: trunk/include/shell/testing.h
+===================================================================
+--- trunk/include/shell/testing.h	2009-12-06 22:38:06 UTC (rev 151)
++++ trunk/include/shell/testing.h	2009-12-29 15:47:06 UTC (rev 152)
+@@ -25,5 +25,5 @@
+ void help_tester();
+ void try_module();
+ void try_open();
+-
++void try_fsinit();
+ #endif
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-12-06 22:38:06 UTC (rev 151)
++++ trunk/shell/commands.c	2009-12-29 15:47:06 UTC (rev 152)
+@@ -414,6 +414,7 @@
+ 					{ "try_printmem", try_printmem },
+ 					{ "try_module", try_module },
+ 					{ "try_open", try_open},
++					{ "try_fsinit", try_fsinit},
+ 					{ "--help", help_tester },
+ 					};
+ 	if (argc != 2) {
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2009-12-06 22:38:06 UTC (rev 151)
++++ trunk/shell/testing.c	2009-12-29 15:47:06 UTC (rev 152)
+@@ -26,6 +26,7 @@
+ #include <multiboot.h>
+ #include <kernel.h>
+ #include <fcntl.h>
++#include <initrd.h>
+ 
+ //multiboot_info_t *boot_informations;
+ char *module_start;
+@@ -107,6 +108,7 @@
+ 		"  -> try_printmem      - Print used locations of memory\n"
+ 		"  -> try_module        - Read the content of the memory zone loaded in module, aka initfs \n"
+ 		"  -> try_open          - Function to test open() & stdarg() \n"
++		"  -> try_fsinit          - Function to test the initialization of initrd\n"
+ 		);	
+ }
+ 
+@@ -136,3 +138,7 @@
+ 	i = open(appoggio, O_RDONLY, 42);
+ 	read(i, prova, 1);
+ }
++
++void try_fsinit(){
++	initfs_init();
++}
+
+
+
+From finarfin at mail.berlios.de  Wed Dec 30 19:08:22 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Wed, 30 Dec 2009 19:08:22 +0100
+Subject: [Dreamos-dev] r153 - in trunk: . fs include/fs utils utils/include
+Message-ID: <200912301808.nBUI8MGe008273@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-12-30 19:08:21 +0100 (Wed, 30 Dec 2009)
+New Revision: 153
+
+Added:
+   trunk/utils/
+   trunk/utils/Makefile
+   trunk/utils/include/
+   trunk/utils/include/initfscp.h
+   trunk/utils/initfscp.c
+Modified:
+   trunk/fs/initrd.c
+   trunk/include/fs/initrd.h
+Log:
+Iniziato programma per creazione di un file system minimale.
+Il programma per ora si occupa di preparare gli headers, stamparli su 
+schermo e controllare l'esistenza dei files. Non crea ancora il 
+filesystem.
+Si e' creato il Makefile di questo programma (chiamato initfscp) perla 
+sua compilazione.
+Il tutto e' stato messo in utils.
+
+
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2009-12-29 15:47:06 UTC (rev 152)
++++ trunk/fs/initrd.c	2009-12-30 18:08:21 UTC (rev 153)
+@@ -47,6 +47,8 @@
+ 
+ int initfs_open(const char *path, int flags, ...){
+ 	char *module_var;
++	int ifs_fd;
++	ifs_fd = 0;
+ 	int j = 0;
+ 	module_var = module_start;
+ 	printf("Hi, i'm a dummy open. And i do nothing!!! path: %s\n", path);
+@@ -55,6 +57,7 @@
+ 		j++;
+ 	}
+ 	_kputs("\n");
++	return ifs_fd;
+ }
+ 
+ ssize_t initfs_read(int fildes, void *buf, size_t nbyte){
+
+Modified: trunk/include/fs/initrd.h
+===================================================================
+--- trunk/include/fs/initrd.h	2009-12-29 15:47:06 UTC (rev 152)
++++ trunk/include/fs/initrd.h	2009-12-30 18:08:21 UTC (rev 153)
+@@ -23,6 +23,7 @@
+ #include <unistd.h>
+ 
+ #define FILENAME_LENGTH 64
++#define MAX_FILES 32
+ 
+ struct initrd_t{
+ 	int nfiles;
+
+Added: trunk/utils/Makefile
+===================================================================
+--- trunk/utils/Makefile	2009-12-29 15:47:06 UTC (rev 152)
++++ trunk/utils/Makefile	2009-12-30 18:08:21 UTC (rev 153)
+@@ -0,0 +1,2 @@
++all:
++	gcc -o initfscp initfscp.c -I./include
+
+Added: trunk/utils/include/initfscp.h
+===================================================================
+--- trunk/utils/include/initfscp.h	2009-12-29 15:47:06 UTC (rev 152)
++++ trunk/utils/include/initfscp.h	2009-12-30 18:08:21 UTC (rev 153)
+@@ -0,0 +1,39 @@
++//      initfscp.h
++//      
++//      Copyright 2009  <crowley at azraphel>
++//      
++//      This program is free software; you can redistribute it and/or modify
++//      it under the terms of the GNU General Public License as published by
++//      the Free Software Foundation; either version 2 of the License, or
++//      (at your option) any later version.
++//      
++//      This program is distributed in the hope that it will be useful,
++//      but WITHOUT ANY WARRANTY; without even the implied warranty of
++//      MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++//      GNU General Public License for more details.
++//      
++//      You should have received a copy of the GNU General Public License
++//      along with this program; if not, write to the Free Software
++//      Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
++//      MA 02110-1301, USA.
++
++
++#ifndef _INITFS_CP_
++#define _INITFS_CP_
++
++#define FILENAME_LENGTH 64
++#define MAX_FILES 32
++#define INITFSCP_VER "0.1"
++
++struct initrd_file_t{
++	int magic;
++	char fileName[FILENAME_LENGTH];
++	int  uid;
++	unsigned int offset;
++	unsigned int length;
++};
++
++typedef struct initrd_file_t initrd_file_t;
++void usage(char *);
++void version(char *);
++#endif
+
+Added: trunk/utils/initfscp.c
+===================================================================
+--- trunk/utils/initfscp.c	2009-12-29 15:47:06 UTC (rev 152)
++++ trunk/utils/initfscp.c	2009-12-30 18:08:21 UTC (rev 153)
+@@ -0,0 +1,76 @@
++/*
++ * initfscp
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2 of the License, or
++ *  (at your option) any later version.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <initfscp.h>
++
++int main(int argc, char* argv[]){
++	if(argc <= 1) usage(argv[0]);
++	else {
++		if(!strcmp(argv[1], "--version") || !strcmp(argv[1], "-v")) version(argv[0]+2);
++		else{
++			initrd_file_t headers[MAX_FILES];
++			int i=0;
++			printf("Welcome to dreamos initfs file copier tool\n");
++			printf("Clearing headers structures ");
++			for (i=0; i<MAX_FILES; i++){
++				headers[i].magic = 0xBF;
++				strcpy(headers[i].fileName, "");
++				headers[i].uid = 0;
++				headers[i].offset = 0;
++				headers[i].length = 0;
++			}			
++			printf("\t\tDONE\n");			
++			printf("Number of files to copy %d\n", argc - 2);
++			printf("FileSystem name: %s\n", argv[argc-1]);
++			printf("Creating File headers\n\n");
++			i=0;
++			for(i=0; i< argc - 2; i++){
++				FILE *fd;
++				fd = fopen(argv[i+1], "r+");
++				if(fd == NULL){
++					 printf("Error one or more files not found\n");
++					 return -1;
++				 }
++				else {
++					strcpy(headers[i].fileName, argv[i+1]);
++					fseek(fd, 0, SEEK_END);
++					printf("File %s Found! Size: %d\n", argv[i+1], ftell(fd));				
++					fclose(fd);
++				}
++			}
++			printf("\t\tDONE\n");
++			i=0;
++			for(i=0; i<argc - 2; i++){
++				printf("%s\n", headers[i].fileName);
++			}
++		}
++	}
++}
++
++void usage(char *prgname){
++	printf("Usage:\n %s --help for this screen\n", prgname);
++	printf(" %s file1 file2 ... fsname\n", prgname);
++	printf("      file1 file2 ... are source files\n");
++	printf("      and fsname is the file that contains the initfs\n");
++}
++
++void version(char *prgname){
++	printf("%s version: %s\n", prgname, INITFSCP_VER);
++}
+
+
+
+From finarfin at mail.berlios.de  Wed Dec 30 20:52:47 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Wed, 30 Dec 2009 20:52:47 +0100
+Subject: [Dreamos-dev] r154 - trunk/utils
+Message-ID: <200912301952.nBUJqlqP008666@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-12-30 20:52:47 +0100 (Wed, 30 Dec 2009)
+New Revision: 154
+
+Modified:
+   trunk/utils/initfscp.c
+Log:
+Aggiunta creazione filesystem
+Opzione --help (e -h)
+Valorizzazione campi offset e length.
+
+
+Modified: trunk/utils/initfscp.c
+===================================================================
+--- trunk/utils/initfscp.c	2009-12-30 18:08:21 UTC (rev 153)
++++ trunk/utils/initfscp.c	2009-12-30 19:52:47 UTC (rev 154)
+@@ -21,14 +21,20 @@
+ #include <initfscp.h>
+ 
+ int main(int argc, char* argv[]){
++	unsigned int offset;
+ 	if(argc <= 1) usage(argv[0]);
+ 	else {
+ 		if(!strcmp(argv[1], "--version") || !strcmp(argv[1], "-v")) version(argv[0]+2);
++		else if(!strcmp(argv[1], "--help") || !strcmp(argv[1], "-h")) usage(argv[0]);
+ 		else{
+ 			initrd_file_t headers[MAX_FILES];
+ 			int i=0;
+-			printf("Welcome to dreamos initfs file copier tool\n");
++			FILE *fsdest;
++			fsdest = fopen(argv[argc-1], "w");
++			if(fsdest == NULL) printf("Could not create FileSystem\n");
++			printf("Welcome to Dreamos initfs file copier tool\n");
+ 			printf("Clearing headers structures ");
++			offset = sizeof(struct initrd_file_t) * 32;
+ 			for (i=0; i<MAX_FILES; i++){
+ 				headers[i].magic = 0xBF;
+ 				strcpy(headers[i].fileName, "");
+@@ -39,7 +45,7 @@
+ 			printf("\t\tDONE\n");			
+ 			printf("Number of files to copy %d\n", argc - 2);
+ 			printf("FileSystem name: %s\n", argv[argc-1]);
+-			printf("Creating File headers\n\n");
++			printf("Creating File headers\n\n");			
+ 			i=0;
+ 			for(i=0; i< argc - 2; i++){
+ 				FILE *fd;
+@@ -52,16 +58,21 @@
+ 					strcpy(headers[i].fileName, argv[i+1]);
+ 					fseek(fd, 0, SEEK_END);
+ 					printf("File %s Found! Size: %d\n", argv[i+1], ftell(fd));				
++					headers[i].length = ftell(fd);
++					headers[i].offset = offset;
+ 					fclose(fd);
+-				}
++					offset += headers[i].length;
++				}				
+ 			}
+ 			printf("\t\tDONE\n");
+ 			i=0;
++			fwrite(headers, sizeof(struct initrd_file_t), 32, fsdest);
+ 			for(i=0; i<argc - 2; i++){
+-				printf("%s\n", headers[i].fileName);
++				printf("FileName: %s Length: %d offset: %d\n", headers[i].fileName, headers[i].length, headers[i].offset);
+ 			}
+-		}
+-	}
++			fclose(fsdest);
++		}		
++	}	
+ }
+ 
+ void usage(char *prgname){
+
+
+
+From finarfin at mail.berlios.de  Wed Dec 30 21:53:41 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Wed, 30 Dec 2009 21:53:41 +0100
+Subject: [Dreamos-dev] r155 - trunk/utils
+Message-ID: <200912302053.nBUKrfSu012572@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-12-30 21:53:41 +0100 (Wed, 30 Dec 2009)
+New Revision: 155
+
+Modified:
+   trunk/utils/initfscp.c
+Log:
+Aggiunta copia dei files.
+Aggiunte scritte colorate.
+Sistemato layout.
+
+
+
+Modified: trunk/utils/initfscp.c
+===================================================================
+--- trunk/utils/initfscp.c	2009-12-30 19:52:47 UTC (rev 154)
++++ trunk/utils/initfscp.c	2009-12-30 20:53:41 UTC (rev 155)
+@@ -20,6 +20,7 @@
+ #include <string.h>
+ #include <initfscp.h>
+ 
++
+ int main(int argc, char* argv[]){
+ 	unsigned int offset;
+ 	if(argc <= 1) usage(argv[0]);
+@@ -33,6 +34,7 @@
+ 			fsdest = fopen(argv[argc-1], "w");
+ 			if(fsdest == NULL) printf("Could not create FileSystem\n");
+ 			printf("Welcome to Dreamos initfs file copier tool\n");
++			printf("Size of headers: %d\n\n", sizeof(struct initrd_file_t)*32);
+ 			printf("Clearing headers structures ");
+ 			offset = sizeof(struct initrd_file_t) * 32;
+ 			for (i=0; i<MAX_FILES; i++){
+@@ -42,10 +44,10 @@
+ 				headers[i].offset = 0;
+ 				headers[i].length = 0;
+ 			}			
+-			printf("\t\tDONE\n");			
++			printf("\e[33,44mDONE\e[0m\n\n");			
+ 			printf("Number of files to copy %d\n", argc - 2);
+-			printf("FileSystem name: %s\n", argv[argc-1]);
+-			printf("Creating File headers\n\n");			
++			printf("FileSystem name: %s\n\n", argv[argc-1]);
++			printf("Creating File headers\n");			
+ 			i=0;
+ 			for(i=0; i< argc - 2; i++){
+ 				FILE *fd;
+@@ -57,19 +59,29 @@
+ 				else {
+ 					strcpy(headers[i].fileName, argv[i+1]);
+ 					fseek(fd, 0, SEEK_END);
+-					printf("File %s Found! Size: %d\n", argv[i+1], ftell(fd));				
++					printf("\tFile %s Found! Size: %d\n", argv[i+1], ftell(fd));				
+ 					headers[i].length = ftell(fd);
+ 					headers[i].offset = offset;
+ 					fclose(fd);
+ 					offset += headers[i].length;
+ 				}				
+ 			}
+-			printf("\t\tDONE\n");
++			printf("\e[33,44mDONE\e[0m\n\n");
+ 			i=0;
++			printf("Copying headers to %s filesystem  ", argv[argc-1]);		
+ 			fwrite(headers, sizeof(struct initrd_file_t), 32, fsdest);
++			printf("\e[33,44mDONE\e[0m\n\n");			
++			printf("Copying data to %s filesystem\n", argv[argc-1]);		
+ 			for(i=0; i<argc - 2; i++){
+-				printf("FileName: %s Length: %d offset: %d\n", headers[i].fileName, headers[i].length, headers[i].offset);
++				FILE *fd2;
++				char *buffer;
++				fd2=fopen(argv[i+1], "r+");
++				buffer = (unsigned char*) malloc(headers[i].length);
++				fread(buffer, 1, headers[i].length, fd2);
++				fwrite(buffer, 1, headers[i].length, fsdest);
++				printf("\t\tFileName: %s Length: %d offset: %d\n", headers[i].fileName, headers[i].length, headers[i].offset);
+ 			}
++			printf("\e[33,44mDONE\e[0m\n\n");
+ 			fclose(fsdest);
+ 		}		
+ 	}	
+
+
+
+From finarfin at mail.berlios.de  Wed Dec 30 23:34:29 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Wed, 30 Dec 2009 23:34:29 +0100
+Subject: [Dreamos-dev] r156 - in trunk: . boot fs include/fs shell
+Message-ID: <200912302234.nBUMYT2s019755@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-12-30 23:33:43 +0100 (Wed, 30 Dec 2009)
+New Revision: 156
+
+Added:
+   trunk/boot/grub.img
+Removed:
+   trunk/boot/grub.img
+Modified:
+   trunk/dreamos.img
+   trunk/fs/initfs
+   trunk/include/fs/initrd.h
+   trunk/shell/testing.c
+Log:
+Aggiornato comando tester try_module.
+Cambiato il formato di initfs. Non si tratta piu di un semplice file di 
+testo, ma sta assuemndo la forma di un minifs. 
+Se ora lo si lancia non mostra piu il contenuto di initfs, ma bensi
+i file che initfs contiene.
+Inoltre per ora mostra al massimo 2 file (il controllo l'ho settato 
+statico su quella cifra). 
+Nelle prossime revisioni il numero di files presenti sara letto 
+direttamente dal fs e il ciclo sara settato di conseguenza.
+Per maggiori informazioni su initfs e initfscp consultare 
+wiki.dreamos.org
+
+
+Deleted: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Added: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+
+Property changes on: trunk/boot/grub.img
+___________________________________________________________________
+Name: svn:executable
+   + *
+Name: svn:mime-type
+   + application/octet-stream
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initfs
+===================================================================
+--- trunk/fs/initfs	2009-12-30 20:53:41 UTC (rev 155)
++++ trunk/fs/initfs	2009-12-30 22:33:43 UTC (rev 156)
+@@ -1,4 +1,106 @@
+-1 informazioni a buffo per non lasciare
+-2 un file da 0 byte.....
+-3
+-4 boh
++?
++
++
++
++
++  ?
++ * initfscp
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2 of the License, or
++ *  (at your option) any later version.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <initfscp.h>
++
++
++int main(int argc, char* argv[]){
++	unsigned int offset;
++	if(argc <= 1) usage(argv[0]);
++	else {
++		if(!strcmp(argv[1], "--version") || !strcmp(argv[1], "-v")) version(argv[0]+2);
++		else if(!strcmp(argv[1], "--help") || !strcmp(argv[1], "-h")) usage(argv[0]);
++		else{
++			initrd_file_t headers[MAX_FILES];
++			int i=0;
++			FILE *fsdest;
++			fsdest = fopen(argv[argc-1], "w");
++			if(fsdest == NULL) printf("Could not create FileSystem\n");
++			printf("Welcome to Dreamos initfs file copier tool\n");
++			printf("Size of headers: %d\n\n", sizeof(struct initrd_file_t)*32);
++			printf("Clearing headers structures ");
++			offset = sizeof(struct initrd_file_t) * 32;
++			for (i=0; i<MAX_FILES; i++){
++				headers[i].magic = 0xBF;
++				strcpy(headers[i].fileName, "");
++				headers[i].uid = 0;
++				headers[i].offset = 0;
++				headers[i].length = 0;
++			}			
++			printf("\e[33,44mDONE\e[0m\n\n");			
++			printf("Number of files to copy %d\n", argc - 2);
++			printf("FileSystem name: %s\n\n", argv[argc-1]);
++			printf("Creating File headers\n");			
++			i=0;
++			for(i=0; i< argc - 2; i++){
++				FILE *fd;
++				fd = fopen(argv[i+1], "r+");
++				if(fd == NULL){
++					 printf("Error one or more files not found\n");
++					 return -1;
++				 }
++				else {
++					strcpy(headers[i].fileName, argv[i+1]);
++					fseek(fd, 0, SEEK_END);
++					printf("\tFile %s Found! Size: %d\n", argv[i+1], ftell(fd));				
++					headers[i].length = ftell(fd);
++					headers[i].offset = offset;
++					fclose(fd);
++					offset += headers[i].length;
++				}				
++			}
++			printf("\e[33,44mDONE\e[0m\n\n");
++			i=0;
++			printf("Copying headers to %s filesystem  ", argv[argc-1]);		
++			fwrite(headers, sizeof(struct initrd_file_t), 32, fsdest);
++			printf("\e[33,44mDONE\e[0m\n\n");			
++			printf("Copying data to %s filesystem\n", argv[argc-1]);		
++			for(i=0; i<argc - 2; i++){
++				FILE *fd2;
++				char *buffer;
++				fd2=fopen(argv[i+1], "r+");
++				buffer = (unsigned char*) malloc(headers[i].length);
++				fread(buffer, 1, headers[i].length, fd2);
++				fwrite(buffer, 1, headers[i].length, fsdest);
++				printf("\t\tFileName: %s Length: %d offset: %d\n", headers[i].fileName, headers[i].length, headers[i].offset);
++			}
++			printf("\e[33,44mDONE\e[0m\n\n");
++			fclose(fsdest);
++		}		
++	}	
++}
++
++void usage(char *prgname){
++	printf("Usage:\n %s --help for this screen\n", prgname);
++	printf(" %s file1 file2 ... fsname\n", prgname);
++	printf("      file1 file2 ... are source files\n");
++	printf("      and fsname is the file that contains the initfs\n");
++}
++
++void version(char *prgname){
++	printf("%s version: %s\n", prgname, INITFSCP_VER);
++}
++all:
++	gcc -o initfscp initfscp.c -I./include
+
+Modified: trunk/include/fs/initrd.h
+===================================================================
+--- trunk/include/fs/initrd.h	2009-12-30 20:53:41 UTC (rev 155)
++++ trunk/include/fs/initrd.h	2009-12-30 22:33:43 UTC (rev 156)
+@@ -38,6 +38,7 @@
+ };
+ 
+ typedef struct initrd_t initrd_t;
++typedef struct initrd_file_t initrd_file_t;
+ 
+ extern initrd_t fs_specs;
+ void dummy();
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2009-12-30 20:53:41 UTC (rev 155)
++++ trunk/shell/testing.c	2009-12-30 22:33:43 UTC (rev 156)
+@@ -113,13 +113,21 @@
+ }
+ 
+ void try_module(){
++	initrd_file_t* headers;
++	int i;
++	i=0;
++	headers = (initrd_file_t *) module_start;
++	while(i<2){
++		printf("%s\t%d\n", headers[i].fileName, headers[i].length);
++		i++;
++	}
+ 	int j=0;
+-	char* mod_address;
++	/*char* mod_address;
+ 	mod_address = module_start;	
+ 	while(j<74){
+ 		putchar(mod_address[j]);
+ 		j++;
+-	}
++	}*/
+ 	_kputs("\n");
+ }
+ 
+
+
+

@@ -1,0 +1,112 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r346 - in trunk: . boot mem misc
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2011-March/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r346%20-%20in%20trunk%3A%20.%20boot%20mem%20misc&In-Reply-To=%3C20110304202716.0595F481285%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   
+   <LINK REL="Next"  HREF="000350.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r346 - in trunk: . boot mem misc</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r346%20-%20in%20trunk%3A%20.%20boot%20mem%20misc&In-Reply-To=%3C20110304202716.0595F481285%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r346 - in trunk: . boot mem misc">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Fri Mar  4 21:27:15 CET 2011</I>
+    <P><UL>
+        
+        <LI>Next message: <A HREF="000350.html">[Dreamos-dev] r347 - in trunk: . boot include/mem mem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#349">[ date ]</a>
+              <a href="thread.html#349">[ thread ]</a>
+              <a href="subject.html#349">[ subject ]</a>
+              <a href="author.html#349">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2011-03-04 21:27:15 +0100 (Fri, 04 Mar 2011)
+New Revision: 346
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/mem/heap.c
+   trunk/misc/ordered_array.c
+Log:
+Sistemato insert_array ora usa t_array-&gt;less_than per il confronto.
+Piccola correzione in new_free
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2011-02-24 22:18:00 UTC (rev 345)
++++ trunk/mem/heap.c	2011-03-04 20:27:15 UTC (rev 346)
+@@ -264,9 +264,9 @@
+ 	if(((unsigned int)footer + sizeof(footer_t)) == t_heap-&gt;end_address){
+ 		unsigned int old_size = t_heap-&gt;end_address - t_heap-&gt;start_address;
+ 		unsigned int new_size = contract((unsigned int)header - t_heap-&gt;start_address, t_heap);
+-		/**We need to resize?*/
+-		//printf(&quot;Test\n&quot;);
++		/**We need to resize?*/		
+ 		if(header-&gt;size - (old_size-new_size) &gt; 0){
++			header-&gt;size = old_size-new_size;			
+ 			footer = (footer_t *) (unsigned int)header + header-&gt;size - sizeof(footer_t);
+ 			footer-&gt;magic = HEAP_MAGIC;
+ 			footer-&gt;header = header;
+
+Modified: trunk/misc/ordered_array.c
+===================================================================
+--- trunk/misc/ordered_array.c	2011-02-24 22:18:00 UTC (rev 345)
++++ trunk/misc/ordered_array.c	2011-03-04 20:27:15 UTC (rev 346)
+@@ -73,7 +73,7 @@
+     //Qui va un ciclo tipo: che termina o quando l'elemento va inserito in coda, o quando trova
+     //la sua posizione dove mettersi. &amp;&amp; t_array-&gt;t_array[i].size&gt;=elem-&gt;size Questa e' l'idea, ma va 
+     //sistemato il codice.
+-    while(i&lt;t_array-&gt;size &amp;&amp; header_t_less_than(t_array-&gt;array[i], elem)){				
++    while(i&lt;t_array-&gt;size &amp;&amp; t_array-&gt;less_than(t_array-&gt;array[i], elem)){				
+         i++;
+ 	}
+     if(i==t_array-&gt;size){
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	
+	<LI>Next message: <A HREF="000350.html">[Dreamos-dev] r347 - in trunk: . boot include/mem mem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#349">[ date ]</a>
+              <a href="thread.html#349">[ thread ]</a>
+              <a href="subject.html#349">[ subject ]</a>
+              <a href="author.html#349">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

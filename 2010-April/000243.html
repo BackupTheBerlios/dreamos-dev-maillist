@@ -1,0 +1,306 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r240 - in trunk: . fs include/io io libc shell sys
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-April/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r240%20-%20in%20trunk%3A%20.%20fs%20include/io%20io%20libc%20shell%20sys&In-Reply-To=%3C201004261730.o3QHU0h2018563%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000242.html">
+   
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r240 - in trunk: . fs include/io io libc shell sys</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r240%20-%20in%20trunk%3A%20.%20fs%20include/io%20io%20libc%20shell%20sys&In-Reply-To=%3C201004261730.o3QHU0h2018563%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r240 - in trunk: . fs include/io io libc shell sys">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Mon Apr 26 19:30:00 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000242.html">[Dreamos-dev] r239 - in trunk: . fs include/fs shell
+</A></li>
+        
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#243">[ date ]</a>
+              <a href="thread.html#243">[ thread ]</a>
+              <a href="subject.html#243">[ subject ]</a>
+              <a href="author.html#243">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-04-26 19:29:40 +0200 (Mon, 26 Apr 2010)
+New Revision: 240
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/initrd.c
+   trunk/fs/unistd.c
+   trunk/fs/vfs.c
+   trunk/include/io/video.h
+   trunk/io/video.c
+   trunk/libc/stdio.c
+   trunk/shell/commands.c
+   trunk/sys/dirent.c
+Log:
+Modificata write per poter scrivere anche nel caso di O_APPEND.
+Corretto bug in get_rel_path (ancora da migliorare, ma funzionante)
+Aggiunta funzione _knntost per i numeri negativi, mentre _kntos rimane 
+per quelli positivi. 
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-04-25 21:42:13 UTC (rev 239)
++++ trunk/fs/initrd.c	2010-04-26 17:29:40 UTC (rev 240)
+@@ -117,6 +117,11 @@
+ 				ret_fd = cur_irdfd;				
+ 				//printf(&quot;ret_fd: %d --- %d\n&quot;, cur_irdfd, j);
+ 				ird_descriptors[cur_irdfd].cur_pos = 0;
++				if(flags&amp;O_APPEND) {
++					printf(&quot;Appendiamoci\n&quot;);
++					ird_descriptors[cur_irdfd].cur_pos = module_var[j].length;
++				}
++				//else printf(&quot;Pero' non ci appendiamo\n&quot;);
+ 				return cur_irdfd++; 
+ 			}
+ 			j++;
+@@ -132,9 +137,7 @@
+ 				module_var[fs_specs-&gt;nfiles].length = 0;
+ 				ird_descriptors[cur_irdfd].file_descriptor	= fs_specs-&gt;nfiles;
+ 				ird_descriptors[cur_irdfd].cur_pos = 0;
+-				fs_specs-&gt;nfiles++;
+-				if(flags&amp;O_APPEND) printf(&quot;Appendiamoci\n&quot;);
+-				else printf(&quot;Pero' non ci appendiamo\n&quot;);
++				fs_specs-&gt;nfiles++;				
+ 				return cur_irdfd++; 
+ 			}
+ 			return -1;
+@@ -193,12 +196,12 @@
+ 	lfd = ird_descriptors[fildes].file_descriptor;
+ 	printf(&quot;Please wait, im writing the world...\n&quot;);
+ 	printf(&quot;And the world begun with those words: %s and his mark his: %d\n&quot;, appoggio, lfd);
+-	file_start = (char *) (module_start	+ fs_headers[lfd].offset);	
++	file_start = (char *) (module_start	+ fs_headers[lfd].offset + ird_descriptors[fildes].cur_pos);	
+ 	while(i&lt;=nbyte) {	
+ 		file_start[i] = appoggio[i];	
+ 		i++;
+ 	} 
+-	fs_headers[lfd].length = i;
++	fs_headers[lfd].length = fs_headers[lfd].length+i;
+ 	free(appoggio);
+ 	return i;
+ 	//fs_headers[ird_descriptors.fildes].
+
+Modified: trunk/fs/unistd.c
+===================================================================
+--- trunk/fs/unistd.c	2010-04-25 21:42:13 UTC (rev 239)
++++ trunk/fs/unistd.c	2010-04-26 17:29:40 UTC (rev 240)
+@@ -48,7 +48,10 @@
+ 		if((ssize_t*)mountpoint_list[fd_list[fildes].mountpoint_id].operations.write!=NULL)
+ 			mountpoint_list[fd_list[fildes].mountpoint_id].operations.write(fs_fd, buf, nbyte);
+ 		//else printf(&quot;Give Me a pen and i'll write you the world\n&quot;);
+-		else return -1;
++		else {
++			printf(&quot;Give Me a pen and i'll write you the world\n&quot;);
++			return -1;
++		}
+ 	}
+ 	else return -1;
+ 	return 0;
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2010-04-25 21:42:13 UTC (rev 239)
++++ trunk/fs/vfs.c	2010-04-26 17:29:40 UTC (rev 240)
+@@ -134,6 +134,7 @@
+ 	int j=0;
+ 	char *tmp_path;
+ 	rel_size = strlen(path) - strlen(mountpoint_list[mountpoint_id].mountpoint);	
++	//printf(&quot;rel_size: %d mp_id: %d\n&quot;, rel_size, mountpoint_id);
+ 	if(rel_size&gt;0){		
+ 		int mp_size= 0;
+ 		tmp_path = kmalloc(rel_size * sizeof(char));		
+@@ -143,7 +144,9 @@
+ 			j++;
+ 		}
+ 		tmp_path[j]='\0';
+-	}	
++	} 
++	else strcpy(tmp_path, path);
++	//printf(&quot;Tmp path: %s\n&quot;, tmp_path);
+ 	return tmp_path;
+ }
+ 
+
+Modified: trunk/include/io/video.h
+===================================================================
+--- trunk/include/io/video.h	2010-04-25 21:42:13 UTC (rev 239)
++++ trunk/include/io/video.h	2010-04-26 17:29:40 UTC (rev 240)
+@@ -48,7 +48,7 @@
+ 
+ #define OK_POS 70
+ 
+-void _kntos(char*,int, int);
++void _kntos(char*, unsigned int, int);
+ void _kputc(char);
+ void _kcolor(char);
+ void _kputs(char *);
+@@ -68,7 +68,7 @@
+ void _kscrollup();
+ void _kscrolldown();
+ void _kntohex (char *, unsigned int);
+-
++void _knntos(char *, int, int );
+ unsigned short shell_mess_col, shell_mess_line;
+ 
+ #endif /* _VIDEO_H */
+
+Modified: trunk/io/video.c
+===================================================================
+--- trunk/io/video.c	2010-04-25 21:42:13 UTC (rev 239)
++++ trunk/io/video.c	2010-04-26 17:29:40 UTC (rev 240)
+@@ -283,6 +283,36 @@
+ }
+ 
+ 
++void _knntos(char *buffer, int num, int base){
++	int mod;
++  //int numval;
++  char *p, *pbase;
++
++  p = pbase = buffer;
++    
++	if(num&lt;0) {		
++		num=(~num)+1;
++		*p++='-';
++		*pbase++;
++	}
++    while(num &gt; 0)
++    {
++      mod = num % base;
++      *p++ = mod + '0';
++      num = num / base;
++    }
++
++    *p-- = 0;
++    while(p &gt; pbase)
++    {
++      char tmp;
++      tmp = *p;
++      *p = *pbase;
++      *pbase = tmp;
++    
++      p--; pbase++;
++    }
++}
+ /** @author Lisa
+   * @version 1.0
+   * @param  buffer (char*) La stringa che contiene il numero
+@@ -291,7 +321,7 @@
+   *
+   * Move the number &quot;num&quot; into a string
+   */
+-void _kntos(char *buffer,int num, int base)
++void _kntos(char *buffer, unsigned int num, int base)
+ {
+   int mod;
+   //int numval;
+
+Modified: trunk/libc/stdio.c
+===================================================================
+--- trunk/libc/stdio.c	2010-04-25 21:42:13 UTC (rev 239)
++++ trunk/libc/stdio.c	2010-04-26 17:29:40 UTC (rev 240)
+@@ -153,7 +153,9 @@
+             }
+             if (*format == 'd' || *format == 'i') {
+                 int varint = va_arg (ap, int);
+-                _kntos (cur_p, varint, 10);
++                if(varint &gt;= 0)
++					_kntos (cur_p, varint, 10);
++				else _knntos (cur_p, varint, 10);
+             }
+             if (*format == 'u') {
+                 unsigned int uint = va_arg (ap, int);
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-04-25 21:42:13 UTC (rev 239)
++++ trunk/shell/commands.c	2010-04-26 17:29:40 UTC (rev 240)
+@@ -392,7 +392,7 @@
+ 			if(flag==1){
+ 				struct stat tmp_stat;
+ 				if(stat(cur_dir_entry-&gt;d_name, &amp;tmp_stat)!=-1)
+-					printf(&quot;uid=%d(%s) - size:  %d &quot;, tmp_stat.st_uid, &quot;root&quot;, tmp_stat.st_size);
++					printf(&quot;uid=%d(%s) - size:  %d &quot;, tmp_stat.st_uid, current_user.username, tmp_stat.st_size);
+ 			}
+ 			printf(&quot;%s\n&quot;, cur_dir_entry-&gt;d_name);
+ 			_kcolor(WHITE);			
+@@ -456,11 +456,12 @@
+ 		return;
+ 	} else {
+ 		int i=0;
+-		int rel_size = 0;
++		int rel_size = 0;		
+ 		memset(abspath, '\0', CURPATH_LEN);				
+ 		if(argv[1][0] == '/') {
+-			i = get_mountpoint_id(argv[1]);
++			i = get_mountpoint_id(argv[1]);		
+ 			strcpy(abspath, argv[1]);
++			//printf(&quot;abspath: %s\n&quot;, abspath);
+ 			dirp=opendir(argv[1]);
+ 		}
+ 		else {			
+
+Modified: trunk/sys/dirent.c
+===================================================================
+--- trunk/sys/dirent.c	2010-04-25 21:42:13 UTC (rev 239)
++++ trunk/sys/dirent.c	2010-04-26 17:29:40 UTC (rev 240)
+@@ -38,10 +38,11 @@
+ 	char* rel_path;	
+ 	DIR* pdir;
+ 	error=get_abs_path((char*)path);
++	//printf(&quot;AbsPath in opendir: %s len: %d\n&quot;, path, strlen(path));
+ 	//printf(&quot;%s\n&quot;, path);
+ 	mpoint_id = get_mountpoint_id((char*)path);
+-	rel_path = get_rel_path(mpoint_id, path);	
+-	//printf(&quot;%d - %s\n&quot;, mpoint_id, rel_path);
++	rel_path = get_rel_path(mpoint_id, path);		
++	//printf(&quot;Rel Path len%d - %s\n&quot;, strlen(rel_path), rel_path);
+ 	if(mountpoint_list[mpoint_id].dir_op.opendir_f!=NULL) {
+ 		pdir = mountpoint_list[mpoint_id].dir_op.opendir_f(rel_path);
+ 		pdir-&gt;handle = mpoint_id;
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000242.html">[Dreamos-dev] r239 - in trunk: . fs include/fs shell
+</A></li>
+	
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#243">[ date ]</a>
+              <a href="thread.html#243">[ thread ]</a>
+              <a href="subject.html#243">[ subject ]</a>
+              <a href="author.html#243">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

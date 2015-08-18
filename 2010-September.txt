@@ -1,0 +1,1014 @@
+From finarfin at mail.berlios.de  Wed Sep  1 00:02:20 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Wed,  1 Sep 2010 00:02:20 +0200
+Subject: [Dreamos-dev] r288 - in trunk: . include/mem include/misc mem
+Message-ID: <20100831220220.6DA8A480FF6@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-09-01 00:02:20 +0200 (Wed, 01 Sep 2010)
+New Revision: 288
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/mem/heap.h
+   trunk/include/misc/ordered_array.h
+   trunk/mem/heap.c
+Log:
+Corretti alcuni errori che ne impedivano la compilazione
+Aggiunta struttura dati new_heap_t.
+Fino al rilascio definitivo tutto quello che riguarda la nuova gestione
+della memoria avra un prefisso new_
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/mem/heap.h
+===================================================================
+--- trunk/include/mem/heap.h	2010-08-30 10:41:44 UTC (rev 287)
++++ trunk/include/mem/heap.h	2010-08-31 22:02:20 UTC (rev 288)
+@@ -25,13 +25,25 @@
+ #define __HEAP_H
+ 
+ #define KHEAP_START_ADDRESS 0xD0000000
++#define KHEAP_START_SIZE 0x100000
+ 
++#include <ordered_array.h>
++
++/*! \struct heap_t 
++    \brief Contiene le informazioni relative all'heap corrente DA TERMINARE
++ */
++typedef struct {
++	ordered_array_t index; /*!< Indice degli holes */
++	unsigned int start_address; /*!< Indirizzo di inizio dell'heap */
++	unsigned int end_address; /*!< Indirizzo di fine dell'heap */
++}new_heap_t;
++
+ /*! \struct header_t 
+     \brief Contiene le informazioni relative alle locazioni di memoria 
+  */
+ typedef struct {
+ 	int magic; /*!<For header identification*/
+-	short int is_hole /*!<1 se si tratta di un hole 0 se si tratta di un block*/
++	short int is_hole; /*!<1 se si tratta di un hole 0 se si tratta di un block*/
+ 	int size;  /*!<Total size of the block (including header and footer)*/
+ } header_t;
+ 
+@@ -43,5 +55,7 @@
+ 	header_t *header;/*!< Pointer to the block header*/
+ } footer_t;
+ 
+-void heap_init();
++void new_heap(unsigned int, unsigned int);
++void *new_alloc(unsigned int size, unsigned short int page_align, heap_t heap);
++void new_free();
+ #endif
+
+Modified: trunk/include/misc/ordered_array.h
+===================================================================
+--- trunk/include/misc/ordered_array.h	2010-08-30 10:41:44 UTC (rev 287)
++++ trunk/include/misc/ordered_array.h	2010-08-31 22:02:20 UTC (rev 288)
+@@ -25,10 +25,10 @@
+ #ifndef ORDERED_ARRAY_H
+ #define ORDERED_ARRAY_H
+ 
+-#include <ordered_array.h>
++/*#include <ordered_array.h>*/
+ 
+ typedef void* void_t;
+-
++typedef short int (*lessthan_predicate_t)(type_t,type_t);
+ /*!  \struct ordered_array_t
+      \brief Struttura dati che un vettore ordinato.
+  */
+@@ -41,7 +41,7 @@
+ 
+ typedef void* type_t;
+ 
+-typedef short int (*lessthan_predicate_t)(type_t,type_t);
++
+ ordered_array_t new_array(void_t, unsigned int, unsigned int);
+ void insert_array(void_t, ordered_array_t*);
+ void destroy_array(ordered_array_t*);
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-08-30 10:41:44 UTC (rev 287)
++++ trunk/mem/heap.c	2010-08-31 22:02:20 UTC (rev 288)
+@@ -21,5 +21,7 @@
+  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+ 
+-void heap_init(){
++#include <heap.h>
++
++void new_heap(unsigned int start, unsigned int size){
+ }
+
+
+
+From finarfin at mail.berlios.de  Wed Sep  1 23:39:27 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Wed,  1 Sep 2010 23:39:27 +0200
+Subject: [Dreamos-dev] r289 - in trunk: . include/mem include/misc
+	include/shell mem shell
+Message-ID: <20100901213927.DA726480FC4@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-09-01 23:39:27 +0200 (Wed, 01 Sep 2010)
+New Revision: 289
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/mem/heap.h
+   trunk/include/misc/ordered_array.h
+   trunk/include/shell/testing.h
+   trunk/mem/heap.c
+   trunk/shell/commands.c
+   trunk/shell/testing.c
+Log:
+Aggiunta new_malloc, per ora solo definita con alcuni test all'interno.
+Aggiunto comando try_newheap di tester per portare avanti i test durante lo sviluppo.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/mem/heap.h
+===================================================================
+--- trunk/include/mem/heap.h	2010-08-31 22:02:20 UTC (rev 288)
++++ trunk/include/mem/heap.h	2010-09-01 21:39:27 UTC (rev 289)
+@@ -24,8 +24,8 @@
+ #ifndef __HEAP_H
+ #define __HEAP_H
+ 
+-#define KHEAP_START_ADDRESS 0xD0000000
+-#define KHEAP_START_SIZE 0x100000
++#define HEAP_START_ADDRESS 0xD0000000
++#define HEAP_START_SIZE 0x100000
+ 
+ #include <ordered_array.h>
+ 
+@@ -55,7 +55,10 @@
+ 	header_t *header;/*!< Pointer to the block header*/
+ } footer_t;
+ 
++
+ void new_heap(unsigned int, unsigned int);
+-void *new_alloc(unsigned int size, unsigned short int page_align, heap_t heap);
++void *new_alloc(unsigned int, unsigned short int, new_heap_t);
+ void new_free();
++
++unsigned int new_malloc(unsigned int);
+ #endif
+
+Modified: trunk/include/misc/ordered_array.h
+===================================================================
+--- trunk/include/misc/ordered_array.h	2010-08-31 22:02:20 UTC (rev 288)
++++ trunk/include/misc/ordered_array.h	2010-09-01 21:39:27 UTC (rev 289)
+@@ -28,7 +28,9 @@
+ /*#include <ordered_array.h>*/
+ 
+ typedef void* void_t;
++typedef void* type_t;
+ typedef short int (*lessthan_predicate_t)(type_t,type_t);
++
+ /*!  \struct ordered_array_t
+      \brief Struttura dati che un vettore ordinato.
+  */
+@@ -39,9 +41,6 @@
+     lessthan_predicate_t less_than;
+ }ordered_array_t;
+ 
+-typedef void* type_t;
+-
+-
+ ordered_array_t new_array(void_t, unsigned int, unsigned int);
+ void insert_array(void_t, ordered_array_t*);
+ void destroy_array(ordered_array_t*);
+
+Modified: trunk/include/shell/testing.h
+===================================================================
+--- trunk/include/shell/testing.h	2010-08-31 22:02:20 UTC (rev 288)
++++ trunk/include/shell/testing.h	2010-09-01 21:39:27 UTC (rev 289)
+@@ -31,5 +31,6 @@
+ void show_fd();
+ void test_stat();
+ void try_shadow();
++void try_newheap();
+ 
+ #endif
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-08-31 22:02:20 UTC (rev 288)
++++ trunk/mem/heap.c	2010-09-01 21:39:27 UTC (rev 289)
+@@ -22,6 +22,21 @@
+  */
+ 
+ #include <heap.h>
++#include <stdio.h>
+ 
++extern unsigned int end;
++new_heap_t *n_heap=0;
+ void new_heap(unsigned int start, unsigned int size){
++	new_heap_t* t_heap = new_malloc(sizeof(new_heap_t));
++	if(start%0x1000 == 0) printf("all right\n");
++	else printf("ERROR\n");
+ }
++
++unsigned int new_malloc(unsigned int size){
++	if(n_heap==0) {
++		printf("No heap defined starting from: %d ...\n", &end);
++	}
++	else {
++		printf("Heap defined\n");
++	}
++}
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-08-31 22:02:20 UTC (rev 288)
++++ trunk/shell/commands.c	2010-09-01 21:39:27 UTC (rev 289)
+@@ -526,6 +526,7 @@
+ 					{ "test_stat", test_stat},
+ 					{ "try_check", try_check},
+ 					{ "try_shadow", try_shadow},
++					{ "try_newheap", try_newheap},
+ 					{ "--help", help_tester },
+ 					};
+ 	if (argc != 2) {
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-08-31 22:02:20 UTC (rev 288)
++++ trunk/shell/testing.c	2010-09-01 21:39:27 UTC (rev 289)
+@@ -29,6 +29,7 @@
+ #include <initrd.h>
+ #include <unistd.h>
+ #include <user_shell.h>
++#include <heap.h>
+ 
+ //multiboot_info_t *boot_informations;
+ char *module_start;
+@@ -98,6 +99,15 @@
+ 	print_heap_list(kheap->used_list);
+ }
+ 
++void try_newheap(){
++	printf("Testing the new heap (in development)\n");
++	printf("First step: testing a new heap...\n");
++	new_heap(HEAP_START_ADDRESS, HEAP_START_SIZE);
++	printf("Second step: trying new_malloc...\n");
++	new_malloc(0);
++	printf("DONE\n");
++}
++
+ void help_tester()
+ {
+ 	printf("Testing functions.. ");
+
+
+
+From finarfin at mail.berlios.de  Thu Sep  2 22:59:44 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Thu,  2 Sep 2010 22:59:44 +0200
+Subject: [Dreamos-dev] r290 - in trunk: . fs mem shell
+Message-ID: <20100902205944.3D3F0481019@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-09-02 22:59:44 +0200 (Thu, 02 Sep 2010)
+New Revision: 290
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/initrd.c
+   trunk/mem/heap.c
+   trunk/shell/testing.c
+Log:
+Elimanate alcune stampe di debug. 
+Si prosegue l'aabbozzo della new_malloc e affini
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-09-01 21:39:27 UTC (rev 289)
++++ trunk/fs/initrd.c	2010-09-02 20:59:44 UTC (rev 290)
+@@ -147,7 +147,7 @@
+ 		return -1;
+ 	}
+ 	
+-	printf("Qua\n");
++	//printf("Qua\n");
+ 	return -1;	
+ }
+ 
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-09-01 21:39:27 UTC (rev 289)
++++ trunk/mem/heap.c	2010-09-02 20:59:44 UTC (rev 290)
+@@ -26,6 +26,7 @@
+ 
+ extern unsigned int end;
+ new_heap_t *n_heap=0;
++unsigned int placement_address=&end;
+ void new_heap(unsigned int start, unsigned int size){
+ 	new_heap_t* t_heap = new_malloc(sizeof(new_heap_t));
+ 	if(start%0x1000 == 0) printf("all right\n");
+@@ -34,9 +35,16 @@
+ 
+ unsigned int new_malloc(unsigned int size){
+ 	if(n_heap==0) {
+-		printf("No heap defined starting from: %d ...\n", &end);
++		unsigned int tmp;
++		printf("No heap defined starting from: %d and %x...\n", &end, placement_address);
++		tmp = placement_address; 
++		placement_address = placement_address+size;
++		printf("New address: %x\n", tmp);
++		return tmp;
+ 	}
+ 	else {
+ 		printf("Heap defined\n");
++		return 0;
+ 	}
++	return 0;
+ }
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-09-01 21:39:27 UTC (rev 289)
++++ trunk/shell/testing.c	2010-09-02 20:59:44 UTC (rev 290)
+@@ -104,7 +104,7 @@
+ 	printf("First step: testing a new heap...\n");
+ 	new_heap(HEAP_START_ADDRESS, HEAP_START_SIZE);
+ 	printf("Second step: trying new_malloc...\n");
+-	new_malloc(0);
++	new_malloc(sizeof(new_heap_t));
+ 	printf("DONE\n");
+ }
+ 
+
+
+
+From finarfin at mail.berlios.de  Fri Sep  3 23:16:52 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Fri,  3 Sep 2010 23:16:52 +0200
+Subject: [Dreamos-dev] r291 - in trunk: . include include/mem mem
+Message-ID: <20100903211652.CEF1C480EAF@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-09-03 23:16:52 +0200 (Fri, 03 Sep 2010)
+New Revision: 291
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/mem/heap.h
+   trunk/include/version.h
+   trunk/initfs
+   trunk/mem/heap.c
+Log:
+Eliminati alcuni warning.
+Aggiornato README in initfs
+Proseguito sviluppo funzione new_heap
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/mem/heap.h
+===================================================================
+--- trunk/include/mem/heap.h	2010-09-02 20:59:44 UTC (rev 290)
++++ trunk/include/mem/heap.h	2010-09-03 21:16:52 UTC (rev 291)
+@@ -26,6 +26,7 @@
+ 
+ #define HEAP_START_ADDRESS 0xD0000000
+ #define HEAP_START_SIZE 0x100000
++#define HEAP_MAGIC 0x12893457
+ 
+ #include <ordered_array.h>
+ 
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2010-09-02 20:59:44 UTC (rev 290)
++++ trunk/include/version.h	2010-09-03 21:16:52 UTC (rev 291)
+@@ -21,7 +21,7 @@
+  */
+ 
+ #define VERSION "0"
+-#define PATCHLEVEL "2.1"
++#define PATCHLEVEL "3"
+ #define EXTRAVERSION "-trunk"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r279"
++#define REV_NUM "-r291"
+
+Modified: trunk/initfs
+===================================================================
+(Binary files differ)
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-09-02 20:59:44 UTC (rev 290)
++++ trunk/mem/heap.c	2010-09-03 21:16:52 UTC (rev 291)
+@@ -26,10 +26,14 @@
+ 
+ extern unsigned int end;
+ new_heap_t *n_heap=0;
+-unsigned int placement_address=&end;
++unsigned int placement_address=(unsigned int) &end;
+ void new_heap(unsigned int start, unsigned int size){
+-	new_heap_t* t_heap = new_malloc(sizeof(new_heap_t));
+-	if(start%0x1000 == 0) printf("all right\n");
++	new_heap_t* t_heap =(new_heap_t*) new_malloc(sizeof(new_heap_t));
++	if(start%0x1000 == 0){
++		printf("all right\n");
++		t_heap->start_address = HEAP_START_ADDRESS;
++		printf("Start_address: 0x%u\n", t_heap->start_address);
++	}
+ 	else printf("ERROR\n");
+ }
+ 
+
+
+
+From finarfin at mail.berlios.de  Sun Sep  5 00:15:39 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun,  5 Sep 2010 00:15:39 +0200
+Subject: [Dreamos-dev] r292 - in trunk: . mem shell
+Message-ID: <20100904221539.BDEDF48102A@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-09-05 00:15:39 +0200 (Sun, 05 Sep 2010)
+New Revision: 292
+
+Modified:
+   trunk/dreamos.img
+   trunk/mem/heap.c
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+   trunk/shell/testing.c
+Log:
+Ripristinata la modifica di DT ora i comandi sono una struttura dati globale.
+Prosegue lo sviluppo delle funzioni per la nuova gestione della memoria.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-09-03 21:16:52 UTC (rev 291)
++++ trunk/mem/heap.c	2010-09-04 22:15:39 UTC (rev 292)
+@@ -32,7 +32,10 @@
+ 	if(start%0x1000 == 0){
+ 		printf("all right\n");
+ 		t_heap->start_address = HEAP_START_ADDRESS;
+-		printf("Start_address: 0x%u\n", t_heap->start_address);
++		t_heap->end_address = HEAP_START_ADDRESS + HEAP_START_SIZE;
++		printf("Start_address: %u\n", t_heap->start_address);		
++		printf("End Address: %u\n", t_heap->end_address);
++		n_heap=t_heap;
+ 	}
+ 	else printf("ERROR\n");
+ }
+@@ -48,6 +51,7 @@
+ 	}
+ 	else {
+ 		printf("Heap defined\n");
++		printf("Start Address: %u End Address: %u\n", n_heap->start_address, n_heap->end_address);
+ 		return 0;
+ 	}
+ 	return 0;
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-09-03 21:16:52 UTC (rev 291)
++++ trunk/shell/commands.c	2010-09-04 22:15:39 UTC (rev 292)
+@@ -57,17 +57,18 @@
+   _kcolor(WHITE);
+ }
+ 
+-/*void help()
++void help()
+ {
+   printf ("Available commands:\n");
+   int i=0;
+-  while(i<5)
++  while(i<19)
+   {
+ 	printf("%s   %s\n", shell_cmd[i].cmdname, shell_cmd[i].cmddesc);
+ 	i++;
+   }
+-}*/
+-void help()
++}
++
++/*void help()
+ {
+   printf ("Available commands:\n");
+   printf(
+@@ -90,7 +91,7 @@
+ 	"more		   - read content of a file\n"
+ 	"newfile	   - create a newfile\n"
+ 	);
+-}
++}*/
+ 
+ 
+ void echo()
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2010-09-03 21:16:52 UTC (rev 291)
++++ trunk/shell/shell.c	2010-09-04 22:15:39 UTC (rev 292)
+@@ -46,7 +46,7 @@
+ int hst_flag;
+ char cmd[CMD_LEN];
+ //#define PWD_CHECK 1
+-/*struct cmd shell_cmd[NUM_COM] = {
++struct cmd shell_cmd[NUM_COM] = {
+  { "aalogo",   aalogo,    "  Show an ascii art logo" },
+  { "clear",    _kclear,   "   Clear the screen" },
+  { "poweroff", poweroff,  "Turn off the machine" },
+@@ -65,7 +65,8 @@
+  { "tester",   tester,    "  Try some functions, 'tester --help' for more info'" },	
+  { "pwd",      pwd,       "     Print current working directory" },
+  { "more",     more,      "    Read content of a file" },
+-};*/
++ { "newfile", newfile,	  "	Create a new file"},
++};
+ /*
+  * Inserisce gli argomenti di un comando in un array di stringhe
+  * argc = numero degli argomenti
+@@ -100,7 +101,7 @@
+   
+   char *cmd_ptr;
+   char password[30];
+-  static struct cmd shell_cmd[NUM_COM] = {
++  /*static struct cmd shell_cmd[NUM_COM] = {
+ 	{ "aalogo",   aalogo      },
+ 	{ "clear",    _kclear     },
+ 	{ "poweroff", poweroff    },
+@@ -120,7 +121,7 @@
+ 	{ "pwd", pwd},
+ 	{ "more", more},
+ 	{ "newfile", newfile}
+-  };
++  };*/
+ 
+ 
+   int i = 0;
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-09-03 21:16:52 UTC (rev 291)
++++ trunk/shell/testing.c	2010-09-04 22:15:39 UTC (rev 292)
+@@ -123,6 +123,7 @@
+ 		"  -> try_syscall	    - Try some syscall functions\n"
+ 		"  -> try_check         - Test username if exist\n"
+ 		"  -> test_stat			- Test stat function\n"
++		"  -> try_newheap		- Test heap functions\n"
+ 		);	
+ }
+ 
+
+
+
+From finarfin at mail.berlios.de  Mon Sep 13 15:46:15 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Mon, 13 Sep 2010 15:46:15 +0200
+Subject: [Dreamos-dev] r293 - in trunk: . include/mem include/misc mem misc
+Message-ID: <20100913134615.B5D5A481034@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-09-13 15:46:15 +0200 (Mon, 13 Sep 2010)
+New Revision: 293
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/mem/heap.h
+   trunk/include/misc/ordered_array.h
+   trunk/kernel.c
+   trunk/mem/heap.c
+   trunk/misc/ordered_array.c
+Log:
+Corretta funzione new_heap. 
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/mem/heap.h
+===================================================================
+--- trunk/include/mem/heap.h	2010-09-04 22:15:39 UTC (rev 292)
++++ trunk/include/mem/heap.h	2010-09-13 13:46:15 UTC (rev 293)
+@@ -57,9 +57,12 @@
+ } footer_t;
+ 
+ 
+-void new_heap(unsigned int, unsigned int);
++new_heap_t *new_heap(unsigned int, unsigned int);
++
+ void *new_alloc(unsigned int, unsigned short int, new_heap_t);
+ void new_free();
++void init_newmem();
+ 
+ unsigned int new_malloc(unsigned int);
++
+ #endif
+
+Modified: trunk/include/misc/ordered_array.h
+===================================================================
+--- trunk/include/misc/ordered_array.h	2010-09-04 22:15:39 UTC (rev 292)
++++ trunk/include/misc/ordered_array.h	2010-09-13 13:46:15 UTC (rev 293)
+@@ -41,7 +41,7 @@
+     lessthan_predicate_t less_than;
+ }ordered_array_t;
+ 
+-ordered_array_t new_array(void_t, unsigned int, unsigned int);
++ordered_array_t new_array(unsigned int, unsigned int, lessthan_predicate_t);
+ void insert_array(void_t, ordered_array_t*);
+ void destroy_array(ordered_array_t*);
+ type_t get_array(int, ordered_array_t*);
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2010-09-04 22:15:39 UTC (rev 292)
++++ trunk/kernel.c	2010-09-13 13:46:15 UTC (rev 293)
+@@ -43,6 +43,7 @@
+ #include <kheap.h>
+ #include <vfs.h>
+ #include <initrd.h>
++#include <heap.h>
+ 
+ #ifdef BOCHS_DEBUG
+ #include <debug.h>
+@@ -92,7 +93,7 @@
+     configure_PIT ();   
+     //_kprintOK();   
+     set_memorysize((boot_info->mem_upper+boot_info->mem_lower)*1024);
+-    init_mem();        
++    init_mem();       
+     asm("sti");
+     _kprintOK();   
+     init_paging();    
+@@ -106,6 +107,7 @@
+         
+     vfs_init();
+     initfs_init();
++      init_newmem(); 
+ 	if(boot_info->mods_count > 0) printf("Found n. %d Modules\n", boot_info->mods_count);		
+ 	//printf("Address of module: 0x%x - 0x%x\n", *((unsigned int*)boot_info->mods_addr),module_end-(unsigned int) module_start);
+     printf("\n");
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-09-04 22:15:39 UTC (rev 292)
++++ trunk/mem/heap.c	2010-09-13 13:46:15 UTC (rev 293)
+@@ -23,21 +23,30 @@
+ 
+ #include <heap.h>
+ #include <stdio.h>
++#include <ordered_array.h>
+ 
+ extern unsigned int end;
+-new_heap_t *n_heap=0;
++new_heap_t *n_heap;
+ unsigned int placement_address=(unsigned int) &end;
+-void new_heap(unsigned int start, unsigned int size){
++
++void init_newmem(){
++	
++	n_heap = (new_heap_t*)new_heap(HEAP_START_ADDRESS, HEAP_START_SIZE);
++}
++
++new_heap_t *new_heap(unsigned int start, unsigned int size){
+ 	new_heap_t* t_heap =(new_heap_t*) new_malloc(sizeof(new_heap_t));
+ 	if(start%0x1000 == 0){
+ 		printf("all right\n");
+-		t_heap->start_address = HEAP_START_ADDRESS;
+-		t_heap->end_address = HEAP_START_ADDRESS + HEAP_START_SIZE;
+-		printf("Start_address: %u\n", t_heap->start_address);		
+-		printf("End Address: %u\n", t_heap->end_address);
+-		n_heap=t_heap;
++		t_heap->start_address = start;
++		t_heap->end_address = start + size;	
++		//t_heap->index = new_array(start,size, 
++		printf("Start_address: %u\n", n_heap->start_address);		
++		printf("End Address: %u\n", n_heap->end_address);
++		return t_heap;		
+ 	}
+ 	else printf("ERROR\n");
++	return 0;
+ }
+ 
+ unsigned int new_malloc(unsigned int size){
+
+Modified: trunk/misc/ordered_array.c
+===================================================================
+--- trunk/misc/ordered_array.c	2010-09-04 22:15:39 UTC (rev 292)
++++ trunk/misc/ordered_array.c	2010-09-13 13:46:15 UTC (rev 293)
+@@ -42,14 +42,15 @@
+   * @param size grandezza massima dell'array
+   * @return Pointer to a new ordered_array_t
+   */
+-ordered_array_t new_array(void_t address,unsigned int start, unsigned int size){
++ordered_array_t new_array(unsigned int start, unsigned int size, lessthan_predicate_t predicate){
+     int i;
+     i=0;
+     printf("Make array code goes here...\n");        
+     ordered_array_t tmp_array;
+     tmp_array.size_max = size;
+     tmp_array.size = 0;
+-    tmp_array.array = (void_t)start;    
++    tmp_array.array = (void_t)start;
++    tmp_array.less_than = predicate;    
+     /* Questa parte e' memsettbile dopo che sara' fatta */
+     while(i<size){
+         tmp_array.array[i]= (void_t) 0x0;
+
+
+
+From finarfin at mail.berlios.de  Tue Sep 14 11:50:57 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Tue, 14 Sep 2010 11:50:57 +0200
+Subject: [Dreamos-dev] r294 - in trunk: . include/mem mem
+Message-ID: <20100914095057.E79DC481024@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-09-14 11:50:57 +0200 (Tue, 14 Sep 2010)
+New Revision: 294
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/mem/heap.h
+   trunk/mem/heap.c
+Log:
+definita header_t_less_than
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/mem/heap.h
+===================================================================
+--- trunk/include/mem/heap.h	2010-09-13 13:46:15 UTC (rev 293)
++++ trunk/include/mem/heap.h	2010-09-14 09:50:57 UTC (rev 294)
+@@ -65,4 +65,5 @@
+ 
+ unsigned int new_malloc(unsigned int);
+ 
++static short int header_t_less_than(void *,void *);
+ #endif
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-09-13 13:46:15 UTC (rev 293)
++++ trunk/mem/heap.c	2010-09-14 09:50:57 UTC (rev 294)
+@@ -29,11 +29,16 @@
+ new_heap_t *n_heap;
+ unsigned int placement_address=(unsigned int) &end;
+ 
++
+ void init_newmem(){
+ 	
+ 	n_heap = (new_heap_t*)new_heap(HEAP_START_ADDRESS, HEAP_START_SIZE);
+ }
+ 
++static short int header_t_less_than(void *a,void *b){
++	return (((header_t*)a)->size < ((header_t*)b)->size)?1:0;
++}
++
+ new_heap_t *new_heap(unsigned int start, unsigned int size){
+ 	new_heap_t* t_heap =(new_heap_t*) new_malloc(sizeof(new_heap_t));
+ 	if(start%0x1000 == 0){
+
+
+
+From finarfin at mail.berlios.de  Tue Sep 21 15:03:16 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Tue, 21 Sep 2010 15:03:16 +0200
+Subject: [Dreamos-dev] r295 - in trunk: . drivers include/mem mem misc
+Message-ID: <20100921130316.DEACB480F4C@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-09-21 15:03:16 +0200 (Tue, 21 Sep 2010)
+New Revision: 295
+
+Modified:
+   trunk/dreamos.img
+   trunk/drivers/keyboard.c
+   trunk/include/mem/heap.h
+   trunk/kernel.c
+   trunk/mem/heap.c
+   trunk/misc/ordered_array.c
+Log:
+Aggiunta funzione get_shadow (che torna lo stato del flag shadow, per l'echo dell'input)
+
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/drivers/keyboard.c
+===================================================================
+--- trunk/drivers/keyboard.c	2010-09-14 09:50:57 UTC (rev 294)
++++ trunk/drivers/keyboard.c	2010-09-21 13:03:16 UTC (rev 295)
+@@ -313,3 +313,7 @@
+ 	else shadow = value;
+ 	return shadow;
+ }
++
++int get_shadow(){
++	return shadow;
++}
+
+Modified: trunk/include/mem/heap.h
+===================================================================
+--- trunk/include/mem/heap.h	2010-09-14 09:50:57 UTC (rev 294)
++++ trunk/include/mem/heap.h	2010-09-21 13:03:16 UTC (rev 295)
+@@ -26,6 +26,7 @@
+ 
+ #define HEAP_START_ADDRESS 0xD0000000
+ #define HEAP_START_SIZE 0x100000
++#define HEAP_INDEX_SIZE 0x20000
+ #define HEAP_MAGIC 0x12893457
+ 
+ #include <ordered_array.h>
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2010-09-14 09:50:57 UTC (rev 294)
++++ trunk/kernel.c	2010-09-21 13:03:16 UTC (rev 295)
+@@ -44,6 +44,7 @@
+ #include <vfs.h>
+ #include <initrd.h>
+ #include <heap.h>
++#include <keyboard.h>
+ 
+ #ifdef BOCHS_DEBUG
+ #include <debug.h>
+@@ -112,6 +113,8 @@
+ 	//printf("Address of module: 0x%x - 0x%x\n", *((unsigned int*)boot_info->mods_addr),module_end-(unsigned int) module_start);
+     printf("\n");
+     printf("----\n");
++    /*set_shadow(DISABLED);
++    printf("The shadow: %d\n", get_shadow());*/
+     printf(LNG_SHELL);    
+     _kprintOK();
+ 		printf("[+] Address: 0x%x\n", &end);		   	        
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-09-14 09:50:57 UTC (rev 294)
++++ trunk/mem/heap.c	2010-09-21 13:03:16 UTC (rev 295)
+@@ -32,7 +32,7 @@
+ 
+ void init_newmem(){
+ 	
+-	n_heap = (new_heap_t*)new_heap(HEAP_START_ADDRESS, HEAP_START_SIZE);
++	n_heap = (new_heap_t*)new_heap(HEAP_START_ADDRESS, HEAP_INDEX_SIZE);
+ }
+ 
+ static short int header_t_less_than(void *a,void *b){
+@@ -45,7 +45,7 @@
+ 		printf("all right\n");
+ 		t_heap->start_address = start;
+ 		t_heap->end_address = start + size;	
+-		//t_heap->index = new_array(start,size, 
++		t_heap->index = new_array(start,size, &header_t_less_than);
+ 		printf("Start_address: %u\n", n_heap->start_address);		
+ 		printf("End Address: %u\n", n_heap->end_address);
+ 		return t_heap;		
+
+Modified: trunk/misc/ordered_array.c
+===================================================================
+--- trunk/misc/ordered_array.c	2010-09-14 09:50:57 UTC (rev 294)
++++ trunk/misc/ordered_array.c	2010-09-21 13:03:16 UTC (rev 295)
+@@ -26,6 +26,7 @@
+ #include <kheap.h>
+ #include <stdio.h>
+ #include <heap.h>
++#include <string.h>
+ 
+ 
+ short int standard_lessthan (type_t a, type_t b){
+@@ -52,10 +53,8 @@
+     tmp_array.array = (void_t)start;
+     tmp_array.less_than = predicate;    
+     /* Questa parte e' memsettbile dopo che sara' fatta */
+-    while(i<size){
+-        tmp_array.array[i]= (void_t) 0x0;
+-        i++;
+-    }
++    //printf("SizeMax: %d\n", tmp_array.size_max);
++    //memset(tmp_array.array, 0, tmp_array.size_max);
+     return tmp_array;
+ }
+ 
+
+
+
+From finarfin at mail.berlios.de  Tue Sep 21 15:04:16 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Tue, 21 Sep 2010 15:04:16 +0200
+Subject: [Dreamos-dev] r296 - trunk/include/drivers
+Message-ID: <20100921130416.5888B480F4C@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-09-21 15:04:16 +0200 (Tue, 21 Sep 2010)
+New Revision: 296
+
+Modified:
+   trunk/include/drivers/keyboard.h
+Log:
+aggiunto header (lo avevo dimenticato)
+
+
+Modified: trunk/include/drivers/keyboard.h
+===================================================================
+--- trunk/include/drivers/keyboard.h	2010-09-21 13:03:16 UTC (rev 295)
++++ trunk/include/drivers/keyboard.h	2010-09-21 13:04:16 UTC (rev 296)
+@@ -68,6 +68,7 @@
+ void keyboard_disable (void);
+ void _ksetleds (int, int, int);
+ int  set_shadow(int);
++int  get_shadow();
+ int  _kgetch (void);
+ 
+ #endif
+
+
+
+From finarfin at mail.berlios.de  Fri Sep 24 15:37:30 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Fri, 24 Sep 2010 15:37:30 +0200
+Subject: [Dreamos-dev] r297 - in trunk: . mem
+Message-ID: <20100924133730.74643480FCB@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-09-24 15:37:30 +0200 (Fri, 24 Sep 2010)
+New Revision: 297
+
+Modified:
+   trunk/dreamos.img
+   trunk/mem/heap.c
+Log:
+Sostituito placement_address con address_cur.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-09-21 13:04:16 UTC (rev 296)
++++ trunk/mem/heap.c	2010-09-24 13:37:30 UTC (rev 297)
+@@ -24,14 +24,16 @@
+ #include <heap.h>
+ #include <stdio.h>
+ #include <ordered_array.h>
++#include <kheap.h>
+ 
+ extern unsigned int end;
++extern unsigned int address_cur;
+ new_heap_t *n_heap;
+ unsigned int placement_address=(unsigned int) &end;
+ 
+ 
+ void init_newmem(){
+-	
++	placement_address = address_cur;
+ 	n_heap = (new_heap_t*)new_heap(HEAP_START_ADDRESS, HEAP_INDEX_SIZE);
+ }
+ 
+@@ -57,9 +59,9 @@
+ unsigned int new_malloc(unsigned int size){
+ 	if(n_heap==0) {
+ 		unsigned int tmp;
+-		printf("No heap defined starting from: %d and %x...\n", &end, placement_address);
+-		tmp = placement_address; 
+-		placement_address = placement_address+size;
++		printf("No heap defined starting from: %d and %x...\n", &end, address_cur);
++		tmp = address_cur; 
++		address_cur = address_cur+size;
+ 		printf("New address: %x\n", tmp);
+ 		return tmp;
+ 	}
+
+
+

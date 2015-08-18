@@ -1,0 +1,109 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r126 - in trunk: . shell sys
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-September/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r126%20-%20in%20trunk%3A%20.%20shell%20sys&In-Reply-To=%3C200909021828.n82ISTqi023005%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   
+   <LINK REL="Next"  HREF="000129.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r126 - in trunk: . shell sys</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r126%20-%20in%20trunk%3A%20.%20shell%20sys&In-Reply-To=%3C200909021828.n82ISTqi023005%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r126 - in trunk: . shell sys">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Wed Sep  2 20:28:29 CEST 2009</I>
+    <P><UL>
+        
+        <LI>Next message: <A HREF="000129.html">[Dreamos-dev] r127 - in trunk: . fs include/fs sys
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#128">[ date ]</a>
+              <a href="thread.html#128">[ thread ]</a>
+              <a href="subject.html#128">[ subject ]</a>
+              <a href="author.html#128">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-09-02 20:28:28 +0200 (Wed, 02 Sep 2009)
+New Revision: 126
+
+Modified:
+   trunk/dreamos.img
+   trunk/shell/commands.c
+   trunk/sys/dirent.c
+Log:
+Iniziata stesura opendir.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-08-30 18:27:01 UTC (rev 125)
++++ trunk/shell/commands.c	2009-09-02 18:28:28 UTC (rev 126)
+@@ -442,6 +442,7 @@
+ 			free(relpath);
+ 		}
+ 	}
++	opendir(argv[1]);
+ }
+ 
+ void whoami(){
+
+Modified: trunk/sys/dirent.c
+===================================================================
+--- trunk/sys/dirent.c	2009-08-30 18:27:01 UTC (rev 125)
++++ trunk/sys/dirent.c	2009-09-02 18:28:28 UTC (rev 126)
+@@ -19,7 +19,14 @@
+ #include &lt;dirent.h&gt;
+ #include &lt;sys/types.h&gt;
+ #include &lt;stdio.h&gt;
++#include &lt;vfs.h&gt;
+ 
++
+ DIR *opendir(const char *path){
+-	printf(&quot;Prova\n&quot;);
++	int mpoint_id = 0;
++	char* rel_path;
++
++	mpoint_id = get_mountpoint_id(path);
++	rel_path = get_rel_path(mpoint_id, path);
++	printf(&quot;%d - %s\n&quot;, mpoint_id, rel_path);	
+ }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	
+	<LI>Next message: <A HREF="000129.html">[Dreamos-dev] r127 - in trunk: . fs include/fs sys
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#128">[ date ]</a>
+              <a href="thread.html#128">[ thread ]</a>
+              <a href="subject.html#128">[ subject ]</a>
+              <a href="author.html#128">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

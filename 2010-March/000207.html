@@ -1,0 +1,176 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r204 - in trunk: . hardware include include/hardware	utils
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-March/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r204%20-%20in%20trunk%3A%20.%20hardware%20include%20include/hardware%0A%09utils&In-Reply-To=%3C201003022147.o22LleSM002608%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   
+   <LINK REL="Next"  HREF="000208.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r204 - in trunk: . hardware include include/hardware	utils</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r204%20-%20in%20trunk%3A%20.%20hardware%20include%20include/hardware%0A%09utils&In-Reply-To=%3C201003022147.o22LleSM002608%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r204 - in trunk: . hardware include include/hardware	utils">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Tue Mar  2 22:47:40 CET 2010</I>
+    <P><UL>
+        
+        <LI>Next message: <A HREF="000208.html">[Dreamos-dev] r205 - in trunk: . io libc utils
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#207">[ date ]</a>
+              <a href="thread.html#207">[ thread ]</a>
+              <a href="subject.html#207">[ subject ]</a>
+              <a href="author.html#207">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-03-02 22:47:39 +0100 (Tue, 02 Mar 2010)
+New Revision: 204
+
+Modified:
+   trunk/README
+   trunk/dreamos.img
+   trunk/hardware/pic8259.c
+   trunk/include/hardware/pic8259.h
+   trunk/include/version.h
+   trunk/utils/README.initfscp
+Log:
+Aggiornato numero versione.
+Aggiunta soluzione temporanea per bug #016902
+Aggiornato readme di initfscp.
+Aggiunte alcune define.
+
+
+Modified: trunk/README
+===================================================================
+--- trunk/README	2010-02-24 10:10:26 UTC (rev 203)
++++ trunk/README	2010-03-02 21:47:39 UTC (rev 204)
+@@ -29,12 +29,12 @@
+ 
+ e dai contributori:
+ 
+-vinc94
+-tk0
+ Osiris
+ Celeron
+ Hamcha
+ m0nt0.
++vinc94
++tk0
+ 
+ 	- a -- Cosa NON &#232; DreamOS -
+ 
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/hardware/pic8259.c
+===================================================================
+--- trunk/hardware/pic8259.c	2010-02-24 10:10:26 UTC (rev 203)
++++ trunk/hardware/pic8259.c	2010-03-02 21:47:39 UTC (rev 204)
+@@ -29,7 +29,7 @@
+ #include &lt;8253.h&gt;
+ #include &lt;bitops.h&gt;
+ 
+-IRQ_s *shareHandler[16];
++IRQ_s *shareHandler[IRQ_NUM];
+ // IRQ_s shareHandler[16];
+ // IRQ_s *tmpHandler;
+ byte master_cur_mask;
+@@ -85,11 +85,14 @@
+     enable_IRQ(TIMER);
+     enable_IRQ(TO_SLAVE_PIC);
+    
++    init_idt();
++    init_gdt();
++
+     setup_IRQ();
+     asm(&quot;sti&quot;);
+                     
+     i=0;
+-    while(i&lt;16){
++    while(i&lt;IRQ_NUM){
+         shareHandler[i] = NULL;
+         i++;
+     }
+
+Modified: trunk/include/hardware/pic8259.h
+===================================================================
+--- trunk/include/hardware/pic8259.h	2010-02-24 10:10:26 UTC (rev 203)
++++ trunk/include/hardware/pic8259.h	2010-03-02 21:47:39 UTC (rev 204)
+@@ -41,7 +41,9 @@
+ 
+ #define EOI 0x20
+ 
++#define IRQ_NUM 16
+ 
++
+ typedef enum irq_types{
+     TIMER,
+     KEYBOARD,
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2010-02-24 10:10:26 UTC (rev 203)
++++ trunk/include/version.h	2010-03-02 21:47:39 UTC (rev 204)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL &quot;2.0&quot;
+ #define EXTRAVERSION &quot;-trunk&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r199&quot;
++#define REV_NUM &quot;-r204&quot;
+
+Modified: trunk/utils/README.initfscp
+===================================================================
+--- trunk/utils/README.initfscp	2010-02-24 10:10:26 UTC (rev 203)
++++ trunk/utils/README.initfscp	2010-03-02 21:47:39 UTC (rev 204)
+@@ -4,8 +4,11 @@
+ ----
+ 
+ initfscp e' un programma che serve a creare un'immagine contenente il file system utilizzato da DreamOS.
+-Consente di inserirci dei files (massimo 32) all'interno. 
+-Per far ci&#195;&#178; digitare il comando &quot;initfscp file1 file2 ... nomefs&quot; dove:
++Consente di inserirci dei files e/o dei mountpoint (massimo 32) all'interno. 
++Per far ci&#195;&#178; digitare il comando &quot;initfscp [-m mountpoint1 -m mountpoint2 ... -m mountpoint n] file1 file2 ... nomefs&quot; 
++
++dove:
++- -m mountpoint1 -m mountpoint2 ... -m mountpoint n (facoltativo) indicano i mountpoint da inserire nel filesystem appena creato. 
+ - &quot;file1 file2 ...&quot; sono i files che inseriremo nel filesystem,
+ - &quot;nomefs&quot; &#195;&#168; il nome che daremo all'immagine.
+ Ad esempio vogliamo inserire i file topolino, pippo e paperino nell'immagine che chiameremo disney, quindi digitiamo:
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	
+	<LI>Next message: <A HREF="000208.html">[Dreamos-dev] r205 - in trunk: . io libc utils
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#207">[ date ]</a>
+              <a href="thread.html#207">[ thread ]</a>
+              <a href="subject.html#207">[ subject ]</a>
+              <a href="author.html#207">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

@@ -1,0 +1,325 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r23 - in trunk: . include include/mem mem shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2008-August/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r23%20-%20in%20trunk%3A%20.%20include%20include/mem%20mem%20shell&In-Reply-To=%3C200808262036.m7QKaSUY026871%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000022.html">
+   <LINK REL="Next"  HREF="000024.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r23 - in trunk: . include include/mem mem shell</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r23%20-%20in%20trunk%3A%20.%20include%20include/mem%20mem%20shell&In-Reply-To=%3C200808262036.m7QKaSUY026871%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r23 - in trunk: . include include/mem mem shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Tue Aug 26 22:36:28 CEST 2008</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000022.html">[Dreamos-dev] r22 - in trunk: . include shell
+</A></li>
+        <LI>Next message: <A HREF="000024.html">[Dreamos-dev] r24 - in trunk: . include include/libc libc shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#23">[ date ]</a>
+              <a href="thread.html#23">[ thread ]</a>
+              <a href="subject.html#23">[ subject ]</a>
+              <a href="author.html#23">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2008-08-26 22:36:26 +0200 (Tue, 26 Aug 2008)
+New Revision: 23
+
+Modified:
+   trunk/TODO
+   trunk/bl.img
+   trunk/dreamos.img
+   trunk/include/mem/kheap.h
+   trunk/include/version.h
+   trunk/kernel.c
+   trunk/mem/fismem.c
+   trunk/mem/kheap.c
+   trunk/mem/paging.c
+   trunk/shell/shell.c
+Log:
+Bugfix della shell.
+Modificata funzione make_heap, ora inizializza una struttura dati che e' della dimensione della ram
+Piccole pulizie di codice (levate dichiarazioni di funzioni inutili, e affine)
+
+
+Modified: trunk/TODO
+===================================================================
+--- trunk/TODO	2008-08-26 18:24:18 UTC (rev 22)
++++ trunk/TODO	2008-08-26 20:36:26 UTC (rev 23)
+@@ -2,10 +2,8 @@
+ 
+ PROGETTI IMMEDIATI
+ - Revisionare stampa esadecimale. Funzione _kprinthex
+-- Implementare syscall handler
+-- Routine asm per individuare quantita' ram
++- Implementare syscall handler (controllare/terminare)
+ - Le routine di gestione degli irq, devono controllare se effettivamente esiste un IRQ per il device che controllano, in caso affermativo proseguono, in caso negativo si fermano.
+-- Logo dreamos in ASCII ART :D
+ - MMU
+ - Funzioni sullo stato registri EFLAGS e CR*
+ - RIVEDERE PRINTF - Forse non stampa i numeri troppo lunghi - problema degli unsigned int.
+@@ -13,7 +11,6 @@
+ - Fare una mega pulizia del codice
+ - Eliminare il maggior numero di messaggi di errore dalla compilazione
+ - Script che memorizza nei sorci il numero di revisione (genera un file header)
+-- fare in modo che quando stampa &quot;root#~&quot; se premo backspace non cancelli quella scritta.
+ - Comandi: echo - clear
+ - bitmasks per interpretare errori del pagefault.
+ - Rivedere il comando info della shell, probabilmente stampa alcune informazioni sbagliate
+
+Modified: trunk/bl.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/mem/kheap.h
+===================================================================
+--- trunk/include/mem/kheap.h	2008-08-26 18:24:18 UTC (rev 22)
++++ trunk/include/mem/kheap.h	2008-08-26 20:36:26 UTC (rev 23)
+@@ -28,6 +28,7 @@
+ #include &lt;ordered_array.h&gt;
+ extern unsigned int address_cur;
+ 
++//Da eliminare
+ typedef struct{
+     unsigned int magic;
+     unsigned int hole;
+@@ -38,23 +39,31 @@
+     unsigned int magic;
+     unsigned int *header;
+ } footer_t;
++//Fino qua
+ 
++/*!  \struct heap_node_t
++     \brief Struttura dati che mantiene le informazioni su locazioni occupate e libere di memoria
++ */
++typedef struct {
++    unsigned int start_address;/**&lt; L'indirizzo di partenza dell'heap*/
++    unsigned int size;    /**&lt; quanto massimo si puo' espandere*/
++    struct heap_node_t* next;
++}heap_node_t;
++
+ /*!  \struct heap_t
+      \brief Struttura dati che mantiene le informazioni su un singolo heap
+  */
+ typedef struct{
+-    ordered_array_t hole_index; /**&lt; La lista degli holes controllare il tipo*/
+-    unsigned int start_address; /**&lt; L'indirizzo di partenza dell'heap*/
+-    unsigned int end_address; /**&lt; Fino a dove arriva l'heap attualmente*/
+-    unsigned int max_size; /**&lt; quanto massimo si puo' espandere*/
++    heap_node_t* free_list;/**&lt; Locazioni di memoria libere*/
++    heap_node_t* used_list;/**&lt; Locazioni di memoria occupate*/
++    unsigned int max_size; /**&lt; Massima memoria allocabile */
+ } heap_t;
+ 
++
+ heap_t* make_heap(unsigned int, unsigned int, unsigned int); //Rivedere il return value
+ void* kmalloc(unsigned int);
+ void kfree(unsigned int);
+ 
+ void* alloc(unsigned int);
+ 
+-
+-
+ #endif
+\ No newline at end of file
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2008-08-26 18:24:18 UTC (rev 22)
++++ trunk/include/version.h	2008-08-26 20:36:26 UTC (rev 23)
+@@ -11,4 +11,4 @@
+ #define PATCHLEVEL &quot;0&quot;
+ #define EXTRAVERSION &quot;-dreamos&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r21&quot;
++#define REV_NUM &quot;-r22&quot;
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2008-08-26 18:24:18 UTC (rev 22)
++++ trunk/kernel.c	2008-08-26 20:36:26 UTC (rev 23)
+@@ -82,9 +82,9 @@
+     asm(&quot;sti&quot;);
+     _kprintOK();
+     init_paging();   
+-    printf(&quot;End: %d\n&quot;, end);    
++    printf(&quot;End: %x\n&quot;, end);    
+     printf(LNG_PIT8253);
+-    //configure_PIT ();
++    configure_PIT ();
+     _kprintOK();
+ 
+     /*asm (&quot;movl $0, %eax\n&quot;
+
+Modified: trunk/mem/fismem.c
+===================================================================
+--- trunk/mem/fismem.c	2008-08-26 18:24:18 UTC (rev 22)
++++ trunk/mem/fismem.c	2008-08-26 20:36:26 UTC (rev 23)
+@@ -31,11 +31,10 @@
+ size_t tot_mem;
+ size_t num_pages=0;
+ size_t bmp_elements;
+-// byte master_cur_mask;
+-// byte slave_cur_mask;
++
+ mem_struct mem_bitmap;
+-int prova2 = 35;
+ 
++
+ mem_area_pointer mem_info_root = (mem_area_pointer)0x110000;
+ mem_area_pointer mem_info = (mem_area_pointer)0x110000;
+ 
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2008-08-26 18:24:18 UTC (rev 22)
++++ trunk/mem/kheap.c	2008-08-26 20:36:26 UTC (rev 23)
+@@ -22,10 +22,14 @@
+  */
+ 
+ #include &lt;kheap.h&gt;
++#include &lt;fismem.h&gt;
+ #include &lt;paging.h&gt;
+ #include &lt;ordered_array.h&gt;
++#include &lt;stddef.h&gt;
++#include &lt;stdio.h&gt;
+ 
+ extern unsigned int end;
++extern size_t tot_mem;
+ heap_t *kheap = 0;
+ unsigned int address_cur = (unsigned int) &end;
+ 
+@@ -36,8 +40,9 @@
+     address_cur+=size;
+     return (void *) temp;
+ }
++
+ /**
+-  * Crea un nuov heap
++  * Build a new heap
+   * @author Ivan Gualandri
+   * @version 1.0
+   * @param start Indirizzo di inizio del nostro heap
+@@ -47,10 +52,18 @@
+   */
+ heap_t* make_heap(unsigned int start, unsigned int end, unsigned int size){
+     heap_t* new_heap;
++    heap_node_t* first_node;
+     new_heap = (heap_t*)kmalloc(sizeof(heap_t));
+-    new_heap-&gt;hole_index = new_array(10,10,10); //decidere i valori
+-    new_heap-&gt;start_address = start;
+-    new_heap-&gt;end_address = end;
+-    new_heap-&gt;max_size = size;
++    first_node = (heap_node_t*)kmalloc(sizeof(heap_node_t));
++    first_node-&gt;start_address = (unsigned int)&end;
++    first_node-&gt;size = size;
++    new_heap-&gt;max_size = tot_mem-(unsigned int) &end;
++    new_heap-&gt;free_list = first_node;
++    new_heap-&gt;used_list = NULL;
++    printf(&quot;First heap created...\n&quot;);   
++    printf(&quot;Size: %d - Tot mem: %d\n&quot;, first_node-&gt;size, tot_mem);
+     return (heap_t*) new_heap;
++}
++
++void* alloc(unsigned int size){
+ }
+\ No newline at end of file
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2008-08-26 18:24:18 UTC (rev 22)
++++ trunk/mem/paging.c	2008-08-26 20:36:26 UTC (rev 23)
+@@ -33,6 +33,8 @@
+ 
+ unsigned int *current_page_dir;
+ unsigned int *current_page_table;
++extern size_t tot_mem;
++extern unsigned int end;
+ extern heap_t *kheap;
+ extern buddy_t *kbuddy;
+ 
+@@ -66,7 +68,7 @@
+         i++;
+     }        
+     load_pdbr((unsigned int)current_page_dir);
+-    kheap = make_heap(10,10,10);
++    kheap = make_heap(10,10,tot_mem - ((unsigned int) &amp;end));
+     kbuddy = new_buddy();    
+ }
+ 
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2008-08-26 18:24:18 UTC (rev 22)
++++ trunk/shell/shell.c	2008-08-26 20:36:26 UTC (rev 23)
+@@ -59,6 +59,7 @@
+                &quot;kmalloc   - Test a basic kmalloc function\n&quot;
+                &quot;do_fault  - Test a page_fault (WARNING: This hang the OS)\n&quot;
+                &quot;aalogo    - Show an ascii art logo\n&quot;
++               &quot;uname     - Print kernel version\n&quot;
+                &quot;try_buddy - Try buddy mmu\n&quot;);
+ }
+ 
+@@ -106,7 +107,7 @@
+ 	int a = 1;
+ 	aalogo();
+ 
+-        shell_mess = 7;
++    shell_mess = 7;
+ 	for (;;)
+ 	{
+ 		_kputs(&quot;root~# &quot;);
+@@ -171,8 +172,10 @@
+              alloc_buddy(16, kbuddy);
+              printf(&quot;New allocation\n\n&quot;);
+              alloc_buddy(8, kbuddy);
++            cmd[a] = NULL;
+         }
+         else if (!(_kstrncmp(cmd,&quot;aalogo&quot;,6))) aalogo();        
++        else printf(&quot;Error %s\n&quot;, cmd);
+         cmd[a]=NULL;
+ 	}
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000022.html">[Dreamos-dev] r22 - in trunk: . include shell
+</A></li>
+	<LI>Next message: <A HREF="000024.html">[Dreamos-dev] r24 - in trunk: . include include/libc libc shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#23">[ date ]</a>
+              <a href="thread.html#23">[ thread ]</a>
+              <a href="subject.html#23">[ subject ]</a>
+              <a href="author.html#23">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

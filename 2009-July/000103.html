@@ -1,0 +1,107 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r101 - in trunk: . include
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-July/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r101%20-%20in%20trunk%3A%20.%20include&In-Reply-To=%3C200907140916.n6E9G6IN029583%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000102.html">
+   <LINK REL="Next"  HREF="000104.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r101 - in trunk: . include</H1>
+    <B>osiris_h4ck at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r101%20-%20in%20trunk%3A%20.%20include&In-Reply-To=%3C200907140916.n6E9G6IN029583%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r101 - in trunk: . include">osiris_h4ck at mail.berlios.de
+       </A><BR>
+    <I>Tue Jul 14 11:16:06 CEST 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000102.html">[Dreamos-dev] r100 - in trunk: . doc include
+</A></li>
+        <LI>Next message: <A HREF="000104.html">[Dreamos-dev] r102 - branches
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#103">[ date ]</a>
+              <a href="thread.html#103">[ thread ]</a>
+              <a href="subject.html#103">[ subject ]</a>
+              <a href="author.html#103">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: osiris_h4ck
+Date: 2009-07-14 11:16:04 +0200 (Tue, 14 Jul 2009)
+New Revision: 101
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/version.h
+   trunk/start.sh
+Log:
+- Aggiunta funzione di backup nello start.sh per quanto riguarda lo script grub.py
+  che aggiunge, per chi possiede Grub, la voce DreamOS per il Boot nel menu.lst.
+  Adesso, prima di modificare 'menu.lst', crea una copia di backup chiamata 'menu.lst_backup'
+  dalla quale ?\195?\168 possibile ripristinare il menu di Grub in caso di problemi.
+
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-07-14 08:57:04 UTC (rev 100)
++++ trunk/include/version.h	2009-07-14 09:16:04 UTC (rev 101)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL &quot;1.3&quot;
+ #define EXTRAVERSION &quot;-trunk&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r99&quot;
++#define REV_NUM &quot;-r100&quot;
+
+Modified: trunk/start.sh
+===================================================================
+--- trunk/start.sh	2009-07-14 08:57:04 UTC (rev 100)
++++ trunk/start.sh	2009-07-14 09:16:04 UTC (rev 101)
+@@ -96,6 +96,9 @@
+ elif [ &quot;$1&quot; == &quot;grub&quot; ]; then
+ 
+   echo &quot;--------------------------------------------- &quot;
++  echo &quot;Creating backup of menu.lst (/boot/grub/menu.lst_backup) ..&quot;
++  su -c &quot;cp /boot/grub/menu.lst /boot/grub/menu.lst_backup&quot;
++  echo &quot;done..&quot;
+   echo &quot;Launching grub installer script in progress..&quot;
+   echo &quot;&quot;
+   su -c &quot;python grub.py&quot;
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000102.html">[Dreamos-dev] r100 - in trunk: . doc include
+</A></li>
+	<LI>Next message: <A HREF="000104.html">[Dreamos-dev] r102 - branches
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#103">[ date ]</a>
+              <a href="thread.html#103">[ thread ]</a>
+              <a href="subject.html#103">[ subject ]</a>
+              <a href="author.html#103">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

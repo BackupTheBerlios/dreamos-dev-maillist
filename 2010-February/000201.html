@@ -1,0 +1,213 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r199 - in trunk: . boot fs include include/fs utils	utils/include
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-February/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r199%20-%20in%20trunk%3A%20.%20boot%20fs%20include%20include/fs%20utils%0A%09utils/include&In-Reply-To=%3C201002121949.o1CJn0iT016174%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000200.html">
+   <LINK REL="Next"  HREF="000202.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r199 - in trunk: . boot fs include include/fs utils	utils/include</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r199%20-%20in%20trunk%3A%20.%20boot%20fs%20include%20include/fs%20utils%0A%09utils/include&In-Reply-To=%3C201002121949.o1CJn0iT016174%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r199 - in trunk: . boot fs include include/fs utils	utils/include">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Fri Feb 12 20:49:00 CET 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000200.html">[Dreamos-dev] r198 - in trunk: . fs include/fs
+</A></li>
+        <LI>Next message: <A HREF="000202.html">[Dreamos-dev] alias e-mail for members/alias e-mail per i membri
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#201">[ date ]</a>
+              <a href="thread.html#201">[ thread ]</a>
+              <a href="subject.html#201">[ subject ]</a>
+              <a href="author.html#201">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-02-12 20:48:16 +0100 (Fri, 12 Feb 2010)
+New Revision: 199
+
+Added:
+   trunk/boot/grub.img
+Removed:
+   trunk/boot/grub.img
+Modified:
+   trunk/dreamos.img
+   trunk/fs/initrd.c
+   trunk/include/fs/initrd.h
+   trunk/include/fs/vfs.h
+   trunk/include/version.h
+   trunk/initfs
+   trunk/utils/include/initfscp.h
+   trunk/utils/initfscp.c
+Log:
+Aggiunto indicatore del tipo per i file in initfs.
+Modificata open che ora controlla il tipo
+Aggiornato initfs con il nuovo formato
+AGgiornato il file grub.
+Aggiornato initfscp con il nuovo formato.
+
+
+
+Deleted: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Added: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+
+Property changes on: trunk/boot/grub.img
+___________________________________________________________________
+Name: svn:executable
+   + *
+Name: svn:mime-type
+   + application/octet-stream
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-02-11 22:55:47 UTC (rev 198)
++++ trunk/fs/initrd.c	2010-02-12 19:48:16 UTC (rev 199)
+@@ -22,6 +22,7 @@
+ #include &lt;unistd.h&gt;
+ #include &lt;types.h&gt;
+ #include &lt;string.h&gt;
++#include &lt;vfs.h&gt;
+ 
+ char *module_start;
+ initrd_t *fs_specs;
+@@ -93,6 +94,8 @@
+ 	if(cur_irdfd &gt;= MAX_INITRD_DESCRIPTORS) cur_irdfd=0;
+ 	while (j &lt; fs_specs-&gt;nfiles) {
+ 		if(!strcmp(path, module_var[j].fileName)){
++				if(module_var[j].file_type == FS_DIRECTORY || module_var[j].file_type == FS_MOUNTPOINT)
++					return -1;
+ 				ird_descriptors[cur_irdfd].file_descriptor	= j;
+ 				printf(&quot;%s Found. Size: %d FS fd val: %d - ID File val: %d\n&quot;, path, module_var[j].length, cur_irdfd, ird_descriptors[cur_irdfd].file_descriptor);
+ 				ret_fd = cur_irdfd;				
+
+Modified: trunk/include/fs/initrd.h
+===================================================================
+--- trunk/include/fs/initrd.h	2010-02-11 22:55:47 UTC (rev 198)
++++ trunk/include/fs/initrd.h	2010-02-12 19:48:16 UTC (rev 199)
+@@ -39,6 +39,7 @@
+ struct initrd_file_t{
+ 	int magic; /*!&lt; Numero usato come delimitatore da settare a 0xBF*/
+ 	char fileName[FILENAME_LENGTH]; /*!&lt; Nome del file*/
++	short int file_type;
+ 	int  uid; /*!&lt; User id del proprietario del file */
+ 	unsigned int offset; /*!&lt; indirizzo relativo di partenza */
+ 	unsigned int length; /*!&lt; Dimensione del File */
+
+Modified: trunk/include/fs/vfs.h
+===================================================================
+--- trunk/include/fs/vfs.h	2010-02-11 22:55:47 UTC (rev 198)
++++ trunk/include/fs/vfs.h	2010-02-12 19:48:16 UTC (rev 199)
+@@ -28,6 +28,7 @@
+ 
+ #define FS_FILE 0x01
+ #define FS_DIRECTORY 0x02
++#define FS_MOUNTPOINT 0x03
+ 
+ 
+ struct directory_operations {
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2010-02-11 22:55:47 UTC (rev 198)
++++ trunk/include/version.h	2010-02-12 19:48:16 UTC (rev 199)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL &quot;2.0&quot;
+ #define EXTRAVERSION &quot;-trunk&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r182&quot;
++#define REV_NUM &quot;-r199&quot;
+
+Modified: trunk/initfs
+===================================================================
+(Binary files differ)
+
+Modified: trunk/utils/include/initfscp.h
+===================================================================
+--- trunk/utils/include/initfscp.h	2010-02-11 22:55:47 UTC (rev 198)
++++ trunk/utils/include/initfscp.h	2010-02-12 19:48:16 UTC (rev 199)
+@@ -23,11 +23,15 @@
+ 
+ #define FILENAME_LENGTH 64
+ #define MAX_FILES 32
+-#define INITFSCP_VER &quot;0.1&quot;
++#define INITFSCP_VER &quot;0.2&quot;
+ 
++#define FS_FILE 0x01
++#define FS_DIRECTORY 0x02
++
+ struct initrd_file_t{
+ 	int magic;
+ 	char fileName[FILENAME_LENGTH];
++	short int file_type;
+ 	int  uid;
+ 	unsigned int offset;
+ 	unsigned int length;
+
+Modified: trunk/utils/initfscp.c
+===================================================================
+--- trunk/utils/initfscp.c	2010-02-11 22:55:47 UTC (rev 198)
++++ trunk/utils/initfscp.c	2010-02-12 19:48:16 UTC (rev 199)
+@@ -47,6 +47,7 @@
+ 			for (i=0; i&lt;MAX_FILES; i++){
+ 				headers[i].magic = 0xBF;
+ 				strcpy(headers[i].fileName, &quot;&quot;);
++				headers[i].file_type = 0;
+ 				headers[i].uid = 0;
+ 				headers[i].offset = 0;
+ 				headers[i].length = 0;
+@@ -72,6 +73,7 @@
+ 						strcpy(headers[i].fileName, argv[i+1]);
+ 					fseek(fd, 0, SEEK_END);
+ 					printf(&quot;\tFile %s Found! Size: %d\n&quot;, argv[i+1], ftell(fd));				
++					headers[i].file_type = FS_FILE;					
+ 					headers[i].length = ftell(fd);
+ 					headers[i].offset = offset;
+ 					fclose(fd);
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000200.html">[Dreamos-dev] r198 - in trunk: . fs include/fs
+</A></li>
+	<LI>Next message: <A HREF="000202.html">[Dreamos-dev] alias e-mail for members/alias e-mail per i membri
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#201">[ date ]</a>
+              <a href="thread.html#201">[ thread ]</a>
+              <a href="subject.html#201">[ subject ]</a>
+              <a href="author.html#201">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

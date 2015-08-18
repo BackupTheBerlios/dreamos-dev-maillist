@@ -1,0 +1,659 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r91 - in trunk: . doc hardware include	include/hardware mem processore shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-June/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r91%20-%20in%20trunk%3A%20.%20doc%20hardware%20include%0A%09include/hardware%20mem%20processore%20shell&In-Reply-To=%3C200906151403.n5FE3LMl014520%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000091.html">
+   <LINK REL="Next"  HREF="000093.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r91 - in trunk: . doc hardware include	include/hardware mem processore shell</H1>
+    <B>osiris_h4ck at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r91%20-%20in%20trunk%3A%20.%20doc%20hardware%20include%0A%09include/hardware%20mem%20processore%20shell&In-Reply-To=%3C200906151403.n5FE3LMl014520%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r91 - in trunk: . doc hardware include	include/hardware mem processore shell">osiris_h4ck at mail.berlios.de
+       </A><BR>
+    <I>Mon Jun 15 16:03:21 CEST 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000091.html">[Dreamos-dev] r90 - in trunk: . drivers hardware io misc processore
+</A></li>
+        <LI>Next message: <A HREF="000093.html">[Dreamos-dev] r92 - in trunk: drivers include/drivers
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#92">[ date ]</a>
+              <a href="thread.html#92">[ thread ]</a>
+              <a href="subject.html#92">[ subject ]</a>
+              <a href="author.html#92">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: osiris_h4ck
+Date: 2009-06-15 16:03:13 +0200 (Mon, 15 Jun 2009)
+New Revision: 91
+
+Added:
+   trunk/doc/Starting_script_HOWTO.txt
+Modified:
+   trunk/.bochsrc
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/grub.py
+   trunk/hardware/pic8259.c
+   trunk/include/hardware/pic8259.h
+   trunk/include/version.h
+   trunk/kernel.c
+   trunk/mem/kheap.c
+   trunk/processore/handlers.c
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+   trunk/start.sh
+Log:
+- Modifica a enlal enum IRQ_t
+
+- Sostituito AVAILABLE_4 con MOUSE
+
+- Scritto il driver per il mouse (ora visualizza che tasto viene premuto)
+
+- Aggiornato il Makefile per la compilazione
+
+- Init Script (start.sh) riscritto con nuove funzionalit?\195?\160 (guardare l'help)
+  Aggiunte nuove funzioni e l'USE '--compile' se si vuole ri-compilare il kernel prima di effettuare
+  un dato 'comando' e la possibilit?\195?\160 di avviare il 'comando' stesso, senza compilare obbligatoriamente
+
+- Scritto uno HOWTo per comprendere al meglio l'Init Script
+
+- Migliorato lo script di grub e reso pi?\195?\185 user-friendly
+
+- Migliorati i vari output per una migliore e pi?\195?\185 bella resa grafica.
+
+
+Grazie a tutti per la collaborazione, e a DT per il primo abbozzo del driver del mouse
+e a finarfin che si ?\195?\168 occupato della correzione e miglioramento di alcune funzioni (sopra citate)
+delle IRQ.
+
+
+
+
+
+                                                                                Lord Osiris
+                                                                          <A HREF="https://lists.berlios.de/mailman/listinfo/dreamos-dev">osiris at Devils.com</A>
+
+
+
+
+
+Modified: trunk/.bochsrc
+===================================================================
+--- trunk/.bochsrc	2009-06-14 17:53:13 UTC (rev 90)
++++ trunk/.bochsrc	2009-06-15 14:03:13 UTC (rev 91)
+@@ -17,7 +17,7 @@
+ # the &quot;wx&quot; display library.
+ #=======================================================================
+ #config_interface: textconfig
+-config_interface: wx
++#config_interface: wx
+ 
+ #=======================================================================
+ # DISPLAY_LIBRARY
+@@ -59,7 +59,7 @@
+ #display_library: sdl, options=&quot;fullscreen&quot; # startup in fullscreen mode
+ #display_library: term
+ #display_library: win32, options=&quot;legacyF12&quot; # use F12 to toggle mouse
+-display_library: wx
++#display_library: wx
+ #display_library: x, options=&quot;gui_debug&quot;
+ #display_library: x
+ #=======================================================================
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2009-06-14 17:53:13 UTC (rev 90)
++++ trunk/Makefile	2009-06-15 14:03:13 UTC (rev 91)
+@@ -30,6 +30,7 @@
+ OBJ = kernel.o\
+       io/video.o\
+       drivers/keyboard.o\
++      drivers/mouse.o\
+       libc/ctype.o\
+       libc/string.o\
+       io/io.o\
+@@ -82,6 +83,7 @@
+ misc/bitops.o: misc/bitops.c
+ misc/debug.o: misc/debug.c
+ drivers/keyboard.o: drivers/keyboard.c
++drivers/mouse.o: drivers/mouse.c
+ system/syscall.o: system/syscall.c
+ hardware/8253.o: hardware/8253.c
+ shell/shell.o: shell/shell.c
+
+Added: trunk/doc/Starting_script_HOWTO.txt
+===================================================================
+--- trunk/doc/Starting_script_HOWTO.txt	2009-06-14 17:53:13 UTC (rev 90)
++++ trunk/doc/Starting_script_HOWTO.txt	2009-06-15 14:03:13 UTC (rev 91)
+@@ -0,0 +1,56 @@
++#	    The DreamOS Operating System 
++#
++#   Greez to all DreamOS Dev &amp; Community
++#	Lord Osiris at <A HREF="https://lists.berlios.de/mailman/listinfo/dreamos-dev">osiris at Devils.com</A>
++#		    or <A HREF="https://lists.berlios.de/mailman/listinfo/dreamos-dev">diego.stamigni at linux.com</A>
++
++
++This DOC is about the &quot;start.sh&quot; init script that allow you to use many
++functions.
++
++Usage: start.sh --options $command $language
++
++Starting DreamOS Emulation:&quot;
++
++  Usage: '$0 qemu'  -&gt; to use Qemu Emulator
++	 '$0 bochs' -&gt; to use Bochs Emulator
++
++be sure you have one of those, else you can try it from
++floppy drive, or boot it form your grub.. DreamOS can! :) 
++
++However you have the possibility to choose if you want to 
++compile DreamOS or only lunch the 'Emulator'.
++If you want to compile, use the USE Flags '--compile' then
++the command, like:
++
++  Usage: start.sh --compile $emulator
++or any command you like to compile before.
++
++Also you can chose the language for the boot message, it
++can be very important to understanding the OS and do the
++			 debug.
++
++So please add the argv[3] into your option to this launch 
++script, something like that:
++
++  Usage: start.sh --compile $emulator $language
++
++where now language supported is 'it' or 'en'
++  
++If you want, you can install DreamOS on your floppy
++So, it's very simple, just type install in argv[1] then
++your test on emulators:
++
++  Usage: start.sh floppy_install
++
++
++If you want to install DreamOS into your grub, the step
++is very simple, just grub into your argv[1] :-)
++Please, be sure you have python.&quot;
++
++  Usage: start.sh grub
++
++Please Read the HOW To Grub Script to a secure use of it.
++
++
++						  Lord Osiris
+\ No newline at end of file
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/grub.py
+===================================================================
+--- trunk/grub.py	2009-06-14 17:53:13 UTC (rev 90)
++++ trunk/grub.py	2009-06-15 14:03:13 UTC (rev 91)
+@@ -2,6 +2,11 @@
+ import sys
+ import os
+ 
++if os.getuid() != 0:
++	print &quot;--------------------DreamOS v0.1.2 Grub Autogen--------------------&quot;
++	print &quot;[-] You need to run this install script as root!&quot;
++	sys.exit(1)
++
+ def grub_hd(pn):
+ 	letter = pn[2]
+ 	nump = int(pn[3]) - 1
+@@ -48,5 +53,12 @@
+ 	fd.write(&quot;\nroot\t&quot; + partition)
+ 	fd.write(&quot;\nkernel\t&quot; + cwd)
+ 	fd.write(&quot;\nboot\n&quot;)
++fd.close()
+ 
+-fd.close()
++print &quot;&quot;
++print &quot;Changes added to /boot/grub/menu.lst: &quot;
++print &quot;\n+title\tDreamOS v0.1.2 trunk&quot;
++print &quot;+root\t&quot; + partition
++print &quot;+kernel\t&quot; + cwd
++print &quot;+boot\n&quot;
++print &quot;[+] Done.&quot;
+
+Modified: trunk/hardware/pic8259.c
+===================================================================
+--- trunk/hardware/pic8259.c	2009-06-14 17:53:13 UTC (rev 90)
++++ trunk/hardware/pic8259.c	2009-06-15 14:03:13 UTC (rev 91)
+@@ -85,8 +85,6 @@
+     enable_IRQ(TIMER);
+     enable_IRQ(TO_SLAVE_PIC);
+    
+-
+-
+     setup_IRQ();
+     asm(&quot;sti&quot;);
+     i=0;
+
+Modified: trunk/include/hardware/pic8259.h
+===================================================================
+--- trunk/include/hardware/pic8259.h	2009-06-14 17:53:13 UTC (rev 90)
++++ trunk/include/hardware/pic8259.h	2009-06-15 14:03:13 UTC (rev 91)
+@@ -55,7 +55,7 @@
+     AVAILABLE_1,
+     AVAILABLE_2,
+     AVAILABLE_3,
+-    AVAILABLE_4,
++    MOUSE,
+     MATH_CPU,
+     FIRST_HD,
+     SECOND_HD
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-06-14 17:53:13 UTC (rev 90)
++++ trunk/include/version.h	2009-06-15 14:03:13 UTC (rev 91)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL &quot;1.2&quot;
+ #define EXTRAVERSION &quot;-trunk&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r87&quot;
++#define REV_NUM &quot;-r90&quot;
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2009-06-14 17:53:13 UTC (rev 90)
++++ trunk/kernel.c	2009-06-15 14:03:13 UTC (rev 91)
+@@ -93,6 +93,10 @@
+     sinfo = kmalloc(sizeof(struct cpuinfo_generic));
+     get_cpuid (sinfo);
+ 
++    /* Driver mouse init */
++    mouse_init();
++    _kprintOK();
++
+     printf(&quot;\n&quot;);
+     printf(&quot;----\n&quot;);
+     printf(LNG_SHELL);
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2009-06-14 17:53:13 UTC (rev 90)
++++ trunk/mem/kheap.c	2009-06-15 14:03:13 UTC (rev 91)
+@@ -98,8 +98,10 @@
+     new_heap-&gt;free_list = first_node;
+     new_heap-&gt;used_list = NULL;
+     new_heap-&gt;free_nodes = NULL;
+-    printf(&quot;\tFirst heap created...\n&quot;);   
+-    printf(&quot;\tSize: %d - Tot mem: %d - Start address: %x\n&quot;, (new_heap-&gt;free_list)-&gt;size, tot_mem, new_heap);    
++    printf(&quot;  First heap created...\n&quot;);   
++    printf(&quot;  Size: %d\n&quot;
++	   &quot;  Tot mem: %d\n&quot;
++	   &quot;  Start address: %x\n&quot;, (new_heap-&gt;free_list)-&gt;size, tot_mem, new_heap);    
+     return (heap_t*) new_heap;
+ }
+     
+
+Modified: trunk/processore/handlers.c
+===================================================================
+--- trunk/processore/handlers.c	2009-06-14 17:53:13 UTC (rev 90)
++++ trunk/processore/handlers.c	2009-06-15 14:03:13 UTC (rev 91)
+@@ -165,7 +165,12 @@
+     irqn = get_current_irq();  
+     IRQ_s* tmpHandler; 
+     if(irqn&gt;=0) {
+-        tmpHandler = shareHandler[irqn];
++		if(irqn==2) {
++			outportb(SLAVE_PORT,GET_IRR_STATUS);
++			irqn = inportb(SLAVE_PORT);
++			irqn = 8 + find_first_bit(irqn);			
++		}
++        tmpHandler = shareHandler[irqn];		
+ 		if(tmpHandler!=0) {
+ 	    	tmpHandler-&gt;IRQ_func();
+ 	    	#ifdef DEBUG
+@@ -181,8 +186,8 @@
+ 	  } else printf(&quot;irqn: %d\n&quot;, irqn);
+     }
+     else printf(&quot;IRQ N: %d E' arrivato qualcosa che non so gestire &quot;, irqn);
+-    if(irqn&lt;=8) outportb(MASTER_PORT, EOI);
+-    else if(irqn&lt;=16){
++    if(irqn&lt;=8 &amp;&amp; irqn!=2) outportb(MASTER_PORT, EOI);
++    else if(irqn&lt;=16 || irqn==2){	  
+       outportb(SLAVE_PORT, EOI);
+       outportb(MASTER_PORT, EOI);
+     }
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-06-14 17:53:13 UTC (rev 90)
++++ trunk/shell/commands.c	2009-06-15 14:03:13 UTC (rev 91)
+@@ -40,9 +40,9 @@
+   printf(&quot;\n&quot;);
+   printf(&quot;\t\t\t The Dream Operating System \n&quot;
+ 	 &quot;\t\t           v%s.%s%s %s      \n\n&quot;
+-	 &quot;\t\t\t\t Welcome to DreamOS\n&quot;
+-	 &quot;\t\t Where dreams don't become Reality and remain dreams. \n&quot;
+-	 &quot;\t\t\tR.I.P - Rest in peace with dreamos ^_^        \n&quot;, 
++	 &quot;\t\t\t   Welcome to DreamOS\n&quot;
++	 &quot;\t  Where dreams don't become Reality and remain dreams. \n&quot;
++	 &quot;\t          R.I.P - Rest in peace with dreamos ^_^        \n&quot;, 
+ 	 VERSION, PATCHLEVEL, EXTRAVERSION, REV_NUM);
+ 	
+   printf(&quot;\n\n\n\n&quot;);
+@@ -222,6 +222,7 @@
+   _kputs(&quot;Main Developers:\n&quot;);
+   _kcolor('\012');
+    printf(&quot;Shainer - Lisa\n&quot;
++	  &quot;Osiris\n&quot;
+           &quot;Finarfin - Ivan\n\n\n&quot;            
+          );
+ 
+@@ -229,8 +230,8 @@
+   _kputs(&quot;Contributors:\n&quot;);
+   _kcolor('\012');
+   _kputs(&quot;vinc94\n&quot;
+-  		 &quot;tk0\n&quot;
+-  		 &quot;Osiris\n&quot;
++	  &quot;tk0\n&quot;
++	  &quot;DT\n&quot;
+          &quot;Celeron\n&quot;
+ 	 &quot;Hamcha\n&quot;
+          &quot;m0nt0\n&quot;
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-06-14 17:53:13 UTC (rev 90)
++++ trunk/shell/shell.c	2009-06-15 14:03:13 UTC (rev 91)
+@@ -98,7 +98,8 @@
+   int i = 0;
+ 
+   memset(user, '\0', USER_LEN);
+-
++  printf(&quot;\t\t.: Benvenuto in DreamOS :.\n\n&quot;);
++  
+   do {		
+     printf(LNG_USER);
+     scanf (&quot;%23s&quot;,user);
+
+Modified: trunk/start.sh
+===================================================================
+--- trunk/start.sh	2009-06-14 17:53:13 UTC (rev 90)
++++ trunk/start.sh	2009-06-15 14:03:13 UTC (rev 91)
+@@ -6,86 +6,80 @@
+ # <A HREF="https://lists.berlios.de/mailman/listinfo/dreamos-dev">diego.stamigni at linux.com</A>
+ # greez ;
+ 
+-#if test -z &quot;$1&quot; 
+-#then
++
++
++VERS=&quot;make vers&quot;
++CLEAN=&quot;make clean&quot;
++MAKE=&quot;make&quot;
++MAKE_IMG=&quot;make img&quot;
++
++if [ &quot;$1&quot; != &quot;--compile&quot; ]; then
++
++  if [ $UID != &quot;0&quot; ]; then
++      echo &quot;[-] You need to run this install script as root!&quot;
++      exit
++  fi
++
+ if [ &quot;$1&quot; == &quot;help&quot; ]; then
+ echo &quot;&quot;
+ echo &quot;	    The DreamOS Operating System&quot;
++echo &quot;		    Init Script&quot;
+ echo &quot;&quot;
++echo &quot;Usage: '$0 'options' 'command' 'language'&quot;
++echo &quot;------------------------------------------------------&quot;
++echo &quot;Starting DreamOS Emulation:&quot;
++echo &quot;&quot;
+ echo &quot;Usage: '$0 qemu'  -&gt; to use Qemu Emulator&quot;
+ echo &quot;       '$0 bochs' -&gt; to use Bochs Emulator&quot;
+ echo &quot;be sure you have one of those, else you can try it from&quot;
+ echo &quot;floppy drive, or boot it form your grub.. DreamOS can! :) &quot;
++echo &quot;&quot;
++echo &quot;However you have the possibility to choose if you want to &quot;
++echo &quot;compile DreamOS or only lunch the 'Emulator'.&quot;
++echo &quot;If you want to compile, use the USE Flags '--compile' then&quot;
++echo &quot;the command, like:&quot;
++echo &quot;&quot;
++echo &quot;Usage: '$0' '--compile' 'emulator'&quot;
++echo &quot;or any command you like to compile before.&quot;
+ echo &quot;------------------------------------------------------&quot;
+ echo &quot;Also you can chose the language for the boot message, it&quot;
+ echo &quot;can be very important to understanding the OS and do the&quot;
+ echo &quot;			 debug.&quot;
+ echo &quot;&quot;
+-echo &quot;So please add the argv[2] into your option to this launch &quot;
++echo &quot;So please add the argv[3] into your option to this launch &quot;
+ echo &quot;script, something like that:&quot;
+ echo &quot;&quot;
+-echo &quot;Usage: '$0' 'emulator' 'language'&quot;
++echo &quot;Usage: '$0' '--compile' 'emulator' 'language'&quot;
+ echo &quot;where now language supported is 'it' or 'en'&quot;
+-echo &quot;-------------------------------------------------------&quot;
++echo &quot;------------------------------------------------------&quot;
+ echo &quot;&quot;
+ echo &quot;If you want, you can install DreamOS on your floppy&quot;
+ echo &quot;So, it's very simple, just type install in argv[1] then&quot;
+ echo &quot;your test on emulators:&quot;
+ echo &quot;&quot;
+-echo &quot;Usage: '$0' 'install'&quot;
+-echo &quot;-------------------------------------------------------&quot;
++echo &quot;Usage: '$0' 'floppy_install'&quot;
++echo &quot;------------------------------------------------------&quot;
+ echo &quot;&quot;
+ echo &quot;If you want to install DreamOS into your grub, the step&quot;
+ echo &quot;is very simple, just grub into your argv[1] :-)&quot;
+ echo &quot;Please, be sure you have python.&quot;
+ echo &quot;&quot;
+ echo &quot;Usage: '$0' 'grub'&quot;
+-echo &quot;-------------------------------------------------------&quot;
++echo &quot;------------------------------------------------------&quot;
+ exit 1
+-fi
+ 
+-if [ &quot;$2&quot; != NULL ]; then
+-	if [ &quot;$2&quot; == &quot;it&quot; ]; then
+-		echo &quot;Ok! Language '$2' imposted&quot;
+-		make it
+-		echo &quot;-----------------------&gt;&quot;
++elif [ &quot;$1&quot; == &quot;qemu&quot; ] || [ &quot;$1&quot; == &quot;bochs&quot; ]; then
+ 
+-	elif [ &quot;$2&quot; == &quot;en&quot; ]; then
+-		echo &quot;Ok! Language '$2' imposted&quot;
+-        	make en
+-		echo &quot;-----------------------&gt;&quot;
+-	else
+-		echo &quot;Warning: No language traslation declared!&quot;
+-		echo &quot;-----------------------&gt;&quot;
+-	fi		
+-fi
++  if [ &quot;$1&quot; == &quot;qemu&quot; ]; then
++	qemu -fda boot/grub.img
++	exit
++  elif [ &quot;$1&quot; == &quot;bochs&quot; ]; then
++	bochs -f .bochsrc -q
++	exit
++  fi
+ 
+-if [ &quot;$1&quot; == &quot;qemu&quot; ]; then
+-  make clean 
+-  make vers
+-  make
+-  make img
+-  umount boot/os
+-  qemu -fda boot/grub.img
+-  umount boot/os
+-  exit
++elif [ &quot;$1&quot; == &quot;floppy_install&quot; ]; then
+ 
+-elif [ &quot;$1&quot; == &quot;bochs&quot; ]; then
+-  make clean 
+-  make vers
+-  make
+-  make img
+-  umount boot/os
+-  bochs -f .bochsrc -q
+-  umount boot/os
+-  exit
+-
+-elif [ &quot;$1&quot; == &quot;install&quot; ]; then
+-  make clean 
+-  make vers
+-  make
+-  make img
+-  umount boot/os
+   echo &quot;---------------------- &quot;
+   echo &quot;Installing in progres..&quot;
+   make install
+@@ -94,18 +88,21 @@
+   exit
+ 
+ elif [ &quot;$1&quot; == &quot;grub&quot; ]; then
+-  make clean 
+-  make vers
+-  make
+-  make img
+-  umount boot/os
++
+   echo &quot;--------------------------------------------- &quot;
+   echo &quot;Launching grub installer script in progress..&quot;
++  echo &quot;&quot;
+   python grub.py
+   echo &quot;done.&quot;
+   echo &quot;--------------------------------------------- &quot;
+   exit
+ 
++elif [ &quot;$1&quot; == &quot;&quot; ]; then
++  echo &quot;Error: No command inserted!&quot;
++  echo &quot;-----------------------&gt;&quot;
++  echo &quot;Usage: '$0 help'&quot;
++  exit
++
+ else
+   echo &quot;Uhm? What the hell did you insert ? Lool! '$1' ?? I don't know what is it!&quot;
+   echo &quot;Please, read the help!!!&quot;
+@@ -115,3 +112,84 @@
+ 
+ fi
+ 
++else
++
++  if [ $UID != &quot;0&quot; ]; then
++      echo &quot;[-] You need to run this install script as root!&quot;
++      exit
++  fi
++
++if [ &quot;$2&quot; == &quot;qemu&quot; ] || [ &quot;$2&quot; == &quot;bochs&quot; ]; then
++
++  if [ &quot;$2&quot; == &quot;qemu&quot; ]; then
++
++	  if [ &quot;$3&quot; == &quot;it&quot; ]; then
++		  echo &quot;Ok! Language '$2' imposted, done.&quot;
++		  make it                          
++		  echo &quot;-----------------------&gt;&quot;  
++
++	  elif [ &quot;$3&quot; == &quot;en&quot; ]; then
++		  echo &quot;Ok! Language '$2' imposted, done.&quot;
++		  make en                          
++		  echo &quot;-----------------------&gt;&quot;  
++		
++	  else                                     
++		  echo &quot;Warning: No language traslation declared!&quot;
++		  echo &quot;-----------------------&gt;&quot;                 
++	  fi   
++	 $VERS &amp;&amp; $CLEAN &amp;&amp; $MAKE &amp;&amp; $MAKE_IMG
++	 qemu -fda boot/grub.img
++	 exit
++
++  elif [ &quot;$2&quot; == &quot;bochs&quot; ]; then
++
++	  if [ &quot;$3&quot; == &quot;it&quot; ]; then
++		  echo &quot;Ok! Language '$3' imposted, done.&quot;
++		  make it                          
++		  echo &quot;-----------------------&gt;&quot;  
++		  
++	  elif [ &quot;$3&quot; == &quot;en&quot; ]; then
++		  echo &quot;Ok! Language '$3' imposted, done.&quot;
++		  make en                          
++		  echo &quot;-----------------------&gt;&quot;  
++	  else                                     
++		  echo &quot;Warning: No language traslation declared!&quot;
++		  echo &quot;-----------------------&gt;&quot;                 
++	  fi  
++
++	$VERS &amp;&amp; $CLEAN &amp;&amp; $MAKE &amp;&amp; $MAKE_IMG
++	bochs -f .bochsrc -q
++	exit
++
++fi
++
++elif [ &quot;$2&quot; == &quot;floppy_install&quot; ]; then
++
++  $VERS &amp;&amp; $CLEAN &amp;&amp; $MAKE &amp;&amp; $MAKE_IMG
++  echo &quot;---------------------- &quot;
++  echo &quot;Installing in progres..&quot;
++  make install
++  echo &quot;done.&quot;
++  echo &quot;---------------------- &quot;
++  exit
++
++elif [ &quot;$2&quot; == &quot;grub&quot; ]; then
++
++  $VERS &amp;&amp; $CLEAN &amp;&amp; $MAKE &amp;&amp; $MAKE_IMG
++  echo &quot;--------------------------------------------- &quot;
++  echo &quot;Launching grub installer script in progress..&quot;
++  python grub.py
++  echo &quot;done.&quot;
++  echo &quot;--------------------------------------------- &quot;
++  exit
++
++
++elif [ &quot;$2&quot; == &quot;&quot; ]; then
++  echo &quot;Error: No command inserted!&quot;
++  echo &quot;-----------------------&gt;&quot;
++  echo &quot;Usage: '$0 help'&quot;
++  exit
++fi  
++    
++fi
++
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000091.html">[Dreamos-dev] r90 - in trunk: . drivers hardware io misc processore
+</A></li>
+	<LI>Next message: <A HREF="000093.html">[Dreamos-dev] r92 - in trunk: drivers include/drivers
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#92">[ date ]</a>
+              <a href="thread.html#92">[ thread ]</a>
+              <a href="subject.html#92">[ subject ]</a>
+              <a href="author.html#92">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

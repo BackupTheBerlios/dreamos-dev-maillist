@@ -1,0 +1,169 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r115 - in trunk: . fs include/fs shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-August/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r115%20-%20in%20trunk%3A%20.%20fs%20include/fs%20shell&In-Reply-To=%3C200908052100.n75L0sjJ018504%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000116.html">
+   <LINK REL="Next"  HREF="000118.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r115 - in trunk: . fs include/fs shell</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r115%20-%20in%20trunk%3A%20.%20fs%20include/fs%20shell&In-Reply-To=%3C200908052100.n75L0sjJ018504%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r115 - in trunk: . fs include/fs shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Wed Aug  5 23:00:54 CEST 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000116.html">[Dreamos-dev] r114 - in trunk: . shell
+</A></li>
+        <LI>Next message: <A HREF="000118.html">[Dreamos-dev] r116 - in trunk: . include/shell libc shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#117">[ date ]</a>
+              <a href="thread.html#117">[ thread ]</a>
+              <a href="subject.html#117">[ subject ]</a>
+              <a href="author.html#117">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-08-05 23:00:53 +0200 (Wed, 05 Aug 2009)
+New Revision: 115
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/vfs.c
+   trunk/include/fs/vfs.h
+   trunk/shell/commands.c
+Log:
+Sostituito nome di open_dir in get_mountpoint_id
+Tale funzione cerca il mountpoint relativo al path che ho inserito
+Aggiornato comando cd
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2009-08-04 09:34:41 UTC (rev 114)
++++ trunk/fs/vfs.c	2009-08-05 21:00:53 UTC (rev 115)
+@@ -54,6 +54,14 @@
+  	mountpoint_list[1].dev_id = 0;
+  	mountpoint_list[1].start_address = 0;
+  	mountpoint_list[1].operations = kmalloc(sizeof(struct super_node_operations));
++	
++	strcpy(mountpoint_list[2].mountpoint,&quot;/dev/video&quot;); 	
++    mountpoint_list[2].uid = 0;
++ 	mountpoint_list[2].gid = 0;
++ 	mountpoint_list[2].pmask = 0;
++ 	mountpoint_list[2].dev_id = 0;
++ 	mountpoint_list[2].start_address = 0;
++ 	mountpoint_list[2].operations = kmalloc(sizeof(struct super_node_operations));
+ 
+ 	//printf(&quot;Created mountpoint: %s\n&quot;, mountpoint_list[0].mountpoint);
+ 	//printf(&quot;Created mountpoint: %s\n&quot;, mountpoint_list[1].mountpoint);
+@@ -65,17 +73,18 @@
+ 	else return;
+ }
+ 
+-int open_dir(char *path){
+-	int i = 0;
+-	while(i&lt;MAX_MOUNTPOINT ){
+-			if(!strcmp(path, mountpoint_list[i].mountpoint)) {
+-				printf(&quot;Changing dir %s\n&quot;, mountpoint_list[i].mountpoint);
+-				return i;
+-			}
+-			else{
+-				/* Continua a cercare il mountpoint e se nn lo trova torna errore.*/				
+-			}	
+-			i++;
+-		}		
+-		return -1;		
++int get_mountpoint_id(char *path){
++       int i = 0;
++       int last;
++	   last = -1;	   	 
++       while(i&lt;MAX_MOUNTPOINT ){
++                       if(!_kstrncmp(path, mountpoint_list[i].mountpoint, strlen(mountpoint_list[i].mountpoint))) {                 
++							   if(strlen(mountpoint_list[i].mountpoint) &gt; strlen(mountpoint_list[last].mountpoint) &amp;&amp; i&gt;0)  
++                               		last = i;
++							   else last = i;
++                       }					   					   
++                       i++;
++               }
++			   if(last!=-1) printf(&quot;Changing dir %s - %d\n&quot;, mountpoint_list[last].mountpoint, last);
++               return last;
+ }
+
+Modified: trunk/include/fs/vfs.h
+===================================================================
+--- trunk/include/fs/vfs.h	2009-08-04 09:34:41 UTC (rev 114)
++++ trunk/include/fs/vfs.h	2009-08-05 21:00:53 UTC (rev 115)
+@@ -68,6 +68,7 @@
+ 
+ void open_vfs (struct inode *);
+ void close (struct inode *);
++int get_mountpoint_id(char *);
+ int open_dir(char *);
+ int read (struct inode *, int, int, int *);
+ int write (struct inode *, int, int, int *);
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-08-04 09:34:41 UTC (rev 114)
++++ trunk/shell/commands.c	2009-08-05 21:00:53 UTC (rev 115)
+@@ -389,7 +389,8 @@
+ void ls(){
+ 	int i=0, j=0;
+     while ( strcmp(mountpoint_list[i].mountpoint, &quot;&quot;) ) {
+-         	j = j++, i = i++;
++         	j = j++;
++			i = i++;
+     }
+ 	i = 0;
+ 	while( i&lt;j &amp;&amp; strcmp(mountpoint_list[i].mountpoint, &quot;&quot;) ) {
+@@ -413,7 +414,7 @@
+ 	else if(argc &lt;2) printf(&quot;Too few arguments\n&quot;);
+ 	else {
+ 		int i=0;
+-		i = open_dir(argv[1]);
++		i = get_mountpoint_id(argv[1]);
+ 		if(i == -1) printf(&quot;cd: %s: No such file or directory\n&quot;, argv[1]);
+ 		else strcpy(current_user.cur_path, mountpoint_list[i].mountpoint);		
+ 	}
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000116.html">[Dreamos-dev] r114 - in trunk: . shell
+</A></li>
+	<LI>Next message: <A HREF="000118.html">[Dreamos-dev] r116 - in trunk: . include/shell libc shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#117">[ date ]</a>
+              <a href="thread.html#117">[ thread ]</a>
+              <a href="subject.html#117">[ subject ]</a>
+              <a href="author.html#117">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

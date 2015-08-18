@@ -1,0 +1,212 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r264 - in trunk: . include/shell shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-June/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r264%20-%20in%20trunk%3A%20.%20include/shell%20shell&In-Reply-To=%3C20100629124608.ADC254800DF%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000266.html">
+   <LINK REL="Next"  HREF="000268.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r264 - in trunk: . include/shell shell</H1>
+    <B>finarfin at sheep.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r264%20-%20in%20trunk%3A%20.%20include/shell%20shell&In-Reply-To=%3C20100629124608.ADC254800DF%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r264 - in trunk: . include/shell shell">finarfin at sheep.berlios.de
+       </A><BR>
+    <I>Tue Jun 29 14:46:08 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000266.html">[Dreamos-dev] r263 - in trunk: . files include/shell shell
+</A></li>
+        <LI>Next message: <A HREF="000268.html">[Dreamos-dev] r265 - in trunk: . include/shell shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#267">[ date ]</a>
+              <a href="thread.html#267">[ thread ]</a>
+              <a href="subject.html#267">[ subject ]</a>
+              <a href="author.html#267">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-06-29 14:46:08 +0200 (Tue, 29 Jun 2010)
+New Revision: 264
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/shell/commands.h
+   trunk/include/shell/testing.h
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+   trunk/shell/testing.c
+   trunk/shell/user_shell.c
+Log:
+Aggiunto comando di test try_check per test sul controllo utente in passwd.
+Iniziata implementazione ricerca utente all'interno di passwd. 
+Aggiornato help del comando tester. 
+Ora user_chk stampa l'utente inserito e quello presente nella prima riga del file.
+
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/shell/commands.h
+===================================================================
+--- trunk/include/shell/commands.h	2010-06-22 17:59:12 UTC (rev 263)
++++ trunk/include/shell/commands.h	2010-06-29 12:46:08 UTC (rev 264)
+@@ -25,7 +25,7 @@
+ 
+ #include &lt;shell.h&gt;
+ #include &lt;kheap.h&gt;
+-#define MAX_TEST 10
++#define MAX_TEST 12
+ 
+ extern int argc;
+ extern char **argv;
+
+Modified: trunk/include/shell/testing.h
+===================================================================
+--- trunk/include/shell/testing.h	2010-06-22 17:59:12 UTC (rev 263)
++++ trunk/include/shell/testing.h	2010-06-29 12:46:08 UTC (rev 264)
+@@ -27,6 +27,7 @@
+ void try_open();
+ void try_ocreat();
+ void try_syscall();
++void try_check();
+ void show_fd();
+ void test_stat();
+ 
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-06-22 17:59:12 UTC (rev 263)
++++ trunk/shell/commands.c	2010-06-29 12:46:08 UTC (rev 264)
+@@ -524,6 +524,7 @@
+ 					{ &quot;try_syscall&quot;, try_syscall},
+ 					{ &quot;show_fd&quot;, show_fd},
+ 					{ &quot;test_stat&quot;, test_stat},
++					{ &quot;try_check&quot;, try_check},
+ 					{ &quot;--help&quot;, help_tester },
+ 					};
+ 	if (argc != 2) {
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2010-06-22 17:59:12 UTC (rev 263)
++++ trunk/shell/shell.c	2010-06-29 12:46:08 UTC (rev 264)
+@@ -136,7 +136,7 @@
+     printf(LNG_USER_R);
+   } while (!strlen(current_user.username));
+   
+-  user_chk(current_user.username);
++  //user_chk(current_user.username);
+   _kclear();
+   aalogo();
+   printf(&quot;\n\n\n\n&quot;);
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-06-22 17:59:12 UTC (rev 263)
++++ trunk/shell/testing.c	2010-06-29 12:46:08 UTC (rev 264)
+@@ -110,6 +110,8 @@
+ 		&quot;  -&gt; try_printmem      - Print used locations of memory\n&quot;		
+ 		&quot;  -&gt; try_open          - Function to test open() &amp; stdarg() \n&quot;		
+ 		&quot;  -&gt; try_syscall	    - Try some syscall functions\n&quot;
++		&quot;  -&gt; try_check         - Test username if exist\n&quot;
++		&quot;  -&gt; test_stat			- Test stat function\n&quot;
+ 		);	
+ }
+ 
+@@ -128,6 +130,14 @@
+ 	_kputs(&quot;\n&quot;);
+ }
+ 
++void try_check(){
++	char test_name[50];
++	memset(test_name, '\0', 50);
++	printf(&quot;Please insert a username: &quot;); 
++	scanf(&quot;%s&quot;, test_name);
++	user_chk(test_name);
++}
++
+ void try_open(){
+ 	char appoggio[50];
+ 	char prova;
+@@ -191,7 +201,7 @@
+ 
+ void test_stat(){
+ 	struct stat *stats;
+-	printf(&quot;Testing stat functions\n&quot;);
++	printf(&quot;Testing stat functions on README\n&quot;);
+ 	stats = (struct stat*) kmalloc(sizeof(struct stat));
+ 	stat(&quot;README&quot;, stats);
+ 	printf(&quot;Device_id: %d\n&quot;, stats-&gt;st_dev);	
+
+Modified: trunk/shell/user_shell.c
+===================================================================
+--- trunk/shell/user_shell.c	2010-06-22 17:59:12 UTC (rev 263)
++++ trunk/shell/user_shell.c	2010-06-29 12:46:08 UTC (rev 264)
+@@ -16,7 +16,28 @@
+  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+  
++#include &lt;stdio.h&gt;
++#include &lt;vfs.h&gt;
++#include &lt;fcntl.h&gt;
++#include &lt;string.h&gt;
+  
+ int user_chk(char *username){
+-
++	int fd = -1;
++	int i = 0;
++	int err;
++	char appo[50];
++	memset(appo, '\0', 50);
++	printf(&quot;Username provided: %s\n&quot;, username);
++	fd = open(&quot;/passwd&quot;, O_RDONLY,0);
++	if(fd != -1) printf(&quot;File passwd found\n&quot;);
++	else printf(&quot;not found\n&quot;);
++	while(i &lt; 50 || appo[i] != ':'){
++		err = read(fd, &amp;appo[i], 1);
++		if(appo[i] == ':') {
++			appo[i] = '\0'; 
++			break;
++		}
++		else i++;
++	}
++	printf(&quot;%s - %s\n&quot;, username, appo);
+ }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000266.html">[Dreamos-dev] r263 - in trunk: . files include/shell shell
+</A></li>
+	<LI>Next message: <A HREF="000268.html">[Dreamos-dev] r265 - in trunk: . include/shell shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#267">[ date ]</a>
+              <a href="thread.html#267">[ thread ]</a>
+              <a href="subject.html#267">[ subject ]</a>
+              <a href="author.html#267">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

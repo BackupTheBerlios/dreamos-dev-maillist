@@ -1,0 +1,135 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r202 - in trunk: . include/misc libc misc utils
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-February/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r202%20-%20in%20trunk%3A%20.%20include/misc%20libc%20misc%20utils&In-Reply-To=%3C201002211457.o1LEv1aF031998%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000204.html">
+   <LINK REL="Next"  HREF="000206.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r202 - in trunk: . include/misc libc misc utils</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r202%20-%20in%20trunk%3A%20.%20include/misc%20libc%20misc%20utils&In-Reply-To=%3C201002211457.o1LEv1aF031998%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r202 - in trunk: . include/misc libc misc utils">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun Feb 21 15:57:01 CET 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000204.html">[Dreamos-dev] r201 - in trunk: . drivers fs include/fs include/misc	libc mem misc processore shell
+</A></li>
+        <LI>Next message: <A HREF="000206.html">[Dreamos-dev] r203 - trunk
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#205">[ date ]</a>
+              <a href="thread.html#205">[ thread ]</a>
+              <a href="subject.html#205">[ subject ]</a>
+              <a href="author.html#205">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-02-21 15:56:55 +0100 (Sun, 21 Feb 2010)
+New Revision: 202
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/misc/debug.h
+   trunk/libc/stdio.c
+   trunk/misc/debug.c
+   trunk/utils/initfscp.c
+Log:
+Eliminati gli ultimi 2 warning.
+Corretta una stampa in initfscp.c
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/misc/debug.h
+===================================================================
+--- trunk/include/misc/debug.h	2010-02-21 14:34:07 UTC (rev 201)
++++ trunk/include/misc/debug.h	2010-02-21 14:56:55 UTC (rev 202)
+@@ -70,6 +70,6 @@
+ #define REGISTER_TRACE_DISABLE	0x8AE4
+ 
+ void dbg_bochs_print( const unsigned char * );
+-static inline void dbg_bochs_send_cmd( const int, const int );
++inline void dbg_bochs_send_cmd( const int, const int );
+ 
+ #endif /* ! _DEBUG_H */
+
+Modified: trunk/libc/stdio.c
+===================================================================
+--- trunk/libc/stdio.c	2010-02-21 14:34:07 UTC (rev 201)
++++ trunk/libc/stdio.c	2010-02-21 14:56:55 UTC (rev 202)
+@@ -47,7 +47,7 @@
+ {
+   while( *s != 0 ) {
+ 	if (last_Xz &amp;&amp; last_Yz) _kscrolldown ();
+-	*VIDEO_PTRZ++ = s;
++	*VIDEO_PTRZ++ = *s;
+ 	*VIDEO_PTRZ++ = VIDEO_CLRZ;
+ 	_kshiftAll();
+ 	_ksetcursauto();
+
+Modified: trunk/misc/debug.c
+===================================================================
+--- trunk/misc/debug.c	2010-02-21 14:34:07 UTC (rev 201)
++++ trunk/misc/debug.c	2010-02-21 14:56:55 UTC (rev 202)
+@@ -45,7 +45,7 @@
+ /**
+  *  Send cmd to bochs port
+  */
+-static inline void dbg_bochs_send_cmd( const int port, const int cmd )
++inline void dbg_bochs_send_cmd( const int port, const int cmd )
+ {
+ #if defined(BOCHS_DEBUG)
+     outportb(port, cmd);
+
+Modified: trunk/utils/initfscp.c
+===================================================================
+--- trunk/utils/initfscp.c	2010-02-21 14:34:07 UTC (rev 201)
++++ trunk/utils/initfscp.c	2010-02-21 14:56:55 UTC (rev 202)
+@@ -86,7 +86,7 @@
+ 					else
+ 						strcpy(headers[i+(j/2)].fileName, argv[i+j+1]);
+ 					fseek(fd, 0, SEEK_END);
+-					printf(&quot;\tFile %s Found! Size: %d\n&quot;, argv[i+j+1], ftell(fd));				
++					printf(&quot;\tFile %s Found! Size: %ld\n&quot;, argv[i+j+1], ftell(fd));				
+ 					headers[i+(j/2)].file_type = FS_FILE;					
+ 					headers[i+(j/2)].length = ftell(fd);
+ 					headers[i+(j/2)].offset = offset;
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000204.html">[Dreamos-dev] r201 - in trunk: . drivers fs include/fs include/misc	libc mem misc processore shell
+</A></li>
+	<LI>Next message: <A HREF="000206.html">[Dreamos-dev] r203 - trunk
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#205">[ date ]</a>
+              <a href="thread.html#205">[ thread ]</a>
+              <a href="subject.html#205">[ subject ]</a>
+              <a href="author.html#205">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

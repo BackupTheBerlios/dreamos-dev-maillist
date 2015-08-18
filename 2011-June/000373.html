@@ -1,0 +1,146 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r370 - in trunk: . boot mem shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2011-June/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r370%20-%20in%20trunk%3A%20.%20boot%20mem%20shell&In-Reply-To=%3C20110608173804.8A4FA4812D3%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000372.html">
+   <LINK REL="Next"  HREF="000374.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r370 - in trunk: . boot mem shell</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r370%20-%20in%20trunk%3A%20.%20boot%20mem%20shell&In-Reply-To=%3C20110608173804.8A4FA4812D3%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r370 - in trunk: . boot mem shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Wed Jun  8 19:38:04 CEST 2011</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000372.html">[Dreamos-dev] r369 - in trunk: . boot mem shell tasks
+</A></li>
+        <LI>Next message: <A HREF="000374.html">[Dreamos-dev] r371 - in trunk: . boot mem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#373">[ date ]</a>
+              <a href="thread.html#373">[ thread ]</a>
+              <a href="subject.html#373">[ subject ]</a>
+              <a href="author.html#373">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2011-06-08 19:38:02 +0200 (Wed, 08 Jun 2011)
+New Revision: 370
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/mem/paging.c
+   trunk/shell/testing.c
+Log:
+Fixed get_phys_address
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2011-06-03 21:35:37 UTC (rev 369)
++++ trunk/mem/paging.c	2011-06-08 17:38:02 UTC (rev 370)
+@@ -286,6 +286,7 @@
+ 	}        
+     return;
+ }
++
+ /**
+   * Mappa l'indirizzo fisico fis_address in quello logico logic_address
+   * @author Ivan Gualandri
+@@ -305,8 +306,7 @@
+     ptable = BITRANGE (logic_address, 12, 21);
+     printf(&quot;Pdir value: %d, PtableValue: %d\n&quot;, pdir, ptable);
+     printf(&quot;Pdir entry value: %d\n&quot;, get_pagedir_entry(pdir));
+-    if(get_pagedir_entry(pdir)==NULL){
+-		printf(&quot;TODO\n&quot;);		
++    if(get_pagedir_entry(pdir)==NULL){		
+ 		/**TODO
+ 		 * Crate_page_table
+ 		 * Map_new_pdir */		
+@@ -321,16 +321,21 @@
+ 	return;
+ }
+ 
++/**
++  * Ritorna l'indirizzo fisico a cui si riferisce l'indirizzo logico preso in input
++  * @author Ivan Gualandri
++  * @version 1.0
++  * @param address Indirizzo fisico
++  * @return physical address
++  */
+ unsigned int get_phys_address(unsigned int address){
+ 	unsigned int pdir = 0;
+ 	unsigned int ptable = 0;
+-	//unsigned int* tmp;
+-	//tmp = 0xFFC00518;
+ 	pdir = BITRANGE (address, 22, 31);
+     ptable = BITRANGE (address, 12, 21);
+-    printf(&quot;GetPhys - Pdir: %d, PTable: %d\n&quot;, pdir,ptable);
+-    if(ptable!=0) printf(&quot;PhysAddress: %x\n&quot;, get_pagetable_entry(pdir, ptable));
+-	return 0;
++    //printf(&quot;GetPhys - Pdir: %d, PTable: %d\n&quot;, pdir,ptable);
++    //suif(ptable!=0) printf(&quot;PhysAddress: %x\n&quot;, get_pagetable_entry(pdir, ptable));
++	return get_pagetable_entry(pdir, ptable);
+ }
+ 
+ void free_logical_page(unsigned int address){
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2011-06-03 21:35:37 UTC (rev 369)
++++ trunk/shell/testing.c	2011-06-08 17:38:02 UTC (rev 370)
+@@ -258,7 +258,7 @@
+ 	unsigned int *tmp = kmalloc(sizeof(int));
+ 	printf(&quot;Testing map_address\n&quot;);
+ 	map_address(0x0010000, (unsigned int)tmp);
+-	get_phys_address((unsigned int)tmp);
++	printf(&quot;GetPhysAddress: %x\n&quot;, get_phys_address((unsigned int)tmp));
+ 	//map_kernel();
+ 	return;
+ }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000372.html">[Dreamos-dev] r369 - in trunk: . boot mem shell tasks
+</A></li>
+	<LI>Next message: <A HREF="000374.html">[Dreamos-dev] r371 - in trunk: . boot mem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#373">[ date ]</a>
+              <a href="thread.html#373">[ thread ]</a>
+              <a href="subject.html#373">[ subject ]</a>
+              <a href="author.html#373">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

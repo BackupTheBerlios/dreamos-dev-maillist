@@ -1,0 +1,160 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r84 - in trunk: . include shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-May/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r84%20-%20in%20trunk%3A%20.%20include%20shell&In-Reply-To=%3C200905261932.n4QJWNU9022848%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000084.html">
+   <LINK REL="Next"  HREF="000086.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r84 - in trunk: . include shell</H1>
+    <B>shainer at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r84%20-%20in%20trunk%3A%20.%20include%20shell&In-Reply-To=%3C200905261932.n4QJWNU9022848%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r84 - in trunk: . include shell">shainer at mail.berlios.de
+       </A><BR>
+    <I>Tue May 26 21:32:23 CEST 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000084.html">[Dreamos-dev] r83 - in trunk: . include include/io include/libc	include/misc io libc misc
+</A></li>
+        <LI>Next message: <A HREF="000086.html">[Dreamos-dev] r85 - in trunk: . include io mem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#85">[ date ]</a>
+              <a href="thread.html#85">[ thread ]</a>
+              <a href="subject.html#85">[ subject ]</a>
+              <a href="author.html#85">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: shainer
+Date: 2009-05-26 21:32:22 +0200 (Tue, 26 May 2009)
+New Revision: 84
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/version.h
+   trunk/shell/shell.c
+Log:
+Apportata modifica secondaria all'organizzazione dei comandi nella shell
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-05-24 17:18:39 UTC (rev 83)
++++ trunk/include/version.h	2009-05-26 19:32:22 UTC (rev 84)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL &quot;1.2&quot;
+ #define EXTRAVERSION &quot;-trunk&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r82&quot;
++#define REV_NUM &quot;-r83&quot;
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-05-24 17:18:39 UTC (rev 83)
++++ trunk/shell/shell.c	2009-05-26 19:32:22 UTC (rev 84)
+@@ -41,6 +41,11 @@
+ 
+ #define NUM_COM 14
+ 
++struct cmd {
++	const char cmdname[CMD_LEN];
++	void (*h_func)(void);
++};
++
+ /*
+  * Inserisce gli argomenti di un comando in un array di stringhe
+  * argc = numero degli argomenti
+@@ -73,29 +78,22 @@
+   char *cmd_ptr;
+   char *user = kmalloc(USER_LEN);
+ 
+-  const char *commands[NUM_COM + 1] = { 
+-      &quot;help&quot;, &quot;clear&quot;, &quot;poweroff&quot;, &quot;kmalloc&quot;, &quot;do_fault&quot;, 
+-      &quot;aalogo&quot;, &quot;uname&quot;, &quot;printmem&quot;, &quot;credits&quot;, &quot;sleep&quot;, 
+-      &quot;cpuid&quot;, &quot;date&quot;, &quot;echo&quot;, &quot;answer&quot;, NULL 
+-      };
++  static struct cmd shell_cmd[NUM_COM] = {
++	{ &quot;aalogo&quot;,   aalogo      },
++	{ &quot;clear&quot;,    _kclear     },
++	{ &quot;poweroff&quot;, poweroff    },
++	{ &quot;kmalloc&quot;,  kmalloc_try },
++	{ &quot;do_fault&quot;, do_fault    },
++	{ &quot;uname&quot;,    uname_cmd   },
++	{ &quot;printmem&quot;, printmem    },
++	{ &quot;credits&quot;,  credits     },
++	{ &quot;sleep&quot;,    sleep       },
++	{ &quot;cpuid&quot;,    cpuid 	  },
++	{ &quot;date&quot;,     date 	  },
++	{ &quot;echo&quot;,     echo 	  },
++	{ &quot;help&quot;,     help	  },
++        };
+ 
+-  void (*routines[NUM_COM])(void) = { 
+-      help, 
+-      _kclear, 
+-      poweroff, 
+-      kmalloc_try, 
+-      do_fault, 
+-      aalogo, 
+-      uname_cmd, 
+-      printmem, 
+-      credits, 
+-      sleep_cmd, 
+-      cpuid, 
+-      date, 	
+-      echo,
+-      answer 
+-      };
+-
+   int i = 0;
+ 
+   memset(user, '\0', USER_LEN);
+@@ -124,8 +122,8 @@
+         goto end;
+ 
+     for (i = NUM_COM; i &gt;= 0; --i) {
+-        if(strcmp(argv[0], commands[i]) == NULL) {
+-            (*routines[i])();
++        if(strcmp(argv[0], shell_cmd[i].cmdname) == NULL) {
++            (*shell_cmd[i].h_func)();
+             break;
+         }
+     }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000084.html">[Dreamos-dev] r83 - in trunk: . include include/io include/libc	include/misc io libc misc
+</A></li>
+	<LI>Next message: <A HREF="000086.html">[Dreamos-dev] r85 - in trunk: . include io mem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#85">[ date ]</a>
+              <a href="thread.html#85">[ thread ]</a>
+              <a href="subject.html#85">[ subject ]</a>
+              <a href="author.html#85">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

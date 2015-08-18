@@ -1,0 +1,625 @@
+From shainer at mail.berlios.de  Fri Nov 14 22:41:00 2008
+From: shainer at mail.berlios.de (shainer at BerliOS)
+Date: Fri, 14 Nov 2008 22:41:00 +0100
+Subject: [Dreamos-dev] r40 - in trunk: include/mem mem misc shell
+Message-ID: <200811142141.mAELf0gh026619@sheep.berlios.de>
+
+Author: shainer
+Date: 2008-11-14 22:40:59 +0100 (Fri, 14 Nov 2008)
+New Revision: 40
+
+Modified:
+   trunk/include/mem/kheap.h
+   trunk/mem/kheap.c
+   trunk/misc/ordered_list.c
+   trunk/shell/shell.c
+Log:
+Prima versione della funzione free() per liberare indirizzi, con merge attivato; aggiunto comando free per testarla
+
+Modified: trunk/include/mem/kheap.h
+===================================================================
+--- trunk/include/mem/kheap.h	2008-10-27 20:47:04 UTC (rev 39)
++++ trunk/include/mem/kheap.h	2008-11-14 21:40:59 UTC (rev 40)
+@@ -54,6 +54,9 @@
+ heap_node_t* alloc_node();
+ 
+ void* alloc(unsigned int, heap_t*);
++void free (void *);
+ 
++void print_heap_list (heap_node_t *);
++
+ #endif
+ 
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2008-10-27 20:47:04 UTC (rev 39)
++++ trunk/mem/kheap.c	2008-11-14 21:40:59 UTC (rev 40)
+@@ -47,8 +47,6 @@
+ /* Test procedure ("try_heap" shell command") */
+ void try_alloc()
+ {
+-    heap_node_t *navigator;
+-    int count=0;
+    
+     printf("try_alloc(): Used list address: %d, Value: %d\n", &(kheap->used_list), kheap->used_list);
+     alloc(5000, kheap);
+@@ -56,13 +54,7 @@
+     alloc(50, kheap);
+     alloc(100, kheap);
+ 
+-    navigator = kheap->used_list;
+-    printf("Navigating all the list...\n");
+-
+-    while(navigator) {
+-        printf("%d) Current_element->start_address: %d\n", ++count, navigator->start_address);
+-        navigator = navigator->next;
+-   }
++    print_heap_list (kheap->used_list);
+ }
+ 
+ /**
+@@ -168,4 +160,94 @@
+     temp = node_address;
+     node_address = node_address + sizeof(heap_node_t);
+     return (heap_node_t*) temp;
+-}
+\ No newline at end of file
++}
++
++/**
++  * Free a block of memory
++  * @author shainer
++  * @version 1.0
++  * @param Start_address of the block
++  * @return none
++  */
++void free (void *location)
++{
++  heap_node_t *busy = kheap->used_list;
++  heap_node_t *prev = busy;
++  heap_node_t *free = kheap->free_list;
++  heap_node_t *n2;
++
++  if ((unsigned int)location % 4 != 0)
++    printf ("Indirizzo non allineato a 4kb\n");
++
++  while (busy) {
++    if (busy->start_address == location) {
++      if (prev == busy) { /* node is the first */
++        kheap->used_list = busy->next;
++      } else
++        prev->next = busy->next;
++        
++      insert_list (busy, &(kheap->free_list)); // insert node in the free_list
++
++      /* 
++       * Deallocation finished, starting merge...
++       * I need "busy", the next (n2) and the previous (prev) node
++       */
++      n2 = kheap->free_list;
++      prev = kheap->free_list;
++      while (n2 != busy) {
++        prev = n2;
++        n2 = n2->next;
++      }
++      n2 = busy->next;
++
++      printf ("--Pre merge--\n");
++      printf ("Prev address: %d, size: %d\n", prev->start_address, prev->size);
++      printf ("Busy address: %d, size: %d\n", busy->start_address, busy->size);
++      if (n2)
++        printf ("N2 address: %d, size %d\n\n", n2->start_address, n2->size);
++
++      /* Merge busy into prev */
++      if (prev != busy && (prev->start_address + prev->size) == busy->start_address) {
++        printf ("Backward merge\n");
++        prev->size += busy->size;
++        prev->next = n2;
++      }
++      /* Merge n2 into busy */
++      if (n2 && (busy->start_address + busy->size) == n2->start_address) {
++        printf ("Forward merge\n");
++        busy->size += n2->size;
++        busy->next = n2->next;
++      }
++
++      break;
++    }
++    prev = busy;
++    busy = busy->next;
++  }
++
++  if (!busy)
++    printf ("Address not found in list\n");
++
++  printf("Navigating used list...\n");
++  print_heap_list (kheap->used_list);
++  printf("Navigating free list...\n");
++  print_heap_list (kheap->free_list);
++}
++
++/**
++  * Print a heap list
++  * @author shainer
++  * @version 1.0
++  * @param list List to be printed
++  */
++void print_heap_list (heap_node_t *list)
++{
++   int count=0;
++
++   while (list) {
++     printf ("%d) Current->start_address: %d\n", count++, list->start_address);
++     list = list->next;
++   }
++   printf ("\n");
++}
++
+
+Modified: trunk/misc/ordered_list.c
+===================================================================
+--- trunk/misc/ordered_list.c	2008-10-27 20:47:04 UTC (rev 39)
++++ trunk/misc/ordered_list.c	2008-11-14 21:40:59 UTC (rev 40)
+@@ -29,7 +29,7 @@
+ /** 
+   * Insert a new element in the list
+   * @author shainer
+-  * @version 0.1
++  * @version 0.2
+   * @param new_node New element
+   * @param list Destination list
+   * @return none
+@@ -49,8 +49,14 @@
+       swap = swap->next;
+       if (!swap) break;
+     }
+-    previous->next = new_node;
+-    new_node->next = swap;             
++
++    if (previous == swap) { /* new_node is to become the new first one */
++      *ulist = new_node;
++      new_node->next = swap;
++    } else { /* new_node is in the middle of the list */
++      previous->next = new_node;
++      new_node->next = swap;
++    }             
+   }
+ }
+ 
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2008-10-27 20:47:04 UTC (rev 39)
++++ trunk/shell/shell.c	2008-11-14 21:40:59 UTC (rev 40)
+@@ -196,6 +196,13 @@
+             try_alloc();
+         }
+ 
++	else if (!(_kstrncmp(cmd,"free",4))) {
++	    unsigned int ptr = 425532;
++	    free(ptr);
++	    ptr = 433724;
++ 	    free(ptr);
++	}
++
+         else if (!(_kstrncmp(cmd,"try_buddy",9)))
+         {
+              printf("L'indirizzo di kbuddy e': 0x%x\n", kbuddy);
+@@ -285,6 +292,7 @@
+            "uname     - Print kernel version, try uname --help for more info\n"
+            "try_buddy - Try buddy mmu\n"
+            "try_heap  - Try heap mmu\n"
++           "free      - Try free() with merge\n"
+            "credits  - Show DreamOS credists\n"
+ 	       "echo      - Print some lines of text\n");
+ }
+
+
+
+From finarfin at mail.berlios.de  Sun Nov 23 23:22:51 2008
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Sun, 23 Nov 2008 23:22:51 +0100
+Subject: [Dreamos-dev] r41 - in trunk: . include mem shell
+Message-ID: <200811232222.mANMMpqQ002670@sheep.berlios.de>
+
+Author: finarfin
+Date: 2008-11-23 23:22:51 +0100 (Sun, 23 Nov 2008)
+New Revision: 41
+
+Modified:
+   trunk/Makefile
+   trunk/include/version.h
+   trunk/mem/kheap.c
+   trunk/mem/paging.c
+   trunk/shell/shell.c
+Log:
+Pulizia del codice.
+Eliminati diversi warning in kheap.c
+Fatto in modo che le stampe di debug in kheap_c compaiano solo se abilitate da una define.
+Correzione di un bug che dopo l'esecuzione in sequenza di try_heap, free e di nuovo try_heap
+non riusciva ad aggiornare correttamente le liste dei nodi liberi e usati.
+Rimozione dalla compilazione e dai sorgenti in cui era incluso di kbuddy.c e kbuddy.h in quanto non 
+piu usati.
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2008-11-14 21:40:59 UTC (rev 40)
++++ trunk/Makefile	2008-11-23 22:22:51 UTC (rev 41)
+@@ -9,7 +9,7 @@
+ 
+ CFLAGS = -nostdlib -fomit-frame-pointer -fno-builtin -fno-stack-protector -Wall -march=i686 -m32 -I./include -I./include/io -I./include/drivers -I./include/libc -I./include/processore -I./include/hardware -I./include/mem -I./include/system -I./include/shell -I./include/misc
+ 
+-OBJ = kernel.o io/video.o drivers/keyboard.o libc/ctype.o libc/string.o io/io.o libc/stdio.o hardware/cpuid.o hardware/keyboard.o processore/gdt.o processore/idt.o processore/handlers.o hardware/pic8259.o mem/fismem.o mem/paging.o mem/kheap.o mem/buddy.o misc/ordered_array.o misc/ordered_list.o system/syscall.o hardware/8253.o shell/shell.o
++OBJ = kernel.o io/video.o drivers/keyboard.o libc/ctype.o libc/string.o io/io.o libc/stdio.o hardware/cpuid.o hardware/keyboard.o processore/gdt.o processore/idt.o processore/handlers.o hardware/pic8259.o mem/fismem.o mem/paging.o mem/kheap.o misc/ordered_array.o misc/ordered_list.o system/syscall.o hardware/8253.o shell/shell.o
+ 
+ dreamos.img: bl.img kernel.bin
+ 	mv kernel.bin dreamos.img
+@@ -35,7 +35,6 @@
+ mem/fismem.o: mem/fismem.c
+ mem/paging.o: mem/paging.c
+ mem/kheap.o: mem/kheap.c
+-mem/buddy.o: mem/buddy.c
+ misc/ordered_array.o: misc/ordered_array.c
+ misc/ordered_list.o: misc/ordered_list.c
+ drivers/keyboard.o: drivers/keyboard.c
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2008-11-14 21:40:59 UTC (rev 40)
++++ trunk/include/version.h	2008-11-23 22:22:51 UTC (rev 41)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "0"
+ #define EXTRAVERSION "-dreamos"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r38"
++#define REV_NUM "-r40"
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2008-11-14 21:40:59 UTC (rev 40)
++++ trunk/mem/kheap.c	2008-11-23 22:22:51 UTC (rev 41)
+@@ -29,6 +29,7 @@
+ #include <stddef.h>
+ #include <stdio.h>
+ 
++// #define DEBUG 1
+ extern unsigned int end;
+ extern size_t tot_mem;
+ heap_t *kheap;
+@@ -53,8 +54,11 @@
+     alloc(60, kheap);
+     alloc(50, kheap);
+     alloc(100, kheap);
+-
++//     alloc(6000, kheap);    
++    printf("Used\n");
+     print_heap_list (kheap->used_list);
++    printf("Free\n");
++    print_heap_list (kheap->free_list);
+ }
+ 
+ /**
+@@ -71,7 +75,7 @@
+     heap_t* new_heap;
+     heap_node_t* first_node;
+ 
+-    new_heap = 0xC0000000;
++    new_heap = (heap_t*)0xC0000000;
+     node_address = 0xC0000000 + sizeof(heap_t);
+ //     new_heap = (heap_t*)kmalloc(sizeof(heap_t));
+ 
+@@ -105,10 +109,11 @@
+     heap_node_t* free_heap_list = cur_heap->free_list;    
+     heap_node_t* prev_node;
+     if(size%4096 !=0)
+-      n_pages++;
++      n_pages++;    
++    #ifdef DEBUG
+     printf("----\n");
+     printf("Number of pages: %d ", n_pages);
+-    
++    #endif
+     prev_node = free_heap_list;
+ 
+     /* Look for a free block of memory in the heap's free memory list */    
+@@ -117,35 +122,45 @@
+         aval_pages = free_heap_list->size/4096;
+         if(free_heap_list->size%4096 !=0)
+             aval_pages++;
++        #ifdef DEBUG
+         printf("Available_pages: %d\n", aval_pages);
++        #endif
+         if(aval_pages > n_pages){
++            #ifdef DEBUG
+             printf("Node should be splitted\n");
++            #endif
+             new_node = (heap_node_t*)alloc_node();
+             new_node->start_address = free_heap_list->start_address;
+             new_node->next = NULL;
+             new_node->size = n_pages*0x1000;
+             insert_list (new_node, &(cur_heap->used_list));
+             free_heap_list->size = (free_heap_list->size) - (n_pages*0x1000);
+-            free_heap_list->start_address = free_heap_list->start_address + (n_pages*0x1000);        
++            free_heap_list->start_address = free_heap_list->start_address + (n_pages*0x1000);
++            #ifdef DEBUG
++            printf("New_node -> Size: %d, start_address: %d\n", new_node->size, new_node->start_address);
++            #endif
+         }
+         else if(aval_pages == n_pages){
+-            insert_list (free_heap_list, &(cur_heap->used_list));
+-            prev_node->next = free_heap_list->next;
+-            printf("\n");    
+-        }
+-
+-        printf("New_node -> Size: %d, start_address: %d\n", new_node->size, new_node->start_address);
+-        printf("free_heap_list -> Actual size: %d, start_address: %d\n", free_heap_list->size, free_heap_list->start_address);
++            if(prev_node == free_heap_list) {                
++                kheap->free_list = free_heap_list->next;
++            }
++            else prev_node->next = free_heap_list->next;
++            insert_list (free_heap_list, &(cur_heap->used_list));            
++        }        
++        #ifdef DEBUG        
++        printf("free_heap_list -> Actual size: %d, start_address: %d\n", free_heap_list->size,        free_heap_list->start_address);
+         printf("----\n");
+-        
++        #endif
+         break;
+       }
+-      else {
++      else {                
+         prev_node = free_heap_list;
+-        free_heap_list = free_heap_list->next;
+-        }      
++        free_heap_list = (heap_node_t*)free_heap_list->next;
++      }      
+    }
++   #ifdef DEBUG
+    printf("Prev_node: %d \n", prev_node->start_address);
++   #endif
+    return (void *)new_node;
+ }
+ 
+@@ -173,16 +188,16 @@
+ {
+   heap_node_t *busy = kheap->used_list;
+   heap_node_t *prev = busy;
+-  heap_node_t *free = kheap->free_list;
++//   heap_node_t *free = kheap->free_list;
+   heap_node_t *n2;
+ 
+   if ((unsigned int)location % 4 != 0)
+     printf ("Indirizzo non allineato a 4kb\n");
+ 
+   while (busy) {
+-    if (busy->start_address == location) {
++    if (busy->start_address == (unsigned int)location) {
+       if (prev == busy) { /* node is the first */
+-        kheap->used_list = busy->next;
++        kheap->used_list = (heap_node_t*)busy->next;
+       } else
+         prev->next = busy->next;
+         
+@@ -196,25 +211,29 @@
+       prev = kheap->free_list;
+       while (n2 != busy) {
+         prev = n2;
+-        n2 = n2->next;
++        n2 = (heap_node_t*)n2->next;
+       }
+-      n2 = busy->next;
+-
++      n2 = (heap_node_t*)busy->next;
++      #ifdef DEBUG
+       printf ("--Pre merge--\n");
+       printf ("Prev address: %d, size: %d\n", prev->start_address, prev->size);
+-      printf ("Busy address: %d, size: %d\n", busy->start_address, busy->size);
++      printf ("Busy address: %d, size: %d\n", busy->start_address, busy->size);      
+       if (n2)
+         printf ("N2 address: %d, size %d\n\n", n2->start_address, n2->size);
+-
++      #endif
+       /* Merge busy into prev */
+       if (prev != busy && (prev->start_address + prev->size) == busy->start_address) {
++        #ifdef DEBUG
+         printf ("Backward merge\n");
++        #endif
+         prev->size += busy->size;
+         prev->next = n2;
+       }
+       /* Merge n2 into busy */
+       if (n2 && (busy->start_address + busy->size) == n2->start_address) {
++        #ifdef DEBUG
+         printf ("Forward merge\n");
++        #endif
+         busy->size += n2->size;
+         busy->next = n2->next;
+       }
+@@ -222,16 +241,11 @@
+       break;
+     }
+     prev = busy;
+-    busy = busy->next;
++    busy = (heap_node_t*)busy->next;
+   }
+ 
+   if (!busy)
+     printf ("Address not found in list\n");
+-
+-  printf("Navigating used list...\n");
+-  print_heap_list (kheap->used_list);
+-  printf("Navigating free list...\n");
+-  print_heap_list (kheap->free_list);
+ }
+ 
+ /**
+@@ -243,10 +257,10 @@
+ void print_heap_list (heap_node_t *list)
+ {
+    int count=0;
+-
++   int prova;
+    while (list) {
+-     printf ("%d) Current->start_address: %d\n", count++, list->start_address);
+-     list = list->next;
++     printf ("%d) Current->start_address: %d size: %d\n", count++, list->start_address, list->size);     
++     list = (heap_node_t*)list->next;
+    }
+    printf ("\n");
+ }
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2008-11-14 21:40:59 UTC (rev 40)
++++ trunk/mem/paging.c	2008-11-23 22:22:51 UTC (rev 41)
+@@ -28,7 +28,6 @@
+ #include <video.h>
+ #include <stddef.h>
+ #include <kheap.h>
+-#include <buddy.h>
+ // #define DEBUG 1
+ 
+ #define BITMASK(len) ((1<<((len) + 1)) - 1)
+@@ -39,8 +38,8 @@
+ extern size_t tot_mem;
+ extern unsigned int end;
+ extern heap_t *kheap;
+-extern buddy_t *kbuddy;
+ 
++
+ void init_paging(){
+     int i;
+     printf("Abilito Paging: In lavorazione....");
+@@ -72,7 +71,6 @@
+     }        
+     load_pdbr((unsigned int)current_page_dir);
+     kheap = make_heap(10,10,tot_mem - ((unsigned int) &end));
+-//     kbuddy = new_buddy();    
+ }
+ 
+ /**
+@@ -223,38 +221,37 @@
+   */
+ void page_fault_handler (int ecode)
+ {
+-        unsigned int fault_addr;
++    unsigned int fault_addr;
+ 	int pdir, ptable;
+-        unsigned int pd_entry, pt_entry;
+-        unsigned int *new_pt;
++    unsigned int pd_entry, pt_entry;
++    unsigned int *new_pt;
+ 	void *new_p;
+ 
+         /* Ricava l'indirizzo che ha causato l'eccezione */
+-        asm ("movl %%cr2, %0"
+-             :"=r" (fault_addr));
++    asm ("movl %%cr2, %0":"=r" (fault_addr));
+ 
+-        if ((ecode & 0b0011) == 2 || (ecode & 0b0011) == 0) {
+-          pdir = BITRANGE (fault_addr, 22, 31);
+-	  ptable = BITRANGE (fault_addr, 12, 21);
+-          printf ("PD entry num: %d, PT entry num: %d, Indirizzo: %d\n", ptable, pdir, fault_addr);
++    if ((ecode & 0b0011) == 2 || (ecode & 0b0011) == 0) {
++    pdir = BITRANGE (fault_addr, 22, 31);
++    ptable = BITRANGE (fault_addr, 12, 21);
++    printf ("PD entry num: %d, PT entry num: %d, Indirizzo: %d\n", ptable, pdir, fault_addr);
+ 
+  	  /* Mappatura della pagedir se non presente */
+-	  pd_entry = get_pagedir_entry (pdir);
+-	  printf ("Entry corrente della pagedir: %d\n", pd_entry);
+-          if (pd_entry == 0) {
++	pd_entry = get_pagedir_entry (pdir);
++	printf ("Entry corrente della pagedir: %d\n", pd_entry);
++    if (pd_entry == 0) {
+ 	    new_pt = create_pageTable();
+-            set_pagedir_entry_ric (pdir, new_pt, PD_PRESENT|SUPERVISOR|WRITE, 0);
++        set_pagedir_entry_ric (pdir, new_pt, PD_PRESENT|SUPERVISOR|WRITE, 0);
+ 	    printf ("Nuova entry dopo la mappatura: %d\n", get_pagedir_entry (pdir));
+-          }
++    }
+ 
+-	  /* Mappatura della pagetable se non presente */
+-	  pt_entry = get_pagetable_entry (pdir, ptable);
+-	  printf ("Entry corrente della pagetable: %d\n", pt_entry);
+-	  if (pt_entry == 0) {
++	/* Mappatura della pagetable se non presente */
++	pt_entry = get_pagetable_entry (pdir, ptable);
++	printf ("Entry corrente della pagetable: %d\n", pt_entry);
++	if (pt_entry == 0) {
+ 	    new_p = request_pages (1, ADD_LIST);
+ 	    set_pagetable_entry_ric (pdir, ptable, new_p, PD_PRESENT|SUPERVISOR|WRITE, 0);
+ 	    printf ("Nuova entry dopo la mappatura: %d\n", get_pagetable_entry (pdir, ptable));
+ 	  }
+ 	}        
+-        return;
++    return;
+ }
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2008-11-14 21:40:59 UTC (rev 40)
++++ trunk/shell/shell.c	2008-11-23 22:22:51 UTC (rev 41)
+@@ -41,10 +41,9 @@
+ #include <use.h>
+ #include <shell.h>
+ #include <kheap.h>
+-#include <buddy.h>
+ #include <version.h>
+-
+-extern buddy_t* kbuddy;
++    
++extern heap_t *kheap;
+ int argc;
+ char **argv;
+ 
+@@ -195,22 +194,20 @@
+         else if (!(_kstrncmp(cmd,"try_heap",8))){
+             try_alloc();
+         }
+-
+-	else if (!(_kstrncmp(cmd,"free",4))) {
+-	    unsigned int ptr = 425532;
+-	    free(ptr);
+-	    ptr = 433724;
+- 	    free(ptr);
+-	}
+-
+-        else if (!(_kstrncmp(cmd,"try_buddy",9)))
+-        {
+-             printf("L'indirizzo di kbuddy e': 0x%x\n", kbuddy);
+-             alloc_buddy(16, kbuddy);
+-             printf("New allocation\n\n");
+-             alloc_buddy(8, kbuddy);
+-        }
+-
++        
++ 	    else if (!(_kstrncmp(cmd,"free",4))) {
++    	    unsigned int ptr = 425532;
++	        free(ptr);
++	        ptr = 433724;
++ 	        free(ptr);
++            ptr=446012;
++            free(ptr);
++            printf("Navigating used list...\n");
++            print_heap_list (kheap->used_list);
++            printf("Navigating free list...\n");
++            print_heap_list (kheap->free_list);
++	    }
++        else if (!(_kstrncmp(cmd,"printmem",8))) print_heap_list(kheap->used_list);        
+         else if (!(_kstrncmp(cmd,"aalogo",6))) 
+ 		aalogo();
+         
+@@ -290,7 +287,6 @@
+            "do_fault  - Test a page_fault\n"
+            "aalogo    - Show an ascii art logo\n"
+            "uname     - Print kernel version, try uname --help for more info\n"
+-           "try_buddy - Try buddy mmu\n"
+            "try_heap  - Try heap mmu\n"
+            "free      - Try free() with merge\n"
+            "credits  - Show DreamOS credists\n"
+
+
+

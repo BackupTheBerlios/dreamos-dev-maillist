@@ -1,0 +1,338 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r177 - in trunk: boot include include/shell shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-January/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r177%20-%20in%20trunk%3A%20boot%20include%20include/shell%20shell&In-Reply-To=%3C201001101002.o0AA2j7T003890%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000178.html">
+   <LINK REL="Next"  HREF="000180.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r177 - in trunk: boot include include/shell shell</H1>
+    <B>osiris_h4ck at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r177%20-%20in%20trunk%3A%20boot%20include%20include/shell%20shell&In-Reply-To=%3C201001101002.o0AA2j7T003890%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r177 - in trunk: boot include include/shell shell">osiris_h4ck at mail.berlios.de
+       </A><BR>
+    <I>Sun Jan 10 11:02:45 CET 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000178.html">[Dreamos-dev] r176 - in trunk: . fs
+</A></li>
+        <LI>Next message: <A HREF="000180.html">[Dreamos-dev] r178 - in trunk: . boot fs include shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#179">[ date ]</a>
+              <a href="thread.html#179">[ thread ]</a>
+              <a href="subject.html#179">[ subject ]</a>
+              <a href="author.html#179">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: osiris_h4ck
+Date: 2010-01-10 11:02:21 +0100 (Sun, 10 Jan 2010)
+New Revision: 177
+
+Added:
+   trunk/boot/grub.img
+Removed:
+   trunk/boot/grub.img
+Modified:
+   trunk/include/shell/commands.h
+   trunk/include/shell/shell.h
+   trunk/include/use.h
+   trunk/include/version.h
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+Log:
+- Aggiornata funzione history() e history_start(): ora cancella il buffer e non va a capo
+
+
+
+Deleted: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Added: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+
+Property changes on: trunk/boot/grub.img
+___________________________________________________________________
+Name: svn:executable
+   + *
+Name: svn:mime-type
+   + application/octet-stream
+
+Modified: trunk/include/shell/commands.h
+===================================================================
+--- trunk/include/shell/commands.h	2010-01-09 23:14:05 UTC (rev 176)
++++ trunk/include/shell/commands.h	2010-01-10 10:02:21 UTC (rev 177)
+@@ -53,7 +53,7 @@
+ void whoami();
+ void tester();
+ 
+-struct a_b {
++struct devel {
+ 	const char cmd_testname[CMD_LEN];
+ 	void (*func)(void);
+ };
+
+Modified: trunk/include/shell/shell.h
+===================================================================
+--- trunk/include/shell/shell.h	2010-01-09 23:14:05 UTC (rev 176)
++++ trunk/include/shell/shell.h	2010-01-10 10:02:21 UTC (rev 177)
+@@ -21,6 +21,7 @@
+ #define USER_LEN 24
+ #define CMD_LEN 256
+ #define CURPATH_LEN 256
++#define NUM_COM 30
+ 
+ 
+ struct cmd {
+
+Modified: trunk/include/use.h
+===================================================================
+--- trunk/include/use.h	2010-01-09 23:14:05 UTC (rev 176)
++++ trunk/include/use.h	2010-01-10 10:02:21 UTC (rev 177)
+@@ -1,5 +1,5 @@
+ /*
+- * It.h
++ * En.h
+  *  This program is free software; you can redistribute it and/or modify
+  *  it under the terms of the GNU General Public License as published by
+  *  the Free Software Foundation; either version 2 of the License, or
+@@ -14,59 +14,57 @@
+  *  along with this program; if not, write to the Free Software
+  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
++#ifndef _EN_H_
++#define _EN_H_
+ 
+-#ifndef _IT_H_
+-#define _IT_H_
++#define LNG_SITE &quot;\nSite: &quot;
++#define LNG_GDT &quot;Initialize GDT   &quot;
++#define LNG_IDT &quot;Initialize IDT   &quot;
++#define LNG_PAGING &quot;Enabling Paging: &quot;
++#define LNG_PIT8253 &quot;Initialize PIT    &quot;
++#define LNG_PIC8259 &quot;Initialize PIC8259    &quot;
++#define LNG_CPU &quot;\nCPU: &quot;
++#define LNG_FREERAM &quot;Free RAM:&quot;
++#define LNG_FREEPAGE &quot;\t- Number free page:&quot;
++#define LNG_BITMAP &quot;\t- Number bitmap's elements:&quot;
++#define LNG_SHELL &quot;Loading the shell&quot;
++#define LNG_USER &quot;[?] Enter your username: &quot;
++#define LNG_USER_R &quot;[x] Please, insert your username :)\n&quot;
++#define LNG_UNKNOWN_CMD &quot;Unknown command:&quot;
++#define LNG_MOUSE_SETUP &quot;Setting up mouse driver..&quot;
++#define LNG_MOUSE_REMOVE &quot;Setting down mouse driver..&quot;
++#define LNG_MOUSE_MID &quot;\n[+] Mouse driver: central key pressed!&quot;
++#define LNG_MOUSE_RIGHT  &quot;\n[+] Mouse driver: right key pressed!&quot;
++#define LNG_MOUSE_LEFT  &quot;\n[+] Mouse driver: left key pressed!&quot;
++#define LNG_WELCOME &quot;\t\t.: Welcome to DreamOS :.\n\n&quot;
++#define LNG_VFS &quot;\nPreparing VFS\n&quot;
+ 
+-#define LNG_SITE &quot;\nSito: &quot;
+-#define LNG_GDT &quot;Inizializzo GDT   &quot;
+-#define LNG_IDT &quot;Inizializzo IDT   &quot;
+-#define LNG_PAGING &quot;Abilito Paging: &quot;
+-#define LNG_PIT8253 &quot;Inizializzo PIT    &quot;
+-#define LNG_PIC8259 &quot;Inizializzo PIC8259    &quot;
+-#define LNG_CPU &quot;\nProcessore: &quot;
+-#define LNG_FREERAM &quot;Ram Disposizione:&quot;
+-#define LNG_FREEPAGE &quot;\t- Numero Pagine a disposizione:&quot;
+-#define LNG_BITMAP &quot;\t- Numero elementi della bitmap:&quot;
+-#define LNG_SHELL &quot;Carico la shell&quot;
+-#define LNG_USER &quot;[?] Inserisci il nome utente: &quot;
+-#define LNG_USER_R &quot;[x] Per favore, inserisci il nome utente :)\n&quot;
+-#define LNG_UNKNOWN_CMD &quot;Comando sconosciuto:&quot;
+-#define LNG_MOUSE_SETUP &quot;Inizializzo il driver del mouse..&quot;
+-#define LNG_MOUSE_REMOVE &quot;Disattivo il driver del mouse..&quot;
+-#define LNG_MOUSE_MID &quot;\n[+] Mouse driver: rilevato tasto centrale premuto!&quot;
+-#define LNG_MOUSE_RIGHT &quot;\n[+] Mouse driver: rilevato tasto destro premuto!&quot;
+-#define LNG_MOUSE_LEFT &quot;\n[+] Mouse driver: rilevato tasto sinistro premuto!&quot;
+-#define LNG_WELCOME &quot;\t\t.: Benvenuto in DreamOS :.\n\n&quot;
+-#define LNG_VFS &quot;\nInizializzo VFS\n&quot;
+-
+ // DATE ME NOE!
+-// MESI: sereno variabile in tutto il nord Italia
+-#define LNG_DATE_JAN &quot;Gennaio&quot;
+-#define LNG_DATE_FEB &quot;Febbraio&quot;
+-#define LNG_DATE_MAR &quot;Marzo&quot;
+-#define LNG_DATE_APR &quot;Aprile&quot;
+-#define LNG_DATE_MAY &quot;Maggio&quot;
+-#define LNG_DATE_JUN &quot;Giugno&quot;
+-#define LNG_DATE_JUL &quot;Luglio&quot;
+-#define LNG_DATE_AUG &quot;Agosto&quot;
+-#define LNG_DATE_SEP &quot;Settembre&quot;
+-#define LNG_DATE_OCT &quot;Ottobre&quot;
+-#define LNG_DATE_NOV &quot;Novembre&quot;
+-#define LNG_DATE_DEC &quot;Dicembre&quot;
+-// GIORNI: Foschia in Sardegna e coste tirreniche
+-#define LNG_DAY_SUN &quot;Domenica&quot;
+-#define LNG_DAY_MON &quot;Lunedi&quot;
+-#define LNG_DAY_TUE &quot;Martedi&quot;
+-#define LNG_DAY_WED &quot;Mercoledi&quot;
+-#define LNG_DAY_THU &quot;Giovedi&quot;
+-#define LNG_DAY_FRI &quot;Venerdi&quot;
+-#define LNG_DAY_SAT &quot;Sabato&quot;
+-// ORE: Tutto il resto si becca un bel maltempo.
+-#define LNG_HOUR_SUMM &quot;Ora legale&quot;
+-#define LNG_HOUR_WINT &quot;Ora solare&quot;
+-#define LNG_TIMESTAMP &quot;Sono le &quot;
+-#define LNG_TIMESTAMP2 &quot; del &quot;
+-#define LNG_TIMESTAMP3 &quot; di &quot;
+-
++// MONTHS
++#define LNG_DATE_JAN &quot;January&quot;
++#define LNG_DATE_FEB &quot;February&quot;
++#define LNG_DATE_MAR &quot;March&quot;
++#define LNG_DATE_APR &quot;April&quot;
++#define LNG_DATE_MAY &quot;May&quot;
++#define LNG_DATE_JUN &quot;June&quot;
++#define LNG_DATE_JUL &quot;July&quot;
++#define LNG_DATE_AUG &quot;August&quot;
++#define LNG_DATE_SEP &quot;September&quot;
++#define LNG_DATE_OCT &quot;October&quot;
++#define LNG_DATE_NOV &quot;November&quot;
++#define LNG_DATE_DEC &quot;December&quot;
++// DAYS
++#define LNG_DAY_SUN &quot;Sunday&quot;
++#define LNG_DAY_MON &quot;Monday&quot;
++#define LNG_DAY_TUE &quot;Tuesday&quot;
++#define LNG_DAY_WED &quot;Wednesday&quot;
++#define LNG_DAY_THU &quot;Thursday&quot;
++#define LNG_DAY_FRI &quot;Friday&quot;
++#define LNG_DAY_SAT &quot;Saturday&quot;
++// HOURS
++#define LNG_HOUR_SUMM &quot;Summer hour&quot;
++#define LNG_HOUR_WINT &quot;Winter hour&quot;
++#define LNG_TIMESTAMP &quot;It's &quot;
++#define LNG_TIMESTAMP2 &quot; of &quot;
++#define LNG_TIMESTAMP3 &quot; of &quot;
+ #endif
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2010-01-09 23:14:05 UTC (rev 176)
++++ trunk/include/version.h	2010-01-10 10:02:21 UTC (rev 177)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL &quot;2.0&quot;
+ #define EXTRAVERSION &quot;-trunk&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r172&quot;
++#define REV_NUM &quot;-r175&quot;
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-01-09 23:14:05 UTC (rev 176)
++++ trunk/shell/commands.c	2010-01-10 10:02:21 UTC (rev 177)
+@@ -407,7 +407,7 @@
+ 
+ void tester(){
+ 	int i = 0;
+-	struct a_b testing[MAX_TEST] = { 
++	struct devel testing[MAX_TEST] = { 
+ 					{ &quot;try_kmalloc&quot;, try_kmalloc },
+ 					{ &quot;try_strtok&quot;, try_strtok },
+ 					{ &quot;do_fault&quot;, do_fault },
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2010-01-09 23:14:05 UTC (rev 176)
++++ trunk/shell/shell.c	2010-01-10 10:02:21 UTC (rev 177)
+@@ -48,9 +48,9 @@
+  * argv[n] = opzioni successive
+  */
+ 
+-int count = 9, posiz = 9, c = 10;
++int count = 9, posiz = 9, c = 10, limit = 1;
+ char *lastcmd[10] = {};
+-    
++
+ void options(char *com)
+ {
+   int i=0;
+@@ -75,8 +75,7 @@
+ {
+   char cmd[CMD_LEN];
+   char *cmd_ptr;
+-  //char *user = kmalloc(USER_LEN);
+-  
++ 
+   static struct cmd shell_cmd[NUM_COM] = {
+ 	{ &quot;aalogo&quot;,   aalogo      },
+ 	{ &quot;clear&quot;,    _kclear     },
+@@ -94,7 +93,7 @@
+ 	{ &quot;cd&quot;,       cd},
+ 	{ &quot;whoami&quot;,   whoami},
+ 	{ &quot;tester&quot;, tester},
+-        };
++  };
+ 
+   int i = 0;
+ 
+@@ -168,13 +167,26 @@
+ }
+ 
+ void history_start(void) { 
+-    static int sc;
++    static int sc_uparrow, sc_enter;
+     count++;
++    int delete = 0, max_limit = strlen(lastcmd[count]);
++	
+     if ( count == 0 || count &gt; 9 ) {
+     	count = posiz;
+     }
+-    if( (sc = inportb (0x60) ) == KEY_UPARROW ) {
+-   		printf(&quot;\n%s&quot;, lastcmd[count]);
+-    }  
++    
++    if (limit &lt; max_limit) {
++		limit = max_limit;
++	}
++	
++    while ( delete &lt;= limit) {
++		_kbackspace();
++		delete++;
++	}
++
++    if( (sc_uparrow = inportb (0x60) ) == KEY_UPARROW ) {
++   		printf(&quot;%s&quot;, lastcmd[count]); 
++	}
++       
+ }
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000178.html">[Dreamos-dev] r176 - in trunk: . fs
+</A></li>
+	<LI>Next message: <A HREF="000180.html">[Dreamos-dev] r178 - in trunk: . boot fs include shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#179">[ date ]</a>
+              <a href="thread.html#179">[ thread ]</a>
+              <a href="subject.html#179">[ subject ]</a>
+              <a href="author.html#179">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

@@ -1,0 +1,3446 @@
+From finarfin at mail.berlios.de  Tue Jun  2 22:12:43 2009
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Tue, 2 Jun 2009 22:12:43 +0200
+Subject: [Dreamos-dev] r86 - in trunk: . boot include libc misc
+Message-ID: <200906022012.n52KChUt007827@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-06-02 22:12:24 +0200 (Tue, 02 Jun 2009)
+New Revision: 86
+
+Removed:
+   trunk/boot/dreamcatcherfat1.asm
+Modified:
+   trunk/dreamos.img
+   trunk/include/version.h
+   trunk/libc/stdio.c
+   trunk/misc/debug.c
+Log:
+Bug 15679: il problema per ora e' stato tamponand disabilitando l'utilizzo
+della syscall per putchar.
+Eliminato file dreamcatcherfat.asm 
+Aggiunto #if defined(BOCHS_DEBUG) alle funzioni in debug.c
+
+
+Deleted: trunk/boot/dreamcatcherfat1.asm
+===================================================================
+--- trunk/boot/dreamcatcherfat1.asm	2009-05-31 07:06:46 UTC (rev 85)
++++ trunk/boot/dreamcatcherfat1.asm	2009-06-02 20:12:24 UTC (rev 86)
+@@ -1,247 +0,0 @@
+-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+-;;    DreamCatcher Version 0.2 Fat Support         ;;
+-;;                                                 ;;
+-;;    Versione del bootloader Riscritta da 0       ;;
+-;;    Con supporto per il boot da file system      ;;
+-;;    Fat.                                         ;;
+-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+-
+-[BITS 16]
+-[ORG 0x7C00]
+-jmp short START
+-nop
+-
+-OEM_IDENTIFIER    db "mkdosfs "
+-NUMBER_BYTES      dw 0x0200   ;numero di byte per settore
+-SECTORS_UNIT      db 0x01
+-RESERVED_SECTORS  dw 0x0001
+-NUMBER_FATS       db 0x02
+-DIR_NUMBER        dw 0x00e0   ;numero di direcctory max
+-VOLUME_SECTORS    dw 0x0b40
+-MEDIA_TYPE        db 0xf0
+-NUMBER_SECTORS    dw 0x0009   ;numero di settori per fat
+-SECTORS_PTRACK    dw 0x0012
+-HEADS_DISK        dw 0x0002
+-SIGNATURE         db 0x29
+-VOLUME_ID         dd 0xFFFFFFFF
+-VOLUME_LABEL      db "DREAMOS    "
+-SYSTEM_ID         db "FAT12   "
+-DUE		  db 2
+-		
+-START:
+-	xor ax, ax
+-	mov es, ax
+-	mov ds, ax
+-	mov fs, ax
+-	mov gs, ax
+-
+-	mov sp, 0xFFFF		; Imposta lo stack
+-
+-	;; Carica la RootDir all'indirizzo 0x0200:0x0000
+-	call Calcola_dim_root
+-	call Trova_root_dir
+-	mov bx, 0x0200
+-	mov es, bx
+-	xor bx, bx
+-	call CaricaSettori
+-
+-cerca_dreamos:
+-	mov si, DREAMOS
+-	mov di, bx
+-	mov cx, 11
+-	repe cmpsb		; ciclo per vedere se le stringhe sono uguali
+-	je dreamos_found
+-	add bx, 0x0020		; passa alla prossima entry
+-	cmp bx, 0x00e0
+-	je CICLO
+-	jmp cerca_dreamos
+-
+-dreamos_found:
+-	push ds
+-	mov cx, es
+-	mov ds, cx
+-	
+-	mov di, bx
+-	mov dx, WORD [di+26] ; primo cluster del file in dx
+-	pop ds
+-
+-	mov ax, 2
+-	mov cx, 18
+-	mov bx, 0x0200
+-	mov es, bx
+-	xor bx, bx
+-	push dx
+-	call CaricaSettori
+-	pop dx
+-
+-	;; dx = 0x004e
+-leggi_cluster:
+-	;; call CaricaCluster
+-	mov bx, 0x0200
+-	add bx, dx
+-	mov cx, WORD [bx]
+-	cmp cx, 0x6035
+-	je corretto
+-	cmp cx, 0x0fff
+-	je corretto
+-	test dx, 0x0001
+-	jnz dispari
+-pari:
+-	and cx, 0xfff
+-	jmp ripeti
+-dispari:
+-	shr cx, 4
+-ripeti:
+-	mov ax, cx
+-	shr ax, 1
+-	add cx, ax
+-	mov dx, cx
+-	jmp leggi_cluster
+-	
+-corretto:
+-	mov si, CORRETTO
+-	mov di, 9
+-	call StampaStringa
+-CICLO:
+-	jmp CICLO
+-
+-	
+-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+-;;						   ;;
+-;;       AREA FUNZIONI E PROCEDURE VARIE	   ;;
+-;;						   ;; 
+-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+-
+-CaricaCluster:
+-	mov cx, 0x1000
+-	mov es, cx
+-	mov cx, 1
+-	mov ax, dx
+-	mov bx, WORD [Offset]
+-	call CaricaSettori
+-	add bx, 0x0200
+-	mov WORD [Offset], bx
+-	ret
+-		
+-;; StampaStringa - Stampa una stringa a video
+-;; Argomenti: di = dimensione stringa
+-;;            si = stringa da leggere
+-;; Ritorno  : Nessuno
+-StampaStringa:
+-     lodsb			; carica il prossimo carattere
+-     dec di
+-     jz      .DONE
+-     mov     ah, 0x0E		; servizio di stampa a video
+-     mov     bh, 0x00		; pagina 0
+-     mov     bl, 0x07		; attributi
+-     int     0x10               ; invoca il BIOS
+-     jmp     StampaStringa
+-.DONE:
+-     ret
+-
+-;; Calcola_dim_root - Calcola il numero di settori occupato dalla RootDir
+-;; Argomenti: Nessuno
+-;; Ritorno  : cx = dimensione in settori
+-Calcola_dim_root:
+-    mov ax, 32		; numero di byte di una entry della dir
+-    mul word [DIR_NUMBER]
+-    div word [NUMBER_BYTES]    
+-    mov cx, ax
+-    ret
+-
+-;; Trova_root_dir - Trova il settore di partenza della RootDir
+-;; Argomenti: Nessuno
+-;; Ritorno  : ax = settore di partenza
+-Trova_root_dir:
+-    xor ax, ax
+-    mov al,  byte [NUMBER_FATS]		; Metto il numero di fat dentro il registro al
+-    mul word [NUMBER_SECTORS]		; lo moltiplico per il numero di settori per fat
+-    add ax, word [RESERVED_SECTORS]	; gli aggiungo il numero di settori riservati
+-    mov word [Lba], ax
+-    ret
+-
+-;; CaricaSettori - Carica settori in memoria
+-;; Argomenti: ax    = settore di partenza
+-;;	      cx    = numero di settori da caricare
+-;;	      es:bx = zona di memoria in cui caricare
+-;; Ritorno  : Nessuno 
+-CaricaSettori:	
+-    pusha			; salva tutti i registri generali sullo stack
+-    call Converti_CHS		; calcola i valori giusti per cilindro, settore e testina
+-    mov ah, 0x02		; servizio di caricamento
+-    mov al, 0x01
+-    mov ch, BYTE [Cilindro]
+-    mov cl, BYTE [Settore]
+-    mov dh, BYTE [Testina]
+-    mov dl, 0			; numero del drive
+-    int 0x13
+-    jc fdc_error		; se CF ? settato ci sono stati errori
+-
+-    popa
+-    dec cx
+-    jz fine_lettura
+-    inc ax			; passa al prossimo settore
+-    jmp CaricaSettori
+-    ret
+-
+-fdc_error:
+-	mov si, ERROR
+-	mov di, 18
+-	call StampaStringa
+-	jmp CICLO
+-
+-fine_lettura:
+-	ret
+-
+-;; Converti_CHS - Converte da settore logico a Cilindro - Testina - Settore 
+-Converti_CHS:
+-    xor dx, dx
+-	
+-    ;; Appoggio = SECTORS_PTRACK * HEADS_DISK
+-    mov ax, [SECTORS_PTRACK]
+-    mul word [HEADS_DISK]
+-    mov word [Appoggio], ax
+-
+-    ;; Cilindro = Lba / Appoggio
+-    mov ax, word [Lba]
+-    div word [Appoggio]
+-    mov byte [Cilindro], al
+-
+-    ;; Appoggio = Lba % (Appoggio)
+-    xor dx, dx			; Azzero dx perch? l'operazione ? a 16 bit
+-    mov ax, word [Lba]
+-    div word [Appoggio]
+-    mov cx, dx
+-	
+-    ;; Testina = cx / SPT 
+-    ;; Settore = cx % SPT + 1   
+-    xor dx, dx
+-    mov ax, cx
+-    div word [SECTORS_PTRACK]    
+-    inc dx  
+-    mov byte [Testina], al
+-    mov byte [Settore], dl
+-    ret
+-
+-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+-;;				      ;; 
+-;; Sezione variabili e strutture dati ;; 
+-;;				      ;;
+-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+-
+-WELCOM	  db	'DreamCatcher v0.2 BootLoader per Dreamos',13,10,0
+-CORRETTO  db	'Corretto', 13,10,0
+-DREAMOS   db	'DREAMOS IMG', 13,10,0
+-ERROR	  db	'Errore nel floppy' ,13,10,0
+-UGUALE	  db	'=' ,13,10,0
+-Lba	  dw	0x0000
+-Appoggio  db	0x00
+-Cilindro  db	0x00
+-Testina	  db	0x00
+-Settore	  db	0x00
+-Offset	  dw    0x0000
+-Cluster	  dw	0x0000
+-	
+-; Fine
+-times 510-($-$$) db 0		; Riempe il resto di 0
+-dw 0xAA55			; Aggiunge la firma del bootloader per marcare il device come avviabile
+\ No newline at end of file
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-05-31 07:06:46 UTC (rev 85)
++++ trunk/include/version.h	2009-06-02 20:12:24 UTC (rev 86)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "1.2"
+ #define EXTRAVERSION "-trunk"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r85"
++#define REV_NUM "-r86"
+
+Modified: trunk/libc/stdio.c
+===================================================================
+--- trunk/libc/stdio.c	2009-05-31 07:06:46 UTC (rev 85)
++++ trunk/libc/stdio.c	2009-06-02 20:12:24 UTC (rev 86)
+@@ -40,9 +40,14 @@
+  */
+ void putchar (char ch)
+ {
+-   asm ("movl $0x0, %%eax\n"
++   /*asm ("movl $0x0, %%eax\n"
+ 	"int $80\n\t"
+-	:: "b" (ch));
++	:: "b" (ch));*/
++	char s[2];
++	s[0] = ch;
++	s[1] = '\0';
++
++   _kputs (s);
+ }
+ 
+ /*
+
+Modified: trunk/misc/debug.c
+===================================================================
+--- trunk/misc/debug.c	2009-05-31 07:06:46 UTC (rev 85)
++++ trunk/misc/debug.c	2009-06-02 20:12:24 UTC (rev 86)
+@@ -34,9 +34,11 @@
+  */ 
+ void dbg_bochs_print( const unsigned char *msg )
+ {
++#if defined(BOCHS_DEBUG)
+     register unsigned int i;
+     for ( i = 0; msg[i] != '\0'; i++ )
+         outportb(msg[i],0xE9);
++#endif
+ }
+ 
+ /**
+@@ -44,5 +46,7 @@
+  */
+ static inline void dbg_bochs_send_cmd( const int port, const int cmd )
+ {
++#if defined(BOCHS_DEBUG)
+     outportb(cmd, port);
++#endif
+ }
+
+
+
+From finarfin at mail.berlios.de  Sat Jun  6 23:37:01 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Sat, 6 Jun 2009 23:37:01 +0200
+Subject: [Dreamos-dev] r87 - in trunk: . doc hardware include/hardware
+	processore shell
+Message-ID: <200906062137.n56Lb1Ee002551@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-06-06 23:37:00 +0200 (Sat, 06 Jun 2009)
+New Revision: 87
+
+Added:
+   trunk/doc/HOWTO_use_grub_script
+   trunk/grub.py
+Modified:
+   trunk/README
+   trunk/dreamos.img
+   trunk/hardware/pic8259.c
+   trunk/include/hardware/pic8259.h
+   trunk/processore/handlers.c
+   trunk/shell/shell.c
+Log:
+Aggiunto LPT1 alla enum irq_types, che mancava
+AGgiunto script per l'aggiunta di una entry grub per dreamos
+Aggiungo readme per l'utilizzo dello script
+Pulizia codice da commenti inutili in pic8259.c
+Risoluzione bug #15810 relativo alla sleep.
+
+
+
+Modified: trunk/README
+===================================================================
+--- trunk/README	2009-06-02 20:12:24 UTC (rev 86)
++++ trunk/README	2009-06-06 21:37:00 UTC (rev 87)
+@@ -29,6 +29,8 @@
+ 
+ e dai contributori:
+ 
++vinc94
++tk0
+ Osiris
+ Celeron
+ Hamcha
+
+Added: trunk/doc/HOWTO_use_grub_script
+===================================================================
+--- trunk/doc/HOWTO_use_grub_script	2009-06-02 20:12:24 UTC (rev 86)
++++ trunk/doc/HOWTO_use_grub_script	2009-06-06 21:37:00 UTC (rev 87)
+@@ -0,0 +1,17 @@
++######################################################
++# Come usare lo script per generare un'entry di GRUB #
++######################################################
++
++1. Inserire la partizione dei sorgenti
++Questo significa dire al programma in quale partizione si trova la vostra directory dei sorgenti.
++Ad esempio se siete su /dev/hda2, dovrete inserire hda2
++
++2. Inserire il mountpoint
++Tale partizione ha un mountpoint (se non lo conoscete, date da shell il comando mount senza argomenti oppure date uno sguardo in /etc/fstab). Ad esempio potr? essere / o anche /home/vostroutente se tenete la home directory in una partizione separata.
++
++3. Attenzione al path
++Il path dell'immagine di dreamos sar? calcolato automaticamente, ma per fare questo lo script dev'essere nella stessa directory dell'immagine.
++Dopodich? vi basta confermare ed avere la vostra entry nel file menu.lst
++
++ATTENZIONE: Usatelo solo se sapete cosa state facendo. Lo script e' stato testato e funziona, ma non rispondiamo di eventuali blocchi del vostro computer.
++
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Added: trunk/grub.py
+===================================================================
+--- trunk/grub.py	2009-06-02 20:12:24 UTC (rev 86)
++++ trunk/grub.py	2009-06-06 21:37:00 UTC (rev 87)
+@@ -0,0 +1,52 @@
++#GrubScript ver 0.1
++import sys
++import os
++
++def grub_hd(pn):
++	letter = pn[2]
++	nump = int(pn[3]) - 1
++	alphanum = { 'a':0, 'b':1, 'c':2, 'd':3, 'e':4, 'f':5 }
++    	
++	res = "(hd" + str(alphanum[letter]) + "," + str(nump) + ")"
++	return res
++
++def sub_mount(mp, cwd):
++	count = 0
++	
++	for x in mp:
++		if mp[count] == cwd[count]:
++			count+=1
++	return cwd[count:]
++
++# Manca il controllo errori
++fd = open("/boot/grub/menu.lst", "a")
++
++print "--------------------DreamOS v0.1.2 Grub Autogen--------------------"
++print "Inserire la partizione dei sorgenti:",
++pn = raw_input()
++partition = grub_hd(pn)
++
++print "Inserire il mountpoint:",
++mp = raw_input()
++cwd = os.getcwd() + "/dreamos.img"
++
++if mp == "/":
++	path = cwd
++else:
++	cwd = sub_mount(mp, cwd)
++	
++print "+---------------------------------INFO----------------------------------+"
++print "| Title: DreamOS v0.1.2 trunk                                           |"
++print "| Root: " + partition + "                                                         |"
++print "| Kernel: " + cwd
++print "+-----------------------------------------------------------------------+"
++print "Procedere alla scrittura? (y/n):",
++answer = raw_input()
++
++if answer == 'y':
++	fd.write("\ntitle\tDreamOS v0.1.2 trunk")
++	fd.write("\nroot\t" + partition)
++	fd.write("\nkernel\t" + cwd)
++	fd.write("\nboot\n")
++
++fd.close()
+
+Modified: trunk/hardware/pic8259.c
+===================================================================
+--- trunk/hardware/pic8259.c	2009-06-02 20:12:24 UTC (rev 86)
++++ trunk/hardware/pic8259.c	2009-06-06 21:37:00 UTC (rev 87)
+@@ -83,12 +83,8 @@
+     outportb(0xFF,SLAVE_PORT_1);
+ 
+     outportb (0xFC, MASTER_PORT_1);
+-//<<<<<<< .mine
+-    //enable_IRQ (0);
+-//=======
+- //     enable_IRQ (0);
+-//>>>>>>> .r13
+ 
++
+     setup_IRQ();
+     asm("sti");
+     i=0;
+@@ -214,9 +210,6 @@
+             tmpHandler = tmpHandler->next;
+             tmpHandler->next = NULL;
+             tmpHandler->IRQ_func = func;
+-            #ifdef DEBUG
+-    //         printf("
+-            #endif
+         }
+     }
+     else return; 
+
+Modified: trunk/include/hardware/pic8259.h
+===================================================================
+--- trunk/include/hardware/pic8259.h	2009-06-02 20:12:24 UTC (rev 86)
++++ trunk/include/hardware/pic8259.h	2009-06-06 21:37:00 UTC (rev 87)
+@@ -50,6 +50,7 @@
+     COM1_3,
+     LPT2,
+     FLOPPY,
++    LPT1,
+     REAL_TIME_CLOCK,
+     AVAILABLE_1,
+     AVAILABLE_2,
+
+Modified: trunk/processore/handlers.c
+===================================================================
+--- trunk/processore/handlers.c	2009-06-02 20:12:24 UTC (rev 86)
++++ trunk/processore/handlers.c	2009-06-06 21:37:00 UTC (rev 87)
+@@ -165,27 +165,19 @@
+     irqn = get_current_irq();  
+     IRQ_s* tmpHandler; 
+     if(irqn>=0) {
+-//       switch(irqn){
+-// 	case 1: 
+-// 	  PIT_handler();
+-// 	  break;
+-// 	case 2:
+-// 	  keyboard_isr();
+-// 	  break;
+-//       }
+-         tmpHandler = shareHandler[irqn];
+-	 if(tmpHandler!=0) {
+-	    tmpHandler->IRQ_func();
+-	    #ifdef DEBUG
+-	    printf("2 - IRQ_func: %d, %d\n", tmpHandler->IRQ_func, tmpHandler);
+-	    #endif
+-	    while(tmpHandler->next!=NULL) {
+-	      tmpHandler = tmpHandler->next;                           
+-	      #ifdef DEBUG
+-	      printf("1 - IRQ_func (_prova): %d, %d\n", tmpHandler->IRQ_func, tmpHandler);
+-	      #endif
+-	      if(tmpHandler!=0) tmpHandler->IRQ_func();
+-	    }
++        tmpHandler = shareHandler[irqn];
++		if(tmpHandler!=0) {
++	    	tmpHandler->IRQ_func();
++	    	#ifdef DEBUG
++	    		printf("2 - IRQ_func: %d, %d\n", tmpHandler->IRQ_func, tmpHandler);
++	    	#endif
++	    	while(tmpHandler->next!=NULL) {
++	      		tmpHandler = tmpHandler->next;                           
++	      		#ifdef DEBUG
++	      			printf("1 - IRQ_func (_prova): %d, %d\n", tmpHandler->IRQ_func, tmpHandler);
++	      		#endif
++	      		if(tmpHandler!=0) tmpHandler->IRQ_func();
++	    	}
+ 	  } else printf("irqn: %d\n", irqn);
+     }
+     else printf("IRQ N: %d E' arrivato qualcosa che non so gestire ", irqn);
+@@ -201,9 +193,4 @@
+ 	while(1);
+ }
+ 
+-/*void _prova(){
+-    #ifdef DEBUG
+-    _kputs("Shared 1\n");
+-    #endif    
+-}*/
+ 
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-06-02 20:12:24 UTC (rev 86)
++++ trunk/shell/shell.c	2009-06-06 21:37:00 UTC (rev 87)
+@@ -39,7 +39,7 @@
+ #include <clock.h>
+ #include <sys/utsname.h>
+ 
+-#define NUM_COM 14
++#define NUM_COM 15
+ 
+ struct cmd {
+ 	const char cmdname[CMD_LEN];
+@@ -87,11 +87,12 @@
+ 	{ "uname",    uname_cmd   },
+ 	{ "printmem", printmem    },
+ 	{ "credits",  credits     },
+-	{ "sleep",    sleep       },
++	{ "sleep",    sleep_cmd   },
+ 	{ "cpuid",    cpuid 	  },
+ 	{ "date",     date 	  },
+ 	{ "echo",     echo 	  },
+ 	{ "help",     help	  },
++	{ "answer",   answer  },
+         };
+ 
+   int i = 0;
+
+
+
+From osiris_h4ck at mail.berlios.de  Sun Jun  7 11:45:10 2009
+From: osiris_h4ck at mail.berlios.de (osiris_h4ck at mail.berlios.de)
+Date: Sun, 7 Jun 2009 11:45:10 +0200
+Subject: [Dreamos-dev] r88 - in trunk: . include
+Message-ID: <200906070945.n579jA88029845@sheep.berlios.de>
+
+Author: osiris_h4ck
+Date: 2009-06-07 11:44:57 +0200 (Sun, 07 Jun 2009)
+New Revision: 88
+
+Modified:
+   trunk/include/version.h
+   trunk/start.sh
+Log:
+Modiche apportate a start.sh:
+ora supporta tutte le funzioni di installatzione e configurazione di DreamOS..
+
+Enjoy it :)
+							          Lord Osiris
+							    osiris at Devils.com
+
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-06-06 21:37:00 UTC (rev 87)
++++ trunk/include/version.h	2009-06-07 09:44:57 UTC (rev 88)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "1.2"
+ #define EXTRAVERSION "-trunk"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r86"
++#define REV_NUM "-r87"
+
+Modified: trunk/start.sh
+===================================================================
+--- trunk/start.sh	2009-06-06 21:37:00 UTC (rev 87)
++++ trunk/start.sh	2009-06-07 09:44:57 UTC (rev 88)
+@@ -2,32 +2,116 @@
+ # This script is more important to do a right compilation..
+ # 
+ # Coded by Osiris
++# For any question about this or other, mail me to
++# diego.stamigni at linux.com
++# greez ;
+ 
+-
+-if test -z "$1" 
+-then
+-echo "Usage: '$0 qemu' -> if you use Qemu Emulator"
+-echo "       '$0 bochs' -> if you use Bochs Emulator"
++#if test -z "$1" 
++#then
++if [ "$1" == "help" ]; then
++echo ""
++echo "	    The DreamOS Operating System"
++echo ""
++echo "Usage: '$0 qemu'  -> to use Qemu Emulator"
++echo "       '$0 bochs' -> to use Bochs Emulator"
++echo "be sure you have one of those, else you can try it from"
++echo "floppy drive, or boot it form your grub.. DreamOS can! :) "
++echo "------------------------------------------------------"
++echo "Also you can chose the language for the boot message, it"
++echo "can be very important to understanding the OS and do the"
++echo "			 debug."
++echo ""
++echo "So please add the argv[2] into your option to this launch "
++echo "script, something like that:"
++echo ""
++echo "Usage: '$0' 'emulator' 'language'"
++echo "where now language supported is 'it' or 'en'"
++echo "-------------------------------------------------------"
++echo ""
++echo "If you want, you can install DreamOS on your floppy"
++echo "So, it's very simple, just type install in argv[1] then"
++echo "your test on emulators:"
++echo ""
++echo "Usage: '$0' 'install'"
++echo "-------------------------------------------------------"
++echo ""
++echo "If you want to install DreamOS into your grub, the step"
++echo "is very simple, just grub into your argv[1] :-)"
++echo "Please, be sure you have python."
++echo ""
++echo "Usage: '$0' 'grub'"
++echo "-------------------------------------------------------"
+ exit 1
++fi
+ 
+-else
+-make clean 
+-make vers
+-make 
+-make img
+-umount boot/os
++if [ "$2" != NULL ]; then
++	if [ "$2" == "it" ]; then
++		echo "Ok! Language '$2' imposted"
++		make it
++		echo "----------------------->"
++
++	elif [ "$2" == "en" ]; then
++		echo "Ok! Language '$2' imposted"
++        	make en
++		echo "----------------------->"
++	else
++		echo "Warning: No language traslation declared!"
++		echo "----------------------->"
++	fi		
+ fi
+ 
+ if [ "$1" == "qemu" ]; then
+-qemu -fda boot/grub.img
+-umount boot/os
+-exit
+-fi
++  make clean 
++  make vers
++  make
++  make img
++  umount boot/os
++  qemu -fda boot/grub.img
++  umount boot/os
++  exit
+ 
+-if [ "$1" == "bochs" ]; then
+-bochs -f .bochsrc -q
+-umount boot/os
+-exit
++elif [ "$1" == "bochs" ]; then
++  make clean 
++  make vers
++  make
++  make img
++  umount boot/os
++  bochs -f .bochsrc -q
++  umount boot/os
++  exit
++
++elif [ "$1" == "install" ]; then
++  make clean 
++  make vers
++  make
++  make img
++  umount boot/os
++  echo "---------------------- "
++  echo "Installing in progres.."
++  make install
++  echo "done."
++  echo "---------------------- "
++  exit
++
++elif [ "$1" == "grub" ]; then
++  make clean 
++  make vers
++  make
++  make img
++  umount boot/os
++  echo "--------------------------------------------- "
++  echo "Launching grub installer script in progress.."
++  python grub.py
++  echo "done."
++  echo "--------------------------------------------- "
++  exit
++
++else
++  echo "Uhm? What the hell did you insert ? Lool! '$1' ?? I don't know what is it!"
++  echo "Please, read the help!!!"
++  echo "----------------------->"
++  echo "Usage: '$0 help'"
++  exit
++
+ fi
+ 
+-
+
+
+
+From finarfin at mail.berlios.de  Mon Jun  8 23:57:27 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Mon, 8 Jun 2009 23:57:27 +0200
+Subject: [Dreamos-dev] r89 - in trunk: . hardware misc
+Message-ID: <200906082157.n58LvR6m008182@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-06-08 23:57:26 +0200 (Mon, 08 Jun 2009)
+New Revision: 89
+
+Modified:
+   trunk/dreamos.img
+   trunk/hardware/pic8259.c
+   trunk/misc/clock.c
+Log:
+Corretto bug che faceva stampare la data un giorno avanti
+Aggiunta abilitazione dell'irq 2.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/hardware/pic8259.c
+===================================================================
+--- trunk/hardware/pic8259.c	2009-06-07 09:44:57 UTC (rev 88)
++++ trunk/hardware/pic8259.c	2009-06-08 21:57:26 UTC (rev 89)
+@@ -80,6 +80,7 @@
+     outportb(0xFF,MASTER_PORT_1);
+     enable_IRQ(KEYBOARD);
+     enable_IRQ(TIMER);
++    enable_IRQ(TO_SLAVE_PIC);
+     outportb(0xFF,SLAVE_PORT_1);
+ 
+     outportb (0xFC, MASTER_PORT_1);
+
+Modified: trunk/misc/clock.c
+===================================================================
+--- trunk/misc/clock.c	2009-06-07 09:44:57 UTC (rev 88)
++++ trunk/misc/clock.c	2009-06-08 21:57:26 UTC (rev 89)
+@@ -124,25 +124,25 @@
+   int c;
+   c = get_day_w();
+   switch(c) {
+-    case 0:
++    case 1:
+       return LNG_DAY_SUN;
+       break;
+-    case 1:
++    case 2:
+       return LNG_DAY_MON;
+       break;
+-    case 2:
++    case 3:
+       return LNG_DAY_TUE;
+       break;
+-    case 3:
++    case 4:
+       return LNG_DAY_WED;
+       break;
+-    case 4:
++    case 5:
+       return LNG_DAY_THU;
+       break;
+-    case 5:
++    case 6:
+       return LNG_DAY_FRI;      
+       break;
+-    case 6:
++    case 7:
+       return LNG_DAY_SAT;     
+       break;
+   }
+
+
+
+From finarfin at mail.berlios.de  Sun Jun 14 19:53:13 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Sun, 14 Jun 2009 19:53:13 +0200
+Subject: [Dreamos-dev] r90 - in trunk: . drivers hardware io misc processore
+Message-ID: <200906141753.n5EHrDtT009551@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-06-14 19:53:13 +0200 (Sun, 14 Jun 2009)
+New Revision: 90
+
+Modified:
+   trunk/dreamos.img
+   trunk/drivers/keyboard.c
+   trunk/hardware/8253.c
+   trunk/hardware/pic8259.c
+   trunk/io/io.c
+   trunk/misc/clock.c
+   trunk/misc/debug.c
+   trunk/processore/handlers.c
+Log:
+Invertiti parametri di outportb, per rispettare la chiamata standard.
+
+Aggiornati tutti i file che usano outportb.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/drivers/keyboard.c
+===================================================================
+--- trunk/drivers/keyboard.c	2009-06-08 21:57:26 UTC (rev 89)
++++ trunk/drivers/keyboard.c	2009-06-14 17:53:13 UTC (rev 90)
+@@ -104,7 +104,7 @@
+     /* In case of useless break codes, switch controls...*/
+     if (sc > CODE_BREAK && sc != (KEY_LSHIFT|CODE_BREAK) && sc != (KEY_RSHIFT|CODE_BREAK)){
+         if (sc==KEY_ENTER+128)
+-            outportb(EOI,MASTER_PORT);
++            outportb(MASTER_PORT, EOI);
+ 	    goto end;
+         }
+ 
+@@ -181,7 +181,7 @@
+ 	_knewline();
+ 	_ksetcursauto();
+ 	last_tab = 0;
+-    outportb(EOI, MASTER_PORT);
++    outportb(MASTER_PORT, EOI);
+ 	break;
+ 
+     case KEY_TAB:
+@@ -221,7 +221,7 @@
+ end:
+     /* Send acknowledge */
+     //printf ("Prego");
+-    outportb (EOI, MASTER_PORT);
++    outportb (MASTER_PORT, EOI);
+     return;
+ }
+ 
+@@ -255,19 +255,19 @@
+ 	ledstate ^= scrlock;
+     }
+ 
+-    outportb (0xED, 0x60);
+-    outportb (ledstate, 0x60);
++    outportb (0x60, 0xED);
++    outportb (0x60, ledstate);
+ }
+ 
+ /* Need explanations? */
+ void keyboard_enable (void)
+ {
+-    outportb (0xF4, 0x60);
++    outportb (0x60, 0xF4);
+ }
+ 
+ void keyboard_disable (void)
+ {
+-    outportb (0xF5, 0x60);
++    outportb (0x60, 0xF5);
+ }
+ 
+ /*
+
+Modified: trunk/hardware/8253.c
+===================================================================
+--- trunk/hardware/8253.c	2009-06-08 21:57:26 UTC (rev 89)
++++ trunk/hardware/8253.c	2009-06-14 17:53:13 UTC (rev 90)
+@@ -41,9 +41,9 @@
+ 
+     asm ("cli");
+     ticks = seconds = 0;
+-    outportb (0x37, PIT_COMREG);
+-    outportb (divisor & 0xFF, PIT_DATAREG0);
+-    outportb (divisor >> 8, PIT_DATAREG0);
++    outportb (PIT_COMREG,0x37);
++    outportb (PIT_DATAREG0,divisor & 0xFF);
++    outportb (PIT_DATAREG0,divisor >> 8);
+     asm ("sti");
+ 
+ }
+
+Modified: trunk/hardware/pic8259.c
+===================================================================
+--- trunk/hardware/pic8259.c	2009-06-08 21:57:26 UTC (rev 89)
++++ trunk/hardware/pic8259.c	2009-06-14 17:53:13 UTC (rev 90)
+@@ -62,30 +62,31 @@
+     int i;
+     asm("cli");
+ // Inizializzo i 2 processori pic con ICw1 ICW2 ICW3 e ICW4
+-    outportb(ICW_1,MASTER_PORT);
+-    outportb(ICW_1,SLAVE_PORT);
++    outportb(MASTER_PORT,ICW_1);
++    outportb(SLAVE_PORT, ICW_1);
+ 
+-    outportb(ICW_2_M,MASTER_PORT_1);
+-    outportb(ICW_2_S,SLAVE_PORT_1);
++    outportb(MASTER_PORT_1, ICW_2_M);
++    outportb(SLAVE_PORT_1,  ICW_2_S);
+ 
+-    outportb(ICW_3_M,MASTER_PORT_1);
+-    outportb(ICW_3_S,SLAVE_PORT_1);
++    outportb(MASTER_PORT_1, ICW_3_M);
++    outportb(SLAVE_PORT_1,  ICW_3_S) ;
+ 
+-    outportb(ICW_4,MASTER_PORT_1);
+-    outportb(ICW_4,SLAVE_PORT_1);
++    outportb(MASTER_PORT_1, ICW_4);
++    outportb(SLAVE_PORT_1,  ICW_4);
+ 
+     master_cur_mask = 0xFF;
+     slave_cur_mask = 0xFF;
+ 
+-    outportb(0xFF,MASTER_PORT_1);
++    outportb(MASTER_PORT_1, 0xFF);
++	outportb(SLAVE_PORT_1,  0xFF);
++
++    //outportb (0xFC, MASTER_PORT_1);
+     enable_IRQ(KEYBOARD);
+     enable_IRQ(TIMER);
+     enable_IRQ(TO_SLAVE_PIC);
+-    outportb(0xFF,SLAVE_PORT_1);
++   
+ 
+-    outportb (0xFC, MASTER_PORT_1);
+ 
+-
+     setup_IRQ();
+     asm("sti");
+     i=0;
+@@ -130,14 +131,14 @@
+         if(irq<8){
+             new_mask = ~(1<<irq);
+             cur_mask = inportb(MASTER_PORT_1);
+-            outportb((new_mask&cur_mask), MASTER_PORT_1);
++            outportb(MASTER_PORT_1, (new_mask&cur_mask));
+             master_cur_mask=(new_mask&cur_mask);
+             }
+         else{
+             irq = irq-8;
+             new_mask = ~(1<<irq);
+             cur_mask = inportb(SLAVE_PORT_1);
+-            outportb((new_mask&cur_mask), SLAVE_PORT_1);
++            outportb(SLAVE_PORT_1, (new_mask&cur_mask));
+             slave_cur_mask=(new_mask&cur_mask);
+         }
+         return 0;
+@@ -158,13 +159,13 @@
+         if(irq<8){
+             cur_mask = inportb(MASTER_PORT_1);
+             cur_mask |= (1<< irq);
+-            outportb(cur_mask&0xFF, MASTER_PORT_1);
++            outportb(MASTER_PORT_1, cur_mask&0xFF);
+         }
+         else {
+             irq = irq-8;
+             cur_mask = inportb(SLAVE_PORT_1);
+             cur_mask |= (1<< irq);
+-            outportb(cur_mask&0xFF, SLAVE_PORT_1);
++            outportb(SLAVE_PORT_1, cur_mask&0xFF);
+         }
+         return 0;
+     }
+@@ -178,11 +179,11 @@
+   **/
+ int get_current_irq(){
+     int cur_irq;
+-    outportb(GET_IRR_STATUS, MASTER_PORT);
++    outportb(MASTER_PORT,GET_IRR_STATUS);
+     cur_irq = inportb(MASTER_PORT);
+ //     if(cur_irq!=1) printf("%d\n", cur_irq);
+     if(cur_irq == 0) {
+-      outportb(GET_IRR_STATUS, SLAVE_PORT);
++      outportb(SLAVE_PORT, GET_IRR_STATUS);
+       cur_irq = inportb(SLAVE_PORT);
+     }
+ //     printf("%d\n", find_first_bit(cur_irq));
+
+Modified: trunk/io/io.c
+===================================================================
+--- trunk/io/io.c	2009-06-08 21:57:26 UTC (rev 89)
++++ trunk/io/io.c	2009-06-14 17:53:13 UTC (rev 90)
+@@ -32,7 +32,7 @@
+   return data;
+ }
+ 
+-inline void outportb (int data, int portnum)
++inline void outportb (int portnum, int data)
+ {
+   __asm__ __volatile__ ("outb %%al, %%dx" :: "a" (data),"d" (portnum));
+ }
+
+Modified: trunk/misc/clock.c
+===================================================================
+--- trunk/misc/clock.c	2009-06-08 21:57:26 UTC (rev 89)
++++ trunk/misc/clock.c	2009-06-14 17:53:13 UTC (rev 90)
+@@ -27,49 +27,49 @@
+ 
+ int get_second()
+ {
+-  outportb(SECOND_RTC,0x70);
++  outportb(0x70, SECOND_RTC);
+   int c = inportb(0x71);
+   return c;
+ }
+ 
+ int get_minute()
+ {
+-  outportb(MINUTE_RTC,0x70);
++  outportb(0x70, MINUTE_RTC);
+   int c = inportb(0x71);
+   return c;
+ }
+ 
+ int get_hour()
+ {
+-  outportb(HOUR_RTC,0x70);
++  outportb(0x70, HOUR_RTC);
+   int c = inportb(0x71);
+   return c;
+ }
+ 
+ int get_day_w()
+ {
+-  outportb(DAY_W_RTC,0x70);
++  outportb(0x70, DAY_W_RTC);
+   int c = inportb(0x71);
+   return c;
+ }
+ 
+ int get_day_m()
+ {
+-  outportb(DAY_M_RTC,0x70);
++  outportb(0x70, DAY_M_RTC);
+   int c = inportb(0x71);
+   return c;
+ }
+ 
+ int get_month()
+ {
+-  outportb(MONTH_RTC,0x70);
++  outportb(0x70,MONTH_RTC);
+   int c = inportb(0x71);
+   return c;
+ }
+ 
+ int get_year()
+ {
+-  outportb(YEAR_RTC,0x70);
++  outportb(0x70, YEAR_RTC);
+   int c = inportb(0x71);
+   return c;
+ }
+
+Modified: trunk/misc/debug.c
+===================================================================
+--- trunk/misc/debug.c	2009-06-08 21:57:26 UTC (rev 89)
++++ trunk/misc/debug.c	2009-06-14 17:53:13 UTC (rev 90)
+@@ -37,7 +37,7 @@
+ #if defined(BOCHS_DEBUG)
+     register unsigned int i;
+     for ( i = 0; msg[i] != '\0'; i++ )
+-        outportb(msg[i],0xE9);
++        outportb(0xE9, msg[i]);
+ #endif
+ }
+ 
+@@ -47,6 +47,6 @@
+ static inline void dbg_bochs_send_cmd( const int port, const int cmd )
+ {
+ #if defined(BOCHS_DEBUG)
+-    outportb(cmd, port);
++    outportb(port, cmd);
+ #endif
+ }
+
+Modified: trunk/processore/handlers.c
+===================================================================
+--- trunk/processore/handlers.c	2009-06-08 21:57:26 UTC (rev 89)
++++ trunk/processore/handlers.c	2009-06-14 17:53:13 UTC (rev 90)
+@@ -181,10 +181,10 @@
+ 	  } else printf("irqn: %d\n", irqn);
+     }
+     else printf("IRQ N: %d E' arrivato qualcosa che non so gestire ", irqn);
+-    if(irqn<=8) outportb(0x20, MASTER_PORT);
++    if(irqn<=8) outportb(MASTER_PORT, EOI);
+     else if(irqn<=16){
+-      outportb(0x20, SLAVE_PORT);
+-      outportb(0x20, MASTER_PORT);
++      outportb(SLAVE_PORT, EOI);
++      outportb(MASTER_PORT, EOI);
+     }
+ }
+ 
+
+
+
+From osiris_h4ck at mail.berlios.de  Mon Jun 15 16:03:21 2009
+From: osiris_h4ck at mail.berlios.de (osiris_h4ck at mail.berlios.de)
+Date: Mon, 15 Jun 2009 16:03:21 +0200
+Subject: [Dreamos-dev] r91 - in trunk: . doc hardware include
+	include/hardware mem processore shell
+Message-ID: <200906151403.n5FE3LMl014520@sheep.berlios.de>
+
+Author: osiris_h4ck
+Date: 2009-06-15 16:03:13 +0200 (Mon, 15 Jun 2009)
+New Revision: 91
+
+Added:
+   trunk/doc/Starting_script_HOWTO.txt
+Modified:
+   trunk/.bochsrc
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/grub.py
+   trunk/hardware/pic8259.c
+   trunk/include/hardware/pic8259.h
+   trunk/include/version.h
+   trunk/kernel.c
+   trunk/mem/kheap.c
+   trunk/processore/handlers.c
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+   trunk/start.sh
+Log:
+- Modifica a enlal enum IRQ_t
+
+- Sostituito AVAILABLE_4 con MOUSE
+
+- Scritto il driver per il mouse (ora visualizza che tasto viene premuto)
+
+- Aggiornato il Makefile per la compilazione
+
+- Init Script (start.sh) riscritto con nuove funzionalit?\195?\160 (guardare l'help)
+  Aggiunte nuove funzioni e l'USE '--compile' se si vuole ri-compilare il kernel prima di effettuare
+  un dato 'comando' e la possibilit?\195?\160 di avviare il 'comando' stesso, senza compilare obbligatoriamente
+
+- Scritto uno HOWTo per comprendere al meglio l'Init Script
+
+- Migliorato lo script di grub e reso pi?\195?\185 user-friendly
+
+- Migliorati i vari output per una migliore e pi?\195?\185 bella resa grafica.
+
+
+Grazie a tutti per la collaborazione, e a DT per il primo abbozzo del driver del mouse
+e a finarfin che si ?\195?\168 occupato della correzione e miglioramento di alcune funzioni (sopra citate)
+delle IRQ.
+
+
+
+
+
+                                                                                Lord Osiris
+                                                                          osiris at Devils.com
+
+
+
+
+
+Modified: trunk/.bochsrc
+===================================================================
+--- trunk/.bochsrc	2009-06-14 17:53:13 UTC (rev 90)
++++ trunk/.bochsrc	2009-06-15 14:03:13 UTC (rev 91)
+@@ -17,7 +17,7 @@
+ # the "wx" display library.
+ #=======================================================================
+ #config_interface: textconfig
+-config_interface: wx
++#config_interface: wx
+ 
+ #=======================================================================
+ # DISPLAY_LIBRARY
+@@ -59,7 +59,7 @@
+ #display_library: sdl, options="fullscreen" # startup in fullscreen mode
+ #display_library: term
+ #display_library: win32, options="legacyF12" # use F12 to toggle mouse
+-display_library: wx
++#display_library: wx
+ #display_library: x, options="gui_debug"
+ #display_library: x
+ #=======================================================================
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2009-06-14 17:53:13 UTC (rev 90)
++++ trunk/Makefile	2009-06-15 14:03:13 UTC (rev 91)
+@@ -30,6 +30,7 @@
+ OBJ = kernel.o\
+       io/video.o\
+       drivers/keyboard.o\
++      drivers/mouse.o\
+       libc/ctype.o\
+       libc/string.o\
+       io/io.o\
+@@ -82,6 +83,7 @@
+ misc/bitops.o: misc/bitops.c
+ misc/debug.o: misc/debug.c
+ drivers/keyboard.o: drivers/keyboard.c
++drivers/mouse.o: drivers/mouse.c
+ system/syscall.o: system/syscall.c
+ hardware/8253.o: hardware/8253.c
+ shell/shell.o: shell/shell.c
+
+Added: trunk/doc/Starting_script_HOWTO.txt
+===================================================================
+--- trunk/doc/Starting_script_HOWTO.txt	2009-06-14 17:53:13 UTC (rev 90)
++++ trunk/doc/Starting_script_HOWTO.txt	2009-06-15 14:03:13 UTC (rev 91)
+@@ -0,0 +1,56 @@
++#	    The DreamOS Operating System 
++#
++#   Greez to all DreamOS Dev & Community
++#	Lord Osiris at osiris at Devils.com
++#		    or diego.stamigni at linux.com
++
++
++This DOC is about the "start.sh" init script that allow you to use many
++functions.
++
++Usage: start.sh --options $command $language
++
++Starting DreamOS Emulation:"
++
++  Usage: '$0 qemu'  -> to use Qemu Emulator
++	 '$0 bochs' -> to use Bochs Emulator
++
++be sure you have one of those, else you can try it from
++floppy drive, or boot it form your grub.. DreamOS can! :) 
++
++However you have the possibility to choose if you want to 
++compile DreamOS or only lunch the 'Emulator'.
++If you want to compile, use the USE Flags '--compile' then
++the command, like:
++
++  Usage: start.sh --compile $emulator
++or any command you like to compile before.
++
++Also you can chose the language for the boot message, it
++can be very important to understanding the OS and do the
++			 debug.
++
++So please add the argv[3] into your option to this launch 
++script, something like that:
++
++  Usage: start.sh --compile $emulator $language
++
++where now language supported is 'it' or 'en'
++  
++If you want, you can install DreamOS on your floppy
++So, it's very simple, just type install in argv[1] then
++your test on emulators:
++
++  Usage: start.sh floppy_install
++
++
++If you want to install DreamOS into your grub, the step
++is very simple, just grub into your argv[1] :-)
++Please, be sure you have python."
++
++  Usage: start.sh grub
++
++Please Read the HOW To Grub Script to a secure use of it.
++
++
++						  Lord Osiris
+\ No newline at end of file
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/grub.py
+===================================================================
+--- trunk/grub.py	2009-06-14 17:53:13 UTC (rev 90)
++++ trunk/grub.py	2009-06-15 14:03:13 UTC (rev 91)
+@@ -2,6 +2,11 @@
+ import sys
+ import os
+ 
++if os.getuid() != 0:
++	print "--------------------DreamOS v0.1.2 Grub Autogen--------------------"
++	print "[-] You need to run this install script as root!"
++	sys.exit(1)
++
+ def grub_hd(pn):
+ 	letter = pn[2]
+ 	nump = int(pn[3]) - 1
+@@ -48,5 +53,12 @@
+ 	fd.write("\nroot\t" + partition)
+ 	fd.write("\nkernel\t" + cwd)
+ 	fd.write("\nboot\n")
++fd.close()
+ 
+-fd.close()
++print ""
++print "Changes added to /boot/grub/menu.lst: "
++print "\n+title\tDreamOS v0.1.2 trunk"
++print "+root\t" + partition
++print "+kernel\t" + cwd
++print "+boot\n"
++print "[+] Done."
+
+Modified: trunk/hardware/pic8259.c
+===================================================================
+--- trunk/hardware/pic8259.c	2009-06-14 17:53:13 UTC (rev 90)
++++ trunk/hardware/pic8259.c	2009-06-15 14:03:13 UTC (rev 91)
+@@ -85,8 +85,6 @@
+     enable_IRQ(TIMER);
+     enable_IRQ(TO_SLAVE_PIC);
+    
+-
+-
+     setup_IRQ();
+     asm("sti");
+     i=0;
+
+Modified: trunk/include/hardware/pic8259.h
+===================================================================
+--- trunk/include/hardware/pic8259.h	2009-06-14 17:53:13 UTC (rev 90)
++++ trunk/include/hardware/pic8259.h	2009-06-15 14:03:13 UTC (rev 91)
+@@ -55,7 +55,7 @@
+     AVAILABLE_1,
+     AVAILABLE_2,
+     AVAILABLE_3,
+-    AVAILABLE_4,
++    MOUSE,
+     MATH_CPU,
+     FIRST_HD,
+     SECOND_HD
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-06-14 17:53:13 UTC (rev 90)
++++ trunk/include/version.h	2009-06-15 14:03:13 UTC (rev 91)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "1.2"
+ #define EXTRAVERSION "-trunk"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r87"
++#define REV_NUM "-r90"
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2009-06-14 17:53:13 UTC (rev 90)
++++ trunk/kernel.c	2009-06-15 14:03:13 UTC (rev 91)
+@@ -93,6 +93,10 @@
+     sinfo = kmalloc(sizeof(struct cpuinfo_generic));
+     get_cpuid (sinfo);
+ 
++    /* Driver mouse init */
++    mouse_init();
++    _kprintOK();
++
+     printf("\n");
+     printf("----\n");
+     printf(LNG_SHELL);
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2009-06-14 17:53:13 UTC (rev 90)
++++ trunk/mem/kheap.c	2009-06-15 14:03:13 UTC (rev 91)
+@@ -98,8 +98,10 @@
+     new_heap->free_list = first_node;
+     new_heap->used_list = NULL;
+     new_heap->free_nodes = NULL;
+-    printf("\tFirst heap created...\n");   
+-    printf("\tSize: %d - Tot mem: %d - Start address: %x\n", (new_heap->free_list)->size, tot_mem, new_heap);    
++    printf("  First heap created...\n");   
++    printf("  Size: %d\n"
++	   "  Tot mem: %d\n"
++	   "  Start address: %x\n", (new_heap->free_list)->size, tot_mem, new_heap);    
+     return (heap_t*) new_heap;
+ }
+     
+
+Modified: trunk/processore/handlers.c
+===================================================================
+--- trunk/processore/handlers.c	2009-06-14 17:53:13 UTC (rev 90)
++++ trunk/processore/handlers.c	2009-06-15 14:03:13 UTC (rev 91)
+@@ -165,7 +165,12 @@
+     irqn = get_current_irq();  
+     IRQ_s* tmpHandler; 
+     if(irqn>=0) {
+-        tmpHandler = shareHandler[irqn];
++		if(irqn==2) {
++			outportb(SLAVE_PORT,GET_IRR_STATUS);
++			irqn = inportb(SLAVE_PORT);
++			irqn = 8 + find_first_bit(irqn);			
++		}
++        tmpHandler = shareHandler[irqn];		
+ 		if(tmpHandler!=0) {
+ 	    	tmpHandler->IRQ_func();
+ 	    	#ifdef DEBUG
+@@ -181,8 +186,8 @@
+ 	  } else printf("irqn: %d\n", irqn);
+     }
+     else printf("IRQ N: %d E' arrivato qualcosa che non so gestire ", irqn);
+-    if(irqn<=8) outportb(MASTER_PORT, EOI);
+-    else if(irqn<=16){
++    if(irqn<=8 && irqn!=2) outportb(MASTER_PORT, EOI);
++    else if(irqn<=16 || irqn==2){	  
+       outportb(SLAVE_PORT, EOI);
+       outportb(MASTER_PORT, EOI);
+     }
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-06-14 17:53:13 UTC (rev 90)
++++ trunk/shell/commands.c	2009-06-15 14:03:13 UTC (rev 91)
+@@ -40,9 +40,9 @@
+   printf("\n");
+   printf("\t\t\t The Dream Operating System \n"
+ 	 "\t\t           v%s.%s%s %s      \n\n"
+-	 "\t\t\t\t Welcome to DreamOS\n"
+-	 "\t\t Where dreams don't become Reality and remain dreams. \n"
+-	 "\t\t\tR.I.P - Rest in peace with dreamos ^_^        \n", 
++	 "\t\t\t   Welcome to DreamOS\n"
++	 "\t  Where dreams don't become Reality and remain dreams. \n"
++	 "\t          R.I.P - Rest in peace with dreamos ^_^        \n", 
+ 	 VERSION, PATCHLEVEL, EXTRAVERSION, REV_NUM);
+ 	
+   printf("\n\n\n\n");
+@@ -222,6 +222,7 @@
+   _kputs("Main Developers:\n");
+   _kcolor('\012');
+    printf("Shainer - Lisa\n"
++	  "Osiris\n"
+           "Finarfin - Ivan\n\n\n"            
+          );
+ 
+@@ -229,8 +230,8 @@
+   _kputs("Contributors:\n");
+   _kcolor('\012');
+   _kputs("vinc94\n"
+-  		 "tk0\n"
+-  		 "Osiris\n"
++	  "tk0\n"
++	  "DT\n"
+          "Celeron\n"
+ 	 "Hamcha\n"
+          "m0nt0\n"
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-06-14 17:53:13 UTC (rev 90)
++++ trunk/shell/shell.c	2009-06-15 14:03:13 UTC (rev 91)
+@@ -98,7 +98,8 @@
+   int i = 0;
+ 
+   memset(user, '\0', USER_LEN);
+-
++  printf("\t\t.: Benvenuto in DreamOS :.\n\n");
++  
+   do {		
+     printf(LNG_USER);
+     scanf ("%23s",user);
+
+Modified: trunk/start.sh
+===================================================================
+--- trunk/start.sh	2009-06-14 17:53:13 UTC (rev 90)
++++ trunk/start.sh	2009-06-15 14:03:13 UTC (rev 91)
+@@ -6,86 +6,80 @@
+ # diego.stamigni at linux.com
+ # greez ;
+ 
+-#if test -z "$1" 
+-#then
++
++
++VERS="make vers"
++CLEAN="make clean"
++MAKE="make"
++MAKE_IMG="make img"
++
++if [ "$1" != "--compile" ]; then
++
++  if [ $UID != "0" ]; then
++      echo "[-] You need to run this install script as root!"
++      exit
++  fi
++
+ if [ "$1" == "help" ]; then
+ echo ""
+ echo "	    The DreamOS Operating System"
++echo "		    Init Script"
+ echo ""
++echo "Usage: '$0 'options' 'command' 'language'"
++echo "------------------------------------------------------"
++echo "Starting DreamOS Emulation:"
++echo ""
+ echo "Usage: '$0 qemu'  -> to use Qemu Emulator"
+ echo "       '$0 bochs' -> to use Bochs Emulator"
+ echo "be sure you have one of those, else you can try it from"
+ echo "floppy drive, or boot it form your grub.. DreamOS can! :) "
++echo ""
++echo "However you have the possibility to choose if you want to "
++echo "compile DreamOS or only lunch the 'Emulator'."
++echo "If you want to compile, use the USE Flags '--compile' then"
++echo "the command, like:"
++echo ""
++echo "Usage: '$0' '--compile' 'emulator'"
++echo "or any command you like to compile before."
+ echo "------------------------------------------------------"
+ echo "Also you can chose the language for the boot message, it"
+ echo "can be very important to understanding the OS and do the"
+ echo "			 debug."
+ echo ""
+-echo "So please add the argv[2] into your option to this launch "
++echo "So please add the argv[3] into your option to this launch "
+ echo "script, something like that:"
+ echo ""
+-echo "Usage: '$0' 'emulator' 'language'"
++echo "Usage: '$0' '--compile' 'emulator' 'language'"
+ echo "where now language supported is 'it' or 'en'"
+-echo "-------------------------------------------------------"
++echo "------------------------------------------------------"
+ echo ""
+ echo "If you want, you can install DreamOS on your floppy"
+ echo "So, it's very simple, just type install in argv[1] then"
+ echo "your test on emulators:"
+ echo ""
+-echo "Usage: '$0' 'install'"
+-echo "-------------------------------------------------------"
++echo "Usage: '$0' 'floppy_install'"
++echo "------------------------------------------------------"
+ echo ""
+ echo "If you want to install DreamOS into your grub, the step"
+ echo "is very simple, just grub into your argv[1] :-)"
+ echo "Please, be sure you have python."
+ echo ""
+ echo "Usage: '$0' 'grub'"
+-echo "-------------------------------------------------------"
++echo "------------------------------------------------------"
+ exit 1
+-fi
+ 
+-if [ "$2" != NULL ]; then
+-	if [ "$2" == "it" ]; then
+-		echo "Ok! Language '$2' imposted"
+-		make it
+-		echo "----------------------->"
++elif [ "$1" == "qemu" ] || [ "$1" == "bochs" ]; then
+ 
+-	elif [ "$2" == "en" ]; then
+-		echo "Ok! Language '$2' imposted"
+-        	make en
+-		echo "----------------------->"
+-	else
+-		echo "Warning: No language traslation declared!"
+-		echo "----------------------->"
+-	fi		
+-fi
++  if [ "$1" == "qemu" ]; then
++	qemu -fda boot/grub.img
++	exit
++  elif [ "$1" == "bochs" ]; then
++	bochs -f .bochsrc -q
++	exit
++  fi
+ 
+-if [ "$1" == "qemu" ]; then
+-  make clean 
+-  make vers
+-  make
+-  make img
+-  umount boot/os
+-  qemu -fda boot/grub.img
+-  umount boot/os
+-  exit
++elif [ "$1" == "floppy_install" ]; then
+ 
+-elif [ "$1" == "bochs" ]; then
+-  make clean 
+-  make vers
+-  make
+-  make img
+-  umount boot/os
+-  bochs -f .bochsrc -q
+-  umount boot/os
+-  exit
+-
+-elif [ "$1" == "install" ]; then
+-  make clean 
+-  make vers
+-  make
+-  make img
+-  umount boot/os
+   echo "---------------------- "
+   echo "Installing in progres.."
+   make install
+@@ -94,18 +88,21 @@
+   exit
+ 
+ elif [ "$1" == "grub" ]; then
+-  make clean 
+-  make vers
+-  make
+-  make img
+-  umount boot/os
++
+   echo "--------------------------------------------- "
+   echo "Launching grub installer script in progress.."
++  echo ""
+   python grub.py
+   echo "done."
+   echo "--------------------------------------------- "
+   exit
+ 
++elif [ "$1" == "" ]; then
++  echo "Error: No command inserted!"
++  echo "----------------------->"
++  echo "Usage: '$0 help'"
++  exit
++
+ else
+   echo "Uhm? What the hell did you insert ? Lool! '$1' ?? I don't know what is it!"
+   echo "Please, read the help!!!"
+@@ -115,3 +112,84 @@
+ 
+ fi
+ 
++else
++
++  if [ $UID != "0" ]; then
++      echo "[-] You need to run this install script as root!"
++      exit
++  fi
++
++if [ "$2" == "qemu" ] || [ "$2" == "bochs" ]; then
++
++  if [ "$2" == "qemu" ]; then
++
++	  if [ "$3" == "it" ]; then
++		  echo "Ok! Language '$2' imposted, done."
++		  make it                          
++		  echo "----------------------->"  
++
++	  elif [ "$3" == "en" ]; then
++		  echo "Ok! Language '$2' imposted, done."
++		  make en                          
++		  echo "----------------------->"  
++		
++	  else                                     
++		  echo "Warning: No language traslation declared!"
++		  echo "----------------------->"                 
++	  fi   
++	 $VERS && $CLEAN && $MAKE && $MAKE_IMG
++	 qemu -fda boot/grub.img
++	 exit
++
++  elif [ "$2" == "bochs" ]; then
++
++	  if [ "$3" == "it" ]; then
++		  echo "Ok! Language '$3' imposted, done."
++		  make it                          
++		  echo "----------------------->"  
++		  
++	  elif [ "$3" == "en" ]; then
++		  echo "Ok! Language '$3' imposted, done."
++		  make en                          
++		  echo "----------------------->"  
++	  else                                     
++		  echo "Warning: No language traslation declared!"
++		  echo "----------------------->"                 
++	  fi  
++
++	$VERS && $CLEAN && $MAKE && $MAKE_IMG
++	bochs -f .bochsrc -q
++	exit
++
++fi
++
++elif [ "$2" == "floppy_install" ]; then
++
++  $VERS && $CLEAN && $MAKE && $MAKE_IMG
++  echo "---------------------- "
++  echo "Installing in progres.."
++  make install
++  echo "done."
++  echo "---------------------- "
++  exit
++
++elif [ "$2" == "grub" ]; then
++
++  $VERS && $CLEAN && $MAKE && $MAKE_IMG
++  echo "--------------------------------------------- "
++  echo "Launching grub installer script in progress.."
++  python grub.py
++  echo "done."
++  echo "--------------------------------------------- "
++  exit
++
++
++elif [ "$2" == "" ]; then
++  echo "Error: No command inserted!"
++  echo "----------------------->"
++  echo "Usage: '$0 help'"
++  exit
++fi  
++    
++fi
++
+
+
+
+From osiris_h4ck at mail.berlios.de  Mon Jun 15 19:30:22 2009
+From: osiris_h4ck at mail.berlios.de (osiris_h4ck at mail.berlios.de)
+Date: Mon, 15 Jun 2009 19:30:22 +0200
+Subject: [Dreamos-dev] r92 - in trunk: drivers include/drivers
+Message-ID: <200906151730.n5FHUMoE032585@sheep.berlios.de>
+
+Author: osiris_h4ck
+Date: 2009-06-15 19:30:19 +0200 (Mon, 15 Jun 2009)
+New Revision: 92
+
+Added:
+   trunk/drivers/mouse.c
+   trunk/include/drivers/mouse.h
+Log:
+ops, dimenticato il driver!
+
+
+
+Added: trunk/drivers/mouse.c
+===================================================================
+--- trunk/drivers/mouse.c	2009-06-15 14:03:13 UTC (rev 91)
++++ trunk/drivers/mouse.c	2009-06-15 17:30:19 UTC (rev 92)
+@@ -0,0 +1,104 @@
++/* 
++ * Driver for *PS2* Mouses.
++ * 	greez to Osiris
++ *	  & DT (Contributor)
++ */
++
++#include <mouse.h>
++#include <video.h>
++#include <io.h>
++#include <handlers.h>
++#include <pic8259.h>
++#include <stdio.h>
++
++void mouse_init()
++{
++	printf("Inizializzo il driver del mouse..");
++	mouse_waitcmd(1);
++	outportb(0x64,0xA8);
++	mouse_waitcmd(1);
++	outportb(0x64,0x20);
++	unsigned char status_byte;
++	mouse_waitcmd(0);
++	status_byte = (inportb(0x60) | 2);
++	mouse_waitcmd(1);
++	outportb(0x64, 0x60);
++	mouse_waitcmd(1);
++	outportb(0x60, status_byte);
++	mouse_write (0xF6);
++	mouse_read();
++	mouse_write (0xF4);
++	mouse_read();
++	add_IRQ_handler(12, mouse_IRQhandler);
++	enable_IRQ(12);
++}
++
++void mouse_waitcmd(unsigned char type)
++{
++	register unsigned int _time_out=100000;
++	if(type==0)
++	{
++		while(_time_out--) // dati
++		{
++			if((inportb(0x64) & 1)==1)
++			{
++				return;
++			}
++		}
++		return;
++	}
++	else
++	{
++		while(_time_out--) // e segnali
++		{
++			if((inportb(0x64) & 2)==0)
++			{
++				return;
++			}
++		}
++		return;
++	}
++}
++
++void mouse_write (unsigned char a_write)
++{
++	mouse_waitcmd(1);
++	outportb(0x64, 0xD4);
++	mouse_waitcmd(1);
++	outportb(0x60, a_write);
++}
++
++unsigned char mouse_read()
++{
++	mouse_waitcmd(0);
++	return inportb(0x60);
++}
++
++void mouse_IRQhandler(struct regs *a_r)
++{
++	static unsigned char cycle = 0;
++	static char mouse_bytes[3];
++	mouse_bytes[cycle++] = inportb(0x60);
++	char x, y;
++ 
++	// Debug, se viene visualizzato questo messagio, il driver worka!
++//	_kputs("\nCi sono!\n");
++
++	if (cycle == 3) {
++	cycle = 0; 
++
++	if ((mouse_bytes[0] & 0x80) || (mouse_bytes[0] & 0x40))
++	  return;
++	if (!(mouse_bytes[0] & 0x20))
++	   y |= 0xFFFFFF00;
++	if (!(mouse_bytes[0] & 0x10))
++	  x |= 0xFFFFFF00;
++	if (mouse_bytes[0] & 0x4)
++	    printf("\n[+] Mouse driver: rilevato tasto centrale premuto!");
++	if (mouse_bytes[0] & 0x2)
++	    printf("\n[+] Mouse driver: rilevato tasto destro premuto!");
++	if (mouse_bytes[0] & 0x1)
++	    printf("\n[+] Mouse driver: rilevato tasto sinistro premuto!");
++	}
++} //End
++
+
+Added: trunk/include/drivers/mouse.h
+===================================================================
+--- trunk/include/drivers/mouse.h	2009-06-15 14:03:13 UTC (rev 91)
++++ trunk/include/drivers/mouse.h	2009-06-15 17:30:19 UTC (rev 92)
+@@ -0,0 +1,37 @@
++#ifndef _MOUSE_H_
++#define _MOUSE_H_
++
++#define MOUSE_ENABLE_PACKET 0xF4
++#define MOUSE_DISABLE_PACKET 0xF5
++#define MOUSE_USE_DEFAULT_SETTINGS 0xF6
++
++/**
++ * mouse_init()
++ * @description inizializza il mouse 
++ **/
++void mouse_init();
++/**
++ * mouse_send_data()
++ * @description manda dati al mouse
++ * @param data:
++ * i dati da mandare
++ **/
++void mouse_waitcmd(unsigned char type);
++
++void mouse_write (unsigned char a_write);
++/**
++ * mouse_receive_data()
++ * @description riceve dati dal mouse
++ * @return i dati ricevuti
++ **/
++unsigned char mouse_read();
++/**
++ * mouse_waitcmd()
++ * @description fa attendere il mouse per un comando
++ * @param type:
++ * 1 per mandare
++ * 0 per ricevere
++ **/
++
++void mouse_IRQhandler();
++#endif /* _MOUSE_H_ */
+
+
+
+From finarfin at mail.berlios.de  Mon Jun 15 22:26:08 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Mon, 15 Jun 2009 22:26:08 +0200
+Subject: [Dreamos-dev] r93 - in trunk: . drivers include include/drivers
+	include/lng mem shell
+Message-ID: <200906152026.n5FKQ8OE029216@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-06-15 22:26:07 +0200 (Mon, 15 Jun 2009)
+New Revision: 93
+
+Modified:
+   trunk/.bochsrc
+   trunk/dreamos.img
+   trunk/drivers/mouse.c
+   trunk/include/drivers/mouse.h
+   trunk/include/lng/en.h
+   trunk/include/lng/it.h
+   trunk/include/use.h
+   trunk/kernel.c
+   trunk/mem/kheap.c
+   trunk/mem/paging.c
+   trunk/shell/shell.c
+Log:
+Aggiornati file lingua, con messagi sul mouse
+Mappato indirizzo fisico fee00000 nel suo corrispettivo logico
+Corrette alcune stampe durante l'inizializzazione del mouse driver
+
+
+Modified: trunk/.bochsrc
+===================================================================
+--- trunk/.bochsrc	2009-06-15 17:30:19 UTC (rev 92)
++++ trunk/.bochsrc	2009-06-15 20:26:07 UTC (rev 93)
+@@ -17,7 +17,7 @@
+ # the "wx" display library.
+ #=======================================================================
+ #config_interface: textconfig
+-#config_interface: wx
++config_interface: wx
+ 
+ #=======================================================================
+ # DISPLAY_LIBRARY
+@@ -59,7 +59,7 @@
+ #display_library: sdl, options="fullscreen" # startup in fullscreen mode
+ #display_library: term
+ #display_library: win32, options="legacyF12" # use F12 to toggle mouse
+-#display_library: wx
++display_library: wx
+ #display_library: x, options="gui_debug"
+ #display_library: x
+ #=======================================================================
+@@ -541,7 +541,7 @@
+ #   mouse: enabled=1, type=serial
+ #   mouse: enabled=0
+ #=======================================================================
+-mouse: enabled=0
++mouse: enabled=1, type=ps2
+ 
+ #=======================================================================
+ # private_colormap: Request that the GUI create and use it's own
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/drivers/mouse.c
+===================================================================
+--- trunk/drivers/mouse.c	2009-06-15 17:30:19 UTC (rev 92)
++++ trunk/drivers/mouse.c	2009-06-15 20:26:07 UTC (rev 93)
+@@ -1,19 +1,39 @@
+-/* 
+- * Driver for *PS2* Mouses.
+- * 	greez to Osiris
+- *	  & DT (Contributor)
++/*
++ * Dreamos
++ * mouse.c
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+ 
++ /*
++  * Driver for *PS2* Mouses.
++  * Authors DT, Osiris
++  * Contributor: finarfin 
++  * first version: 16/06/2009
++  */
++
+ #include <mouse.h>
+ #include <video.h>
+ #include <io.h>
+ #include <handlers.h>
+ #include <pic8259.h>
+ #include <stdio.h>
++#include <use.h>
+ 
+ void mouse_init()
+ {
+-	printf("Inizializzo il driver del mouse..");
++	printf(LNG_MOUSE_SETUP);
+ 	mouse_waitcmd(1);
+ 	outportb(0x64,0xA8);
+ 	mouse_waitcmd(1);
+@@ -94,11 +114,11 @@
+ 	if (!(mouse_bytes[0] & 0x10))
+ 	  x |= 0xFFFFFF00;
+ 	if (mouse_bytes[0] & 0x4)
+-	    printf("\n[+] Mouse driver: rilevato tasto centrale premuto!");
++	    printf(LNG_MOUSE_MID);
+ 	if (mouse_bytes[0] & 0x2)
+-	    printf("\n[+] Mouse driver: rilevato tasto destro premuto!");
++	    printf(LNG_MOUSE_RIGHT);
+ 	if (mouse_bytes[0] & 0x1)
+-	    printf("\n[+] Mouse driver: rilevato tasto sinistro premuto!");
++	    printf(LNG_MOUSE_LEFT);
+ 	}
+ } //End
+ 
+
+Modified: trunk/include/drivers/mouse.h
+===================================================================
+--- trunk/include/drivers/mouse.h	2009-06-15 17:30:19 UTC (rev 92)
++++ trunk/include/drivers/mouse.h	2009-06-15 20:26:07 UTC (rev 93)
+@@ -1,3 +1,28 @@
++/*
++ * Dreamos
++ * mouse.h
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++/*
++  * Driver for *PS2* Mouses.
++  * Authors DT, Osiris
++  * Contributor: finarfin 
++  * first version: 16/06/2009
++  */
++  
+ #ifndef _MOUSE_H_
+ #define _MOUSE_H_
+ 
+
+Modified: trunk/include/lng/en.h
+===================================================================
+--- trunk/include/lng/en.h	2009-06-15 17:30:19 UTC (rev 92)
++++ trunk/include/lng/en.h	2009-06-15 20:26:07 UTC (rev 93)
+@@ -31,6 +31,11 @@
+ #define LNG_USER "[?] Enter your username: "
+ #define LNG_USER_R "[x] Please, insert your username :)\n"
+ #define LNG_UNKNOWN_CMD "Unknown command:"
++#define LNG_MOUSE_SETUP "Setting up mouse driver.."
++#define LNG_MOUSE_MID "\n[+] Mouse driver: central key pressed!"
++#define LNG_MOUSE_RIGHT  "\n[+] Mouse driver: right key pressed!"
++#define LNG_MOUSE_LEFT  "\n[+] Mouse driver: left key pressed!"
++#define LNG_WELCOME "\t\t.: Welcome to DreamOS :.\n\n"
+ 
+ // DATE ME NOE!
+ // MONTHS
+
+Modified: trunk/include/lng/it.h
+===================================================================
+--- trunk/include/lng/it.h	2009-06-15 17:30:19 UTC (rev 92)
++++ trunk/include/lng/it.h	2009-06-15 20:26:07 UTC (rev 93)
+@@ -32,6 +32,11 @@
+ #define LNG_USER "[?] Inserisci il nome utente: "
+ #define LNG_USER_R "[x] Per favore, inserisci il nome utente :)\n"
+ #define LNG_UNKNOWN_CMD "Comando sconosciuto:"
++#define LNG_MOUSE_SETUP "Inizializzo il driver del mouse.."
++#define LNG_MOUSE_MID "\n[+] Mouse driver: rilevato tasto centrale premuto!"
++#define LNG_MOUSE_RIGHT "\n[+] Mouse driver: rilevato tasto destro premuto!"
++#define LNG_MOUSE_LEFT "\n[+] Mouse driver: rilevato tasto sinistro premuto!"
++#define LNG_WELCOME "\t\t.: Benvenuto in DreamOS :.\n\n"
+ 
+ // DATE ME NOE!
+ // MESI: sereno variabile in tutto il nord Italia
+
+Modified: trunk/include/use.h
+===================================================================
+--- trunk/include/use.h	2009-06-15 17:30:19 UTC (rev 92)
++++ trunk/include/use.h	2009-06-15 20:26:07 UTC (rev 93)
+@@ -1,5 +1,5 @@
+ /*
+- * It.h
++ * En.h
+  *  This program is free software; you can redistribute it and/or modify
+  *  it under the terms of the GNU General Public License as published by
+  *  the Free Software Foundation; either version 2 of the License, or
+@@ -14,52 +14,55 @@
+  *  along with this program; if not, write to the Free Software
+  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
++#ifndef _EN_H_
++#define _EN_H_
+ 
+-#ifndef _IT_H_
+-#define _IT_H_
++#define LNG_SITE "\nSite: "
++#define LNG_GDT "Initialize GDT   "
++#define LNG_IDT "Initialize IDT   "
++#define LNG_PAGING "Enabling Paging: "
++#define LNG_PIT8253 "Initialize PIT    "
++#define LNG_PIC8259 "Initialize PIC8259    "
++#define LNG_CPU "\nCPU: "
++#define LNG_FREERAM "Free RAM:"
++#define LNG_FREEPAGE "\t- Number free page:"
++#define LNG_BITMAP "\t- Number bitmap's elements:"
++#define LNG_SHELL "Loading the shell"
++#define LNG_USER "[?] Enter your username: "
++#define LNG_USER_R "[x] Please, insert your username :)\n"
++#define LNG_UNKNOWN_CMD "Unknown command:"
++#define LNG_MOUSE_SETUP "Setting up mouse driver.."
++#define LNG_MOUSE_MID "\n[+] Mouse driver: central key pressed!"
++#define LNG_MOUSE_RIGHT  "\n[+] Mouse driver: right key pressed!"
++#define LNG_MOUSE_LEFT  "\n[+] Mouse driver: left key pressed!"
++#define LNG_WELCOME "\t\t.: Welcome to DreamOS :.\n\n"
+ 
+-#define LNG_SITE "\nSito: "
+-#define LNG_GDT "Inizializzo GDT   "
+-#define LNG_IDT "Inizializzo IDT   "
+-#define LNG_PAGING "Abilito Paging: "
+-#define LNG_PIT8253 "Inizializzo PIT    "
+-#define LNG_PIC8259 "Inizializzo PIC8259    "
+-#define LNG_CPU "\nProcessore: "
+-#define LNG_FREERAM "Ram Disposizione:"
+-#define LNG_FREEPAGE "\t- Numero Pagine a disposizione:"
+-#define LNG_BITMAP "\t- Numero elementi della bitmap:"
+-#define LNG_SHELL "Carico la shell"
+-#define LNG_USER "[?] Inserisci il nome utente: "
+-#define LNG_USER_R "[x] Per favore, inserisci il nome utente :)\n"
+-#define LNG_UNKNOWN_CMD "Comando sconosciuto:"
+-
+ // DATE ME NOE!
+-// MESI: sereno variabile in tutto il nord Italia
+-#define LNG_DATE_JAN "Gennaio"
+-#define LNG_DATE_FEB "Febbraio"
+-#define LNG_DATE_MAR "Marzo"
+-#define LNG_DATE_APR "Aprile"
+-#define LNG_DATE_MAY "Maggio"
+-#define LNG_DATE_JUN "Giugno"
+-#define LNG_DATE_JUL "Luglio"
+-#define LNG_DATE_AUG "Agosto"
+-#define LNG_DATE_SEP "Settembre"
+-#define LNG_DATE_OCT "Ottobre"
+-#define LNG_DATE_NOV "Novembre"
+-#define LNG_DATE_DEC "Dicembre"
+-// GIORNI: Foschia in Sardegna e coste tirreniche
+-#define LNG_DAY_SUN "Domenica"
+-#define LNG_DAY_MON "Lunedi"
+-#define LNG_DAY_TUE "Martedi"
+-#define LNG_DAY_WED "Mercoledi"
+-#define LNG_DAY_THU "Giovedi"
+-#define LNG_DAY_FRI "Venerdi"
+-#define LNG_DAY_SAT "Sabato"
+-// ORE: Tutto il resto si becca un bel maltempo.
+-#define LNG_HOUR_SUMM "Ora legale"
+-#define LNG_HOUR_WINT "Ora solare"
+-#define LNG_TIMESTAMP "Sono le "
+-#define LNG_TIMESTAMP2 " del "
+-#define LNG_TIMESTAMP3 " di "
+-
++// MONTHS
++#define LNG_DATE_JAN "January"
++#define LNG_DATE_FEB "February"
++#define LNG_DATE_MAR "March"
++#define LNG_DATE_APR "April"
++#define LNG_DATE_MAY "May"
++#define LNG_DATE_JUN "June"
++#define LNG_DATE_JUL "July"
++#define LNG_DATE_AUG "August"
++#define LNG_DATE_SEP "September"
++#define LNG_DATE_OCT "October"
++#define LNG_DATE_NOV "November"
++#define LNG_DATE_DEC "December"
++// DAYS
++#define LNG_DAY_SUN "Sunday"
++#define LNG_DAY_MON "Monday"
++#define LNG_DAY_TUE "Tuesday"
++#define LNG_DAY_WED "Wednesday"
++#define LNG_DAY_THU "Thursday"
++#define LNG_DAY_FRI "Friday"
++#define LNG_DAY_SAT "Saturday"
++// HOURS
++#define LNG_HOUR_SUMM "Summer hour"
++#define LNG_HOUR_WINT "Winter hour"
++#define LNG_TIMESTAMP "It's "
++#define LNG_TIMESTAMP2 " of "
++#define LNG_TIMESTAMP3 " of "
+ #endif
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2009-06-15 17:30:19 UTC (rev 92)
++++ trunk/kernel.c	2009-06-15 20:26:07 UTC (rev 93)
+@@ -86,17 +86,17 @@
+     printf(LNG_PIT8253);
+     configure_PIT ();
+     _kprintOK();    
++	/* Driver mouse init */    
++	mouse_init();
++	_kprintOK();
+     printf("Memory (upper) amount-> %d kb \n", boot_info->mem_upper);
+     printf("Memory (lower) amount-> %d kb \n", boot_info->mem_lower);
+ 
+     /* Alloc and fill CPUID structure */
+     sinfo = kmalloc(sizeof(struct cpuinfo_generic));
+     get_cpuid (sinfo);
++        
+ 
+-    /* Driver mouse init */
+-    mouse_init();
+-    _kprintOK();
+-
+     printf("\n");
+     printf("----\n");
+     printf(LNG_SHELL);
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2009-06-15 17:30:19 UTC (rev 92)
++++ trunk/mem/kheap.c	2009-06-15 20:26:07 UTC (rev 93)
+@@ -102,6 +102,7 @@
+     printf("  Size: %d\n"
+ 	   "  Tot mem: %d\n"
+ 	   "  Start address: %x\n", (new_heap->free_list)->size, tot_mem, new_heap);    
++	set_pagetable_entry_ric(1019, 512 ,0xFEE00000, SUPERVISOR|PD_PRESENT|WRITE, 0);
+     return (heap_t*) new_heap;
+ }
+     
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2009-06-15 17:30:19 UTC (rev 92)
++++ trunk/mem/paging.c	2009-06-15 20:26:07 UTC (rev 93)
+@@ -42,7 +42,7 @@
+ 
+ void init_paging(){
+     int i;
+-    int apic_location;
++    unsigned int apic_location;
+     printf(LNG_PAGING);
+     _kprintOK();    
+     current_page_dir = create_pageDir();
+@@ -70,7 +70,8 @@
+         #endif
+         i++;
+     }
+-    apic_location = request_pages(1, NOT_ADD_LIST);       
++    //apic_location = request_pages(1, NOT_ADD_LIST);	
++	set_pagedir_entry(1019, (unsigned int) apic_location,PD_PRESENT|SUPERVISOR, 0);	
+             
+     load_pdbr((unsigned int)current_page_dir);
+     kheap = make_heap(tot_mem - ((unsigned int) &end));
+@@ -145,7 +146,7 @@
+     current_page_table[pos] = (base&0xFFFFF000)|opt1|opt2;
+     #ifdef DEBUG
+     if(pos<10) printf("pos: %d, base: %d, basepte: %d\n",pos, base, current_page_table[pos]);
+-    #endif
++    #endif	
+ }
+ 
+ /**
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-06-15 17:30:19 UTC (rev 92)
++++ trunk/shell/shell.c	2009-06-15 20:26:07 UTC (rev 93)
+@@ -98,7 +98,7 @@
+   int i = 0;
+ 
+   memset(user, '\0', USER_LEN);
+-  printf("\t\t.: Benvenuto in DreamOS :.\n\n");
++  printf(LNG_WELCOME);
+   
+   do {		
+     printf(LNG_USER);
+
+
+
+From finarfin at mail.berlios.de  Tue Jun 16 19:12:56 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Tue, 16 Jun 2009 19:12:56 +0200
+Subject: [Dreamos-dev] r94 - trunk/mem
+Message-ID: <200906161712.n5GHCu6e020639@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-06-16 19:12:54 +0200 (Tue, 16 Jun 2009)
+New Revision: 94
+
+Modified:
+   trunk/mem/paging.c
+Log:
+Aggiunta createpagetable in paging.c
+
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2009-06-15 20:26:07 UTC (rev 93)
++++ trunk/mem/paging.c	2009-06-16 17:12:54 UTC (rev 94)
+@@ -45,6 +45,7 @@
+     unsigned int apic_location;
+     printf(LNG_PAGING);
+     _kprintOK();    
++	apic_location = create_pageTable();
+     current_page_dir = create_pageDir();
+     #ifdef DEBUG
+     printf("Pd baseAddress: %d\n", (unsigned int) current_page_dir);
+
+
+
+From osiris_h4ck at mail.berlios.de  Tue Jun 16 19:39:28 2009
+From: osiris_h4ck at mail.berlios.de (osiris_h4ck at mail.berlios.de)
+Date: Tue, 16 Jun 2009 19:39:28 +0200
+Subject: [Dreamos-dev] r95 - in trunk: . drivers include include/drivers
+	include/io include/lng include/shell io shell
+Message-ID: <200906161739.n5GHdSne031216@sheep.berlios.de>
+
+Author: osiris_h4ck
+Date: 2009-06-16 19:39:19 +0200 (Tue, 16 Jun 2009)
+New Revision: 95
+
+Modified:
+   trunk/.bochsrc
+   trunk/dreamos.img
+   trunk/drivers/mouse.c
+   trunk/include/drivers/mouse.h
+   trunk/include/io/video.h
+   trunk/include/lng/en.h
+   trunk/include/lng/it.h
+   trunk/include/shell/commands.h
+   trunk/include/use.h
+   trunk/include/version.h
+   trunk/io/video.c
+   trunk/kernel.c
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+Log:
+Bene! Nuova rev -> grandi novita'! Vediamole insieme:
+
+1) Aggiunto comando modprobe da shell che gestisce l'init e il de-init del driver del mouse
+2) Aggiunte alcune funzioni comode per lo stampo delle coordinate del mouse
+3) Aggiunto '\r' per le stampe
+4) Il mouse ora muove il cursore e stampa le coordinate
+5) Bloccato per il momento la funziona di monitoraggio dei tasti del mouse premuti per un piccolo
+   problema che a breve sara'risolto.
+
+                                                                                        Lord Osiris
+                                                                                  osiris at Devils.com
+                                                                        or diego.stamigni at linux.com
+
+
+Modified: trunk/.bochsrc
+===================================================================
+--- trunk/.bochsrc	2009-06-16 17:12:54 UTC (rev 94)
++++ trunk/.bochsrc	2009-06-16 17:39:19 UTC (rev 95)
+@@ -16,8 +16,8 @@
+ # NOTE: if you use the "wx" configuration interface, you must also use
+ # the "wx" display library.
+ #=======================================================================
+-#config_interface: textconfig
+-config_interface: wx
++config_interface: textconfig
++#config_interface: wx
+ 
+ #=======================================================================
+ # DISPLAY_LIBRARY
+@@ -59,7 +59,7 @@
+ #display_library: sdl, options="fullscreen" # startup in fullscreen mode
+ #display_library: term
+ #display_library: win32, options="legacyF12" # use F12 to toggle mouse
+-display_library: wx
++#display_library: wx
+ #display_library: x, options="gui_debug"
+ #display_library: x
+ #=======================================================================
+@@ -85,9 +85,9 @@
+ # The default is 32MB, most OS's won't need more than that.
+ # The maximum amount of memory supported is 2048Mb.
+ #=======================================================================
+-#megs: 256
++megs: 512
+ #megs: 128
+-megs: 64
++#megs: 64
+ #megs: 32
+ #megs: 16
+ #megs: 8
+@@ -541,7 +541,7 @@
+ #   mouse: enabled=1, type=serial
+ #   mouse: enabled=0
+ #=======================================================================
+-mouse: enabled=1, type=ps2
++#mouse: enabled=1, type=ps2
+ 
+ #=======================================================================
+ # private_colormap: Request that the GUI create and use it's own
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/drivers/mouse.c
+===================================================================
+--- trunk/drivers/mouse.c	2009-06-16 17:12:54 UTC (rev 94)
++++ trunk/drivers/mouse.c	2009-06-16 17:39:19 UTC (rev 95)
+@@ -51,8 +51,16 @@
+ 	mouse_read();
+ 	add_IRQ_handler(12, mouse_IRQhandler);
+ 	enable_IRQ(12);
++	_kprintOK();
+ }
+ 
++void mouse_dead()
++{
++	printf(LNG_MOUSE_REMOVE);
++	disable_IRQ(12);
++	_kprintOK();
++}
++
+ void mouse_waitcmd(unsigned char type)
+ {
+ 	register unsigned int _time_out=100000;
+@@ -99,26 +107,90 @@
+ 	static unsigned char cycle = 0;
+ 	static char mouse_bytes[3];
+ 	mouse_bytes[cycle++] = inportb(0x60);
+-	char x, y;
+- 
+-	// Debug, se viene visualizzato questo messagio, il driver worka!
+-//	_kputs("\nCi sono!\n");
++	// dichiariamo le due variabili che conterranno le coordinate
++	// e inizializziamole a 0
++	signed long int MousePositionX = 0, MousePositionY = 0;
++      
++	// e alliniamolo al centro!
++	// non va bene _SCR_H e _SCR_W
++	//MousePositionX=(_SCR_H/2)-(_SCR_W/2);
++	//MousePositionY=(_SCR_H/2)-(_SCR_W/2);
++	MousePositionX=(800/2)-(800/2);
++	MousePositionY=(800/2)-(600/2);
+ 
+ 	if (cycle == 3) {
+-	cycle = 0; 
++	  cycle = 0; 
+ 
+-	if ((mouse_bytes[0] & 0x80) || (mouse_bytes[0] & 0x40))
+-	  return;
+-	if (!(mouse_bytes[0] & 0x20))
+-	   y |= 0xFFFFFF00;
+-	if (!(mouse_bytes[0] & 0x10))
+-	  x |= 0xFFFFFF00;
+-	if (mouse_bytes[0] & 0x4)
+-	    printf(LNG_MOUSE_MID);
+-	if (mouse_bytes[0] & 0x2)
+-	    printf(LNG_MOUSE_RIGHT);
+-	if (mouse_bytes[0] & 0x1)
+-	    printf(LNG_MOUSE_LEFT);
++//	if ((mouse_bytes[0] & 0x80) || (mouse_bytes[0] & 0x40))
++//	  return;
++
++	// coordinate x stanno in mouse_bytes[1] e
++	// le coordinate y stanno in mouse_bytes[2]
++	// direzione (0=destra, 1=sinitra)
++
++	if((mouse_bytes[0] & 0x07)==0) // 0x07 forse non ? un valore corretto
++	//if((mouse_bytes[0] & 0x40)==0)
++	{
++	  //if((mouse_bytes[0] & 0x05)==0) // 0x05 forse non ? un valore corretto
++	  if((mouse_bytes[0] & 0x10)==0)
++	  {
++	      MousePositionX+=mouse_bytes[1];
++	  } else {
++	      MousePositionX-=mouse_bytes[1];
++	  }
++	} else //overflow
++	  MousePositionX+=mouse_bytes[1]/2;
++   
++	// direzioni (0=su, 1=sotto)
++	if((mouse_bytes[0] & 0x08)==0) // 0x08 forse non ? un valore corretto
++	//if((mouse_bytes[0] & 0x80)==0)
++	{
++	  //if((mouse_bytes[0] & 0x06)==0) // 0x06 forse non ? un valore corretto
++	  if((mouse_bytes[0] & 0x20)==0)
++	  {
++	      MousePositionY-=mouse_bytes[2];
++	  } else {
++	      MousePositionY+=mouse_bytes[2];
++	  }
++	} else  // overflow
++	    MousePositionY-=mouse_bytes[2]/2;
++	
++	// manteniamo il cursore entro i limiti 
++	// per uno schermo 800x600
++	// per MousePositionX
++	if(MousePositionX>=800-16) 
++	  MousePositionX=800-16;
++
++	if(MousePositionX<=0)
++	  MousePositionX=0;
++
++	// e per MousePositionY
++	if(MousePositionY>=600-24)
++	  MousePositionY=600-24;
++
++	if(MousePositionY<=0)
++	  MousePositionY=0;
++
++	// stampa la posizione
++	printf("\rx: %d | y: %d", MousePositionX, MousePositionY);
++
++	// e muove il cursore 
++	_ksetcursor(MousePositionX, MousePositionY);
++/*
++	// Qui ? si rilevato un problema, se il mouse si muove
++	// vengono rilevati tasti premuti..
++
++	// Rilevo i tasti premuti..
++	if (mouse_bytes[0] & 0x4) 
++	    printf(LNG_MOUSE_MID);  // Centrale premuto
++
++	else if (mouse_bytes[0] & 0x2) 
++	    printf(LNG_MOUSE_RIGHT);  // Destro premuto
++
++	else if (mouse_bytes[0] & 0x1) 
++	    printf(LNG_MOUSE_LEFT);  // Sinistro premuto
++*/
+ 	}
++
+ } //End
+ 
+
+Modified: trunk/include/drivers/mouse.h
+===================================================================
+--- trunk/include/drivers/mouse.h	2009-06-16 17:12:54 UTC (rev 94)
++++ trunk/include/drivers/mouse.h	2009-06-16 17:39:19 UTC (rev 95)
+@@ -58,5 +58,6 @@
+  * 0 per ricevere
+  **/
+ 
++void mouse_dead();
+ void mouse_IRQhandler();
+ #endif /* _MOUSE_H_ */
+
+Modified: trunk/include/io/video.h
+===================================================================
+--- trunk/include/io/video.h	2009-06-16 17:12:54 UTC (rev 94)
++++ trunk/include/io/video.h	2009-06-16 17:39:19 UTC (rev 95)
+@@ -42,6 +42,7 @@
+ void _ktab();
+ void _kclear();
+ void _knewline();
++void _kminline();
+ void _kprintOK();
+ int _kgetline();
+ int _kgetcolumn();
+
+Modified: trunk/include/lng/en.h
+===================================================================
+--- trunk/include/lng/en.h	2009-06-16 17:12:54 UTC (rev 94)
++++ trunk/include/lng/en.h	2009-06-16 17:39:19 UTC (rev 95)
+@@ -32,6 +32,7 @@
+ #define LNG_USER_R "[x] Please, insert your username :)\n"
+ #define LNG_UNKNOWN_CMD "Unknown command:"
+ #define LNG_MOUSE_SETUP "Setting up mouse driver.."
++#define LNG_MOUSE_REMOVE "Setting down mouse driver.."
+ #define LNG_MOUSE_MID "\n[+] Mouse driver: central key pressed!"
+ #define LNG_MOUSE_RIGHT  "\n[+] Mouse driver: right key pressed!"
+ #define LNG_MOUSE_LEFT  "\n[+] Mouse driver: left key pressed!"
+
+Modified: trunk/include/lng/it.h
+===================================================================
+--- trunk/include/lng/it.h	2009-06-16 17:12:54 UTC (rev 94)
++++ trunk/include/lng/it.h	2009-06-16 17:39:19 UTC (rev 95)
+@@ -33,6 +33,7 @@
+ #define LNG_USER_R "[x] Per favore, inserisci il nome utente :)\n"
+ #define LNG_UNKNOWN_CMD "Comando sconosciuto:"
+ #define LNG_MOUSE_SETUP "Inizializzo il driver del mouse.."
++#define LNG_MOUSE_REMOVE "Disattivo il driver del mouse.."
+ #define LNG_MOUSE_MID "\n[+] Mouse driver: rilevato tasto centrale premuto!"
+ #define LNG_MOUSE_RIGHT "\n[+] Mouse driver: rilevato tasto destro premuto!"
+ #define LNG_MOUSE_LEFT "\n[+] Mouse driver: rilevato tasto sinistro premuto!"
+
+Modified: trunk/include/shell/commands.h
+===================================================================
+--- trunk/include/shell/commands.h	2009-06-16 17:12:54 UTC (rev 94)
++++ trunk/include/shell/commands.h	2009-06-16 17:39:19 UTC (rev 95)
+@@ -45,4 +45,5 @@
+ void sleep_cmd();
+ void cpuid();
+ void answer();
++void modprobe();
+ #endif
+
+Modified: trunk/include/use.h
+===================================================================
+--- trunk/include/use.h	2009-06-16 17:12:54 UTC (rev 94)
++++ trunk/include/use.h	2009-06-16 17:39:19 UTC (rev 95)
+@@ -1,5 +1,5 @@
+ /*
+- * En.h
++ * It.h
+  *  This program is free software; you can redistribute it and/or modify
+  *  it under the terms of the GNU General Public License as published by
+  *  the Free Software Foundation; either version 2 of the License, or
+@@ -14,55 +14,58 @@
+  *  along with this program; if not, write to the Free Software
+  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+-#ifndef _EN_H_
+-#define _EN_H_
+ 
+-#define LNG_SITE "\nSite: "
+-#define LNG_GDT "Initialize GDT   "
+-#define LNG_IDT "Initialize IDT   "
+-#define LNG_PAGING "Enabling Paging: "
+-#define LNG_PIT8253 "Initialize PIT    "
+-#define LNG_PIC8259 "Initialize PIC8259    "
+-#define LNG_CPU "\nCPU: "
+-#define LNG_FREERAM "Free RAM:"
+-#define LNG_FREEPAGE "\t- Number free page:"
+-#define LNG_BITMAP "\t- Number bitmap's elements:"
+-#define LNG_SHELL "Loading the shell"
+-#define LNG_USER "[?] Enter your username: "
+-#define LNG_USER_R "[x] Please, insert your username :)\n"
+-#define LNG_UNKNOWN_CMD "Unknown command:"
+-#define LNG_MOUSE_SETUP "Setting up mouse driver.."
+-#define LNG_MOUSE_MID "\n[+] Mouse driver: central key pressed!"
+-#define LNG_MOUSE_RIGHT  "\n[+] Mouse driver: right key pressed!"
+-#define LNG_MOUSE_LEFT  "\n[+] Mouse driver: left key pressed!"
+-#define LNG_WELCOME "\t\t.: Welcome to DreamOS :.\n\n"
++#ifndef _IT_H_
++#define _IT_H_
+ 
++#define LNG_SITE "\nSito: "
++#define LNG_GDT "Inizializzo GDT   "
++#define LNG_IDT "Inizializzo IDT   "
++#define LNG_PAGING "Abilito Paging: "
++#define LNG_PIT8253 "Inizializzo PIT    "
++#define LNG_PIC8259 "Inizializzo PIC8259    "
++#define LNG_CPU "\nProcessore: "
++#define LNG_FREERAM "Ram Disposizione:"
++#define LNG_FREEPAGE "\t- Numero Pagine a disposizione:"
++#define LNG_BITMAP "\t- Numero elementi della bitmap:"
++#define LNG_SHELL "Carico la shell"
++#define LNG_USER "[?] Inserisci il nome utente: "
++#define LNG_USER_R "[x] Per favore, inserisci il nome utente :)\n"
++#define LNG_UNKNOWN_CMD "Comando sconosciuto:"
++#define LNG_MOUSE_SETUP "Inizializzo il driver del mouse.."
++#define LNG_MOUSE_REMOVE "Disattivo il driver del mouse.."
++#define LNG_MOUSE_MID "\n[+] Mouse driver: rilevato tasto centrale premuto!"
++#define LNG_MOUSE_RIGHT "\n[+] Mouse driver: rilevato tasto destro premuto!"
++#define LNG_MOUSE_LEFT "\n[+] Mouse driver: rilevato tasto sinistro premuto!"
++#define LNG_WELCOME "\t\t.: Benvenuto in DreamOS :.\n\n"
++
+ // DATE ME NOE!
+-// MONTHS
+-#define LNG_DATE_JAN "January"
+-#define LNG_DATE_FEB "February"
+-#define LNG_DATE_MAR "March"
+-#define LNG_DATE_APR "April"
+-#define LNG_DATE_MAY "May"
+-#define LNG_DATE_JUN "June"
+-#define LNG_DATE_JUL "July"
+-#define LNG_DATE_AUG "August"
+-#define LNG_DATE_SEP "September"
+-#define LNG_DATE_OCT "October"
+-#define LNG_DATE_NOV "November"
+-#define LNG_DATE_DEC "December"
+-// DAYS
+-#define LNG_DAY_SUN "Sunday"
+-#define LNG_DAY_MON "Monday"
+-#define LNG_DAY_TUE "Tuesday"
+-#define LNG_DAY_WED "Wednesday"
+-#define LNG_DAY_THU "Thursday"
+-#define LNG_DAY_FRI "Friday"
+-#define LNG_DAY_SAT "Saturday"
+-// HOURS
+-#define LNG_HOUR_SUMM "Summer hour"
+-#define LNG_HOUR_WINT "Winter hour"
+-#define LNG_TIMESTAMP "It's "
+-#define LNG_TIMESTAMP2 " of "
+-#define LNG_TIMESTAMP3 " of "
++// MESI: sereno variabile in tutto il nord Italia
++#define LNG_DATE_JAN "Gennaio"
++#define LNG_DATE_FEB "Febbraio"
++#define LNG_DATE_MAR "Marzo"
++#define LNG_DATE_APR "Aprile"
++#define LNG_DATE_MAY "Maggio"
++#define LNG_DATE_JUN "Giugno"
++#define LNG_DATE_JUL "Luglio"
++#define LNG_DATE_AUG "Agosto"
++#define LNG_DATE_SEP "Settembre"
++#define LNG_DATE_OCT "Ottobre"
++#define LNG_DATE_NOV "Novembre"
++#define LNG_DATE_DEC "Dicembre"
++// GIORNI: Foschia in Sardegna e coste tirreniche
++#define LNG_DAY_SUN "Domenica"
++#define LNG_DAY_MON "Lunedi"
++#define LNG_DAY_TUE "Martedi"
++#define LNG_DAY_WED "Mercoledi"
++#define LNG_DAY_THU "Giovedi"
++#define LNG_DAY_FRI "Venerdi"
++#define LNG_DAY_SAT "Sabato"
++// ORE: Tutto il resto si becca un bel maltempo.
++#define LNG_HOUR_SUMM "Ora legale"
++#define LNG_HOUR_WINT "Ora solare"
++#define LNG_TIMESTAMP "Sono le "
++#define LNG_TIMESTAMP2 " del "
++#define LNG_TIMESTAMP3 " di "
++
+ #endif
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-06-16 17:12:54 UTC (rev 94)
++++ trunk/include/version.h	2009-06-16 17:39:19 UTC (rev 95)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "1.2"
+ #define EXTRAVERSION "-trunk"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r90"
++#define REV_NUM "-r93"
+
+Modified: trunk/io/video.c
+===================================================================
+--- trunk/io/video.c	2009-06-16 17:12:54 UTC (rev 94)
++++ trunk/io/video.c	2009-06-16 17:39:19 UTC (rev 95)
+@@ -63,6 +63,8 @@
+       _ktab();
+     else if(*s=='\b')
+       _kbackspace();
++    else if (*s=='\r')
++      _kminline();
+     else
+       _kputc(*s);
+     s++;
+@@ -147,6 +149,16 @@
+ }
+ 
+ /*
++ * Move to the up line (the effect of \n character)
++ */
++void _kminline()
++{	
++    VIDEO_PTR = VIDEO_MEM + ((((VIDEO_PTR - VIDEO_MEM) / (_SCR_W * 2)) - 1) * (_SCR_W * 2));
++    _knewline();
++    _kshiftAll();
++    _ksetcursauto();
++}
++/*
+  * Move the cursor to the correct position
+  */
+ void _ksetcursor(unsigned int x, unsigned int y)
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2009-06-16 17:12:54 UTC (rev 94)
++++ trunk/kernel.c	2009-06-16 17:39:19 UTC (rev 95)
+@@ -86,9 +86,7 @@
+     printf(LNG_PIT8253);
+     configure_PIT ();
+     _kprintOK();    
+-	/* Driver mouse init */    
+-	mouse_init();
+-	_kprintOK();
++
+     printf("Memory (upper) amount-> %d kb \n", boot_info->mem_upper);
+     printf("Memory (lower) amount-> %d kb \n", boot_info->mem_lower);
+ 
+@@ -97,6 +95,11 @@
+     get_cpuid (sinfo);
+         
+ 
++    /* Driver mouse init */
++    //mouse_init();
++    //_kprintOK();
++    // NON IMPOSTATELO, ORA VIENE GESTITO DA MODPROBE l'INIT! */
++
+     printf("\n");
+     printf("----\n");
+     printf(LNG_SHELL);
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-06-16 17:12:54 UTC (rev 94)
++++ trunk/shell/commands.c	2009-06-16 17:39:19 UTC (rev 95)
+@@ -20,6 +20,7 @@
+ #include <cpuid.h>
+ #include <clock.h>
+ #include <sys/utsname.h>
++#include <mouse.h>
+ 
+ void aalogo()
+ {
+@@ -64,7 +65,8 @@
+ 	 "sleep     - pause DreamOS for a particular number of seconds\n"
+ 	 "cpuid     - Show cpu identification informations\n"
+ 	 "date      - Show date and time\n"
+-	 "echo      - Print some lines of text\n");
++	 "echo      - Print some lines of text\n"
++	 "modprobe  - Tool to load and kill modules\n");
+ }
+ 
+ void echo()
+@@ -322,3 +324,51 @@
+   printf("42\n");
+ }
+ 
++void modprobe(void)
++{
++  if (argc < 2)
++      printf("No module inserted or bad usage! Type modprobe --help for the usage.\n");
++  
++  else
++  {
++      if ( argv[2] != NULL && (_kstrncmp (argv[1], "-r", 2) == 0) && 
++	  (_kstrncmp (argv[2], "mouse", 5) == 0) )
++      {
++	  printf("Removing %s..\n", argv[2]);
++	  mouse_dead();
++      }
++      /* per ora lo impostiamo cos?, static,
++      tanto non abbiamo nessun altro modulo, per ora.. */
++      else if (_kstrncmp (argv[1], "mouse", 5) == 0)
++      {
++	 /* enabling mouse */
++	 mouse_init();
++       }
++
++      else if (_kstrncmp (argv[1], "--help", 6) == 0)
++      {
++	  printf("---------------------------------------------------\n"
++		 "Module tool to load and kill modules\n"
++		 "Simple to use, just type:\n"
++		 "\n"
++		 "Usage: %s -<options> module_name\n"
++		 "\t-> %s module_name     - to load module\n"
++		 "\t-> %s -r module_name  - to kill module\n"
++		  "---------------------------------------------------\n"
++		  , argv[0], argv[0], argv[0]);
++      }
++
++      else
++	 if ( (_kstrncmp (argv[1], "-r", 2) == 0) && (_kstrncmp (argv[2], "mouse", 5) == -1) )
++	 {   printf("FATAL: Module %s not found.\n", argv[2]); }
++	
++	 else
++	     printf("FATAL: Module %s not found.\n", argv[1]);
++
++   }
++
++
++}
++
++
++
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-06-16 17:12:54 UTC (rev 94)
++++ trunk/shell/shell.c	2009-06-16 17:39:19 UTC (rev 95)
+@@ -93,6 +93,7 @@
+ 	{ "echo",     echo 	  },
+ 	{ "help",     help	  },
+ 	{ "answer",   answer  },
++	{ "modprobe", modprobe},
+         };
+ 
+   int i = 0;
+
+
+
+From dreamos-dev at lists.berlios.de  Tue Jun 16 23:21:14 2009
+From: dreamos-dev at lists.berlios.de (dreamos-dev at lists.berlios.de)
+Date: Tue, 16 Jun 2009 23:21:14 +0200
+Subject: [Dreamos-dev] [Git]dreamos branch, master,
+	updated. bde943252c05877fa9e7e4cf87e6e10cf1821329
+Message-ID: <200906162121.n5GLLEx0020875@sheep.berlios.de>
+
+This is an automated email from the git hooks/post-receive script. It was
+generated because a ref change was pushed to the repository containing
+the project "dreamos".
+
+The branch, master has been updated
+       via  bde943252c05877fa9e7e4cf87e6e10cf1821329 (commit)
+      from  e7d34974e49fe88eba9891955f6100ec096fdc27 (commit)
+
+Those revisions listed above that are new to this repository have
+not appeared on any other notification email; so we list those
+revisions in full, below.
+
+- Log -----------------------------------------------------------------
+commit bde943252c05877fa9e7e4cf87e6e10cf1821329
+Author: crowley <crowley at azraphel.homenet.telecomitalia.it>
+Date:   Tue Jun 16 23:03:13 2009 +0200
+
+    Aggiornato all'ultima rev svn
+
+-----------------------------------------------------------------------
+
+Summary of changes:
+ Makefile                      |   24 +++++-
+ README                        |    2 +
+ doc/HOWTO_use_grub_script     |   17 ++++
+ doc/Starting_script_HOWTO.txt |   56 ++++++++++++
+ dreamos.img                   |  Bin 49829 -> 54596 bytes
+ drivers/keyboard.c            |   14 ++--
+ drivers/mouse.c               |  196 ++++++++++++++++++++++++++++++++++++++++
+ grub.py                       |   64 +++++++++++++
+ hardware/8253.c               |    6 +-
+ hardware/pic8259.c            |   47 ++++------
+ include/drivers/mouse.h       |   63 +++++++++++++
+ include/hardware/pic8259.h    |    3 +-
+ include/io/io.h               |    7 +-
+ include/io/video.h            |    1 +
+ include/libc/stddef.h         |   10 ++-
+ include/lng/en.h              |    6 ++
+ include/lng/it.h              |    6 ++
+ include/misc/debug.h          |    2 +-
+ include/shell/commands.h      |    1 +
+ include/use.h                 |    6 ++
+ include/version.h             |    2 +-
+ io/io.c                       |    8 +-
+ io/video.c                    |   23 +++++-
+ kernel.c                      |   19 +++--
+ libc/stdio.c                  |    9 ++-
+ libc/string.c                 |   12 ++-
+ mem/kheap.c                   |    7 +-
+ mem/paging.c                  |    9 ++-
+ misc/clock.c                  |   28 +++---
+ misc/debug.c                  |    8 ++-
+ processore/handlers.c         |   52 +++++------
+ shell/commands.c              |   63 ++++++++++++--
+ shell/shell.c                 |   53 ++++++------
+ start.sh                      |  198 +++++++++++++++++++++++++++++++++++++----
+ 34 files changed, 858 insertions(+), 164 deletions(-)
+ create mode 100644 doc/HOWTO_use_grub_script
+ create mode 100644 doc/Starting_script_HOWTO.txt
+ create mode 100644 drivers/mouse.c
+ create mode 100644 grub.py
+ create mode 100644 include/drivers/mouse.h
+
+
+hooks/post-receive
+-- 
+dreamos
+
+
+From finarfin at mail.berlios.de  Sun Jun 21 23:44:11 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Sun, 21 Jun 2009 23:44:11 +0200
+Subject: [Dreamos-dev] r96 - in trunk: . drivers include mem shell
+Message-ID: <200906212144.n5LLiBVn000256@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-06-21 23:44:10 +0200 (Sun, 21 Jun 2009)
+New Revision: 96
+
+Modified:
+   trunk/.bochsrc
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/drivers/mouse.c
+   trunk/include/kernel.h
+   trunk/include/version.h
+   trunk/mem/fismem.c
+   trunk/mem/kheap.c
+   trunk/mem/paging.c
+   trunk/shell/shell.c
+Log:
+Mappato indirizzo del pic 0xFEC00000 anche in memoria logica
+Segnato tale indirizzo come occupato sia a livello fisico che a livello 
+logico
+Modificato il num di vers in Makefile
+Quando si ferma il drv del mouse ora si inibisce anche quest'ultimo a 
+livello hardware
+
+
+
+Modified: trunk/.bochsrc
+===================================================================
+--- trunk/.bochsrc	2009-06-16 17:39:19 UTC (rev 95)
++++ trunk/.bochsrc	2009-06-21 21:44:10 UTC (rev 96)
+@@ -16,8 +16,8 @@
+ # NOTE: if you use the "wx" configuration interface, you must also use
+ # the "wx" display library.
+ #=======================================================================
+-config_interface: textconfig
+-#config_interface: wx
++#config_interface: textconfig
++config_interface: wx
+ 
+ #=======================================================================
+ # DISPLAY_LIBRARY
+@@ -59,7 +59,7 @@
+ #display_library: sdl, options="fullscreen" # startup in fullscreen mode
+ #display_library: term
+ #display_library: win32, options="legacyF12" # use F12 to toggle mouse
+-#display_library: wx
++display_library: wx
+ #display_library: x, options="gui_debug"
+ #display_library: x
+ #=======================================================================
+@@ -541,7 +541,7 @@
+ #   mouse: enabled=1, type=serial
+ #   mouse: enabled=0
+ #=======================================================================
+-#mouse: enabled=1, type=ps2
++mouse: enabled=1, type=ps2
+ 
+ #=======================================================================
+ # private_colormap: Request that the GUI create and use it's own
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2009-06-16 17:39:19 UTC (rev 95)
++++ trunk/Makefile	2009-06-21 21:44:10 UTC (rev 96)
+@@ -4,7 +4,7 @@
+ 
+ NAME = DreamOS
+ VERSION = 0
+-PATCHLEVEL = 1.2
++PATCHLEVEL = 1.3
+ EXTRAVERSION = -trunk
+ 
+ CFLAGS = -nostdlib\
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/drivers/mouse.c
+===================================================================
+--- trunk/drivers/mouse.c	2009-06-16 17:39:19 UTC (rev 95)
++++ trunk/drivers/mouse.c	2009-06-21 21:44:10 UTC (rev 96)
+@@ -57,7 +57,9 @@
+ void mouse_dead()
+ {
+ 	printf(LNG_MOUSE_REMOVE);
+-	disable_IRQ(12);
++	disable_IRQ(MOUSE);
++	mouse_write(0xF5); 
++	mouse_read();
+ 	_kprintOK();
+ }
+ 
+
+Modified: trunk/include/kernel.h
+===================================================================
+--- trunk/include/kernel.h	2009-06-16 17:39:19 UTC (rev 95)
++++ trunk/include/kernel.h	2009-06-21 21:44:10 UTC (rev 96)
+@@ -29,7 +29,7 @@
+ asmlinkage void _start(struct multiboot_info*);
+ int main_loop(struct multiboot_info*);
+ 
+-#define DREAMOS_VER "DreamOS ver 0.1.2 - trunk"
++#define DREAMOS_VER "DreamOS ver 0.1.3 - trunk"
+ #define SITEURL "www.dreamos.org"
+ 
+ #endif
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-06-16 17:39:19 UTC (rev 95)
++++ trunk/include/version.h	2009-06-21 21:44:10 UTC (rev 96)
+@@ -21,7 +21,7 @@
+  */
+ 
+ #define VERSION "0"
+-#define PATCHLEVEL "1.2"
++#define PATCHLEVEL "1.3"
+ #define EXTRAVERSION "-trunk"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r93"
++#define REV_NUM "-r95"
+
+Modified: trunk/mem/fismem.c
+===================================================================
+--- trunk/mem/fismem.c	2009-06-16 17:39:19 UTC (rev 95)
++++ trunk/mem/fismem.c	2009-06-21 21:44:10 UTC (rev 96)
+@@ -48,6 +48,8 @@
+         else mem_bitmap.mem_map[i] = 0x00000000;
+         i++;
+     }
++	mem_bitmap.mem_map[0xf7f0] = 0x00000001;
++	mem_bitmap.mem_map[0x7f60] = 0x00000001;
+     i=0;    
+     bmp_elements = (tot_mem/4096)/32;    
+     //     printf("bmp_elements: %d\n", bmp_elements);
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2009-06-16 17:39:19 UTC (rev 95)
++++ trunk/mem/kheap.c	2009-06-21 21:44:10 UTC (rev 96)
+@@ -82,6 +82,7 @@
+ {
+     heap_t* new_heap;
+     heap_node_t* first_node;
++	heap_node_t* apic_node;
+ 
+     new_heap = (heap_t*)KHEAP_LIST_ADDRESS;
+     node_address = KHEAP_LIST_ADDRESS + sizeof(heap_t);
+@@ -101,8 +102,17 @@
+     printf("  First heap created...\n");   
+     printf("  Size: %d\n"
+ 	   "  Tot mem: %d\n"
+-	   "  Start address: %x\n", (new_heap->free_list)->size, tot_mem, new_heap);    
+-	set_pagetable_entry_ric(1019, 512 ,0xFEE00000, SUPERVISOR|PD_PRESENT|WRITE, 0);
++	   "  Start address: %x\n", (new_heap->free_list)->size, tot_mem, new_heap);	    
++	apic_node = alloc_node();
++	apic_node->start_address = 0xFEC00000;
++	apic_node->size = 4096;
++	apic_node->next = NULL;
++	insert_list (apic_node, &(new_heap->used_list));
++	apic_node = alloc_node();
++	apic_node->start_address = 0xFEE00000;
++	apic_node->size = 4096;
++	apic_node->next = NULL;
++	insert_list (apic_node, &(new_heap->used_list));
+     return (heap_t*) new_heap;
+ }
+     
+@@ -296,7 +306,6 @@
+   * @version 1.0
+   * @param node Node in free_list or used_list to be freed 
+   */
+-
+ void free_node(heap_node_t* toadd){    
+     toadd->start_address = NULL;
+     toadd->size = 0;    
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2009-06-16 17:39:19 UTC (rev 95)
++++ trunk/mem/paging.c	2009-06-21 21:44:10 UTC (rev 96)
+@@ -72,9 +72,11 @@
+         i++;
+     }
+     //apic_location = request_pages(1, NOT_ADD_LIST);	
+-	set_pagedir_entry(1019, (unsigned int) apic_location,PD_PRESENT|SUPERVISOR, 0);	
+-            
++	set_pagedir_entry(1019, (unsigned int) apic_location, PD_PRESENT|SUPERVISOR, 0);	
++           
+     load_pdbr((unsigned int)current_page_dir);
++	set_pagetable_entry_ric(1019, 512 ,0xFEE00000, SUPERVISOR|PD_PRESENT|WRITE, 0);
++	set_pagetable_entry_ric(1019, 0 ,0xFEC00000, SUPERVISOR|PD_PRESENT|WRITE, 0);
+     kheap = make_heap(tot_mem - ((unsigned int) &end));
+ }
+ 
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-06-16 17:39:19 UTC (rev 95)
++++ trunk/shell/shell.c	2009-06-21 21:44:10 UTC (rev 96)
+@@ -39,7 +39,7 @@
+ #include <clock.h>
+ #include <sys/utsname.h>
+ 
+-#define NUM_COM 15
++#define NUM_COM 16
+ 
+ struct cmd {
+ 	const char cmdname[CMD_LEN];
+
+
+
+From finarfin at mail.berlios.de  Tue Jun 23 20:13:08 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Tue, 23 Jun 2009 20:13:08 +0200
+Subject: [Dreamos-dev] r97 - in trunk: . drivers hardware include/drivers io
+	processore shell
+Message-ID: <200906231813.n5NID8LW018191@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-06-23 20:13:07 +0200 (Tue, 23 Jun 2009)
+New Revision: 97
+
+Modified:
+   trunk/dreamos.img
+   trunk/drivers/mouse.c
+   trunk/hardware/pic8259.c
+   trunk/include/drivers/mouse.h
+   trunk/io/video.c
+   trunk/processore/handlers.c
+   trunk/shell/commands.c
+Log:
+IRQ: ora get_current_irq gestisce correttamente anhce l'irq slave
+Aggiunti alcuni commenti su delle funzioni, per la documentazione 
+generata da doxygen
+Sistemato il gestore delle IRQ per utilizzare la nuova get_current_irq
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/drivers/mouse.c
+===================================================================
+--- trunk/drivers/mouse.c	2009-06-21 21:44:10 UTC (rev 96)
++++ trunk/drivers/mouse.c	2009-06-23 18:13:07 UTC (rev 97)
+@@ -54,6 +54,11 @@
+ 	_kprintOK();
+ }
+ 
++/**
++  * Disable the mouse driver
++  * @author Ivan Gualandri, Diego Stamigni, DT
++  * @version 1.0
++  */
+ void mouse_dead()
+ {
+ 	printf(LNG_MOUSE_REMOVE);
+@@ -63,6 +68,11 @@
+ 	_kprintOK();
+ }
+ 
++/**
++ * Mouse wait for a command
++ * @param type: 1 for sending - 0 for receive
++ * @return none
++ **/
+ void mouse_waitcmd(unsigned char type)
+ {
+ 	register unsigned int _time_out=100000;
+@@ -90,6 +100,10 @@
+ 	}
+ }
+ 
++/**
++ * Send data to mouse
++ * @param data data to send
++ **/
+ void mouse_write (unsigned char a_write)
+ {
+ 	mouse_waitcmd(1);
+@@ -98,6 +112,10 @@
+ 	outportb(0x60, a_write);
+ }
+ 
++/**
++ * Read data from mouse
++ * @return data received from mouse
++ **/
+ unsigned char mouse_read()
+ {
+ 	mouse_waitcmd(0);
+
+Modified: trunk/hardware/pic8259.c
+===================================================================
+--- trunk/hardware/pic8259.c	2009-06-21 21:44:10 UTC (rev 96)
++++ trunk/hardware/pic8259.c	2009-06-23 18:13:07 UTC (rev 97)
+@@ -179,12 +179,12 @@
+     int cur_irq;
+     outportb(MASTER_PORT,GET_IRR_STATUS);
+     cur_irq = inportb(MASTER_PORT);
+-//     if(cur_irq!=1) printf("%d\n", cur_irq);
+-    if(cur_irq == 0) {
++    if(cur_irq == 4) {		
+       outportb(SLAVE_PORT, GET_IRR_STATUS);
+       cur_irq = inportb(SLAVE_PORT);
++	  //printf("Slave irq number: %d\n", cur_irq);
++	  return 8 + find_first_bit(cur_irq);
+     }
+-//     printf("%d\n", find_first_bit(cur_irq));
+     return find_first_bit(cur_irq);
+ }
+ 
+
+Modified: trunk/include/drivers/mouse.h
+===================================================================
+--- trunk/include/drivers/mouse.h	2009-06-21 21:44:10 UTC (rev 96)
++++ trunk/include/drivers/mouse.h	2009-06-23 18:13:07 UTC (rev 97)
+@@ -30,33 +30,11 @@
+ #define MOUSE_DISABLE_PACKET 0xF5
+ #define MOUSE_USE_DEFAULT_SETTINGS 0xF6
+ 
+-/**
+- * mouse_init()
+- * @description inizializza il mouse 
+- **/
+ void mouse_init();
+-/**
+- * mouse_send_data()
+- * @description manda dati al mouse
+- * @param data:
+- * i dati da mandare
+- **/
+ void mouse_waitcmd(unsigned char type);
+ 
+ void mouse_write (unsigned char a_write);
+-/**
+- * mouse_receive_data()
+- * @description riceve dati dal mouse
+- * @return i dati ricevuti
+- **/
+ unsigned char mouse_read();
+-/**
+- * mouse_waitcmd()
+- * @description fa attendere il mouse per un comando
+- * @param type:
+- * 1 per mandare
+- * 0 per ricevere
+- **/
+ 
+ void mouse_dead();
+ void mouse_IRQhandler();
+
+Modified: trunk/io/video.c
+===================================================================
+--- trunk/io/video.c	2009-06-21 21:44:10 UTC (rev 96)
++++ trunk/io/video.c	2009-06-23 18:13:07 UTC (rev 97)
+@@ -1,4 +1,4 @@
+-	/***************************************************************************
++/***************************************************************************
+  *            video.c
+  *
+  *  Sat Mar 31 07:47:55 2007
+
+Modified: trunk/processore/handlers.c
+===================================================================
+--- trunk/processore/handlers.c	2009-06-21 21:44:10 UTC (rev 96)
++++ trunk/processore/handlers.c	2009-06-23 18:13:07 UTC (rev 97)
+@@ -165,11 +165,11 @@
+     irqn = get_current_irq();  
+     IRQ_s* tmpHandler; 
+     if(irqn>=0) {
+-		if(irqn==2) {
++		/*if(irqn==2) {
+ 			outportb(SLAVE_PORT,GET_IRR_STATUS);
+ 			irqn = inportb(SLAVE_PORT);
+ 			irqn = 8 + find_first_bit(irqn);			
+-		}
++		}*/
+         tmpHandler = shareHandler[irqn];		
+ 		if(tmpHandler!=0) {
+ 	    	tmpHandler->IRQ_func();
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-06-21 21:44:10 UTC (rev 96)
++++ trunk/shell/commands.c	2009-06-23 18:13:07 UTC (rev 97)
+@@ -223,21 +223,21 @@
+   _kputs("DreamOS Credits\n\n");                
+   _kputs("Main Developers:\n");
+   _kcolor('\012');
+-   printf("Shainer - Lisa\n"
+-	  "Osiris\n"
++   printf("Shainer - Lisa\n"	  
+           "Finarfin - Ivan\n\n\n"            
+          );
+ 
+   _kcolor('\011');
+   _kputs("Contributors:\n");
+   _kcolor('\012');
+-  _kputs("vinc94\n"
+-	  "tk0\n"
+-	  "DT\n"
+-         "Celeron\n"
+-	 "Hamcha\n"
+-         "m0nt0\n"
+-         "and many others (3 or 4 :P)\n\n");
++  _kputs(	"Osiris\n"
++		    "vinc94\n"
++	  		"tk0\n"
++	  		"DT\n"
++         	"Celeron\n"
++	 		"Hamcha\n"
++         	"m0nt0\n"
++         	"and many others (3 or 4 :P)\n\n");
+   _kcolor('\007');
+ }
+ 
+
+
+

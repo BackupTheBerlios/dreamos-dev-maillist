@@ -1,0 +1,226 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r92 - in trunk: drivers include/drivers
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-June/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r92%20-%20in%20trunk%3A%20drivers%20include/drivers&In-Reply-To=%3C200906151730.n5FHUMoE032585%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000092.html">
+   <LINK REL="Next"  HREF="000094.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r92 - in trunk: drivers include/drivers</H1>
+    <B>osiris_h4ck at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r92%20-%20in%20trunk%3A%20drivers%20include/drivers&In-Reply-To=%3C200906151730.n5FHUMoE032585%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r92 - in trunk: drivers include/drivers">osiris_h4ck at mail.berlios.de
+       </A><BR>
+    <I>Mon Jun 15 19:30:22 CEST 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000092.html">[Dreamos-dev] r91 - in trunk: . doc hardware include	include/hardware mem processore shell
+</A></li>
+        <LI>Next message: <A HREF="000094.html">[Dreamos-dev] r93 - in trunk: . drivers include include/drivers	include/lng mem shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#93">[ date ]</a>
+              <a href="thread.html#93">[ thread ]</a>
+              <a href="subject.html#93">[ subject ]</a>
+              <a href="author.html#93">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: osiris_h4ck
+Date: 2009-06-15 19:30:19 +0200 (Mon, 15 Jun 2009)
+New Revision: 92
+
+Added:
+   trunk/drivers/mouse.c
+   trunk/include/drivers/mouse.h
+Log:
+ops, dimenticato il driver!
+
+
+
+Added: trunk/drivers/mouse.c
+===================================================================
+--- trunk/drivers/mouse.c	2009-06-15 14:03:13 UTC (rev 91)
++++ trunk/drivers/mouse.c	2009-06-15 17:30:19 UTC (rev 92)
+@@ -0,0 +1,104 @@
++/* 
++ * Driver for *PS2* Mouses.
++ * 	greez to Osiris
++ *	  &amp; DT (Contributor)
++ */
++
++#include &lt;mouse.h&gt;
++#include &lt;video.h&gt;
++#include &lt;io.h&gt;
++#include &lt;handlers.h&gt;
++#include &lt;pic8259.h&gt;
++#include &lt;stdio.h&gt;
++
++void mouse_init()
++{
++	printf(&quot;Inizializzo il driver del mouse..&quot;);
++	mouse_waitcmd(1);
++	outportb(0x64,0xA8);
++	mouse_waitcmd(1);
++	outportb(0x64,0x20);
++	unsigned char status_byte;
++	mouse_waitcmd(0);
++	status_byte = (inportb(0x60) | 2);
++	mouse_waitcmd(1);
++	outportb(0x64, 0x60);
++	mouse_waitcmd(1);
++	outportb(0x60, status_byte);
++	mouse_write (0xF6);
++	mouse_read();
++	mouse_write (0xF4);
++	mouse_read();
++	add_IRQ_handler(12, mouse_IRQhandler);
++	enable_IRQ(12);
++}
++
++void mouse_waitcmd(unsigned char type)
++{
++	register unsigned int _time_out=100000;
++	if(type==0)
++	{
++		while(_time_out--) // dati
++		{
++			if((inportb(0x64) &amp; 1)==1)
++			{
++				return;
++			}
++		}
++		return;
++	}
++	else
++	{
++		while(_time_out--) // e segnali
++		{
++			if((inportb(0x64) &amp; 2)==0)
++			{
++				return;
++			}
++		}
++		return;
++	}
++}
++
++void mouse_write (unsigned char a_write)
++{
++	mouse_waitcmd(1);
++	outportb(0x64, 0xD4);
++	mouse_waitcmd(1);
++	outportb(0x60, a_write);
++}
++
++unsigned char mouse_read()
++{
++	mouse_waitcmd(0);
++	return inportb(0x60);
++}
++
++void mouse_IRQhandler(struct regs *a_r)
++{
++	static unsigned char cycle = 0;
++	static char mouse_bytes[3];
++	mouse_bytes[cycle++] = inportb(0x60);
++	char x, y;
++ 
++	// Debug, se viene visualizzato questo messagio, il driver worka!
++//	_kputs(&quot;\nCi sono!\n&quot;);
++
++	if (cycle == 3) {
++	cycle = 0; 
++
++	if ((mouse_bytes[0] &amp; 0x80) || (mouse_bytes[0] &amp; 0x40))
++	  return;
++	if (!(mouse_bytes[0] &amp; 0x20))
++	   y |= 0xFFFFFF00;
++	if (!(mouse_bytes[0] &amp; 0x10))
++	  x |= 0xFFFFFF00;
++	if (mouse_bytes[0] &amp; 0x4)
++	    printf(&quot;\n[+] Mouse driver: rilevato tasto centrale premuto!&quot;);
++	if (mouse_bytes[0] &amp; 0x2)
++	    printf(&quot;\n[+] Mouse driver: rilevato tasto destro premuto!&quot;);
++	if (mouse_bytes[0] &amp; 0x1)
++	    printf(&quot;\n[+] Mouse driver: rilevato tasto sinistro premuto!&quot;);
++	}
++} //End
++
+
+Added: trunk/include/drivers/mouse.h
+===================================================================
+--- trunk/include/drivers/mouse.h	2009-06-15 14:03:13 UTC (rev 91)
++++ trunk/include/drivers/mouse.h	2009-06-15 17:30:19 UTC (rev 92)
+@@ -0,0 +1,37 @@
++#ifndef _MOUSE_H_
++#define _MOUSE_H_
++
++#define MOUSE_ENABLE_PACKET 0xF4
++#define MOUSE_DISABLE_PACKET 0xF5
++#define MOUSE_USE_DEFAULT_SETTINGS 0xF6
++
++/**
++ * mouse_init()
++ * @description inizializza il mouse 
++ **/
++void mouse_init();
++/**
++ * mouse_send_data()
++ * @description manda dati al mouse
++ * @param data:
++ * i dati da mandare
++ **/
++void mouse_waitcmd(unsigned char type);
++
++void mouse_write (unsigned char a_write);
++/**
++ * mouse_receive_data()
++ * @description riceve dati dal mouse
++ * @return i dati ricevuti
++ **/
++unsigned char mouse_read();
++/**
++ * mouse_waitcmd()
++ * @description fa attendere il mouse per un comando
++ * @param type:
++ * 1 per mandare
++ * 0 per ricevere
++ **/
++
++void mouse_IRQhandler();
++#endif /* _MOUSE_H_ */
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000092.html">[Dreamos-dev] r91 - in trunk: . doc hardware include	include/hardware mem processore shell
+</A></li>
+	<LI>Next message: <A HREF="000094.html">[Dreamos-dev] r93 - in trunk: . drivers include include/drivers	include/lng mem shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#93">[ date ]</a>
+              <a href="thread.html#93">[ thread ]</a>
+              <a href="subject.html#93">[ subject ]</a>
+              <a href="author.html#93">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

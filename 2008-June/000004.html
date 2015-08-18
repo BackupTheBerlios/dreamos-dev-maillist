@@ -1,0 +1,140 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r6 - trunk
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2008-June/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r6%20-%20trunk&In-Reply-To=%3C200806051857.m55IvMki012095%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000002.html">
+   <LINK REL="Next"  HREF="000005.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r6 - trunk</H1>
+    <B>osiris_h4ck at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r6%20-%20trunk&In-Reply-To=%3C200806051857.m55IvMki012095%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r6 - trunk">osiris_h4ck at mail.berlios.de
+       </A><BR>
+    <I>Thu Jun  5 20:57:22 CEST 2008</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000002.html">[Dreamos-dev] r5 - in trunk: . boot include include/shell shell
+</A></li>
+        <LI>Next message: <A HREF="000005.html">[Dreamos-dev] Osservazioni
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4">[ date ]</a>
+              <a href="thread.html#4">[ thread ]</a>
+              <a href="subject.html#4">[ subject ]</a>
+              <a href="author.html#4">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: osiris_h4ck
+Date: 2008-06-05 20:57:21 +0200 (Thu, 05 Jun 2008)
+New Revision: 6
+
+Added:
+   trunk/start.sh
+Modified:
+   trunk/kernel.c
+Log:
+shellz
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2008-06-05 17:12:22 UTC (rev 5)
++++ trunk/kernel.c	2008-06-05 18:57:21 UTC (rev 6)
+@@ -38,6 +38,7 @@
+ #include &lt;keyboard.h&gt;
+ #include &lt;paging.h&gt;
+ #include &lt;use.h&gt;
++#include &lt;shell.h&gt;
+ 
+ unsigned int *current_page_table;
+ multiboot_info_t *boot_informations;
+@@ -79,22 +80,6 @@
+     init_paging();
+ 
+     get_cpuid();
+-    _kputs (LNG_CPU);
+-    _kcolor (4);
+-    _kgoto (61, _kgetline());
+-    _kputs (cpu_vendor);
+-    _kputs (&quot;\n\n&quot;);
+-    _kcolor(7);    
+-    printf(LNG_FREERAM);
+-    _kgoto(60, _kgetline());
+-    printf(&quot; %d kb\n&quot;, get_memsize()/1024);
+-    printf(LNG_FREEPAGE);
+-    _kgoto(60, _kgetline());
+-    printf(&quot; %d\n&quot;, get_numpages());
+-    printf(LNG_BITMAP);
+-    _kgoto(60, _kgetline());
+-    printf(&quot; %d\n&quot;, get_bmpelements());
+-    printf(&quot;Size of mem_area: %d\n&quot;, sizeof(mem_area));
+     init_mem();
+     asm (&quot;movl $0, %eax\n&quot;
+ 	 &quot;movl $35, %ebx\n&quot;
+@@ -102,11 +87,14 @@
+ 
+     configure_PIT ();
+ 
+-
+     printf(&quot;\n&quot;);
+-    printf(&quot;Page Dir Entry n.0 is: %d\n&quot;, get_pagedir_entry(0));
+-    printf(&quot;Page Table Entry n.4 in Page dir 0 is: %d\n&quot;, get_pagetable_entry(0,4));
+     printf(&quot;----\n&quot;);
++    printf(&quot;Loading the shell..\n&quot;);
++    printf(&quot;[+] Loading compleate!!\n\n&quot;);
+ 
+-    while(1);
++    shell();
++    
++/*    if ( (shell()) != NULL)
++    {	printf(&quot;[+] Loading compleate!!\n\n\n&quot;);	}
++*/
+ }
+
+Added: trunk/start.sh
+===================================================================
+--- trunk/start.sh	2008-06-05 17:12:22 UTC (rev 5)
++++ trunk/start.sh	2008-06-05 18:57:21 UTC (rev 6)
+@@ -0,0 +1 @@
++make clean &amp;&amp; make &amp;&amp; make img &amp;&amp; qemu -fda boot/grub.img
+
+
+Property changes on: trunk/start.sh
+___________________________________________________________________
+Name: svn:executable
+   + *
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000002.html">[Dreamos-dev] r5 - in trunk: . boot include include/shell shell
+</A></li>
+	<LI>Next message: <A HREF="000005.html">[Dreamos-dev] Osservazioni
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4">[ date ]</a>
+              <a href="thread.html#4">[ thread ]</a>
+              <a href="subject.html#4">[ subject ]</a>
+              <a href="author.html#4">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

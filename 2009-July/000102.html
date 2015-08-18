@@ -1,0 +1,321 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r100 - in trunk: . doc include
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-July/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r100%20-%20in%20trunk%3A%20.%20doc%20include&In-Reply-To=%3C200907140903.n6E930OR028197%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000101.html">
+   <LINK REL="Next"  HREF="000103.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r100 - in trunk: . doc include</H1>
+    <B>osiris_h4ck at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r100%20-%20in%20trunk%3A%20.%20doc%20include&In-Reply-To=%3C200907140903.n6E930OR028197%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r100 - in trunk: . doc include">osiris_h4ck at mail.berlios.de
+       </A><BR>
+    <I>Tue Jul 14 11:03:00 CEST 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000101.html">[Dreamos-dev] r99 - in trunk: . hardware include/shell processore	shell
+</A></li>
+        <LI>Next message: <A HREF="000103.html">[Dreamos-dev] r101 - in trunk: . include
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#102">[ date ]</a>
+              <a href="thread.html#102">[ thread ]</a>
+              <a href="subject.html#102">[ subject ]</a>
+              <a href="author.html#102">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: osiris_h4ck
+Date: 2009-07-14 10:57:04 +0200 (Tue, 14 Jul 2009)
+New Revision: 100
+
+Added:
+   trunk/ISO/
+   trunk/dreamos-image.iso
+Modified:
+   trunk/.bochsrc
+   trunk/Makefile
+   trunk/doc/Starting_script_HOWTO.txt
+   trunk/dreamos.img
+   trunk/include/version.h
+   trunk/start.sh
+Log:
+- Aggiunta funzione nello start.sh per creare la iso di DreamOS
+  ./start.sh create_iso
+- Corretti alcuni permessi nello start.sh e nel Makefile, ora non ?\195?\168 necessario avviare
+  obbligatoriamente lo script da root, ma ?\195?\168 lui a decidere quando ha bisogno di UID=0
+- Aggiunte informazioni sul create_iso() nella doc dello start.sh in doc/
+
+
+
+Modified: trunk/.bochsrc
+===================================================================
+--- trunk/.bochsrc	2009-07-13 21:25:47 UTC (rev 99)
++++ trunk/.bochsrc	2009-07-14 08:57:04 UTC (rev 100)
+@@ -17,7 +17,7 @@
+ # the &quot;wx&quot; display library.
+ #=======================================================================
+ #config_interface: textconfig
+-config_interface: wx
++#config_interface: wx
+ 
+ #=======================================================================
+ # DISPLAY_LIBRARY
+@@ -59,7 +59,7 @@
+ #display_library: sdl, options=&quot;fullscreen&quot; # startup in fullscreen mode
+ #display_library: term
+ #display_library: win32, options=&quot;legacyF12&quot; # use F12 to toggle mouse
+-display_library: wx
++#display_library: wx
+ #display_library: x, options=&quot;gui_debug&quot;
+ #display_library: x
+ #=======================================================================
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2009-07-13 21:25:47 UTC (rev 99)
++++ trunk/Makefile	2009-07-14 08:57:04 UTC (rev 100)
+@@ -60,7 +60,7 @@
+ 	nasm -f elf ./boot/multicatcher.S -o bl.img
+ 
+ kernel.bin: $(OBJ)
+-	ld -static --oformat elf32-i386 --output=kernel.bin --script=kernel.lds bl.img $(OBJ) -Ttext 0x100000 -Map kernel.map
++	su -c &quot;ld -static --oformat elf32-i386 --output=kernel.bin --script=kernel.lds bl.img $(OBJ) -Ttext 0x100000 -Map kernel.map&quot;
+ 
+ kernel.o: kernel.c
+ io/video.o: io/video.c
+@@ -90,9 +90,7 @@
+ sys/utsname.o: sys/utsname.c
+ 
+ img:
+-	mount -o loop boot/grub.img boot/os
+-	cp dreamos.img boot/os/boot/grub/
+-	umount boot/os
++	su -c &quot;mount -o loop boot/grub.img boot/os &amp;&amp; cp dreamos.img boot/os/boot/grub/ &amp;&amp; umount boot/os&quot;
+ 
+ vers: 
+ 	 sed -i -e &quot;/^#define VERSION/s/\&quot;.*\&quot;/\&quot;$(VERSION)\&quot;/&quot; include/version.h
+@@ -106,7 +104,6 @@
+ clean:
+ 	rm -f *.img *.bin *.map
+ 	rm -f $(OBJ)
+-#	echo &quot;&quot; &gt; include/version.h
+ 
+ install:
+ 	mkfs.ext2 /dev/fd0
+
+Modified: trunk/doc/Starting_script_HOWTO.txt
+===================================================================
+--- trunk/doc/Starting_script_HOWTO.txt	2009-07-13 21:25:47 UTC (rev 99)
++++ trunk/doc/Starting_script_HOWTO.txt	2009-07-14 08:57:04 UTC (rev 100)
+@@ -52,5 +52,11 @@
+ 
+ Please Read the HOW To Grub Script to a secure use of it.
+ 
++However, if you want, there is a possibility to create an ISO Image
++to burn it then on your CDRom and boot DreamOS on every PC you want.
++Make sure you have installed mkisofs from cdrkit package.
+ 
+-						  Lord Osiris
+\ No newline at end of file
++Usage: start.sh create_iso
++
++
++						  Lord Osiris
+
+Added: trunk/dreamos-image.iso
+===================================================================
+(Binary files differ)
+
+
+Property changes on: trunk/dreamos-image.iso
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-07-13 21:25:47 UTC (rev 99)
++++ trunk/include/version.h	2009-07-14 08:57:04 UTC (rev 100)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL &quot;1.3&quot;
+ #define EXTRAVERSION &quot;-trunk&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r97&quot;
++#define REV_NUM &quot;-r99&quot;
+
+Modified: trunk/start.sh
+===================================================================
+--- trunk/start.sh	2009-07-13 21:25:47 UTC (rev 99)
++++ trunk/start.sh	2009-07-14 08:57:04 UTC (rev 100)
+@@ -6,8 +6,6 @@
+ # <A HREF="https://lists.berlios.de/mailman/listinfo/dreamos-dev">diego.stamigni at linux.com</A>
+ # greez ;
+ 
+-
+-
+ VERS=&quot;make vers&quot;
+ CLEAN=&quot;make clean&quot;
+ MAKE=&quot;make&quot;
+@@ -15,10 +13,10 @@
+ 
+ if [ &quot;$1&quot; != &quot;--compile&quot; ]; then
+ 
+-  if [ $UID != &quot;0&quot; ]; then
+-      echo &quot;[-] You need to run this install script as root!&quot;
+-      exit
+-  fi
++#  if [ $UID != &quot;0&quot; ]; then
++#      echo &quot;[-] You need to run this install script as root!&quot;
++#     exit
++#  fi
+ 
+ if [ &quot;$1&quot; == &quot;help&quot; ]; then
+ echo &quot;&quot;
+@@ -66,6 +64,14 @@
+ echo &quot;&quot;
+ echo &quot;Usage: '$0' 'grub'&quot;
+ echo &quot;------------------------------------------------------&quot;
++echo &quot;&quot;
++echo &quot;If you want, you can create a DreamOS ISO Image Disk&quot;
++echo &quot;to burn it on a cdrom and boot it from a real PC.&quot;
++echo &quot;Make sure you have installed mkisofs from cdrkit package.&quot;
++echo &quot;The command is like this:&quot;
++echo &quot;&quot;
++echo &quot;Usage: '$0' 'create_iso'&quot;
++echo &quot;------------------------------------------------------&quot;
+ exit 1
+ 
+ elif [ &quot;$1&quot; == &quot;qemu&quot; ] || [ &quot;$1&quot; == &quot;bochs&quot; ]; then
+@@ -82,7 +88,7 @@
+ 
+   echo &quot;---------------------- &quot;
+   echo &quot;Installing in progres..&quot;
+-  make install
++  su -c &quot;make install&quot;
+   echo &quot;done.&quot;
+   echo &quot;---------------------- &quot;
+   exit
+@@ -92,11 +98,21 @@
+   echo &quot;--------------------------------------------- &quot;
+   echo &quot;Launching grub installer script in progress..&quot;
+   echo &quot;&quot;
+-  python grub.py
++  su -c &quot;python grub.py&quot;
+   echo &quot;done.&quot;
+   echo &quot;--------------------------------------------- &quot;
+   exit
+ 
++elif [ &quot;$1&quot; == &quot;create_iso&quot; ]; then
++
++  echo &quot;--------------------------------------------- &quot;
++  echo &quot;Launching ISO Creating script in progress..&quot;
++  echo &quot;&quot;
++  mkisofs -o dreamos-image.iso -A DreamOS -b boot/grub.img `pwd`
++  echo &quot;done.&quot;
++  echo &quot;--------------------------------------------- &quot;
++  exit
++
+ elif [ &quot;$1&quot; == &quot;&quot; ]; then
+   echo &quot;Error: No command inserted!&quot;
+   echo &quot;-----------------------&gt;&quot;
+@@ -114,10 +130,10 @@
+ 
+ else
+ 
+-  if [ $UID != &quot;0&quot; ]; then
+-      echo &quot;[-] You need to run this install script as root!&quot;
+-      exit
+-  fi
++#  if [ $UID != &quot;0&quot; ]; then
++#      echo &quot;[-] You need to run this install script as root!&quot;
++#      exit
++#  fi
+ 
+ if [ &quot;$2&quot; == &quot;qemu&quot; ] || [ &quot;$2&quot; == &quot;bochs&quot; ]; then
+ 
+@@ -168,7 +184,7 @@
+   $VERS &amp;&amp; $CLEAN &amp;&amp; $MAKE &amp;&amp; $MAKE_IMG
+   echo &quot;---------------------- &quot;
+   echo &quot;Installing in progres..&quot;
+-  make install
++  su -c &quot;make install&quot;
+   echo &quot;done.&quot;
+   echo &quot;---------------------- &quot;
+   exit
+@@ -178,7 +194,7 @@
+   $VERS &amp;&amp; $CLEAN &amp;&amp; $MAKE &amp;&amp; $MAKE_IMG
+   echo &quot;--------------------------------------------- &quot;
+   echo &quot;Launching grub installer script in progress..&quot;
+-  python grub.py
++  su -c &quot;python grub.py&quot;
+   echo &quot;done.&quot;
+   echo &quot;--------------------------------------------- &quot;
+   exit
+@@ -189,7 +205,26 @@
+   echo &quot;-----------------------&gt;&quot;
+   echo &quot;Usage: '$0 help'&quot;
+   exit
++
++
++elif [ &quot;$2&quot; == &quot;create_iso&quot; ]; then
++  $VERS &amp;&amp; $CLEAN &amp;&amp; $MAKE &amp;&amp; $MAKE_IMG
++  echo &quot;--------------------------------------------- &quot;
++  echo &quot;Launching ISO Creating script in progress..&quot;
++  echo &quot;&quot;
++  mkisofs -o dreamos-image.iso -A DreamOS -b boot/grub.img `pwd`
++  echo &quot;done.&quot;
++  echo &quot;--------------------------------------------- &quot;
++  exit
++
++else
++  echo &quot;Uhm? What the hell did you insert ? Lool! '$2' ?? I don't know what is it!&quot;
++  echo &quot;Please, read the help!!!&quot;
++  echo &quot;-----------------------&gt;&quot;
++  echo &quot;Usage: '$0 help'&quot;
++  exit
++
+ fi  
+-    
++ 
+ fi
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000101.html">[Dreamos-dev] r99 - in trunk: . hardware include/shell processore	shell
+</A></li>
+	<LI>Next message: <A HREF="000103.html">[Dreamos-dev] r101 - in trunk: . include
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#102">[ date ]</a>
+              <a href="thread.html#102">[ thread ]</a>
+              <a href="subject.html#102">[ subject ]</a>
+              <a href="author.html#102">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

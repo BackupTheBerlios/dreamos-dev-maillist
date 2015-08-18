@@ -1,0 +1,200 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r150 - in trunk: . fs include/fs
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-December/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r150%20-%20in%20trunk%3A%20.%20fs%20include/fs&In-Reply-To=%3C200912032230.nB3MUEiA013177%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000151.html">
+   <LINK REL="Next"  HREF="000153.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r150 - in trunk: . fs include/fs</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r150%20-%20in%20trunk%3A%20.%20fs%20include/fs&In-Reply-To=%3C200912032230.nB3MUEiA013177%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r150 - in trunk: . fs include/fs">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Thu Dec  3 23:30:14 CET 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000151.html">[Dreamos-dev] r149 - in trunk: . fs include/fs include/sys shell
+</A></li>
+        <LI>Next message: <A HREF="000153.html">[Dreamos-dev] r151 - in trunk: . fs
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#152">[ date ]</a>
+              <a href="thread.html#152">[ thread ]</a>
+              <a href="subject.html#152">[ subject ]</a>
+              <a href="author.html#152">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-12-03 23:30:13 +0100 (Thu, 03 Dec 2009)
+New Revision: 150
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/fs/initrd.c
+   trunk/fs/unistd.c
+   trunk/fs/vfs.c
+   trunk/include/fs/initrd.h
+Log:
+Aggiunte le definizioni di read per initfs.
+Sostituiti in initfs i nomi di funzione dummy_* con initfs_*
+Iniziata initfs_read (per ora stampa solo l'id del mountpoint)
+In open: cur_fd ora si incrementa nel return.
+
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2009-12-02 22:39:03 UTC (rev 149)
++++ trunk/fs/fcntl.c	2009-12-03 22:30:13 UTC (rev 150)
+@@ -46,10 +46,9 @@
+ 		if(mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open != NULL)
+ 			mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open(path, oflags);
+ 		else 
+-			printf(&quot;No OPEN services found here\n&quot;);
+-		cur_fd++;
++			printf(&quot;No OPEN services found here\n&quot;);		
+ 	}	
+ 	va_end(ap);
+-	return cur_fd;
++	return cur_fd++;
+ }
+ 
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2009-12-02 22:39:03 UTC (rev 149)
++++ trunk/fs/initrd.c	2009-12-03 22:30:13 UTC (rev 150)
+@@ -20,6 +20,8 @@
+ #include &lt;stddef.h&gt;
+ #include &lt;initrd.h&gt;
+ #include &lt;multiboot.h&gt;
++#include &lt;unistd.h&gt;
++#include &lt;types.h&gt;
+ 
+ extern char *module_start;
+ 
+@@ -27,12 +29,12 @@
+ 	printf(&quot;Qui solo per una prova\n&quot;);
+ }	
+ 
+-DIR *dummy_opendir(const char *path){
++DIR *initfs_opendir(const char *path){
+ 	printf(&quot;Sono una dummy_opendir, ti piaccio? path: %s\n&quot;, path);
+ 	return NULL;
+ }
+ 
+-int dummy_open(const char *path, int flags, ...){
++int initfs_open(const char *path, int flags, ...){
+ 	char *module_var;
+ 	int j = 0;
+ 	module_var = module_start;
+@@ -43,3 +45,8 @@
+ 	}
+ 	_kputs(&quot;\n&quot;);
+ }
++
++ssize_t initfs_read(int fildes, void *buf, size_t nbyte){
++	printf(&quot;Hi i'm a dummy read... do you like me?\n&quot;);
++	return nbyte;
++}
+
+Modified: trunk/fs/unistd.c
+===================================================================
+--- trunk/fs/unistd.c	2009-12-02 22:39:03 UTC (rev 149)
++++ trunk/fs/unistd.c	2009-12-03 22:30:13 UTC (rev 150)
+@@ -18,7 +18,14 @@
+ 
+ #include &lt;unistd.h&gt;
+ #include &lt;stdio.h&gt;
++#include &lt;fcntl.h&gt;
++#include &lt;vfs.h&gt;
+ 
++struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
++file_descriptor_t fd_list[_SC_OPEN_MAX];
++
+ ssize_t read(int fildes, void *buf, size_t nbyte){
+-	printf(&quot;Hi, i'm a read(), if you wanna see me at work.... stay tuned :D\n&quot;);
++	int mp_id = 0;
++	mp_id = fd_list[fildes].mountpoint_id;
++	printf(&quot;Mpoint id: %d\n&quot;, mp_id);
+ }
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2009-12-02 22:39:03 UTC (rev 149)
++++ trunk/fs/vfs.c	2009-12-03 22:30:13 UTC (rev 150)
+@@ -66,8 +66,8 @@
+  	mountpoint_list[0].pmask = 0;
+  	mountpoint_list[0].dev_id = 0;
+  	mountpoint_list[0].start_address = 0;
+- 	mountpoint_list[0].dir_op.opendir_f = dummy_opendir;
+- 	mountpoint_list[0].operations.open = dummy_open;
++ 	mountpoint_list[0].dir_op.opendir_f = initfs_opendir;
++ 	mountpoint_list[0].operations.open = initfs_open;
+  	//mountpoint_list[0].operations = kmalloc(sizeof(struct super_node_operations));
+ 
+ 	strcpy(mountpoint_list[1].mountpoint,&quot;/dev&quot;); 	
+
+Modified: trunk/include/fs/initrd.h
+===================================================================
+--- trunk/include/fs/initrd.h	2009-12-02 22:39:03 UTC (rev 149)
++++ trunk/include/fs/initrd.h	2009-12-03 22:30:13 UTC (rev 150)
+@@ -20,6 +20,7 @@
+ #define INITRD_H
+ 
+ #include &lt;dirent.h&gt;
++#include &lt;unistd.h&gt;
+ 
+ #define FILENAME_LENGTH 64
+ 
+@@ -36,6 +37,7 @@
+ };
+ 
+ void dummy();
+-DIR *dummy_opendir(const char *);
+-int dummy_open(const char *, int, ... );
++DIR *initfs_opendir(const char *);
++int initfs_open(const char *, int, ...);
++ssize_t initfs_read(int, void *, size_t);
+ #endif
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000151.html">[Dreamos-dev] r149 - in trunk: . fs include/fs include/sys shell
+</A></li>
+	<LI>Next message: <A HREF="000153.html">[Dreamos-dev] r151 - in trunk: . fs
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#152">[ date ]</a>
+              <a href="thread.html#152">[ thread ]</a>
+              <a href="subject.html#152">[ subject ]</a>
+              <a href="author.html#152">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

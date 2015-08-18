@@ -1,0 +1,243 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r208 - in trunk: . include/shell shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-March/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r208%20-%20in%20trunk%3A%20.%20include/shell%20shell&In-Reply-To=%3C201003072250.o27MosVV028042%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000210.html">
+   <LINK REL="Next"  HREF="000212.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r208 - in trunk: . include/shell shell</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r208%20-%20in%20trunk%3A%20.%20include/shell%20shell&In-Reply-To=%3C201003072250.o27MosVV028042%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r208 - in trunk: . include/shell shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun Mar  7 23:50:54 CET 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000210.html">[Dreamos-dev] r207 - in trunk: . fs include/sys shell
+</A></li>
+        <LI>Next message: <A HREF="000212.html">[Dreamos-dev] r209 - in trunk: . fs include/shell shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#211">[ date ]</a>
+              <a href="thread.html#211">[ thread ]</a>
+              <a href="subject.html#211">[ subject ]</a>
+              <a href="author.html#211">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-03-07 23:50:44 +0100 (Sun, 07 Mar 2010)
+New Revision: 208
+
+Modified:
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/grub.py
+   trunk/include/shell/commands.h
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+   trunk/start.sh
+Log:
+Sistemato errore scrittura entry grub in grub.py.
+Corrette alcune frasi in start.sh.
+Aggiunta base per il comando cat (per ora solo controllo degli argomenti e prototipi di funzione).
+
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2010-03-05 15:30:57 UTC (rev 207)
++++ trunk/Makefile	2010-03-07 22:50:44 UTC (rev 208)
+@@ -20,7 +20,7 @@
+ 	 -I./include\
+ 	 -I./include/io\
+ 	 -I./include/drivers\
+-         -I./include/libc\
++     -I./include/libc\
+ 	 -I./include/processore\
+ 	 -I./include/hardware\
+ 	 -I./include/mem\
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/grub.py
+===================================================================
+--- trunk/grub.py	2010-03-05 15:30:57 UTC (rev 207)
++++ trunk/grub.py	2010-03-07 22:50:44 UTC (rev 208)
+@@ -64,7 +64,7 @@
+ 	fd.write(&quot;\nsplashimage=&quot; + partition + &quot;/boot/grub/grub2.xpm.gz\n\n&quot;)
+ 	fd.write(&quot;\ntitle\tDreamOS v0.&quot; + patchlevel + &quot;-&quot; + trunk +&quot;&quot;)
+ 	fd.write(&quot;\nroot\t&quot; + partition)
+-	fd.write(&quot;\nkernel\t&quot; + cwd + &quot;\tmodule\t&quot; + initFS)
++	fd.write(&quot;\nkernel\t&quot; + cwd + &quot;\nmodule\t&quot; + initFS)
+ 	fd.write(&quot;\nboot\n&quot;)
+ 	fd.close()
+ 	print &quot;&quot;
+
+Modified: trunk/include/shell/commands.h
+===================================================================
+--- trunk/include/shell/commands.h	2010-03-05 15:30:57 UTC (rev 207)
++++ trunk/include/shell/commands.h	2010-03-07 22:50:44 UTC (rev 208)
+@@ -53,6 +53,7 @@
+ void whoami();
+ void tester();
+ void pwd();	
++void cat();
+ 
+ struct devel {
+ 	const char cmd_testname[CMD_LEN];
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-03-05 15:30:57 UTC (rev 207)
++++ trunk/shell/commands.c	2010-03-07 22:50:44 UTC (rev 208)
+@@ -403,6 +403,14 @@
+ 	}
+ }
+ 
++void cat(){
++	if(argc==1) 
++		printf(&quot;Usage:\n\t cat filename\nfor read a file\n&quot;);
++	else {
++		if(argc&lt;3) printf(&quot;File to open: %s\n&quot;, argv[1]);
++	}
++}
++
+ void cd( ){
+ 	char *relpath;		
+ 	DIR *dirp=NULL;
+@@ -414,11 +422,10 @@
+ 		int rel_size = 0;		
+ 		i = get_mountpoint_id(argv[1]);
+ 		dirp=opendir(argv[1]);
+-		if(dirp!=NULL){
+-			printf(&quot;good\n&quot;);
++		if(dirp!=NULL){			
+ 			closedir(dirp);
+ 		}
+-		else printf(&quot;bad\n&quot;);
++		//else printf(&quot;bad\n&quot;);
+ 		//printf(&quot;path: %s\n&quot;, argv[1]);
+ 		rel_size = strlen(argv[1]) - strlen(mountpoint_list[i].mountpoint);
+ 		if(i == -1) {			
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2010-03-05 15:30:57 UTC (rev 207)
++++ trunk/shell/shell.c	2010-03-07 22:50:44 UTC (rev 208)
+@@ -93,8 +93,9 @@
+ 	{ &quot;ls&quot;,       ls},
+ 	{ &quot;cd&quot;,       cd},
+ 	{ &quot;whoami&quot;,   whoami},
+-	{ &quot;tester&quot;, tester},
++	{ &quot;tester&quot;, tester},	
+ 	{ &quot;pwd&quot;, pwd},
++	{ &quot;cat&quot;, cat},
+   };
+ 
+   int i = 0;
+
+Modified: trunk/start.sh
+===================================================================
+--- trunk/start.sh	2010-03-05 15:30:57 UTC (rev 207)
++++ trunk/start.sh	2010-03-07 22:50:44 UTC (rev 208)
+@@ -105,7 +105,7 @@
+   echo &quot;Creating backup of menu.lst (/boot/grub/menu.lst_backup) ..&quot;
+   su -c &quot;cp /boot/grub/menu.lst /boot/grub/menu.lst_backup&quot;
+   echo &quot;done..&quot;
+-  echo &quot;Launching grub installer script in progress..&quot;
++  echo &quot;Launching grub installer script ...&quot;
+   echo &quot;&quot;
+   su -c &quot;python grub.py&quot;
+   echo &quot;done.&quot;
+@@ -115,7 +115,7 @@
+ elif [ &quot;$1&quot; == &quot;create_iso&quot; ]; then
+ 
+   echo &quot;--------------------------------------------- &quot;
+-  echo &quot;Launching ISO Creating script in progress..&quot;
++  echo &quot;Launching ISO Creating script ...&quot;
+   echo &quot;&quot;
+   mkisofs -o ISO/dreamos-image.iso -A DreamOS -b boot/grub.img `pwd`
+   echo &quot;done.&quot;
+@@ -178,7 +178,7 @@
+ 	 $VERS &amp;&amp; $CLEAN &amp;&amp; $MAKE &amp;&amp; $MAKE_IMG
+ 	  
+ 	 echo &quot;--------------------------------------------- &quot;
+-  	 echo &quot;Launching FS Creating script in progress..&quot;
++  	 echo &quot;Launching FS Creating script ...&quot;
+ 	 echo &quot;&quot;
+          utils/initfscp `find files/* -exec echo {} +;` initfs
+          echo &quot;done.&quot;
+@@ -209,7 +209,7 @@
+ 	 $VERS &amp;&amp; $CLEAN &amp;&amp; $MAKE &amp;&amp; $MAKE_IMG
+ 	  
+ 	 echo &quot;--------------------------------------------- &quot;
+-  	 echo &quot;Launching FS Creating script in progress..&quot;
++  	 echo &quot;Launching FS Creating script ...&quot;
+ 	 echo &quot;&quot;
+          utils/initfscp `find files/* -exec echo {} +;` initfs
+          echo &quot;done.&quot;
+@@ -237,7 +237,7 @@
+ 
+   $VERS &amp;&amp; $CLEAN &amp;&amp; $MAKE &amp;&amp; $MAKE_IMG &amp;&amp; $MAKE_FS
+   echo &quot;--------------------------------------------- &quot;
+-  echo &quot;Launching grub installer script in progress..&quot;
++  echo &quot;Launching grub installer script in ...&quot;
+   su -c &quot;python grub.py&quot;
+   echo &quot;done.&quot;
+   echo &quot;--------------------------------------------- &quot;
+@@ -245,7 +245,7 @@
+ 
+ 
+ elif [ &quot;$2&quot; == &quot;&quot; ]; then
+-  echo &quot;Error: No command inserted!&quot;
++  echo &quot;Error: No commands inserted!&quot;
+   echo &quot;-----------------------&gt;&quot;
+   echo &quot;Usage: '$0 help'&quot;
+   exit
+@@ -254,7 +254,7 @@
+ elif [ &quot;$2&quot; == &quot;create_iso&quot; ]; then
+   $VERS &amp;&amp; $CLEAN &amp;&amp; $MAKE &amp;&amp; $MAKE_IMG &amp;&amp; $MAKE_FS
+   echo &quot;--------------------------------------------- &quot;
+-  echo &quot;Launching ISO Creation script in progress..&quot;
++  echo &quot;Launching ISO Creation script...&quot;
+   echo &quot;&quot;
+   mkisofs -o ISO/dreamos-image.iso -A DreamOS -b boot/grub.img `pwd`
+   echo &quot;done.&quot;
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000210.html">[Dreamos-dev] r207 - in trunk: . fs include/sys shell
+</A></li>
+	<LI>Next message: <A HREF="000212.html">[Dreamos-dev] r209 - in trunk: . fs include/shell shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#211">[ date ]</a>
+              <a href="thread.html#211">[ thread ]</a>
+              <a href="subject.html#211">[ subject ]</a>
+              <a href="author.html#211">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

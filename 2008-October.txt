@@ -1,0 +1,1538 @@
+From finarfin at mail.berlios.de  Fri Oct  3 18:30:18 2008
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Fri, 3 Oct 2008 18:30:18 +0200
+Subject: [Dreamos-dev] r34 - in trunk: . include include/misc mem misc
+	processore shell
+Message-ID: <200810031630.m93GUINt032045@sheep.berlios.de>
+
+Author: finarfin
+Date: 2008-10-03 18:30:16 +0200 (Fri, 03 Oct 2008)
+New Revision: 34
+
+Added:
+   trunk/include/misc/ordered_list.h
+   trunk/misc/ordered_list.c
+Modified:
+   trunk/.bochsrc
+   trunk/Makefile
+   trunk/TODO
+   trunk/bl.img
+   trunk/dreamos.img
+   trunk/include/use.h
+   trunk/include/version.h
+   trunk/kernel.c
+   trunk/mem/fismem.c
+   trunk/mem/kheap.c
+   trunk/mem/paging.c
+   trunk/processore/handlers.c
+   trunk/shell/shell.c
+Log:
+Aggiunta funzione alloc da completare, e comandi per testarla
+Funzioni e strutture dati base per la gestione di un heap per il gestore di memoria
+Funzione di inserimento (tnx shainer) per liste dell'heap
+Aggiunti files ordered_list.c e ordered_list.h
+Aggiornato makefile
+Funzione di test per l'alloc
+
+
+Modified: trunk/.bochsrc
+===================================================================
+--- trunk/.bochsrc	2008-09-29 18:13:35 UTC (rev 33)
++++ trunk/.bochsrc	2008-10-03 16:30:16 UTC (rev 34)
+@@ -16,8 +16,8 @@
+ # NOTE: if you use the "wx" configuration interface, you must also use
+ # the "wx" display library.
+ #=======================================================================
+-config_interface: textconfig
+-#config_interface: wx
++#config_interface: textconfig
++config_interface: wx
+ 
+ #=======================================================================
+ # DISPLAY_LIBRARY
+@@ -59,8 +59,8 @@
+ #display_library: sdl, options="fullscreen" # startup in fullscreen mode
+ #display_library: term
+ #display_library: win32, options="legacyF12" # use F12 to toggle mouse
+-#display_library: wx
+-display_library: x
++display_library: wx
++#display_library: x
+ 
+ #=======================================================================
+ # ROMIMAGE:
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2008-09-29 18:13:35 UTC (rev 33)
++++ trunk/Makefile	2008-10-03 16:30:16 UTC (rev 34)
+@@ -9,7 +9,7 @@
+ 
+ CFLAGS = -nostdlib -fomit-frame-pointer -fno-builtin -fno-stack-protector -Wall -march=i686 -m32 -I./include -I./include/io -I./include/drivers -I./include/libc -I./include/processore -I./include/hardware -I./include/mem -I./include/system -I./include/shell -I./include/misc
+ 
+-OBJ = kernel.o io/video.o drivers/keyboard.o libc/ctype.o libc/string.o io/io.o libc/stdio.o hardware/cpuid.o hardware/keyboard.o processore/gdt.o processore/idt.o processore/handlers.o hardware/pic8259.o mem/fismem.o mem/paging.o mem/kheap.o mem/buddy.o misc/ordered_array.o system/syscall.o hardware/8253.o shell/shell.o
++OBJ = kernel.o io/video.o drivers/keyboard.o libc/ctype.o libc/string.o io/io.o libc/stdio.o hardware/cpuid.o hardware/keyboard.o processore/gdt.o processore/idt.o processore/handlers.o hardware/pic8259.o mem/fismem.o mem/paging.o mem/kheap.o mem/buddy.o misc/ordered_array.o misc/ordered_list.o system/syscall.o hardware/8253.o shell/shell.o
+ 
+ dreamos.img: bl.img kernel.bin
+ 	mv kernel.bin dreamos.img
+@@ -37,6 +37,7 @@
+ mem/kheap.o: mem/kheap.c
+ mem/buddy.o: mem/buddy.c
+ misc/ordered_array.o: misc/ordered_array.c
++misc/ordered_list.o: misc/ordered_list.c
+ drivers/keyboard.o: drivers/keyboard.c
+ system/syscall.o: system/syscall.c
+ hardware/8253.o: hardware/8253.c
+
+Modified: trunk/TODO
+===================================================================
+--- trunk/TODO	2008-09-29 18:13:35 UTC (rev 33)
++++ trunk/TODO	2008-10-03 16:30:16 UTC (rev 34)
+@@ -10,12 +10,9 @@
+ - Todo rivedere quali sono le eccezioni che hanno un error code e sostituire le relative EXCEPTION(xx) con EXCEPTION_EC(xx)
+ - Fare una mega pulizia del codice
+ - Eliminare il maggior numero di messaggi di errore dalla compilazione
+-- Script che memorizza nei sorci il numero di revisione (genera un file header)
+-- Comandi: echo - clear
+ - bitmasks per interpretare errori del pagefault.
+ - Rivedere il comando info della shell, probabilmente stampa alcune informazioni sbagliate
+ - Script per generare automaticamente il file immagine grub.img
+-- Quando il comando non esiste stmapre "nome-comando not-found" 
+ 
+ 
+ PROGETTI A LUNGO TERMINE:
+
+Modified: trunk/bl.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Added: trunk/include/misc/ordered_list.h
+===================================================================
+--- trunk/include/misc/ordered_list.h	2008-09-29 18:13:35 UTC (rev 33)
++++ trunk/include/misc/ordered_list.h	2008-10-03 16:30:16 UTC (rev 34)
+@@ -0,0 +1,31 @@
++/***************************************************************************
++ *            ordered_list.c
++ *
++ *  Sun 18 07 08 07:47:17 2007
++ *  Copyright  2008  Ivan Gualandri
++ *  Email finarfin at elenhost.org
++ ****************************************************************************/
++/*
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2 of the License, or
++ *  (at your option) any later version.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++#ifndef ORDERED_LIST 
++#define ORDERED_LIST
++
++#include <kheap.h>
++
++void insert_list(heap_node_t*, heap_node_t**);
++
++#endif
+
+Modified: trunk/include/use.h
+===================================================================
+--- trunk/include/use.h	2008-09-29 18:13:35 UTC (rev 33)
++++ trunk/include/use.h	2008-10-03 16:30:16 UTC (rev 34)
+@@ -1,5 +1,5 @@
+ /*
+- * Use.h
++ * It.h
+  *  This program is free software; you can redistribute it and/or modify
+  *  it under the terms of the GNU General Public License as published by
+  *  the Free Software Foundation; either version 2 of the License, or
+@@ -15,17 +15,17 @@
+  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+ 
+-#ifndef _EN_H_
+-#define _EN_H_
++#ifndef _IT_H_
++#define _IT_H_
+ 
+-#define LNG_SITE "\nSite: "
+-#define LNG_GDT "Initialize GDT   "
+-#define LNG_IDT "Initialize IDT   "
+-#define LNG_PIT8253 "Initialize PIT    "
+-#define LNG_PIC8259 "Initialize PIC8259    "
+-#define LNG_CPU "\nCPU: "
+-#define LNG_FREERAM "Free RAM:"
+-#define LNG_FREEPAGE "\t- Number free page:"
+-#define LNG_BITMAP "\t- Number bitmap's elements:"
++#define LNG_SITE "\nSito: "
++#define LNG_GDT "Inizializzo GDT   "
++#define LNG_IDT "Inizializzo IDT   "
++#define LNG_PIT8253 "Inizializzo PIT    "
++#define LNG_PIC8259 "Inizializzo PIC8259    "
++#define LNG_CPU "\nProcessore: "
++#define LNG_FREERAM "Ram Disposizione:"
++#define LNG_FREEPAGE "\t- Numero Pagine a disposizione:"
++#define LNG_BITMAP "\t- Numero elementi della bitmap:"
+ 
+ #endif
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2008-09-29 18:13:35 UTC (rev 33)
++++ trunk/include/version.h	2008-10-03 16:30:16 UTC (rev 34)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "0"
+ #define EXTRAVERSION "-dreamos"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r28"
++#define REV_NUM "-r33"
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2008-09-29 18:13:35 UTC (rev 33)
++++ trunk/kernel.c	2008-10-03 16:30:16 UTC (rev 34)
+@@ -39,6 +39,7 @@
+ #include <paging.h>
+ #include <use.h>
+ #include <shell.h>
++#include <syscall.h>
+ 
+ 
+ unsigned int *current_page_table;
+@@ -52,8 +53,7 @@
+ }
+ 
+ int main_loop(struct multiboot_info *boot_info)
+-{    unsigned int *provatore;
+-
++{
+     _kclear();
+     syscall_init();
+     _kcolor('\012');
+
+Modified: trunk/mem/fismem.c
+===================================================================
+--- trunk/mem/fismem.c	2008-09-29 18:13:35 UTC (rev 33)
++++ trunk/mem/fismem.c	2008-10-03 16:30:16 UTC (rev 34)
+@@ -216,7 +216,7 @@
+ 
+ size_t calcola_memoria()
+ {
+-    unsigned int *mem_position;
++/*    unsigned int *mem_position;
+     asm("cli");
+     outportb(0xFF, MASTER_PORT_1);                     //Disabilito gli interrupt hardware
+     outportb(0xFF, SLAVE_PORT_1);
+@@ -247,7 +247,7 @@
+     asm("sti");
+     mem_position = 16777216;
+     tot_mem = (unsigned long) mem_position;
+-    return (unsigned long) mem_position;
++    return (unsigned long) mem_position;*/
+ }
+ 
+ /**
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2008-09-29 18:13:35 UTC (rev 33)
++++ trunk/mem/kheap.c	2008-10-03 16:30:16 UTC (rev 34)
+@@ -25,6 +25,7 @@
+ #include <fismem.h>
+ #include <paging.h>
+ #include <ordered_array.h>
++#include <ordered_list.h>
+ #include <stddef.h>
+ #include <stdio.h>
+ 
+@@ -59,6 +60,7 @@
+     first_node = (heap_node_t*)kmalloc(sizeof(heap_node_t));
+     first_node->start_address = (unsigned int)&end;
+     first_node->size = size;
++    first_node->next = NULL;
+     new_heap->max_size = tot_mem-(unsigned int) &end;
+     new_heap->free_list = first_node;
+     new_heap->used_list = NULL;
+@@ -68,15 +70,43 @@
+ }
+ 
+ void* alloc(unsigned int size, heap_t *cur_heap){    
+-    heap_node_t* cur_list;
++    int n_pages;
++    n_pages = size/4096;
++    if(size%4096!=0) n_pages++;
++    printf("Numero pagine da allocare: %d, %d\n", n_pages, size);
++    heap_node_t* cur_list;    
++    printf("Cur_heap->max_size %d\n", cur_heap->max_size);
+     cur_list = cur_heap->free_list;
++    printf("Arrivo qua\n");
++    /*Vado alla ricerca di una locazione di memoria libera*/
+     while(cur_list!=NULL) {
+-        printf("All right let's go\n");
++        if(cur_list->size > size){
++            heap_node_t* new_node;
++
++            new_node = (heap_node_t*)kmalloc(sizeof(heap_node_t));
++            new_node->start_address = cur_list->start_address;
++            new_node->next = NULL;
++            new_node->size = n_pages*0x1000;
++//             new_node->next= cur_heap->used_list; 
++//             cur_heap->used_list = new_node;
++            /*Inserisci il nodo in testa*/
++            printf("New_node: Size: %d, start_address: %d\n", new_node->size, new_node->start_address);
++            printf("Cur_list Actual size: %d, start_address: %d\n", cur_list->size, cur_list->start_address);
++            cur_list->size = (cur_list->size) - (n_pages*0x1000);
++            cur_list->start_address = cur_list->start_address - (n_pages*0x1000);
++            printf("New_size: %d, new_start_address %d\n", cur_list->size, cur_list->start_address);      
++
++             insert_list(new_node,&(cur_heap->used_list));                            
++        }
++        else printf("No good\n");
++        printf("The size of that node is: %d\n", cur_list->size);
++        printf("Value: %d\n", cur_list->next); 
+         cur_list = cur_list->next;
+     }
+ }
+ 
+ /**Queste funzioni sono messe solo per alcune prove verranno eliminate entro le prossime revisioni*/
+ void try_alloc(){
+-    alloc(4, kheap);
++    alloc(5000, kheap);
++    alloc(60, kheap);    
+ }
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2008-09-29 18:13:35 UTC (rev 33)
++++ trunk/mem/paging.c	2008-10-03 16:30:16 UTC (rev 34)
+@@ -72,7 +72,7 @@
+     }        
+     load_pdbr((unsigned int)current_page_dir);
+     kheap = make_heap(10,10,tot_mem - ((unsigned int) &end));
+-    kbuddy = new_buddy();    
++//     kbuddy = new_buddy();    
+ }
+ 
+ /**
+@@ -255,7 +255,6 @@
+ 	    set_pagetable_entry_ric (pdir, ptable, new_p, PD_PRESENT|SUPERVISOR|WRITE, 0);
+ 	    printf ("Nuova entry dopo la mappatura: %d\n", get_pagetable_entry (pdir, ptable));
+ 	  }
+-	}
+-
++	}        
+         return;
+ }
+
+Added: trunk/misc/ordered_list.c
+===================================================================
+--- trunk/misc/ordered_list.c	2008-09-29 18:13:35 UTC (rev 33)
++++ trunk/misc/ordered_list.c	2008-10-03 16:30:16 UTC (rev 34)
+@@ -0,0 +1,41 @@
++/***************************************************************************
++ *            ordered_list.c
++ *
++ *  Sun 18 07 08 07:47:17 2007
++ *  Copyright  2008  Ivan Gualandri
++ *  Email finarfin at elenhost.org
++ ****************************************************************************/
++/*
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2 of the License, or
++ *  (at your option) any later version.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++#include <ordered_list.h>
++#include <kheap.h>
++#include <stdio.h>
++#include <stddef.h>
++
++void insert_list(heap_node_t* new_node, heap_node_t** list){
++    if(*list==NULL){
++        printf("\n---Insert new node---\n");
++        *list=new_node;
++        printf("Provo: %d---\n", (*list)->size);
++    }
++    else {
++        printf("List->size= %d\n", (*list)->size);
++        printf("Piano piano vado avanti\n");
++    }
++    printf("The current size: %d\n", new_node->size);
++    printf("I will insert into the list\n");
++}
+
+Modified: trunk/processore/handlers.c
+===================================================================
+--- trunk/processore/handlers.c	2008-09-29 18:13:35 UTC (rev 33)
++++ trunk/processore/handlers.c	2008-10-03 16:30:16 UTC (rev 34)
+@@ -84,9 +84,7 @@
+ 	else if(n==GENERAL_PROTECTION) _kputs("General Protection Exception\n");
+     else if(n==INVALID_OPCODE) _kputs("Invalid Opcode Exception\n");
+     else if(n==BOUND_RANGE_EXCEED) _kputs("Bound exception\n");
+-    else if(n==PAGE_FAULT) {
+-        page_fault_handler (error);
+-    }
++    else if(n==PAGE_FAULT) page_fault_handler (error);    
+     else if(n==INT_RSV) _kputs("Intel Reserved\n");
+     else if(n==FLOATING_POINT_ERR) _kputs("Floating Point Exception\n");
+     else if(n==ALIGNMENT_CHECK) _kputs("Alignment Check Exception\n");             
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2008-09-29 18:13:35 UTC (rev 33)
++++ trunk/shell/shell.c	2008-10-03 16:30:16 UTC (rev 34)
+@@ -196,12 +196,12 @@
+         }
+ 
+         else if (!(_kstrncmp(cmd,"do_fault",8)))
+-	{  
++    	{  
+              printf ("Genero un pagefault scrivendo 10 nella locazione 0xa0000000...\n");
+              int *prova;
+              prova = 0xa0000000;
+              *prova = 10;
+-             printf ("Contenuto della locazione 0xa0000000 dopo l'intervento dell'handler: %d\n", *prova);
++              printf ("Contenuto della locazione 0xa0000000 dopo l'intervento dell'handler: %d\n", *prova);
+         }
+ 
+         else if (!(_kstrncmp(cmd,"try_heap",8))){
+
+
+
+From shainer at mail.berlios.de  Mon Oct 13 14:27:15 2008
+From: shainer at mail.berlios.de (shainer at BerliOS)
+Date: Mon, 13 Oct 2008 14:27:15 +0200
+Subject: [Dreamos-dev] r35 - in trunk: . include/mem mem misc shell
+Message-ID: <200810131227.m9DCRFkC021925@sheep.berlios.de>
+
+Author: shainer
+Date: 2008-10-13 14:27:14 +0200 (Mon, 13 Oct 2008)
+New Revision: 35
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/mem/kheap.h
+   trunk/mem/kheap.c
+   trunk/misc/ordered_list.c
+   trunk/shell/shell.c
+Log:
+Completata l'allocazione di blocchi di memoria usando l'heap
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/mem/kheap.h
+===================================================================
+--- trunk/include/mem/kheap.h	2008-10-03 16:30:16 UTC (rev 34)
++++ trunk/include/mem/kheap.h	2008-10-13 12:27:14 UTC (rev 35)
+@@ -28,39 +28,26 @@
+ #include <ordered_array.h>
+ extern unsigned int address_cur;
+ 
+-//Da eliminare
+-typedef struct{
+-    unsigned int magic;
+-    unsigned int hole;
+-    unsigned int size;
+-} header_t;
+-
+-typedef struct{
+-    unsigned int magic;
+-    unsigned int *header;
+-} footer_t;
+-//Fino qua
+-
+ /*!  \struct heap_node_t
+      \brief Struttura dati che mantiene le informazioni su locazioni occupate e libere di memoria
+  */
+ typedef struct {
+-    unsigned int start_address;/**< L'indirizzo di partenza dell'heap*/
+-    unsigned int size;    /**< quanto massimo si puo' espandere*/
++    unsigned int start_address;/** < L'indirizzo di partenza dell'heap */
++    unsigned int size;    /** < quanto massimo si puo' espandere */
+     struct heap_node_t* next;
+-}heap_node_t;
++} heap_node_t;
+ 
+ /*!  \struct heap_t
+      \brief Struttura dati che mantiene le informazioni su un singolo heap
+  */
+-typedef struct{
+-    heap_node_t* free_list;/**< Locazioni di memoria libere*/
+-    heap_node_t* used_list;/**< Locazioni di memoria occupate*/
+-    unsigned int max_size; /**< Massima memoria allocabile */
++typedef struct {
++    heap_node_t* free_list; /** < Locazioni di memoria libere */
++    heap_node_t* used_list; /** < Locazioni di memoria occupate */
++    unsigned int max_size; /** < Massima memoria allocabile */
+ } heap_t;
+ 
+ 
+-heap_t* make_heap(unsigned int, unsigned int, unsigned int); //Rivedere il return value
++heap_t* make_heap(unsigned int, unsigned int, unsigned int);
+ void* kmalloc(unsigned int);
+ void kfree(unsigned int);
+ void try_alloc();
+@@ -68,3 +55,4 @@
+ void* alloc(unsigned int, heap_t*);
+ 
+ #endif
++
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2008-10-03 16:30:16 UTC (rev 34)
++++ trunk/mem/kheap.c	2008-10-13 12:27:14 UTC (rev 35)
+@@ -31,12 +31,11 @@
+ 
+ extern unsigned int end;
+ extern size_t tot_mem;
+-heap_t *kheap = 0;
++heap_t *kheap;
+ unsigned int address_cur = (unsigned int) &end;
+ 
+-void* kmalloc(unsigned int size){
+-/** Questa funzione andra' modificata con l'evoluzione del paging.
+-  */
++void* kmalloc(unsigned int size)
++{
+     unsigned int temp;
+     
+     temp = address_cur;
+@@ -44,69 +43,96 @@
+     return (void *) temp;
+ }
+ 
++/* Test procedure ("try_heap" shell command") */
++void try_alloc()
++{
++    heap_node_t *navigator;
++    int count=0;
++   
++    printf("try_alloc(): Used list address: %d, Value: %d\n", &(kheap->used_list), kheap->used_list);
++    alloc(5000, kheap);
++    alloc(60, kheap);
++    alloc(50, kheap);
++    alloc(100, kheap);
++
++    navigator = kheap->used_list;
++    printf("Navigating all the list...\n");
++
++    while(navigator) {
++        printf("%d) Current_element->start_address: %d\n", ++count, navigator->start_address);
++        navigator = navigator->next;
++   }
++}
++
+ /**
+   * Build a new heap
+   * @author Ivan Gualandri
+   * @version 1.0
+-  * @param start Indirizzo di inizio del nostro heap
+-  * @param end Indirizzo di fine dell'heap
+-  * @param size grandezza massima dell'heap
++  * @param start Heap start address
++  * @param end Heap end address
++  * @param size Heap maximum size
+   * @return Pointer to a new heap
+   */
+-heap_t* make_heap(unsigned int start, unsigned int end, unsigned int size){
++heap_t* make_heap(unsigned int start, unsigned int end, unsigned int size)
++{
+     heap_t* new_heap;
+     heap_node_t* first_node;
++
+     new_heap = (heap_t*)kmalloc(sizeof(heap_t));
++
+     first_node = (heap_node_t*)kmalloc(sizeof(heap_node_t));
+     first_node->start_address = (unsigned int)&end;
+     first_node->size = size;
+     first_node->next = NULL;
++
+     new_heap->max_size = tot_mem-(unsigned int) &end;
+     new_heap->free_list = first_node;
+     new_heap->used_list = NULL;
++
+     printf("First heap created...\n");   
+-    printf("Size: %d - Tot mem: %d - Address: %x\n", (new_heap->free_list)->size, tot_mem, new_heap);    
++    printf("Size: %d - Tot mem: %d - Start address: %x\n", (new_heap->free_list)->size, tot_mem, new_heap);    
+     return (heap_t*) new_heap;
+ }
++    
++/*
++ * Allocation
++ * @author Ivan Gualandri
++ * @version 1.0
++ * @param size Size of the memory to be allocated
++ * @param cur_heap Current heap
++ * @return The start address of the new allocated memory (or NULL if no memory can be allocated)
++ */
++void *alloc(unsigned int size, heap_t *cur_heap)
++{    
++    int n_pages = size / 4096;
++    heap_node_t* new_node = NULL;
++    heap_node_t* free_heap_list = cur_heap->free_list;
+ 
+-void* alloc(unsigned int size, heap_t *cur_heap){    
+-    int n_pages;
+-    n_pages = size/4096;
+-    if(size%4096!=0) n_pages++;
+-    printf("Numero pagine da allocare: %d, %d\n", n_pages, size);
+-    heap_node_t* cur_list;    
+-    printf("Cur_heap->max_size %d\n", cur_heap->max_size);
+-    cur_list = cur_heap->free_list;
+-    printf("Arrivo qua\n");
+-    /*Vado alla ricerca di una locazione di memoria libera*/
+-    while(cur_list!=NULL) {
+-        if(cur_list->size > size){
+-            heap_node_t* new_node;
++    if(size%4096 !=0)
++      n_pages++;
++    printf("----\n");
++    printf("Number of pages: %d\n", n_pages, size);
+ 
+-            new_node = (heap_node_t*)kmalloc(sizeof(heap_node_t));
+-            new_node->start_address = cur_list->start_address;
+-            new_node->next = NULL;
+-            new_node->size = n_pages*0x1000;
+-//             new_node->next= cur_heap->used_list; 
+-//             cur_heap->used_list = new_node;
+-            /*Inserisci il nodo in testa*/
+-            printf("New_node: Size: %d, start_address: %d\n", new_node->size, new_node->start_address);
+-            printf("Cur_list Actual size: %d, start_address: %d\n", cur_list->size, cur_list->start_address);
+-            cur_list->size = (cur_list->size) - (n_pages*0x1000);
+-            cur_list->start_address = cur_list->start_address - (n_pages*0x1000);
+-            printf("New_size: %d, new_start_address %d\n", cur_list->size, cur_list->start_address);      
++    /* Look for a free block of memory in the heap's free memory list */
++    while(free_heap_list) {
++      if(free_heap_list->size >= size) {
+ 
+-             insert_list(new_node,&(cur_heap->used_list));                            
+-        }
+-        else printf("No good\n");
+-        printf("The size of that node is: %d\n", cur_list->size);
+-        printf("Value: %d\n", cur_list->next); 
+-        cur_list = cur_list->next;
+-    }
++        new_node = (heap_node_t*)kmalloc(sizeof(heap_node_t));
++        new_node->start_address = free_heap_list->start_address;
++        new_node->next = NULL;
++        new_node->size = n_pages*0x1000;
++
++        printf("New_node -> Size: %d, start_address: %d\n", new_node->size, new_node->start_address);
++        printf("free_heap_list -> Actual size: %d, start_address: %d\n", free_heap_list->size, free_heap_list->start_address);
++        printf("----\n");
++        free_heap_list->size = (free_heap_list->size) - (n_pages*0x1000);
++        free_heap_list->start_address = free_heap_list->start_address + (n_pages*0x1000);
++
++        insert_list (new_node, &(cur_heap->used_list));
++
++      }
++      free_heap_list = free_heap_list->next;
++   }
++   return (void *)new_node;
+ }
+ 
+-/**Queste funzioni sono messe solo per alcune prove verranno eliminate entro le prossime revisioni*/
+-void try_alloc(){
+-    alloc(5000, kheap);
+-    alloc(60, kheap);    
+-}
+
+Modified: trunk/misc/ordered_list.c
+===================================================================
+--- trunk/misc/ordered_list.c	2008-10-03 16:30:16 UTC (rev 34)
++++ trunk/misc/ordered_list.c	2008-10-13 12:27:14 UTC (rev 35)
+@@ -26,16 +26,31 @@
+ #include <stdio.h>
+ #include <stddef.h>
+ 
+-void insert_list(heap_node_t* new_node, heap_node_t** list){
+-    if(*list==NULL){
+-        printf("\n---Insert new node---\n");
+-        *list=new_node;
+-        printf("Provo: %d---\n", (*list)->size);
++/* 
++ * Insert a new element in the list
++ * @author shainer
++ * @version 0.1
++ * @param new_node New element
++ * @param list Destination list
++ * @return none
++ */
++void insert_list(heap_node_t *new_node, heap_node_t **ulist)
++{
++  /* First node */
++  if(!(*ulist)) {
++    (*ulist)=new_node;
++  } else {
++    heap_node_t *swap = *ulist;
++    heap_node_t *previous = swap;
++
++    /* Sorting by start address */
++    while (swap->start_address < new_node->start_address) {
++      previous = swap;
++      swap = swap->next;
++      if (!swap) break;
+     }
+-    else {
+-        printf("List->size= %d\n", (*list)->size);
+-        printf("Piano piano vado avanti\n");
+-    }
+-    printf("The current size: %d\n", new_node->size);
+-    printf("I will insert into the list\n");
++    previous->next = new_node;
++    new_node->next = swap;             
++  }
+ }
++
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2008-10-03 16:30:16 UTC (rev 34)
++++ trunk/shell/shell.c	2008-10-13 12:27:14 UTC (rev 35)
+@@ -275,7 +275,7 @@
+ 	printf("help      - See the 'help' list to learn the DreamOS command now avaible\n"
+ 	       "poweroff  - Turn off the machine\n"
+                "kmalloc   - Test a basic kmalloc function\n"
+-               "do_fault  - Test a page_fault (WARNING: This hang the OS)\n"
++               "do_fault  - Test a page_fault\n"
+                "aalogo    - Show an ascii art logo\n"
+                "uname     - Print kernel version, try uname --help for more info\n"
+                "try_buddy - Try buddy mmu\n"
+
+
+
+From finarfin at mail.berlios.de  Sun Oct 19 16:42:34 2008
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Sun, 19 Oct 2008 16:42:34 +0200
+Subject: [Dreamos-dev] r36 - in trunk: . include mem shell
+Message-ID: <200810191442.m9JEgY0s019415@sheep.berlios.de>
+
+Author: finarfin
+Date: 2008-10-19 16:42:33 +0200 (Sun, 19 Oct 2008)
+New Revision: 36
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/use.h
+   trunk/include/version.h
+   trunk/kernel.c
+   trunk/mem/kheap.c
+   trunk/shell/shell.c
+Log:
+Bugfix: 
+- Esisteva una doppia chiamata a init_paging, eliminata
+- Sistemata la gestione dell'input utente, ora non usa piu un while(1) (il codice risulta piu pulito)
+- Eliminate alcune memset nella shell inutili
+- Messo un messaggio di benvenuto piu "Allegro"
+- Pulite le scritte all'avvio
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/use.h
+===================================================================
+--- trunk/include/use.h	2008-10-13 12:27:14 UTC (rev 35)
++++ trunk/include/use.h	2008-10-19 14:42:33 UTC (rev 36)
+@@ -1,5 +1,5 @@
+ /*
+- * It.h
++ * En.h
+  *  This program is free software; you can redistribute it and/or modify
+  *  it under the terms of the GNU General Public License as published by
+  *  the Free Software Foundation; either version 2 of the License, or
+@@ -14,18 +14,17 @@
+  *  along with this program; if not, write to the Free Software
+  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
++#ifndef _EN_H_
++#define _EN_H_
+ 
+-#ifndef _IT_H_
+-#define _IT_H_
++#define LNG_SITE "\nSite: "
++#define LNG_GDT "Initialize GDT   "
++#define LNG_IDT "Initialize IDT   "
++#define LNG_PIT8253 "Initialize PIT    "
++#define LNG_PIC8259 "Initialize PIC8259    "
++#define LNG_CPU "\nCPU: "
++#define LNG_FREERAM "Free RAM:"
++#define LNG_FREEPAGE "\t- Number free page:"
++#define LNG_BITMAP "\t- Number bitmap's elements:"
+ 
+-#define LNG_SITE "\nSito: "
+-#define LNG_GDT "Inizializzo GDT   "
+-#define LNG_IDT "Inizializzo IDT   "
+-#define LNG_PIT8253 "Inizializzo PIT    "
+-#define LNG_PIC8259 "Inizializzo PIC8259    "
+-#define LNG_CPU "\nProcessore: "
+-#define LNG_FREERAM "Ram Disposizione:"
+-#define LNG_FREEPAGE "\t- Numero Pagine a disposizione:"
+-#define LNG_BITMAP "\t- Numero elementi della bitmap:"
+-
+ #endif
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2008-10-13 12:27:14 UTC (rev 35)
++++ trunk/include/version.h	2008-10-19 14:42:33 UTC (rev 36)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "0"
+ #define EXTRAVERSION "-dreamos"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r33"
++#define REV_NUM "-r35"
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2008-10-13 12:27:14 UTC (rev 35)
++++ trunk/kernel.c	2008-10-19 14:42:33 UTC (rev 36)
+@@ -84,8 +84,6 @@
+     asm("sti");
+     _kprintOK();   
+     init_paging();
+-    _kprintOK();
+-    init_paging();   
+     printf("End: %x\n", end);
+     printf(LNG_PIT8253);
+     configure_PIT ();
+@@ -96,16 +94,10 @@
+     get_cpuid();    
+     printf("\n");
+     printf("----\n");
+-    printf("Loading the shell..\n");
+-    printf("[+] Loading complete!!\n\n");    
+-    printf("End: %d Address: 0x%x\n", end, &end);
+-
+-		printf("\n----\n");
+-    		printf("Loading the shell..\n");
++    printf("Loading the shell..");
++    _kprintOK();
+ 		printf("[+] End: %d \n"
+-		       "[+] Address: 0x%x\n", end, &end);
+-		printf("[+] Loading complete!!");   
+-   	        _kprintOK();
++		       "[+] Address: 0x%x\n", end, &end);		   	        
+ 		printf("\n\n");
+ 		shell();
+ 
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2008-10-13 12:27:14 UTC (rev 35)
++++ trunk/mem/kheap.c	2008-10-19 14:42:33 UTC (rev 36)
+@@ -48,18 +48,18 @@
+ {
+     heap_node_t *navigator;
+     int count=0;
+-   
+-    printf("try_alloc(): Used list address: %d, Value: %d\n", &(kheap->used_list), kheap->used_list);
+-    alloc(5000, kheap);
+-    alloc(60, kheap);
++   
++    printf("try_alloc(): Used list address: %d, Value: %d\n", &(kheap->used_list), kheap->used_list);
++    alloc(5000, kheap);
++    alloc(60, kheap);
+     alloc(50, kheap);
+     alloc(100, kheap);
+-
+-    navigator = kheap->used_list;
++
++    navigator = kheap->used_list;
+     printf("Navigating all the list...\n");
+-
+-    while(navigator) {
+-        printf("%d) Current_element->start_address: %d\n", ++count, navigator->start_address);
++
++    while(navigator) {
++        printf("%d) Current_element->start_address: %d\n", ++count, navigator->start_address);
+         navigator = navigator->next;
+    }
+ }
+@@ -129,9 +129,10 @@
+         free_heap_list->start_address = free_heap_list->start_address + (n_pages*0x1000);
+ 
+         insert_list (new_node, &(cur_heap->used_list));
+-
++        break;
+       }
+-      free_heap_list = free_heap_list->next;
++      else
++        free_heap_list = free_heap_list->next;
+    }
+    return (void *)new_node;
+ }
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2008-10-13 12:27:14 UTC (rev 35)
++++ trunk/shell/shell.c	2008-10-19 14:42:33 UTC (rev 36)
+@@ -58,16 +58,11 @@
+ 	printf("[?] Enter your username: ");
+ 	scanf ("%s",user);
+ 
+-	while (1)
+-	{
+-		if (!(_kstrncmp(user, "", 1) ) )
+-		{
++	while (!strlen(user))
++	{		
+ 			printf("[?] Enter your username: ");
+ 			scanf ("%s",user);
+ 			printf("[x] Please, insert your username :)\n");
+-		}
+-		else
+-			break;	
+ 	}
+ 	
+ 	_kclear();
+@@ -142,17 +137,17 @@
+ 			}
+ 
+ 			if (!(_kstrncmp(argv[2], "-a", 2)) || !(_kstrncmp(argv[2], "--all", 5)))
+-       			{
++       		{
+ 				printf("%s %s.%s.%s%s #1 beta CEST 2008 %s\n",NAME,VERSION,PATCHLEVEL,REV_NUM,EXTRAVERSION,cpu_vendor);
+ 			}
+ 
+ 			else if (!(_kstrncmp(argv[2], "-r", 2)) || !(_kstrncmp(argv[2], "--rev", 5)))
+-       			{
++       		{
+ 			 	printf("%s.%s.%s%s\n",VERSION,PATCHLEVEL,REV_NUM,EXTRAVERSION);
+ 			}
+ 
+ 			else if (!(_kstrncmp(argv[2], "-h", 2) ) || !(_kstrncmp(argv[2], "--help", 6)))
+-       			{
++       		{
+ 			 	uname_help();
+ 			}
+ 				
+@@ -172,8 +167,7 @@
+ 
+ 		else if (!(_kstrncmp(cmd,"answer",6)))
+       		{
+-          		  printf("42\n");
+-			  memset(cmd, 0, strlen(cmd));
++          		  printf("42\n");			  
+         	}
+ 
+         else if (!(_kstrncmp(cmd,"kmalloc",7)))
+@@ -208,7 +202,8 @@
+             try_alloc();
+         }
+ 
+-        else if (!(_kstrncmp(cmd,"try_buddy",9))){
++        else if (!(_kstrncmp(cmd,"try_buddy",9)))
++        {
+              printf("L'indirizzo di kbuddy e': 0x%x\n", kbuddy);
+              alloc_buddy(16, kbuddy);
+              printf("New allocation\n\n");
+@@ -219,9 +214,8 @@
+ 		aalogo();
+         
+         else if (strlen(cmd)>0)
+-	{
+-            printf("Unknown command: %s\n", cmd);
+-            memset(cmd, 0, strlen(cmd));
++	    {
++            printf("Unknown command: %s\n", cmd);            
+         }
+ 
+ 	memset(string+5, 0, strlen(string));
+@@ -249,10 +243,9 @@
+ 	printf("\n");
+ 	printf("\t\t\t The Dream Operating System \n"
+ 	       "\t\t           v0.01%s pre-alpha      \n\n"
+-
+-	  "\t\tHave you ever dreammed an operation system \n"
+-	  "\t\tof your Dream? I think yep, becuse You can \n"
+-	              "\t\t\t\tChange Happens!        \n",REV_NUM);
++	  "\t\t\t\t Welcome to DreamOS\n"
++	  "\t\t Where dreams don't became Reality and remain dreams. \n"
++	              "\t\t\tR.I.P - Rest in peace with dreamos ^_^        \n",REV_NUM);
+ 	
+ 	printf("\n\n\n\n");
+ 	_kcolor(7);
+
+
+
+From shainer at mail.berlios.de  Sun Oct 19 23:02:02 2008
+From: shainer at mail.berlios.de (shainer at BerliOS)
+Date: Sun, 19 Oct 2008 23:02:02 +0200
+Subject: [Dreamos-dev] r37 - in trunk: . libc shell
+Message-ID: <200810192102.m9JL22ZP019689@sheep.berlios.de>
+
+Author: shainer
+Date: 2008-10-19 23:02:02 +0200 (Sun, 19 Oct 2008)
+New Revision: 37
+
+Modified:
+   trunk/dreamos.img
+   trunk/libc/string.c
+   trunk/shell/shell.c
+Log:
+Riscritta daccapo la strtok; cambiata la gestione degli argomenti (la precedente aveva alcuni bug) e spostata in una funzione a parte; piccola correzione nella gestione del comando uname
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/libc/string.c
+===================================================================
+--- trunk/libc/string.c	2008-10-19 14:42:33 UTC (rev 36)
++++ trunk/libc/string.c	2008-10-19 21:02:02 UTC (rev 37)
+@@ -145,23 +145,43 @@
+ /*
+  * Separate a string in token according to the delimitator
+  * If str is NULL, the scanning will continue for the previous string
++ * It can be bettered
+  */
+ char *strtok (char *str, const char *delim)
+ {
+-    static char *t;
+-    char *ret, *sptr;
++    int dim = strlen(delim);
++    static char *token;
++    char *point, *start;
++    char *p;
++    int i=0;
++ 
++    if (str!=NULL)
++	token = str;
+ 
+-    if (str)
+-	t = str;
++    start = token; // save the beginning of the string
++    if ((point = strstr(start, delim)))
++    {
++        /* it takes "token" just first the delimitator */
++	while (token != point)
++	  token++;
+ 
+-    if ((ret = strstr(t, delim))) {
+-	sptr = t;
+-	while (t++ != ret);
+-	*t = '\0';
+-	t += strlen(delim);
+-	return sptr;
++        /* p will contains all the chars until the delimitator */
++	while (start != point)
++          p[i++] = *start++;
++        p[i] = 0;
++
++        token += dim; // delete the delimitator, otherwise it will come up in the next call
++        return p;
+     }
+ 
++    /* The last token, if there is no final delimitator */
++    if (token) {
++      do {
++       p[i] = token[i];
++      } while (token[i++]);
++      p[i] = 0;
++      return p;
++    }
+     return NULL;
+ }
+ 
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2008-10-19 14:42:33 UTC (rev 36)
++++ trunk/shell/shell.c	2008-10-19 21:02:02 UTC (rev 37)
+@@ -45,9 +45,29 @@
+ #include <version.h>
+ 
+ extern buddy_t* kbuddy;
++int argc;
++char **argv;
+ 
++void options(char *com)
++{
++  int i=0;
++  argc=0;
+ 
+-void shell(int argc, char *argv[])
++  for (; *com; com++)
++  {
++    argv[argc] = (char *)kmalloc(sizeof(char) * 10);
++    while (*com != ' ') {
++      *(argv[argc] + i) = *com++;
++      i++;
++    } 
++    *(argv[argc] + i) = '\0';
++    argc++;
++    i=0;
++  }
++  argv[argc] = '\0';
++}
++
++void shell()
+ {
+ 	unsigned char cmd[256];
+ 	unsigned char string[256];
+@@ -77,33 +97,8 @@
+ 	    printf("%s~# ",user);
+ 	    scanf("%s",cmd);
+ 
+-	    // Inizio funzione argc e argv --->
++            options (cmd);
+ 
+-	   while (1)
+-	   {
+-		if (flag) {
+-			str1 = strtok(cmd, " ");
+-			flag = 0;
+-		} 
+-		else 
+-		{
+-			str1 = strtok(NULL, " ");
+-		}
+-
+-		if (str1 == NULL)
+-		{
+-			break;
+-		}
+-
+-		argv[argc] = (char *)kmalloc(strlen(str1) + 1); // Qui ho usato kmalloc() perch? non c'? malloc() 
+-
+-		strncpy(argv[argc], str1, strlen(str1));
+-		argc++;
+-	    }
+-	    // fine argomentazione.. facile no ? :) --> Osiris r0x :P
+-	    // Si, d'accordo, ora dobbiamo includerlo in una libreria.. :)
+-
+-
+ 		if (!(_kstrncmp(cmd,"help",4) ) )
+ 		{
+ 			printf("Available command: \n");
+@@ -131,32 +126,32 @@
+ 
+ 		else if (!(_kstrncmp(cmd, "uname",5)))
+ 		{
+-			if (argv[2] != " ")
++			/*if (argv[2] != " ")
+ 			{
+ 				memmove(argv[2], argv[2]+6, strlen(argv[2]));
+-			}
++			}*/
+ 
+-			if (!(_kstrncmp(argv[2], "-a", 2)) || !(_kstrncmp(argv[2], "--all", 5)))
++			if (!(_kstrncmp(argv[1], "-a", 2)) || !(_kstrncmp(argv[1], "--all", 5)))
+        		{
+ 				printf("%s %s.%s.%s%s #1 beta CEST 2008 %s\n",NAME,VERSION,PATCHLEVEL,REV_NUM,EXTRAVERSION,cpu_vendor);
+ 			}
+ 
+-			else if (!(_kstrncmp(argv[2], "-r", 2)) || !(_kstrncmp(argv[2], "--rev", 5)))
++			else if (!(_kstrncmp(argv[1], "-r", 2)) || !(_kstrncmp(argv[1], "--rev", 5)))
+        		{
+ 			 	printf("%s.%s.%s%s\n",VERSION,PATCHLEVEL,REV_NUM,EXTRAVERSION);
+ 			}
+ 
+-			else if (!(_kstrncmp(argv[2], "-h", 2) ) || !(_kstrncmp(argv[2], "--help", 6)))
++			else if (!(_kstrncmp(argv[1], "-h", 2) ) || !(_kstrncmp(argv[1], "--help", 6)))
+        		{
+ 			 	uname_help();
+ 			}
+ 				
+-			else if (!(_kstrncmp(argv[2], "-i", 2)) || !(_kstrncmp(argv[2], "--info", 6)))
++			else if (!(_kstrncmp(argv[1], "-i", 2)) || !(_kstrncmp(argv[1], "--info", 6)))
+ 			{
+ 				info();
+ 			}
+ 
+-			if (!(_kstrncmp(argv[2], '/0', 1)))
++			if (!(_kstrncmp(argv[1], '\0', 1)))
+ 			{
+ 				printf("%s\n"
+ 				       "For more info about this tool, please do 'uname --help'\n",NAME);
+@@ -244,7 +239,7 @@
+ 	printf("\t\t\t The Dream Operating System \n"
+ 	       "\t\t           v0.01%s pre-alpha      \n\n"
+ 	  "\t\t\t\t Welcome to DreamOS\n"
+-	  "\t\t Where dreams don't became Reality and remain dreams. \n"
++	  "\t\t Where dreams don't become Reality and remain dreams. \n"
+ 	              "\t\t\tR.I.P - Rest in peace with dreamos ^_^        \n",REV_NUM);
+ 	
+ 	printf("\n\n\n\n");
+
+
+
+From finarfin at mail.berlios.de  Mon Oct 20 22:54:41 2008
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Mon, 20 Oct 2008 22:54:41 +0200
+Subject: [Dreamos-dev] r38 - in trunk: . include shell
+Message-ID: <200810202054.m9KKsfgH018146@sheep.berlios.de>
+
+Author: finarfin
+Date: 2008-10-20 22:54:41 +0200 (Mon, 20 Oct 2008)
+New Revision: 38
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/version.h
+   trunk/shell/shell.c
+Log:
+Ancora bugfix sulla shell:
+    Risolto il problema che venivano generati dei #PF casualmente e dopo la strtok
+Pulito il codice in shell.c (levati riferimenti a variabili non piu utilizzate.
+Aggiunto un comando credits, per stampare le informazioni sugli sviluppatori (da migliorare)
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2008-10-19 21:02:02 UTC (rev 37)
++++ trunk/include/version.h	2008-10-20 20:54:41 UTC (rev 38)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "0"
+ #define EXTRAVERSION "-dreamos"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r35"
++#define REV_NUM "-r37"
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2008-10-19 21:02:02 UTC (rev 37)
++++ trunk/shell/shell.c	2008-10-20 20:54:41 UTC (rev 38)
+@@ -71,8 +71,7 @@
+ {
+ 	unsigned char cmd[256];
+ 	unsigned char string[256];
+-	int flag = 1;
+-	char *str1, *user = kmalloc(24);
++	char *user = kmalloc(24);
+ 	memset(user, 0, strlen(user));
+ 
+ 	printf("[?] Enter your username: ");
+@@ -96,7 +95,7 @@
+ 	{
+ 	    printf("%s~# ",user);
+ 	    scanf("%s",cmd);
+-
++        
+             options (cmd);
+ 
+ 		if (!(_kstrncmp(cmd,"help",4) ) )
+@@ -208,6 +207,24 @@
+         else if (!(_kstrncmp(cmd,"aalogo",6))) 
+ 		aalogo();
+         
++        else if (!(_kstrncmp(cmd,"credits",7)))
++            {
++                _kcolor('\011');
++                _kputs("DreamOS Credits\n\n");                
++                _kputs("Main Developers:\n");
++                _kcolor('\012');
++                printf("Shainer - Lisa\n"
++                    "Finarfin - Ivan\n\n\n"            
++                );
++                _kcolor('\011');
++                _kputs("Contributors:\n");
++                _kcolor('\012');
++                _kputs("Osiris\n"
++                    "Celeron\n"
++                    "m0nt0\n"
++                    "and many others (3 or 4 :P)\n\n");
++                _kcolor('\007');
++            }
+         else if (strlen(cmd)>0)
+ 	    {
+             printf("Unknown command: %s\n", cmd);            
+@@ -215,7 +232,6 @@
+ 
+ 	memset(string+5, 0, strlen(string));
+ 	memset(cmd, 0, strlen(cmd));
+-	memset(argv[2], 0, strlen(argv[2]));
+ 
+ 	}
+ }
+@@ -262,12 +278,13 @@
+ {
+ 	printf("help      - See the 'help' list to learn the DreamOS command now avaible\n"
+ 	       "poweroff  - Turn off the machine\n"
+-               "kmalloc   - Test a basic kmalloc function\n"
+-               "do_fault  - Test a page_fault\n"
+-               "aalogo    - Show an ascii art logo\n"
+-               "uname     - Print kernel version, try uname --help for more info\n"
+-               "try_buddy - Try buddy mmu\n"
+-               "try_heap  - Try heap mmu\n"
++           "kmalloc   - Test a basic kmalloc function\n"
++           "do_fault  - Test a page_fault\n"
++           "aalogo    - Show an ascii art logo\n"
++           "uname     - Print kernel version, try uname --help for more info\n"
++           "try_buddy - Try buddy mmu\n"
++           "try_heap  - Try heap mmu\n"
++           "credits  - Show DreamOS credists\n"
+ 	       "echo      - Print some lines of text\n");
+ }
+ 
+
+
+
+From finarfin at mail.berlios.de  Mon Oct 27 21:47:05 2008
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Mon, 27 Oct 2008 21:47:05 +0100
+Subject: [Dreamos-dev] r39 - in trunk: . include include/mem mem misc shell
+Message-ID: <200810272047.m9RKl5Sr016053@sheep.berlios.de>
+
+Author: finarfin
+Date: 2008-10-27 21:47:04 +0100 (Mon, 27 Oct 2008)
+New Revision: 39
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/mem/kheap.h
+   trunk/include/version.h
+   trunk/kernel.c
+   trunk/mem/kheap.c
+   trunk/misc/ordered_list.c
+   trunk/shell/shell.c
+Log:
+Pulito il codice nel kernel.
+Aggiunta linea dell'help relativa al comando clear.
+Terminata (almeno spero) la alloc (ovviamente si dovra anche debuggare per bene)
+Aggiunta funzione alloc_node per chiedere spazio per un nuovo nodo
+
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/mem/kheap.h
+===================================================================
+--- trunk/include/mem/kheap.h	2008-10-20 20:54:41 UTC (rev 38)
++++ trunk/include/mem/kheap.h	2008-10-27 20:47:04 UTC (rev 39)
+@@ -51,6 +51,7 @@
+ void* kmalloc(unsigned int);
+ void kfree(unsigned int);
+ void try_alloc();
++heap_node_t* alloc_node();
+ 
+ void* alloc(unsigned int, heap_t*);
+ 
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2008-10-20 20:54:41 UTC (rev 38)
++++ trunk/include/version.h	2008-10-27 20:47:04 UTC (rev 39)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "0"
+ #define EXTRAVERSION "-dreamos"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r37"
++#define REV_NUM "-r38"
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2008-10-20 20:54:41 UTC (rev 38)
++++ trunk/kernel.c	2008-10-27 20:47:04 UTC (rev 39)
+@@ -94,7 +94,7 @@
+     get_cpuid();    
+     printf("\n");
+     printf("----\n");
+-    printf("Loading the shell..");
++    printf("Loading the shell");
+     _kprintOK();
+ 		printf("[+] End: %d \n"
+ 		       "[+] Address: 0x%x\n", end, &end);		   	        
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2008-10-20 20:54:41 UTC (rev 38)
++++ trunk/mem/kheap.c	2008-10-27 20:47:04 UTC (rev 39)
+@@ -33,6 +33,7 @@
+ extern size_t tot_mem;
+ heap_t *kheap;
+ unsigned int address_cur = (unsigned int) &end;
++unsigned int node_address;
+ 
+ void* kmalloc(unsigned int size)
+ {
+@@ -78,9 +79,11 @@
+     heap_t* new_heap;
+     heap_node_t* first_node;
+ 
+-    new_heap = (heap_t*)kmalloc(sizeof(heap_t));
++    new_heap = 0xC0000000;
++    node_address = 0xC0000000 + sizeof(heap_t);
++//     new_heap = (heap_t*)kmalloc(sizeof(heap_t));
+ 
+-    first_node = (heap_node_t*)kmalloc(sizeof(heap_node_t));
++    first_node = (heap_node_t*)alloc_node();
+     first_node->start_address = (unsigned int)&end;
+     first_node->size = size;
+     first_node->next = NULL;
+@@ -94,46 +97,75 @@
+     return (heap_t*) new_heap;
+ }
+     
+-/*
+- * Allocation
+- * @author Ivan Gualandri
+- * @version 1.0
+- * @param size Size of the memory to be allocated
+- * @param cur_heap Current heap
+- * @return The start address of the new allocated memory (or NULL if no memory can be allocated)
+- */
++/**
++  * Allocation
++  * @author Ivan Gualandri
++  * @version 1.0
++  * @param size Size of the memory to be allocated
++  * @param cur_heap Current heap
++  * @return The start address of the new allocated memory (or NULL if no memory can be allocated)
++  */
+ void *alloc(unsigned int size, heap_t *cur_heap)
+ {    
+     int n_pages = size / 4096;
++    int aval_pages;
+     heap_node_t* new_node = NULL;
+-    heap_node_t* free_heap_list = cur_heap->free_list;
+-
++    heap_node_t* free_heap_list = cur_heap->free_list;    
++    heap_node_t* prev_node;
+     if(size%4096 !=0)
+       n_pages++;
+     printf("----\n");
+-    printf("Number of pages: %d\n", n_pages, size);
++    printf("Number of pages: %d ", n_pages);
++    
++    prev_node = free_heap_list;
+ 
+-    /* Look for a free block of memory in the heap's free memory list */
++    /* Look for a free block of memory in the heap's free memory list */    
+     while(free_heap_list) {
+       if(free_heap_list->size >= size) {
++        aval_pages = free_heap_list->size/4096;
++        if(free_heap_list->size%4096 !=0)
++            aval_pages++;
++        printf("Available_pages: %d\n", aval_pages);
++        if(aval_pages > n_pages){
++            printf("Node should be splitted\n");
++            new_node = (heap_node_t*)alloc_node();
++            new_node->start_address = free_heap_list->start_address;
++            new_node->next = NULL;
++            new_node->size = n_pages*0x1000;
++            insert_list (new_node, &(cur_heap->used_list));
++            free_heap_list->size = (free_heap_list->size) - (n_pages*0x1000);
++            free_heap_list->start_address = free_heap_list->start_address + (n_pages*0x1000);        
++        }
++        else if(aval_pages == n_pages){
++            insert_list (free_heap_list, &(cur_heap->used_list));
++            prev_node->next = free_heap_list->next;
++            printf("\n");    
++        }
+ 
+-        new_node = (heap_node_t*)kmalloc(sizeof(heap_node_t));
+-        new_node->start_address = free_heap_list->start_address;
+-        new_node->next = NULL;
+-        new_node->size = n_pages*0x1000;
+-
+         printf("New_node -> Size: %d, start_address: %d\n", new_node->size, new_node->start_address);
+         printf("free_heap_list -> Actual size: %d, start_address: %d\n", free_heap_list->size, free_heap_list->start_address);
+         printf("----\n");
+-        free_heap_list->size = (free_heap_list->size) - (n_pages*0x1000);
+-        free_heap_list->start_address = free_heap_list->start_address + (n_pages*0x1000);
+-
+-        insert_list (new_node, &(cur_heap->used_list));
++        
+         break;
+       }
+-      else
++      else {
++        prev_node = free_heap_list;
+         free_heap_list = free_heap_list->next;
++        }      
+    }
++   printf("Prev_node: %d \n", prev_node->start_address);
+    return (void *)new_node;
+ }
+ 
++/**
++  * Allocation of a new node for kheap
++  * @author Ivan Gualandri
++  * @version 1.0
++  * @return The start address of the new allocated node
++  */
++heap_node_t* alloc_node(){
++    unsigned int temp;
++    temp = node_address;
++    node_address = node_address + sizeof(heap_node_t);
++    return (heap_node_t*) temp;
++}
+\ No newline at end of file
+
+Modified: trunk/misc/ordered_list.c
+===================================================================
+--- trunk/misc/ordered_list.c	2008-10-20 20:54:41 UTC (rev 38)
++++ trunk/misc/ordered_list.c	2008-10-27 20:47:04 UTC (rev 39)
+@@ -26,14 +26,14 @@
+ #include <stdio.h>
+ #include <stddef.h>
+ 
+-/* 
+- * Insert a new element in the list
+- * @author shainer
+- * @version 0.1
+- * @param new_node New element
+- * @param list Destination list
+- * @return none
+- */
++/** 
++  * Insert a new element in the list
++  * @author shainer
++  * @version 0.1
++  * @param new_node New element
++  * @param list Destination list
++  * @return none
++  **/
+ void insert_list(heap_node_t *new_node, heap_node_t **ulist)
+ {
+   /* First node */
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2008-10-20 20:54:41 UTC (rev 38)
++++ trunk/shell/shell.c	2008-10-27 20:47:04 UTC (rev 39)
+@@ -277,6 +277,7 @@
+ void help()
+ {
+ 	printf("help      - See the 'help' list to learn the DreamOS command now avaible\n"
++           "clear     - Clear the screen\n"
+ 	       "poweroff  - Turn off the machine\n"
+            "kmalloc   - Test a basic kmalloc function\n"
+            "do_fault  - Test a page_fault\n"
+
+
+

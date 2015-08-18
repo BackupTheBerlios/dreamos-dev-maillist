@@ -1,0 +1,203 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r5 - in trunk: . boot include include/shell shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2008-June/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r5%20-%20in%20trunk%3A%20.%20boot%20include%20include/shell%20shell&In-Reply-To=%3C200806051712.m55HCNfF032537%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000003.html">
+   <LINK REL="Next"  HREF="000004.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r5 - in trunk: . boot include include/shell shell</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r5%20-%20in%20trunk%3A%20.%20boot%20include%20include/shell%20shell&In-Reply-To=%3C200806051712.m55HCNfF032537%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r5 - in trunk: . boot include include/shell shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Thu Jun  5 19:12:23 CEST 2008</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000003.html">[Dreamos-dev] r4 - trunk
+</A></li>
+        <LI>Next message: <A HREF="000004.html">[Dreamos-dev] r6 - trunk
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2">[ date ]</a>
+              <a href="thread.html#2">[ thread ]</a>
+              <a href="subject.html#2">[ subject ]</a>
+              <a href="author.html#2">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2008-06-05 19:12:22 +0200 (Thu, 05 Jun 2008)
+New Revision: 5
+
+Added:
+   trunk/boot/os/
+   trunk/include/shell/
+   trunk/include/shell/shell.h
+   trunk/shell/
+   trunk/shell/shell.c
+Log:
+Modifiche di Osiris
+Aggiunta prima bozza di shell 
+Aggiunta automatizzazione nel makefile per aggiornamento automatico 
+immagine.
+
+
+Added: trunk/include/shell/shell.h
+===================================================================
+--- trunk/include/shell/shell.h	2008-06-05 13:06:17 UTC (rev 4)
++++ trunk/include/shell/shell.h	2008-06-05 17:12:22 UTC (rev 5)
+@@ -0,0 +1,6 @@
++// Wrote by Osiris
++
++#ifndef __SHELL_H
++#define __SHELL_H
++void shell();
++#endif
+
+Added: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2008-06-05 13:06:17 UTC (rev 4)
++++ trunk/shell/shell.c	2008-06-05 17:12:22 UTC (rev 5)
+@@ -0,0 +1,107 @@
++/* 
++  Shell Coded by
++	Osiris 
++*/
++
++#include &lt;multiboot.h&gt;
++#include &lt;kernel.h&gt;
++#include &lt;stddef.h&gt;
++#include &lt;video.h&gt;
++#include &lt;pic8259.h&gt;
++#include &lt;8253.h&gt;
++#include &lt;gdt.h&gt;
++#include &lt;idt.h&gt;
++#include &lt;cpuid.h&gt;
++#include &lt;stdio.h&gt;
++#include &lt;string.h&gt;
++#include &lt;fismem.h&gt;
++#include &lt;io.h&gt;
++#include &lt;keyboard.h&gt;
++#include &lt;paging.h&gt;
++#include &lt;use.h&gt;
++#include &lt;shell.h&gt;
++
++void logo()
++{
++	printf(&quot;\t-------------------------- \n&quot;
++	       &quot;\tThe Dream Operation System \n&quot;
++	       &quot;\t      v0.01 pre-alpha      \n&quot;
++	       &quot;\t-------------------------- \n&quot;);
++	printf(&quot;\n\n\n&quot;);
++}
++
++void help()
++{
++	printf(&quot;help     - See the 'help' list to learn the DreamOS command now avaible\n&quot;
++	       &quot;poweroff - Turn off the machine\n&quot;
++	       &quot;info     - See the system info about Memory and other staffs like that\n&quot;
++		);
++}
++
++void poweroff()
++{
++	asm(	&quot;movl %0, %%eax\n&quot;
++		&quot;int $0xff\n&quot;
++		: : &quot;g&quot;(1)); // valore di enum
++}
++
++void info()
++{
++	printf(&quot;:==========: System info: :==========:\n\n&quot;);
++        printf(&quot;Memory RAM: %d Mb&quot;, get_bmpelements());
++        _kputs (LNG_CPU);
++        _kcolor (4);
++        _kgoto (61, _kgetline());
++        _kputs (cpu_vendor);
++        _kcolor(7);  
++	printf(&quot;\n&quot;);  
++        printf(LNG_FREERAM);
++        _kgoto(60, _kgetline());
++        printf(&quot; %d kb\n&quot;, get_memsize()/1024);
++        printf(LNG_FREEPAGE);
++        _kgoto(60, _kgetline());
++        printf(&quot; %d\n&quot;, get_numpages());
++        printf(LNG_BITMAP);
++	_kgoto(60, _kgetline());
++	printf(&quot; %d&quot;, get_bmpelements());
++        _kgoto(60, _kgetline());
++        printf(&quot;\nSize of mem_area: %d\n&quot;, sizeof(mem_area));
++        printf(&quot;Page Dir Entry n.0 is: %d\n&quot;, get_pagedir_entry(0));
++        printf(&quot;Page Table Entry n.4 in Page dir 0 is: %d\n&quot;, get_pagetable_entry(0,4));
++	printf(&quot;:==========: :==========: :==========:\n&quot;);
++}
++
++void shell(void)
++{
++	unsigned char cmd[256];
++	//char *cmd=malloc(256); Dio maiale, Page Fault con il puntatore...
++	int a = 1;
++	logo();
++	for (;;)
++	{
++		_kputs(&quot;root~# &quot;);
++	        scanf(&quot;%s&quot;,cmd);
++		if (!(_kstrncmp(cmd,&quot;help&quot;,4) ) )
++		{
++			printf(&quot;Avaible command: \n&quot;);
++			help();
++			cmd[a]=NULL;
++		}
++
++		else if (!(_kstrncmp(cmd,&quot;poweroff&quot;,8)))
++		{
++			printf(&quot;Poweroff..\n&quot;);
++			poweroff();
++			cmd[a]=NULL;
++		}
++		
++		else if (!(_kstrncmp(cmd,&quot;info&quot;,4)))
++		{
++			info();
++			cmd[a]=NULL;
++		}
++		
++	}
++
++}
++
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000003.html">[Dreamos-dev] r4 - trunk
+</A></li>
+	<LI>Next message: <A HREF="000004.html">[Dreamos-dev] r6 - trunk
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2">[ date ]</a>
+              <a href="thread.html#2">[ thread ]</a>
+              <a href="subject.html#2">[ subject ]</a>
+              <a href="author.html#2">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

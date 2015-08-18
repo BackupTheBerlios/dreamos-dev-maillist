@@ -1,0 +1,385 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r76 - in trunk: . drivers hardware include	include/drivers include/mem io mem shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-April/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r76%20-%20in%20trunk%3A%20.%20drivers%20hardware%20include%0A%09include/drivers%20include/mem%20io%20mem%20shell&In-Reply-To=%3C200904251507.n3PF7ZcN009667%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000076.html">
+   <LINK REL="Next"  HREF="000078.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r76 - in trunk: . drivers hardware include	include/drivers include/mem io mem shell</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r76%20-%20in%20trunk%3A%20.%20drivers%20hardware%20include%0A%09include/drivers%20include/mem%20io%20mem%20shell&In-Reply-To=%3C200904251507.n3PF7ZcN009667%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r76 - in trunk: . drivers hardware include	include/drivers include/mem io mem shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sat Apr 25 17:07:35 CEST 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000076.html">[Dreamos-dev] r75 - in trunk: . drivers include include/drivers	include/io include/libc include/misc io libc mem misc shell sys
+</A></li>
+        <LI>Next message: <A HREF="000078.html">[Dreamos-dev] r77 - branches
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#77">[ date ]</a>
+              <a href="thread.html#77">[ thread ]</a>
+              <a href="subject.html#77">[ subject ]</a>
+              <a href="author.html#77">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-04-25 17:07:29 +0200 (Sat, 25 Apr 2009)
+New Revision: 76
+
+Modified:
+   trunk/bl.img
+   trunk/dreamos.img
+   trunk/drivers/keyboard.c
+   trunk/hardware/cpuid.c
+   trunk/include/drivers/keyboard.h
+   trunk/include/mem/kheap.h
+   trunk/include/version.h
+   trunk/io/video.c
+   trunk/kernel.c
+   trunk/mem/kheap.c
+   trunk/mem/paging.c
+   trunk/shell/commands.c
+Log:
+Eliminati diversi warning (task 4308)
+Aggiornati i ringraziamenti nel comando credits
+Eliminazione bug pressione tasto esc (nr #15557)
+Eliminazione della funzione kmalloc commentata in kheap.c
+Aggiornato versione nella stampa dell'os appena avviato.
+
+
+Modified: trunk/bl.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/drivers/keyboard.c
+===================================================================
+--- trunk/drivers/keyboard.c	2009-04-22 21:26:04 UTC (rev 75)
++++ trunk/drivers/keyboard.c	2009-04-25 15:07:29 UTC (rev 76)
+@@ -61,7 +61,7 @@
+     -1,  -1,  62,  -1,  -1                                     //88
+  };
+ 
+-static unsigned char pad_map[] = { '7', '8', '9', '0', '4', '5', '6', '0', '1', '2', '3', '0', '0' };
++/* UNUSED static unsigned char pad_map[] = { '7', '8', '9', '0', '4', '5', '6', '0', '1', '2', '3', '0', '0' };*/
+ 
+ /* The buffer where keys are stored */
+ static int circlebuf[BUFSIZE];
+@@ -84,7 +84,6 @@
+  */
+ void keyboard_isr (void)
+ {
+-    int control;
+     sc = inportb (0x60); // take scancode from the port    
+     /* error handling */
+     if (sc == 0x00 || sc == 0xFF) {
+@@ -162,6 +161,9 @@
+ 	}
+ 	break;
+ 
++    case KEY_ESCAPE:
++        break;
++
+     case KEY_BACKSPACE:
+ 	if (STEP(buf_w) == buf_r)
+ 	  buf_r = STEP(buf_r);
+
+Modified: trunk/hardware/cpuid.c
+===================================================================
+--- trunk/hardware/cpuid.c	2009-04-22 21:26:04 UTC (rev 75)
++++ trunk/hardware/cpuid.c	2009-04-25 15:07:29 UTC (rev 76)
+@@ -157,10 +157,10 @@
+   for(r-&gt;eax = 0x80000002; r-&gt;eax &lt;= 0x80000004; (r-&gt;eax)++) {
+     r-&gt;ebx = r-&gt;ecx = r-&gt;edx = 0;
+     call_cpuid (r);
+-    temp = strncat (temp, r-&gt;eax, strlen(r-&gt;eax));
+-    temp = strncat (temp, r-&gt;ebx, strlen(r-&gt;ebx));
+-    temp = strncat (temp, r-&gt;ecx, strlen(r-&gt;ecx));
+-    temp = strncat (temp, r-&gt;edx, strlen(r-&gt;edx));
++    temp = strncat (temp, (const char*)r-&gt;eax, strlen((const char*)r-&gt;eax));
++    temp = strncat (temp, (const char*)r-&gt;ebx, strlen((const char*)r-&gt;ebx));
++    temp = strncat (temp, (const char*)r-&gt;ecx, strlen((const char*)r-&gt;ecx));
++    temp = strncat (temp, (const char*)r-&gt;edx, strlen((const char*)r-&gt;edx));
+   }
+    
+   return temp;
+
+Modified: trunk/include/drivers/keyboard.h
+===================================================================
+--- trunk/include/drivers/keyboard.h	2009-04-22 21:26:04 UTC (rev 75)
++++ trunk/include/drivers/keyboard.h	2009-04-25 15:07:29 UTC (rev 76)
+@@ -29,6 +29,7 @@
+ /* Special keys */
+ #define CODE_BREAK      0x80
+ 
++#define KEY_ESCAPE     0x1
+ #define KEY_SPACE      0x39
+ #define KEY_ENTER      0x1c
+ #define KEY_BACKSPACE  0xe
+
+Modified: trunk/include/mem/kheap.h
+===================================================================
+--- trunk/include/mem/kheap.h	2009-04-22 21:26:04 UTC (rev 75)
++++ trunk/include/mem/kheap.h	2009-04-25 15:07:29 UTC (rev 76)
+@@ -31,10 +31,10 @@
+ /*!  \struct heap_node_t
+      \brief Struttura dati che mantiene le informazioni su locazioni occupate e libere di memoria
+  */
+-typedef struct {
++typedef struct heap_node {
+     unsigned int start_address;/** &lt; L'indirizzo di partenza dell'heap */
+     unsigned int size;    /** &lt; quanto massimo si puo' espandere */
+-    struct heap_node_t* next;
++    struct heap_node* next;
+ } heap_node_t;
+ 
+ /*!  \struct heap_t
+@@ -52,7 +52,7 @@
+ void kfree(unsigned int);
+ void try_alloc();
+ heap_node_t* alloc_node();
+-void free_node();
++void free_node(heap_node_t*);
+ 
+ void* alloc(unsigned int, heap_t*);
+ void free (void *);
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-04-22 21:26:04 UTC (rev 75)
++++ trunk/include/version.h	2009-04-25 15:07:29 UTC (rev 76)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL &quot;1.1&quot;
+ #define EXTRAVERSION &quot;-trunk&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r74&quot;
++#define REV_NUM &quot;-r76&quot;
+
+Modified: trunk/io/video.c
+===================================================================
+--- trunk/io/video.c	2009-04-22 21:26:04 UTC (rev 75)
++++ trunk/io/video.c	2009-04-25 15:07:29 UTC (rev 76)
+@@ -56,8 +56,7 @@
+     if(*s=='\n')
+       _knewline();
+     else if(*s=='\033') {
+-      *s++;
+-      _kcolor(*s);
++      _kcolor(*++s);
+     } else if (*s=='\t')
+       _ktab();
+     else if(*s=='\b')
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2009-04-22 21:26:04 UTC (rev 75)
++++ trunk/kernel.c	2009-04-25 15:07:29 UTC (rev 76)
+@@ -40,11 +40,12 @@
+ #include &lt;use.h&gt;
+ #include &lt;shell.h&gt;
+ #include &lt;syscall.h&gt;
++#include &lt;kheap.h&gt;
+ #include &lt;debug.h&gt;
+ 
+ unsigned int *current_page_table;
+ extern unsigned int end;
+- multiboot_info_t *boot_informations;
++multiboot_info_t *boot_informations;
+ asmlinkage void _start(struct multiboot_info *boot_info)
+ {
+      boot_informations = boot_info;    
+@@ -101,7 +102,7 @@
+ 		printf(&quot;[+] Address: 0x%x\n&quot;, &amp;end);		   	        
+ 		printf(&quot;\n\n&quot;);
+ 		#ifdef BOCHS_DEBUG
+-		dbg_bochs_print(&quot;DreamOS Debug&quot;);
++		dbg_bochs_print(&quot;DreamOS Debug\n&quot;);
+ 		#endif
+ 		shell();
+ 
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2009-04-22 21:26:04 UTC (rev 75)
++++ trunk/mem/kheap.c	2009-04-25 15:07:29 UTC (rev 76)
+@@ -300,70 +300,3 @@
+     toadd-&gt;next = kheap-&gt;free_nodes;
+     kheap-&gt;free_nodes = toadd;        
+ }
+-
+-/*-----------------------------------------------------------------------------*/
+-
+-//~ void *alloc(unsigned int size, heap_t *cur_heap)
+-//~ {    
+-    //~ int n_pages = size / 4096;
+-    //~ int aval_pages;
+-    //~ heap_node_t* new_node = NULL;
+-    //~ heap_node_t* free_heap_list = cur_heap-&gt;free_list;    
+-    //~ heap_node_t* prev_node;
+-    //~ if(size%4096 !=0)
+-      //~ n_pages++;    
+-    //~ #ifdef DEBUG
+-    //~ printf(&quot;----\n&quot;);
+-    //~ printf(&quot;Number of pages: %d &quot;, n_pages);
+-    //~ #endif
+-    //~ prev_node = free_heap_list;
+-//~ 
+-    //~ /* Look for a free block of memory in the heap's free memory list */    
+-    //~ while(free_heap_list) {
+-      //~ if(free_heap_list-&gt;size &gt;= size) {
+-        //~ aval_pages = free_heap_list-&gt;size/4096;
+-        //~ if(free_heap_list-&gt;size%4096 !=0)
+-            //~ aval_pages++;
+-        //~ #ifdef DEBUG
+-        //~ printf(&quot;Available_pages: %d\n&quot;, aval_pages);
+-        //~ #endif
+-        //~ /*Se lo spazio disponibile e' maggiore di quello richiesto*/
+-        //~ if(aval_pages &gt; n_pages){
+-            //~ #ifdef DEBUG
+-            //~ printf(&quot;Node should be splitted\n&quot;);
+-            //~ #endif
+-            //~ new_node = (heap_node_t*)alloc_node();
+-            //~ new_node-&gt;start_address = free_heap_list-&gt;start_address;
+-            //~ new_node-&gt;next = NULL;
+-            //~ new_node-&gt;size = n_pages*0x1000;
+-            //~ insert_list (new_node, &amp;(cur_heap-&gt;used_list));
+-            //~ free_heap_list-&gt;size = (free_heap_list-&gt;size) - (n_pages*0x1000);
+-            //~ free_heap_list-&gt;start_address = free_heap_list-&gt;start_address + (n_pages*0x1000);
+-            //~ #ifdef DEBUG
+-            //~ printf(&quot;New_node -&gt; Size: %d, start_address: %d\n&quot;, new_node-&gt;size, new_node-&gt;start_address);
+-            //~ #endif
+-        //~ }
+-        //~ /*Se lo spazio richiesto e' uguale a quello disponibile*/         
+-        //~ else if(aval_pages == n_pages){
+-            //~ if(prev_node == free_heap_list) {                
+-                //~ kheap-&gt;free_list = (heap_node_t*)free_heap_list-&gt;next;
+-            //~ }            
+-            //~ else prev_node-&gt;next = free_heap_list-&gt;next;
+-            //~ insert_list (free_heap_list, &amp;(cur_heap-&gt;used_list));            
+-        //~ }        
+-        //~ #ifdef DEBUG        
+-        //~ printf(&quot;free_heap_list -&gt; Actual size: %d, start_address: %d\n&quot;, free_heap_list-&gt;size,        free_heap_list-&gt;start_address);
+-        //~ printf(&quot;----\n&quot;);
+-        //~ #endif
+-        //~ break;
+-      //~ }
+-      //~ else {                
+-        //~ prev_node = free_heap_list;
+-        //~ free_heap_list = (heap_node_t*)free_heap_list-&gt;next;
+-      //~ }      
+-   //~ }
+-   //~ #ifdef DEBUG
+-   //~ printf(&quot;Prev_node: %d \n&quot;, prev_node-&gt;start_address);
+-   //~ #endif
+-   //~ return (void *)new_node-&gt;start_address;
+-//~ }
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2009-04-22 21:26:04 UTC (rev 75)
++++ trunk/mem/paging.c	2009-04-25 15:07:29 UTC (rev 76)
+@@ -121,8 +121,7 @@
+   * @return none
+   */
+ void set_pagedir_entry_ric(int pd_entry, unsigned int base, unsigned char opt1, unsigned char opt2){
+-    unsigned int* mod_address;    
+-    mod_address = 0xFFFFF000 + (pd_entry*4);
++    unsigned int* mod_address  = (unsigned int*) (0xFFFFF000 + (pd_entry*4));
+     *mod_address = (base&amp;0xFFFFF000)|opt1|opt2;    
+     #ifdef DEBUG
+     printf(&quot;value for entry n.: %d is: %d\n&quot;, pd_entry,*mod_address);
+@@ -174,8 +173,7 @@
+   * @return Il contenuto dell'entry
+   */
+ unsigned int get_pagedir_entry(int num){
+-    unsigned int *mod_address;    
+-    mod_address= (0xFFFFF000 + (num*4));
++    unsigned int *mod_address = (unsigned int*) (0xFFFFF000 + (num*4));
+     return *mod_address;
+ }
+ 
+@@ -188,8 +186,7 @@
+   * @return Il contenuto dell'entry
+   */
+ unsigned int get_pagetable_entry(int dir_num, int tab_num){
+-    unsigned int *mod_address;    
+-    mod_address=(0xFFC00000|(dir_num&lt;&lt;12))+ (tab_num*4);
++    unsigned int *mod_address = (unsigned int*) (0xFFC00000|(dir_num&lt;&lt;12))+ (tab_num*4);
+     return (unsigned int) (*mod_address);
+ }
+ 
+@@ -248,7 +245,7 @@
+ 	      new_pt[i] = 0x00000000;
+ 	      i++;
+ 	    }
+-	    set_pagedir_entry_ric (pdir, new_pt, PD_PRESENT|SUPERVISOR|WRITE, 0);
++	    set_pagedir_entry_ric (pdir, (unsigned int)new_pt, PD_PRESENT|SUPERVISOR|WRITE, 0);
+ 	    #ifdef DEBUG
+ 	    printf (&quot;Nuova entry dopo la mappatura: %d\n&quot;, get_pagedir_entry (pdir));
+ 	    #endif
+@@ -261,7 +258,7 @@
+ 	#endif
+ 	if (pt_entry == 0) {
+ 	    new_p = request_pages (1, ADD_LIST);
+-	    set_pagetable_entry_ric (pdir, ptable, new_p, PD_PRESENT|SUPERVISOR|WRITE, 0);
++	    set_pagetable_entry_ric (pdir, ptable, (unsigned int)new_p, PD_PRESENT|SUPERVISOR|WRITE, 0);
+ 	    #ifdef DEBUG
+ 	    printf (&quot;Nuova entry dopo la mappatura: %d\n&quot;, get_pagetable_entry (pdir, ptable));
+ 	    #endif
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-04-22 21:26:04 UTC (rev 75)
++++ trunk/shell/commands.c	2009-04-25 15:07:29 UTC (rev 76)
+@@ -228,7 +228,9 @@
+   _kcolor('\011');
+   _kputs(&quot;Contributors:\n&quot;);
+   _kcolor('\012');
+-  _kputs(&quot;Osiris\n&quot;
++  _kputs(&quot;vinc94\n&quot;
++  		 &quot;tk0\n&quot;
++  		 &quot;Osiris\n&quot;
+          &quot;Celeron\n&quot;
+ 	 &quot;Hamcha\n&quot;
+          &quot;m0nt0\n&quot;
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000076.html">[Dreamos-dev] r75 - in trunk: . drivers include include/drivers	include/io include/libc include/misc io libc mem misc shell sys
+</A></li>
+	<LI>Next message: <A HREF="000078.html">[Dreamos-dev] r77 - branches
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#77">[ date ]</a>
+              <a href="thread.html#77">[ thread ]</a>
+              <a href="subject.html#77">[ subject ]</a>
+              <a href="author.html#77">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

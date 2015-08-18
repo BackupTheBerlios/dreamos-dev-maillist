@@ -1,0 +1,207 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r287 - in trunk: . include/mem include/misc misc
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-August/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r287%20-%20in%20trunk%3A%20.%20include/mem%20include/misc%20misc&In-Reply-To=%3C20100830104144.87C86480FE0%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000289.html">
+   
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r287 - in trunk: . include/mem include/misc misc</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r287%20-%20in%20trunk%3A%20.%20include/mem%20include/misc%20misc&In-Reply-To=%3C20100830104144.87C86480FE0%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r287 - in trunk: . include/mem include/misc misc">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Mon Aug 30 12:41:44 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000289.html">[Dreamos-dev] r286 - in trunk: . include include/mem mem
+</A></li>
+        
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#290">[ date ]</a>
+              <a href="thread.html#290">[ thread ]</a>
+              <a href="subject.html#290">[ subject ]</a>
+              <a href="author.html#290">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-08-30 12:41:44 +0200 (Mon, 30 Aug 2010)
+New Revision: 287
+
+Added:
+   trunk/include/misc/utils.h
+Modified:
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/include/mem/heap.h
+   trunk/include/misc/ordered_array.h
+   trunk/misc/ordered_array.c
+Log:
+Aggiunto file con funzioni di utilita generica.
+Preparazione variabili e define per nuovo gestore della memoria
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2010-08-10 08:16:52 UTC (rev 286)
++++ trunk/Makefile	2010-08-30 10:41:44 UTC (rev 287)
+@@ -55,6 +55,7 @@
+       mem/heap.o\
+       misc/clock.o\
+       misc/bitops.o\
++      misc/ordered_array.o\
+       misc/ordered_list.o\
+       misc/debug.o \
+       system/syscall.o\
+@@ -98,6 +99,7 @@
+ mem/heap.o: mem/heap.c
+ misc/clock.o: misc/clock.c
+ misc/ordered_list.o: misc/ordered_list.c
++misc/orderet_array.o: misc/ordered_array.c
+ misc/bitops.o: misc/bitops.c
+ misc/debug.o: misc/debug.c
+ drivers/keyboard.o: drivers/keyboard.c
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/mem/heap.h
+===================================================================
+--- trunk/include/mem/heap.h	2010-08-10 08:16:52 UTC (rev 286)
++++ trunk/include/mem/heap.h	2010-08-30 10:41:44 UTC (rev 287)
+@@ -24,12 +24,14 @@
+ #ifndef __HEAP_H
+ #define __HEAP_H
+ 
++#define KHEAP_START_ADDRESS 0xD0000000
++
+ /*! \struct header_t 
+     \brief Contiene le informazioni relative alle locazioni di memoria 
+  */
+ typedef struct {
+ 	int magic; /*!&lt;For header identification*/
+-	char is_hole /*!&lt;1 se si tratta di un hole 0 se si tratta di un block*/
++	short int is_hole /*!&lt;1 se si tratta di un hole 0 se si tratta di un block*/
+ 	int size;  /*!&lt;Total size of the block (including header and footer)*/
+ } header_t;
+ 
+@@ -41,4 +43,5 @@
+ 	header_t *header;/*!&lt; Pointer to the block header*/
+ } footer_t;
+ 
++void heap_init();
+ #endif
+
+Modified: trunk/include/misc/ordered_array.h
+===================================================================
+--- trunk/include/misc/ordered_array.h	2010-08-10 08:16:52 UTC (rev 286)
++++ trunk/include/misc/ordered_array.h	2010-08-30 10:41:44 UTC (rev 287)
+@@ -36,9 +36,15 @@
+     void_t *array; /**&lt; Il vettore che sara' ordinato*/
+     unsigned int size; /**&lt; La dimensione attuale*/
+     unsigned int size_max; /**&lt; La dimensione massima*/
++    lessthan_predicate_t less_than;
+ }ordered_array_t;
+ 
++typedef void* type_t;
++
++typedef short int (*lessthan_predicate_t)(type_t,type_t);
+ ordered_array_t new_array(void_t, unsigned int, unsigned int);
+ void insert_array(void_t, ordered_array_t*);
+-
++void destroy_array(ordered_array_t*);
++type_t get_array(int, ordered_array_t*);
++void remove_array(int, ordered_array_t*);
+ #endif
+
+Added: trunk/include/misc/utils.h
+===================================================================
+--- trunk/include/misc/utils.h	                        (rev 0)
++++ trunk/include/misc/utils.h	2010-08-30 10:41:44 UTC (rev 287)
+@@ -0,0 +1,30 @@
++/***************************************************************************
++ *            utils.h
++ *
++ *  Sun 30 08 10 
++ *  Copyright  2010  Ivan Gualandri
++ *  Email <A HREF="https://lists.berlios.de/mailman/listinfo/dreamos-dev">finarfin at elenhost.org</A>
++ ****************************************************************************/
++/*
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2 of the License, or
++ *  (at your option) any later version.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++#ifndef COMMON_H
++#define COMMON_H
++
++#define MAX(a,b) ((a) &gt; (b) ? (a) : (b)) 
++
++#define ASSERT(b) ((b)? (void)0 ? void(1))
++#endif
+
+Modified: trunk/misc/ordered_array.c
+===================================================================
+--- trunk/misc/ordered_array.c	2010-08-10 08:16:52 UTC (rev 286)
++++ trunk/misc/ordered_array.c	2010-08-30 10:41:44 UTC (rev 287)
+@@ -25,7 +25,15 @@
+ #include &lt;ordered_array.h&gt;
+ #include &lt;kheap.h&gt;
+ #include &lt;stdio.h&gt;
++#include &lt;heap.h&gt;
+ 
++
++short int standard_lessthan (type_t a, type_t b){
++	if(a&lt;b) return 1;
++	else return 0;
++	return 0;
++}
++
+ /**
+   * Crea un nuovo ordered_array
+   * @author Ivan Gualandri
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000289.html">[Dreamos-dev] r286 - in trunk: . include include/mem mem
+</A></li>
+	
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#290">[ date ]</a>
+              <a href="thread.html#290">[ thread ]</a>
+              <a href="subject.html#290">[ subject ]</a>
+              <a href="author.html#290">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

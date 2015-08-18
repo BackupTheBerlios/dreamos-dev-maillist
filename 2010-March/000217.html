@@ -1,0 +1,274 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r214 - in trunk: . fs include/fs shell utils
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-March/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r214%20-%20in%20trunk%3A%20.%20fs%20include/fs%20shell%20utils&In-Reply-To=%3C201003171045.o2HAjiXr025121%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000216.html">
+   <LINK REL="Next"  HREF="000218.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r214 - in trunk: . fs include/fs shell utils</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r214%20-%20in%20trunk%3A%20.%20fs%20include/fs%20shell%20utils&In-Reply-To=%3C201003171045.o2HAjiXr025121%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r214 - in trunk: . fs include/fs shell utils">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Wed Mar 17 11:45:44 CET 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000216.html">[Dreamos-dev] r213 - in trunk: . fs include/fs sys
+</A></li>
+        <LI>Next message: <A HREF="000218.html">[Dreamos-dev] r215 - in trunk: . shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#217">[ date ]</a>
+              <a href="thread.html#217">[ thread ]</a>
+              <a href="subject.html#217">[ subject ]</a>
+              <a href="author.html#217">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-03-17 11:45:35 +0100 (Wed, 17 Mar 2010)
+New Revision: 214
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/fs/initrd.c
+   trunk/fs/unistd.c
+   trunk/include/fs/initrd.h
+   trunk/include/fs/vfs.h
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+   trunk/shell/testing.c
+   trunk/utils/README.initfscp
+Log:
+Aggiornato il file README.initfscp
+Abilitata la history (per ora i comandi si possono solo navigare)
+Migliorata la gestione dei file descriptor in initrd_open
+Ridefinite alcune define sui file descriptor.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2010-03-13 10:09:44 UTC (rev 213)
++++ trunk/fs/fcntl.c	2010-03-17 10:45:35 UTC (rev 214)
+@@ -78,6 +78,7 @@
+ 			va_end(ap);
+ 			return -1;
+ 		}
++		//printf(&quot;%d---%d---&quot;, cur_fd, fd_list[cur_fd].fs_spec_id);
+ 			//printf(&quot;Mpoint id: %d %s fs_spec_fd: %d\n&quot;, fd_list[cur_fd].mountpoint_id, path, fd_list[cur_fd].fs_spec_id);			
+ 	}
+ 	else {
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-03-13 10:09:44 UTC (rev 213)
++++ trunk/fs/initrd.c	2010-03-17 10:45:35 UTC (rev 214)
+@@ -94,7 +94,12 @@
+ 	int j = 0;
+ 	int ret_fd = -1;
+ 	module_var = fs_headers;
+-	if(cur_irdfd &gt;= MAX_INITRD_DESCRIPTORS) cur_irdfd=0;
++	if(cur_irdfd &gt;= MAX_INITRD_DESCRIPTORS) {
++		int i=0;
++		cur_irdfd=0;
++		while(ird_descriptors[i].file_descriptor!=-1 &amp;&amp; i &lt; MAX_INITRD_DESCRIPTORS) i++;			
++		cur_irdfd = i;
++	}
+ 	while (j &lt; fs_specs-&gt;nfiles) {
+ 		if(!strcmp(path, module_var[j].fileName)){
+ 				if(module_var[j].file_type == FS_DIRECTORY || module_var[j].file_type == FS_MOUNTPOINT)
+@@ -102,6 +107,8 @@
+ 				ird_descriptors[cur_irdfd].file_descriptor	= j;
+ 				//printf(&quot;%s Found. Size: %d FS fd val: %d - ID File val: %d\n&quot;, path, module_var[j].length, cur_irdfd, ird_descriptors[cur_irdfd].file_descriptor);
+ 				ret_fd = cur_irdfd;				
++				//printf(&quot;ret_fd: %d --- %d\n&quot;, cur_irdfd, j);
++				ird_descriptors[cur_irdfd].cur_pos = 0;
+ 				return cur_irdfd++; 
+ 		}
+ 		j++;
+
+Modified: trunk/fs/unistd.c
+===================================================================
+--- trunk/fs/unistd.c	2010-03-13 10:09:44 UTC (rev 213)
++++ trunk/fs/unistd.c	2010-03-17 10:45:35 UTC (rev 214)
+@@ -42,7 +42,7 @@
+ 	int fs_fd;
+ 	mp_id = fd_list[fildes].mountpoint_id;
+ 	fs_fd = fd_list[fildes].fs_spec_id;
+-	if (fd_list[fildes].fs_spec_id &gt;= 0){
++	if (fd_list[fildes].fs_spec_id &gt;= -1){
+ 		if(mountpoint_list[mp_id].operations.close !=NULL)
+ 			mountpoint_list[mp_id].operations.close(fs_fd);		
+ 		fd_list[fildes].fs_spec_id = -1;
+
+Modified: trunk/include/fs/initrd.h
+===================================================================
+--- trunk/include/fs/initrd.h	2010-03-13 10:09:44 UTC (rev 213)
++++ trunk/include/fs/initrd.h	2010-03-17 10:45:35 UTC (rev 214)
+@@ -24,7 +24,7 @@
+ 
+ #define FILENAME_LENGTH 64
+ #define MAX_FILES 32
+-#define MAX_INITRD_DESCRIPTORS 10
++#define MAX_INITRD_DESCRIPTORS _SC_OPEN_MAX
+ 
+ /*! \struct initrd_t
+     \brief Contiene il numero dei files contenuti nel filesystem initrd.
+
+Modified: trunk/include/fs/vfs.h
+===================================================================
+--- trunk/include/fs/vfs.h	2010-03-13 10:09:44 UTC (rev 213)
++++ trunk/include/fs/vfs.h	2010-03-17 10:45:35 UTC (rev 214)
+@@ -24,7 +24,7 @@
+ #include &lt;use.h&gt;
+ 
+ #define MAX_MOUNTPOINT 10
+-#define MAX_FD 255
++#define MAX_FD _SC_OPEN_MAX
+ 
+ #define FS_FILE 0x01
+ #define FS_DIRECTORY 0x02
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-03-13 10:09:44 UTC (rev 213)
++++ trunk/shell/commands.c	2010-03-17 10:45:35 UTC (rev 214)
+@@ -457,8 +457,7 @@
+ 		}		
+ 		if(dirp!=NULL){			
+ 			closedir(dirp);
+-		}
+-		//else printf(&quot;bad\n&quot;);
++		}		
+ 		//printf(&quot;path: %s\n&quot;, argv[1]);
+ 		rel_size = strlen(argv[1]) - strlen(mountpoint_list[i].mountpoint);
+ 		if(i == -1) {			
+@@ -473,15 +472,6 @@
+ 			free(relpath);
+ 		}*/
+ 	}
+-	/*dirp = opendir(argv[1]);
+-	if(dirp!=NULL){
+-		prova = readdir(dirp);
+-		while(prova!=NULL){
+-			printf(&quot;%s\n&quot;, prova-&gt;d_name);
+-			prova = readdir(dirp);
+-		}
+-		closedir(dirp);
+-	}*/
+ }
+ 
+ void whoami(){
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2010-03-13 10:09:44 UTC (rev 213)
++++ trunk/shell/shell.c	2010-03-17 10:45:35 UTC (rev 214)
+@@ -52,7 +52,7 @@
+ 
+ int count = 9, posiz = 9, c = 10, limit = 1;
+ char *lastcmd[10] = {};
+-
++int hist_press = 0;
+ void options(char *com)
+ {  
+   int i=0;
+@@ -121,9 +121,9 @@
+   
+   for (;;)
+   {
+-    /*for (c = 1 ; c &lt;= 10 ; c++) {
++    for (c = 1 ; c &lt;= 10 ; c++) {
+     	    lastcmd[c] = (char *)kmalloc(sizeof(char) * 30); 
+-    }*/
++    }
+     int cmdclean = 0;
+     while(cmdclean&lt;CMD_LEN){
+ 		cmd[cmdclean] = '\0';
+@@ -134,7 +134,7 @@
+     _kcolor(15);
+ 	printf(&quot;~:%s# &quot;, current_user.cur_path);
+     scanf(&quot;%30s&quot;,cmd);        
+-    //history(cmd);
++    history(cmd);
+    
+     /* elimina eventuali spazi all'inizio del comando */
+     for (i = 0, cmd_ptr = cmd; cmd[i] == ' '; i++, cmd_ptr++);
+@@ -158,9 +158,9 @@
+     for (--argc; argc&gt;=0; argc--) {      
+         free (argv[argc]);
+     }
+-    /*for (c = 1 ; c &lt;= 10 ; c++) {
++    for (c = 1 ; c &lt;= 10 ; c++) {
+     	    free(lastcmd[c]); 
+-    }*/
++    }
+   }
+ }
+ 
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-03-13 10:09:44 UTC (rev 213)
++++ trunk/shell/testing.c	2010-03-17 10:45:35 UTC (rev 214)
+@@ -139,6 +139,7 @@
+ 	
+ 	scanf(&quot;%s&quot;, appoggio);	
+ 	i = open(appoggio, O_RDONLY, 42);
++	printf(&quot;%d\n&quot;, i);
+ 	if(i&gt;-1) {
+ 		int j=0;		
+ 		while(read(i, &amp;prova, 1)!=0) {
+
+Modified: trunk/utils/README.initfscp
+===================================================================
+--- trunk/utils/README.initfscp	2010-03-13 10:09:44 UTC (rev 213)
++++ trunk/utils/README.initfscp	2010-03-17 10:45:35 UTC (rev 214)
+@@ -1,6 +1,6 @@
+ ----
+ README
+-initfscp - Autore: Aleksej
++initfscp - Autore di questa guida: Aleksej
+ ----
+ 
+ initfscp e' un programma che serve a creare un'immagine contenente il file system utilizzato da DreamOS.
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000216.html">[Dreamos-dev] r213 - in trunk: . fs include/fs sys
+</A></li>
+	<LI>Next message: <A HREF="000218.html">[Dreamos-dev] r215 - in trunk: . shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#217">[ date ]</a>
+              <a href="thread.html#217">[ thread ]</a>
+              <a href="subject.html#217">[ subject ]</a>
+              <a href="author.html#217">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

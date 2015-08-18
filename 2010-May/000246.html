@@ -1,0 +1,174 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r243 - in branches/0.2: . fs include
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-May/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r243%20-%20in%20branches/0.2%3A%20.%20fs%20include&In-Reply-To=%3C201005102129.o4ALTiRj012617%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000245.html">
+   <LINK REL="Next"  HREF="000247.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r243 - in branches/0.2: . fs include</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r243%20-%20in%20branches/0.2%3A%20.%20fs%20include&In-Reply-To=%3C201005102129.o4ALTiRj012617%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r243 - in branches/0.2: . fs include">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Mon May 10 23:29:44 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000245.html">[Dreamos-dev] r242 - branches
+</A></li>
+        <LI>Next message: <A HREF="000247.html">[Dreamos-dev] r244 - branches/0.2/boot
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#246">[ date ]</a>
+              <a href="thread.html#246">[ thread ]</a>
+              <a href="subject.html#246">[ subject ]</a>
+              <a href="author.html#246">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-05-10 23:29:41 +0200 (Mon, 10 May 2010)
+New Revision: 243
+
+Added:
+   branches/0.2/CHANGELOG
+Modified:
+   branches/0.2/Makefile
+   branches/0.2/dreamos.img
+   branches/0.2/fs/initrd.c
+   branches/0.2/include/version.h
+Log:
+Aggiunto changelog
+Modificati nomi versione nell'os
+
+
+Added: branches/0.2/CHANGELOG
+===================================================================
+--- branches/0.2/CHANGELOG	2010-05-10 21:06:45 UTC (rev 242)
++++ branches/0.2/CHANGELOG	2010-05-10 21:29:41 UTC (rev 243)
+@@ -0,0 +1,39 @@
++CHANGELOG Ver. 2.0 - Name: Hastur
++
++filesystem: aggiunti files: fs/vfs.c include/fs/vfs.h
++filesystem: aggiunta funzione get_mountpoint_id
++filesystem: aggiunta funzione get_rel_path
++filesystem: aggiunta struttura dati directory_operations
++filesystem: aggiunta Aggiunta funzione open
++filesystem: flags inseriti di open: O_CREAT,O_APPEND,O_RDONLY,O_WRONLY,O_RDWR
++filesystem: aggiunto file come modulo initfs per un primo mini-fs
++filesystem: aggiunta funzione read 
++filesystem: aggiunga funzione write
++filesystem: aggiunta funzione vfs opendir, e funzione a livello di initfs.
++filesystem: aggiunta funzione readdir, e relativa implementazione in initfs
++filesystem: aggiunta funzione stat per gestione informazioni su un file
++
++shell: Aggiunto comando ls se non trova nulla stampa i mountpoint. Altrimenti il contenuto del filesystem relativo
++shell: Aggiunto comando cd non del tutto completo, ma funzionante
++shell: Aggiunta struttura dati userenv_t per ora i campi sono: username e cur_path
++shell: Aggiunto comando whoami
++shell: Aumentato da 10 a 30 dimensione di argomenti che si possono prendere da linea di comando
++shell: I comandi di debug sono stati raccolti dentro tester
++shell: Corretti errori lingua in start.sh
++shell: Modificati colori shell
++shell: Aggiunto comando pwd
++shell: Aggiunto comando per testare le syscall: tester try_syscall
++shell: Aggiunto comando tester try_ocreat per testare la creazione di un file.
++
++i/o: corretto bug su stampa di numeri negativi, ora si possono visualizzare correttamente
++
++boot: Aggiunto splash screen in grub.
++
++posix: Aggiunto header fnctl.h per operazioni sui files (Da completare)
++
++Compiling: Aggiornato Makefile per i nuovi files relativi al file system
++Compiling: Ora si puo' anche creare una iso bootabile di dreamos
++Compiling: Makefile modificato, ora rende la compilazione piu leggibile.
++Compiling: Eliminati tutti gli warning.
++
++utils: Aggiunto initfscp, tool per creare un minifs che gira da Ram.
+
+
+Property changes on: branches/0.2/CHANGELOG
+___________________________________________________________________
+Name: svn:executable
+   + *
+
+Modified: branches/0.2/Makefile
+===================================================================
+--- branches/0.2/Makefile	2010-05-10 21:06:45 UTC (rev 242)
++++ branches/0.2/Makefile	2010-05-10 21:29:41 UTC (rev 243)
+@@ -5,7 +5,7 @@
+ NAME = DreamOS
+ VERSION = 0
+ PATCHLEVEL = 2.0
+-EXTRAVERSION = -trunk
++EXTRAVERSION = -hastur
+ 
+ include Makefile.am
+ 
+
+Modified: branches/0.2/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: branches/0.2/fs/initrd.c
+===================================================================
+--- branches/0.2/fs/initrd.c	2010-05-10 21:06:45 UTC (rev 242)
++++ branches/0.2/fs/initrd.c	2010-05-10 21:29:41 UTC (rev 243)
+@@ -51,7 +51,7 @@
+ 	cur_irdfd = 0;
+ 	printf(&quot;Number of files present: %d\n&quot;, fs_specs-&gt;nfiles);
+ 	fs_end = fs_headers[(fs_specs-&gt;nfiles)-1].offset + fs_headers[(fs_specs-&gt;nfiles)-1].length;
+-	printf(&quot;Fs_end: %d\n&quot;, fs_end);
++	//printf(&quot;Fs_end: %d\n&quot;, fs_end);
+ 	return fs_specs-&gt;nfiles;
+ 	
+ }
+
+Modified: branches/0.2/include/version.h
+===================================================================
+--- branches/0.2/include/version.h	2010-05-10 21:06:45 UTC (rev 242)
++++ branches/0.2/include/version.h	2010-05-10 21:29:41 UTC (rev 243)
+@@ -22,6 +22,6 @@
+ 
+ #define VERSION &quot;0&quot;
+ #define PATCHLEVEL &quot;2.0&quot;
+-#define EXTRAVERSION &quot;-trunk&quot;
++#define EXTRAVERSION &quot;-hastur&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r229&quot;
++#define REV_NUM &quot;-r242&quot;
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000245.html">[Dreamos-dev] r242 - branches
+</A></li>
+	<LI>Next message: <A HREF="000247.html">[Dreamos-dev] r244 - branches/0.2/boot
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#246">[ date ]</a>
+              <a href="thread.html#246">[ thread ]</a>
+              <a href="subject.html#246">[ subject ]</a>
+              <a href="author.html#246">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

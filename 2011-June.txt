@@ -1,0 +1,582 @@
+From finarfin at mail.berlios.de  Fri Jun  3 23:35:38 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Fri,  3 Jun 2011 23:35:38 +0200
+Subject: [Dreamos-dev] r369 - in trunk: . boot mem shell tasks
+Message-ID: <20110603213538.55753480C9D@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-06-03 23:35:37 +0200 (Fri, 03 Jun 2011)
+New Revision: 369
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/mem/paging.c
+   trunk/shell/testing.c
+   trunk/tasks/task_utils.c
+Log:
+Added get_phys_address.
+Fixed get_pagetable_entry
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2011-05-28 21:20:22 UTC (rev 368)
++++ trunk/mem/paging.c	2011-06-03 21:35:37 UTC (rev 369)
+@@ -175,9 +175,9 @@
+     unsigned int *mod_address;    
+     mod_address = (unsigned int *)((0XFFC00000|(pd_entry<<12))+(pt_entry*4));
+     *mod_address = (base&0xFFFFF000)|opt1|opt2;
+-    #ifdef DEBUG
+-    printf("value for entry n.: %d is: %d\n", pt_entry,*mod_address);
+-    #endif
++    //#ifdef DEBUG
++    printf("value for entry n.: %d is: %x\n", pt_entry,mod_address);
++    //#endif
+ }
+ 
+ /**
+@@ -201,7 +201,8 @@
+   * @return Il contenuto dell'entry
+   */
+ unsigned int get_pagetable_entry(int dir_num, int tab_num){
+-    unsigned int *mod_address = (unsigned int*) (0xFFC00000|(dir_num<<12))+ (tab_num*4);
++    unsigned int *mod_address = (unsigned int*) ((0xFFC00000|(dir_num<<12))+(tab_num*4));
++    //printf("value for entry n.: %d is: %u\n", tab_num,mod_address);
+     return (unsigned int) (*mod_address);
+ }
+ 
+@@ -314,13 +315,21 @@
+ 		set_pagedir_entry_ric(pdir, (unsigned int)new_pagetable, PD_PRESENT|SUPERVISOR, 0);
+ 		set_pagetable_entry_ric(pdir, ptable, fis_address, PD_PRESENT|SUPERVISOR, 0);
+ 	} else {
+-		printf("Else TODO\n");
++		printf("Else TODO %u %u\n", fis_address, get_pagedir_entry(pdir));		
+ 		set_pagetable_entry_ric(pdir, ptable ,fis_address, PD_PRESENT|SUPERVISOR|WRITE, 0);		
+ 	}
+ 	return;
+ }
+ 
+ unsigned int get_phys_address(unsigned int address){
++	unsigned int pdir = 0;
++	unsigned int ptable = 0;
++	//unsigned int* tmp;
++	//tmp = 0xFFC00518;
++	pdir = BITRANGE (address, 22, 31);
++    ptable = BITRANGE (address, 12, 21);
++    printf("GetPhys - Pdir: %d, PTable: %d\n", pdir,ptable);
++    if(ptable!=0) printf("PhysAddress: %x\n", get_pagetable_entry(pdir, ptable));
+ 	return 0;
+ }
+ 
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2011-05-28 21:20:22 UTC (rev 368)
++++ trunk/shell/testing.c	2011-06-03 21:35:37 UTC (rev 369)
+@@ -255,8 +255,10 @@
+ }
+ 
+ void try_mapaddress(){
++	unsigned int *tmp = kmalloc(sizeof(int));
+ 	printf("Testing map_address\n");
+-	map_address(0x0010000, kmalloc(sizeof(int)));
++	map_address(0x0010000, (unsigned int)tmp);
++	get_phys_address((unsigned int)tmp);
+ 	//map_kernel();
+ 	return;
+ }
+
+Modified: trunk/tasks/task_utils.c
+===================================================================
+--- trunk/tasks/task_utils.c	2011-05-28 21:20:22 UTC (rev 368)
++++ trunk/tasks/task_utils.c	2011-06-03 21:35:37 UTC (rev 369)
+@@ -38,7 +38,8 @@
+ 	unsigned int *logic_pt_address = kmalloc(8*4096);
+ 	unsigned int *pagedir;
+ 	unsigned int *pagetable;
+-	int i=0;	
++	unsigned int i=0;	
++	unsigned int j=0;
+ 	pagedir = create_pageDir();
+ 	pagetable = create_pageTable();	
+ 	//set_pagedir_entry_ric(1023, fis_address, PD_PRESENT|SUPERVISOR, 0);
+@@ -52,6 +53,12 @@
+ 		i++;
+ 	}
+ 	//set_pagedir_entry_ric(0, (unsigned int)current_page_table, PD_PRESENT|SUPERVISOR|WRITE,0);    
+-	
++	while(j<PD_LIMIT){
++		pagedir[j] = 0x0;
++		pagetable[j] = (j*0x1000&0xFFFFF0)|PD_PRESENT|SUPERVISOR|WRITE|0;
++		j++;
++	}	
++	pagedir[0] = ((unsigned int)pagetable&0xFFFFF000)|PD_PRESENT|SUPERVISOR|WRITE|0;
++	pagedir[1023] = ((unsigned int)pagedir&0xFFFFF000)|PD_PRESENT|SUPERVISOR|0;	
+ 	return 0;
+ }
+
+
+
+From finarfin at mail.berlios.de  Wed Jun  8 19:38:04 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Wed,  8 Jun 2011 19:38:04 +0200
+Subject: [Dreamos-dev] r370 - in trunk: . boot mem shell
+Message-ID: <20110608173804.8A4FA4812D3@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-06-08 19:38:02 +0200 (Wed, 08 Jun 2011)
+New Revision: 370
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/mem/paging.c
+   trunk/shell/testing.c
+Log:
+Fixed get_phys_address
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2011-06-03 21:35:37 UTC (rev 369)
++++ trunk/mem/paging.c	2011-06-08 17:38:02 UTC (rev 370)
+@@ -286,6 +286,7 @@
+ 	}        
+     return;
+ }
++
+ /**
+   * Mappa l'indirizzo fisico fis_address in quello logico logic_address
+   * @author Ivan Gualandri
+@@ -305,8 +306,7 @@
+     ptable = BITRANGE (logic_address, 12, 21);
+     printf("Pdir value: %d, PtableValue: %d\n", pdir, ptable);
+     printf("Pdir entry value: %d\n", get_pagedir_entry(pdir));
+-    if(get_pagedir_entry(pdir)==NULL){
+-		printf("TODO\n");		
++    if(get_pagedir_entry(pdir)==NULL){		
+ 		/**TODO
+ 		 * Crate_page_table
+ 		 * Map_new_pdir */		
+@@ -321,16 +321,21 @@
+ 	return;
+ }
+ 
++/**
++  * Ritorna l'indirizzo fisico a cui si riferisce l'indirizzo logico preso in input
++  * @author Ivan Gualandri
++  * @version 1.0
++  * @param address Indirizzo fisico
++  * @return physical address
++  */
+ unsigned int get_phys_address(unsigned int address){
+ 	unsigned int pdir = 0;
+ 	unsigned int ptable = 0;
+-	//unsigned int* tmp;
+-	//tmp = 0xFFC00518;
+ 	pdir = BITRANGE (address, 22, 31);
+     ptable = BITRANGE (address, 12, 21);
+-    printf("GetPhys - Pdir: %d, PTable: %d\n", pdir,ptable);
+-    if(ptable!=0) printf("PhysAddress: %x\n", get_pagetable_entry(pdir, ptable));
+-	return 0;
++    //printf("GetPhys - Pdir: %d, PTable: %d\n", pdir,ptable);
++    //suif(ptable!=0) printf("PhysAddress: %x\n", get_pagetable_entry(pdir, ptable));
++	return get_pagetable_entry(pdir, ptable);
+ }
+ 
+ void free_logical_page(unsigned int address){
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2011-06-03 21:35:37 UTC (rev 369)
++++ trunk/shell/testing.c	2011-06-08 17:38:02 UTC (rev 370)
+@@ -258,7 +258,7 @@
+ 	unsigned int *tmp = kmalloc(sizeof(int));
+ 	printf("Testing map_address\n");
+ 	map_address(0x0010000, (unsigned int)tmp);
+-	get_phys_address((unsigned int)tmp);
++	printf("GetPhysAddress: %x\n", get_phys_address((unsigned int)tmp));
+ 	//map_kernel();
+ 	return;
+ }
+
+
+
+From finarfin at mail.berlios.de  Wed Jun  8 20:39:10 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Wed,  8 Jun 2011 20:39:10 +0200
+Subject: [Dreamos-dev] r371 - in trunk: . boot mem
+Message-ID: <20110608183911.1298748130A@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-06-08 20:39:10 +0200 (Wed, 08 Jun 2011)
+New Revision: 371
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/mem/paging.c
+Log:
+Added free_logical_page
+Cleaned screen output
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2011-06-08 17:38:02 UTC (rev 370)
++++ trunk/mem/paging.c	2011-06-08 18:39:10 UTC (rev 371)
+@@ -175,9 +175,9 @@
+     unsigned int *mod_address;    
+     mod_address = (unsigned int *)((0XFFC00000|(pd_entry<<12))+(pt_entry*4));
+     *mod_address = (base&0xFFFFF000)|opt1|opt2;
+-    //#ifdef DEBUG
++    #ifdef DEBUG
+     printf("value for entry n.: %d is: %x\n", pt_entry,mod_address);
+-    //#endif
++    #endif
+ }
+ 
+ /**
+@@ -339,5 +339,10 @@
+ }
+ 
+ void free_logical_page(unsigned int address){
++	unsigned int pdir = 0;
++	unsigned int ptable = 0;
++	pdir = BITRANGE (address, 22, 31);
++    ptable = BITRANGE (address, 12, 21);
++    set_pagetable_entry_ric(pdir, ptable ,0x00000000, PD_PRESENT|SUPERVISOR|WRITE, 0);		
+ 	return;
+ }
+
+
+
+From finarfin at mail.berlios.de  Wed Jun  8 23:43:17 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Wed,  8 Jun 2011 23:43:17 +0200
+Subject: [Dreamos-dev] r372 - in trunk: . boot mem shell
+Message-ID: <20110608214317.4789C48130A@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-06-08 23:43:16 +0200 (Wed, 08 Jun 2011)
+New Revision: 372
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/mem/paging.c
+   trunk/shell/testing.c
+Log:
+Added some comment.
+Updated tester --help command
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2011-06-08 18:39:10 UTC (rev 371)
++++ trunk/mem/paging.c	2011-06-08 21:43:16 UTC (rev 372)
+@@ -337,7 +337,12 @@
+     //suif(ptable!=0) printf("PhysAddress: %x\n", get_pagetable_entry(pdir, ptable));
+ 	return get_pagetable_entry(pdir, ptable);
+ }
+-
++/**
++  * Libera un indirizzo logico
++  * @author Ivan Gualandri
++  * @version 1.0
++  * @param address Indirizzo fisico  
++  */
+ void free_logical_page(unsigned int address){
+ 	unsigned int pdir = 0;
+ 	unsigned int ptable = 0;
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2011-06-08 18:39:10 UTC (rev 371)
++++ trunk/shell/testing.c	2011-06-08 21:43:16 UTC (rev 372)
+@@ -146,7 +146,7 @@
+ 		"  -> try_syscall	    - Try some syscall functions\n"
+ 		"  -> try_check         - Test username if exist\n"
+ 		"  -> test_stat			- Test stat function\n"
+-		"  -> try_newheap		- Test heap functions\n"
++		"  -> try_mapaddress    - Test map address function\n"
+ 		);	
+ }
+ 
+
+
+
+From finarfin at mail.berlios.de  Mon Jun 20 23:03:11 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Mon, 20 Jun 2011 23:03:11 +0200
+Subject: [Dreamos-dev] r373 - in trunk: include/tasks tasks
+Message-ID: <20110620210311.CA9C3480E51@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-06-20 23:03:11 +0200 (Mon, 20 Jun 2011)
+New Revision: 373
+
+Added:
+   trunk/include/tasks/task.h
+   trunk/tasks/task.c
+Log:
+Added task.c and task.h files
+
+
+Added: trunk/include/tasks/task.h
+===================================================================
+--- trunk/include/tasks/task.h	                        (rev 0)
++++ trunk/include/tasks/task.h	2011-06-20 21:03:11 UTC (rev 373)
+@@ -0,0 +1,30 @@
++/*
++ * Dreamos
++ * task.h
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++ 
++ /*
++  * Autore Ivan Gualandri
++  * Prima versione: 20/06/2011
++  */
++  
++  
++#ifndef _TASK__H
++#define _TASK__H
++
++void tasks_init();
++
++#endif
+
+Added: trunk/tasks/task.c
+===================================================================
+--- trunk/tasks/task.c	                        (rev 0)
++++ trunk/tasks/task.c	2011-06-20 21:03:11 UTC (rev 373)
+@@ -0,0 +1,30 @@
++/*
++ * Dreamos
++ * task.c
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++ 
++ /*
++  * Autore Ivan Gualandri
++  * Prima versione: 20/06/2011
++  */
++  
++#include <task.h>
++
++void tasks_init(){
++	return;
++}
++
++
+
+
+
+From finarfin at mail.berlios.de  Thu Jun 23 22:53:37 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Thu, 23 Jun 2011 22:53:37 +0200
+Subject: [Dreamos-dev] r374 - trunk/include/tasks
+Message-ID: <20110623205337.6B96B4828FA@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-06-23 22:53:36 +0200 (Thu, 23 Jun 2011)
+New Revision: 374
+
+Modified:
+   trunk/include/tasks/task.h
+Log:
+Started task_t data definition
+
+
+Modified: trunk/include/tasks/task.h
+===================================================================
+--- trunk/include/tasks/task.h	2011-06-20 21:03:11 UTC (rev 373)
++++ trunk/include/tasks/task.h	2011-06-23 20:53:36 UTC (rev 374)
+@@ -25,6 +25,14 @@
+ #ifndef _TASK__H
+ #define _TASK__H
+ 
++#define MAX_TASKS 10
++
++typedef unsigned int pid_t;
++typedef struct {
++	unsigned int pid;	
++} task_t;
++
++extern task_t task_list[MAX_TASKS];
+ void tasks_init();
+ 
+ #endif
+
+
+
+From finarfin at mail.berlios.de  Mon Jun 27 23:42:40 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Mon, 27 Jun 2011 23:42:40 +0200
+Subject: [Dreamos-dev] r375 - in trunk: . include/tasks tasks
+Message-ID: <20110627214241.31BF948294F@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-06-27 23:42:40 +0200 (Mon, 27 Jun 2011)
+New Revision: 375
+
+Modified:
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/include/tasks/task.h
+   trunk/tasks/task.c
+Log:
+Added enum task_state
+Added field to task data structure
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2011-06-23 20:53:36 UTC (rev 374)
++++ trunk/Makefile	2011-06-27 21:42:40 UTC (rev 375)
+@@ -66,7 +66,8 @@
+       sys/utsname.o\
+       sys/dirent.o\
+       sys/stat.o\
+-      tasks/task_utils.o
++      tasks/task_utils.o\
++      tasks/task.o
+ #mem/heap.o\
+ #misc/ordered_array.o
+ dreamos.img: bl.img kernel.bin
+@@ -116,6 +117,7 @@
+ sys/dirent.o: sys/dirent.c
+ sys/stat.o: sys/stat.c
+ tasks/task_utils.o: tasks/task_utils.c
++tasks/task.o: tasks/task_utils.c
+ utils:
+ 	make -f utils/Makefile
+ 	
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/tasks/task.h
+===================================================================
+--- trunk/include/tasks/task.h	2011-06-23 20:53:36 UTC (rev 374)
++++ trunk/include/tasks/task.h	2011-06-27 21:42:40 UTC (rev 375)
+@@ -28,11 +28,30 @@
+ #define MAX_TASKS 10
+ 
+ typedef unsigned int pid_t;
++
++/*!  \enum task_state
++     \brief I possibili stati di un processo
++ */
++typedef enum {
++	DEAD,
++	READY,
++	SLEEPING
++} task_state;
++
+ typedef struct {
+-	unsigned int pid;	
++	pid_t pid;	
++	char *name;
++	task_state state;
++	unsigned int eip;
++	unsigned int esp;
++	unsigned int pdir;
++	unsigned int ptable;
+ } task_t;
+ 
+ extern task_t task_list[MAX_TASKS];
++extern pid_t current_pid;
++
+ void tasks_init();
++void new_task();
+ 
+ #endif
+
+Modified: trunk/tasks/task.c
+===================================================================
+--- trunk/tasks/task.c	2011-06-23 20:53:36 UTC (rev 374)
++++ trunk/tasks/task.c	2011-06-27 21:42:40 UTC (rev 375)
+@@ -22,9 +22,19 @@
+   */
+   
+ #include <task.h>
++#include <stdio.h>
+ 
+-void tasks_init(){
++pid_t current_pid; 
++task_t task_list[MAX_TASKS];
++
++void tasks_init(){	
++	current_pid = 0;
++	printf("Init Tasks");	
++	//_kprintOk();
+ 	return;
+ }
+ 
++void new_task(){
++	
++}
+ 
+
+
+

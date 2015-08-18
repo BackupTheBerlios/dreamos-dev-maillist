@@ -1,0 +1,201 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r229 - in trunk: include/shell shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-April/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r229%20-%20in%20trunk%3A%20include/shell%20shell&In-Reply-To=%3C201004162240.o3GMe4Jw008663%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000231.html">
+   <LINK REL="Next"  HREF="000233.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r229 - in trunk: include/shell shell</H1>
+    <B>dt- at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r229%20-%20in%20trunk%3A%20include/shell%20shell&In-Reply-To=%3C201004162240.o3GMe4Jw008663%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r229 - in trunk: include/shell shell">dt- at mail.berlios.de
+       </A><BR>
+    <I>Sat Apr 17 00:40:04 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000231.html">[Dreamos-dev] r228 - in trunk: . fs include/shell shell
+</A></li>
+        <LI>Next message: <A HREF="000233.html">[Dreamos-dev] r230 - in trunk: . fs include include/shell shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#232">[ date ]</a>
+              <a href="thread.html#232">[ thread ]</a>
+              <a href="subject.html#232">[ subject ]</a>
+              <a href="author.html#232">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: dt-
+Date: 2010-04-17 00:39:34 +0200 (Sat, 17 Apr 2010)
+New Revision: 229
+
+Modified:
+   trunk/include/shell/shell.h
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+Log:
+
+
+Modified: trunk/include/shell/shell.h
+===================================================================
+--- trunk/include/shell/shell.h	2010-04-16 21:34:38 UTC (rev 228)
++++ trunk/include/shell/shell.h	2010-04-16 22:39:34 UTC (rev 229)
+@@ -20,13 +20,16 @@
+ 
+ #define USER_LEN 24
+ #define CMD_LEN 256
++#define DESC_LEN 256
+ #define CURPATH_LEN 256
+ #define NUM_COM 30
++#define DEF_COM 18
+ 
+ 
+ struct cmd {
+ 	const char cmdname[CMD_LEN];
+ 	void (*h_func)(void);
++	const char cmddesc[DESC_LEN];
+ };
+ 
+ struct user_env {
+@@ -35,6 +38,7 @@
+ };
+ 
+ //extern char cur_path[256];
++struct cmd shell_cmd[NUM_COM];
+ typedef struct user_env userenv_t;
+ extern userenv_t current_user;
+ void shell(void);
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-04-16 21:34:38 UTC (rev 228)
++++ trunk/shell/commands.c	2010-04-16 22:39:34 UTC (rev 229)
+@@ -60,25 +60,12 @@
+ void help()
+ {
+   printf (&quot;Available commands:\n&quot;);
+-  printf(
+-	&quot;help          - See the 'help' list to learn the DreamOS commands now available\n&quot;
+-	&quot;clear         - Clear the screen\n&quot;
+-	&quot;poweroff      - Turn off the machine\n&quot;
+-	&quot;aalogo        - Show an ascii art logo\n&quot;
+-	&quot;uname         - Print kernel version, try uname --help for more info\n&quot;
+-	&quot;credits       - Show DreamOS credits\n&quot;
+-	&quot;sleep         - pause DreamOS for a particular number of seconds\n&quot;
+-	&quot;cpuid         - Show cpu identification informations\n&quot;
+-	&quot;date          - Show date and time\n&quot;
+-	&quot;echo          - Print some lines of text\n&quot;
+-	&quot;drv_load      - Tool to load and kill drivers\n&quot;
+-	&quot;ls            - Tool for listing dir - not complete-\n&quot;
+-	&quot;cd            - Change dir - not complete-\n&quot;
+-	&quot;whoami        - Show the current user name\n&quot;
+-	&quot;tester        - Try some functions, 'tester --help' for more info'\n&quot;
+-	&quot;pwd           - Print current working directory\n&quot;
+-	&quot;more		   - read content of a file\n&quot;
+-	);
++  int i=0;
++  while(i&lt;DEF_COM)
++  {
++	printf(&quot;%s   %s\n&quot;, shell_cmd[i].cmdname, shell_cmd[i].cmddesc);
++	i++;
++  }
+ }
+ 
+ void echo()
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2010-04-16 21:34:38 UTC (rev 228)
++++ trunk/shell/shell.c	2010-04-16 22:39:34 UTC (rev 229)
+@@ -45,7 +45,26 @@
+ char **argv;
+ int hst_flag;
+ char cmd[CMD_LEN];
+-
++struct cmd shell_cmd[NUM_COM] = {
++ { &quot;aalogo&quot;,   aalogo,    &quot;  Show an ascii art logo&quot; },
++ { &quot;clear&quot;,    _kclear,   &quot;   Clear the screen&quot; },
++ { &quot;poweroff&quot;, poweroff,  &quot;Turn off the machine&quot; },
++ { &quot;uname&quot;,    uname_cmd, &quot;   Print kernel version, try uname --help for more info&quot; },
++ { &quot;credits&quot;,  credits,   &quot; Show DreamOS credits&quot; },
++ { &quot;sleep&quot;,    sleep_cmd, &quot;   Pause DreamOS for a particular number of seconds&quot; },
++ { &quot;cpuid&quot;,    cpuid, 	  &quot;   Show cpu identification informations&quot; },
++ { &quot;date&quot;,     date, 	  &quot;    Show date and time&quot; },
++ { &quot;echo&quot;,     echo, 	  &quot;    Print some lines of text&quot; },
++ { &quot;help&quot;,     help,	  &quot;    See the 'help' list to learn the DreamOS commands now available&quot; },
++ { &quot;answer&quot;,   answer,    &quot;  42&quot; },
++ { &quot;drv_load&quot;, drv_load,  &quot;Tool to load and kill drivers&quot; },
++ { &quot;ls&quot;,       ls,        &quot;      Tool for listing dir - not complete-&quot; },
++ { &quot;cd&quot;,       cd,        &quot;      Change dir - not complete-&quot; },
++ { &quot;whoami&quot;,   whoami,    &quot;  Show the current user name&quot; },
++ { &quot;tester&quot;,   tester,    &quot;  Try some functions, 'tester --help' for more info'&quot; },	
++ { &quot;pwd&quot;,      pwd,       &quot;     Print current working directory&quot; },
++ { &quot;more&quot;,     more,      &quot;    Read content of a file&quot; },
++};
+ /*
+  * Inserisce gli argomenti di un comando in un array di stringhe
+  * argc = numero degli argomenti
+@@ -80,27 +99,8 @@
+   
+   char *cmd_ptr;
+  
+-  static struct cmd shell_cmd[NUM_COM] = {
+-	{ &quot;aalogo&quot;,   aalogo      },
+-	{ &quot;clear&quot;,    _kclear     },
+-	{ &quot;poweroff&quot;, poweroff    },
+-	{ &quot;uname&quot;,    uname_cmd   },
+-	{ &quot;credits&quot;,  credits     },
+-	{ &quot;sleep&quot;,    sleep_cmd   },
+-	{ &quot;cpuid&quot;,    cpuid 	  },
+-	{ &quot;date&quot;,     date 	  },
+-	{ &quot;echo&quot;,     echo 	  },
+-	{ &quot;help&quot;,     help	  },
+-	{ &quot;answer&quot;,   answer  },
+-	{ &quot;drv_load&quot;, drv_load},
+-	{ &quot;ls&quot;,       ls},
+-	{ &quot;cd&quot;,       cd},
+-	{ &quot;whoami&quot;,   whoami},
+-	{ &quot;tester&quot;, tester},	
+-	{ &quot;pwd&quot;, pwd},
+-	{ &quot;more&quot;, more},
+-  };
+ 
++
+   int i = 0;
+   hst_flag = 0;
+   memset(cmd, '\0', CMD_LEN);
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000231.html">[Dreamos-dev] r228 - in trunk: . fs include/shell shell
+</A></li>
+	<LI>Next message: <A HREF="000233.html">[Dreamos-dev] r230 - in trunk: . fs include include/shell shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#232">[ date ]</a>
+              <a href="thread.html#232">[ thread ]</a>
+              <a href="subject.html#232">[ subject ]</a>
+              <a href="author.html#232">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

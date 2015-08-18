@@ -1,0 +1,156 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r241 - in trunk: . fs include/fs
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-May/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r241%20-%20in%20trunk%3A%20.%20fs%20include/fs&In-Reply-To=%3C201005062215.o46MFVcO026023%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   
+   <LINK REL="Next"  HREF="000245.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r241 - in trunk: . fs include/fs</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r241%20-%20in%20trunk%3A%20.%20fs%20include/fs&In-Reply-To=%3C201005062215.o46MFVcO026023%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r241 - in trunk: . fs include/fs">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Fri May  7 00:15:31 CEST 2010</I>
+    <P><UL>
+        
+        <LI>Next message: <A HREF="000245.html">[Dreamos-dev] r242 - branches
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#244">[ date ]</a>
+              <a href="thread.html#244">[ thread ]</a>
+              <a href="subject.html#244">[ subject ]</a>
+              <a href="author.html#244">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-05-07 00:15:23 +0200 (Fri, 07 May 2010)
+New Revision: 241
+
+Modified:
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/fs/unistd.c
+   trunk/fs/vfs.c
+   trunk/include/fs/fcntl.h
+   trunk/include/fs/vfs.h
+   trunk/initfs
+Log:
+Eliminato alcuni warning
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2010-04-26 17:29:40 UTC (rev 240)
++++ trunk/Makefile	2010-05-06 22:15:23 UTC (rev 241)
+@@ -126,8 +126,8 @@
+ .PHONY: clean install qemu
+ 
+ clean:
+-	rm -f *.img *.bin *.map initfs
+-	rm -f $(OBJ)
++	rm -f *.img *.bin *.map 
++	rm -f $(OBJ)		
+ 	rm -rf utils/initfscp
+ 
+ install:
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/unistd.c
+===================================================================
+--- trunk/fs/unistd.c	2010-04-26 17:29:40 UTC (rev 240)
++++ trunk/fs/unistd.c	2010-05-06 22:15:23 UTC (rev 241)
+@@ -46,7 +46,7 @@
+ 		printf(&quot;placeholder for write, coming soon,\n stay tuned\n&quot;);
+ 		printf(&quot;Oh i received something: %s\n&quot;, buf);
+ 		if((ssize_t*)mountpoint_list[fd_list[fildes].mountpoint_id].operations.write!=NULL)
+-			mountpoint_list[fd_list[fildes].mountpoint_id].operations.write(fs_fd, buf, nbyte);
++			mountpoint_list[fd_list[fildes].mountpoint_id].operations.write(fs_fd,(void *) buf, nbyte);
+ 		//else printf(&quot;Give Me a pen and i'll write you the world\n&quot;);
+ 		else {
+ 			printf(&quot;Give Me a pen and i'll write you the world\n&quot;);
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2010-04-26 17:29:40 UTC (rev 240)
++++ trunk/fs/vfs.c	2010-05-06 22:15:23 UTC (rev 241)
+@@ -133,6 +133,7 @@
+ 	int rel_size = 0;
+ 	int j=0;
+ 	char *tmp_path;
++	tmp_path = NULL;
+ 	rel_size = strlen(path) - strlen(mountpoint_list[mountpoint_id].mountpoint);	
+ 	//printf(&quot;rel_size: %d mp_id: %d\n&quot;, rel_size, mountpoint_id);
+ 	if(rel_size&gt;0){		
+
+Modified: trunk/include/fs/fcntl.h
+===================================================================
+--- trunk/include/fs/fcntl.h	2010-04-26 17:29:40 UTC (rev 240)
++++ trunk/include/fs/fcntl.h	2010-05-06 22:15:23 UTC (rev 241)
+@@ -25,8 +25,8 @@
+ #define O_WRONLY    0x01
+ #define O_RDWR      0x02
+ 
+-#define O_CREAT		0x04
+-#define O_APPEND	0x08
++#define O_CREAT		0x40
++#define O_APPEND	0x400
+ 
+ 
+ int  creat(const char *, mode_t);
+
+Modified: trunk/include/fs/vfs.h
+===================================================================
+--- trunk/include/fs/vfs.h	2010-04-26 17:29:40 UTC (rev 240)
++++ trunk/include/fs/vfs.h	2010-05-06 22:15:23 UTC (rev 241)
+@@ -43,7 +43,7 @@
+ 	int (*open)(const char *, int, ... );
+ 	int (*close)(int);
+ 	ssize_t (*read)(int, char*, size_t);
+-	int (*write)(int, void*, size_t);
++	ssize_t (*write)(int,const void*, size_t);
+ };
+ 
+ struct stat_operations{
+
+Modified: trunk/initfs
+===================================================================
+(Binary files differ)
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	
+	<LI>Next message: <A HREF="000245.html">[Dreamos-dev] r242 - branches
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#244">[ date ]</a>
+              <a href="thread.html#244">[ thread ]</a>
+              <a href="subject.html#244">[ subject ]</a>
+              <a href="author.html#244">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

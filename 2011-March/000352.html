@@ -1,0 +1,225 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r349 - in trunk: . boot mem
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2011-March/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r349%20-%20in%20trunk%3A%20.%20boot%20mem&In-Reply-To=%3C20110310200318.91E6F4813F4%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000351.html">
+   <LINK REL="Next"  HREF="000353.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r349 - in trunk: . boot mem</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r349%20-%20in%20trunk%3A%20.%20boot%20mem&In-Reply-To=%3C20110310200318.91E6F4813F4%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r349 - in trunk: . boot mem">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Thu Mar 10 21:03:18 CET 2011</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000351.html">[Dreamos-dev] r348 - in trunk: . boot include/mem shell
+</A></li>
+        <LI>Next message: <A HREF="000353.html">[Dreamos-dev] r350 - in trunk: . utils/eltorito_iso	utils/eltorito_iso/boot
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#352">[ date ]</a>
+              <a href="thread.html#352">[ thread ]</a>
+              <a href="subject.html#352">[ subject ]</a>
+              <a href="author.html#352">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2011-03-10 21:03:18 +0100 (Thu, 10 Mar 2011)
+New Revision: 349
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/kernel.c
+   trunk/mem/heap.c
+   trunk/mem/paging.c
+Log:
+Cleaned some useless comments. 
+Added (but actually disabled) kmalloc and kfree functions into heap.c
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2011-03-09 21:11:20 UTC (rev 348)
++++ trunk/kernel.c	2011-03-10 20:03:18 UTC (rev 349)
+@@ -99,11 +99,11 @@
+     _kprintOK();   
+     init_paging();
+ 
+-    /*
++    
+     init_newmem();     
+     try_newheap();
+     while(1);            
+-    */
++    
+     _kprintOK();    	
+     printf(&quot;Memory (upper) amount-&gt; %d Mb \n&quot;, boot_info-&gt;mem_upper/1024);
+     printf(&quot;Memory (lower) amount-&gt; %d kb \n&quot;, boot_info-&gt;mem_lower);	
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2011-03-09 21:11:20 UTC (rev 348)
++++ trunk/mem/heap.c	2011-03-10 20:03:18 UTC (rev 349)
+@@ -85,11 +85,7 @@
+ }
+ 
+ void *new_alloc(unsigned int size, unsigned short int p_aligned, new_heap_t* t_heap){
+-	//#define MEMDEBUG 1
+-	#ifdef  MEMDEBUG
+ 	unsigned int real_size = size +sizeof(header_t) + sizeof(footer_t);	
+-	//printf(&quot;Size of:\n\theader_t: %d\n\tfooter_t: %d\n\treal_size: %d\n\tsize: %d\n&quot;, sizeof(header_t), sizeof(footer_t), real_size, size);	
+-	//printf(&quot;Real size: %d\n&quot;, real_size);
+ 	unsigned int min_index = locate_smallest_hole(real_size, PAGE_ALIGNED, t_heap);
+ 	//printf(&quot;Real size: %d - min_index: %d\n&quot;, real_size, min_index);
+ 	if(min_index == -1 ){
+@@ -97,10 +93,8 @@
+ 		unsigned int old_len = t_heap-&gt;end_address - t_heap-&gt;start_address;		
+ 		unsigned int old_end_address = t_heap-&gt;end_address;			
+ 		/**expand the current heap*/
+-		//printf(&quot;Old len value: %x - &quot;, old_len);
+ 		expand(old_len+real_size, t_heap);
+ 		unsigned int new_len = t_heap-&gt;end_address - t_heap-&gt;start_address;		
+-		//printf(&quot;New len value: %x\n&quot;, old_len);		
+ 		min_index=0;
+ 		unsigned int latest_i = -1;
+ 		unsigned int val = 0x0;
+@@ -132,25 +126,19 @@
+ 			footer_t* footer = (footer_t*) (header + header-&gt;size - sizeof(footer_t));
+ 			footer-&gt;magic = HEAP_MAGIC;
+ 			footer-&gt;header = header;
+-		}
+-		//printf(&quot;Recursing!!! \n&quot;);
++		}	
+ 		return new_alloc(size, p_aligned, t_heap);
+ 	}
+ 	else {
+ 		header_t *header = get_array(min_index, &amp;t_heap-&gt;index);
+ 		unsigned int hole_address = (unsigned int)header;
+ 		unsigned int hole_size = header-&gt;size;
+-		//printf(&quot;HOLE FOUND\n&quot;);
+-		//printf(&quot; In new_alloc: Header: 0x%x\t Real Size: 0x%x\n&quot;, header-&gt;magic, real_size);
+ 		if(hole_size - real_size &lt; sizeof(header_t) + sizeof(footer_t)){
+ 			/*We can't split the hole!*/
+-			//printf(&quot;A good step forward&quot;);
+ 			size = hole_size + real_size;
+ 			real_size = hole_size;			
+ 		}
+ 		else remove_array(min_index, &amp;t_heap-&gt;index);
+-		//Temporaneamente commentato!	
+-		//#ifdef DEBUG
+ 		header_t *block_header  = (header_t *)hole_address;
+ 		block_header-&gt;magic = HEAP_MAGIC;
+ 		block_header-&gt;size = real_size;
+@@ -158,8 +146,6 @@
+ 		footer_t *block_footer = (footer_t *)(hole_address + size + sizeof(header_t));
+ 		block_footer-&gt;magic = HEAP_MAGIC;
+ 		block_footer-&gt;header = block_header;
+-		//printf(&quot;Block_header: %x - End of block_footer: %x\n&quot;, (unsigned int)block_header, (unsigned int)block_footer);
+-		//#endif
+ 		if(hole_size - real_size &gt;0){
+ 			/**We need to add a new hole. The new_hole address is given by:
+ 			 * the current hole address + size + sizeof(header_t) + sizeof(footer_t) 
+@@ -175,9 +161,7 @@
+ 			insert_array((void *)head_hole, &amp;t_heap-&gt;index);			
+ 		}	
+ 		return (void *)((unsigned int)block_header+sizeof(header_t));
+-		//get_array(0, &amp;t_heap-&gt;index);
+ 	}	
+-	#endif
+ 	return NULL;
+ }
+ 
+@@ -210,7 +194,7 @@
+ 	while(index &lt; in_heap-&gt;index.size){
+ 		unsigned int h_size;
+ 		header_t *header = (header_t *)get_array(index, &amp;in_heap-&gt;index);
+-		printf(&quot;Header: 0x%x\tSize: 0x%x\n&quot;, header-&gt;magic, header-&gt;size);
++		//printf(&quot;Header: 0x%x\tSize: 0x%x\n&quot;, header-&gt;magic, header-&gt;size);
+ 		h_size = header-&gt;size;
+ 		if(h_size &gt;= size)
+ 			break;
+@@ -235,7 +219,6 @@
+ 	/**Unify left*/
+ 	/**Test if on the left i have a hole*/
+ 	footer_t* left_footer = (footer_t*) ((unsigned int) header - sizeof(footer_t));
+-	//printf(&quot;Address of header: %x - Footer: %x Left: %x\n&quot;, header, footer, footer-&gt;magic);
+ 	if(left_footer-&gt;magic == HEAP_MAGIC &amp;&amp; left_footer-&gt;header-&gt;is_hole == HEAP_HOLE){
+ 		//printf(&quot;unify left\n&quot;);
+ 		/**I have found a hole on the left of my current header i need to save the size of
+@@ -286,5 +269,15 @@
+ }
+ 
+ void n_free(unsigned int address){
+-	new_free(address, n_heap);
++	new_free((void*)address, n_heap);
+ }
++
++#ifdef OLD_MEM_DISABLED
++void* kmalloc(unsigned int size){
++	new_malloc(size);
++}
++
++void kfree(unsigned int address){
++	n_free(address);
++}
++#endif
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2011-03-09 21:11:20 UTC (rev 348)
++++ trunk/mem/paging.c	2011-03-10 20:03:18 UTC (rev 349)
+@@ -84,7 +84,7 @@
+     load_pdbr((unsigned int)current_page_dir);
+ 	//set_pagetable_entry_ric(1019, 512 ,0xFEE00000, SUPERVISOR|PD_PRESENT|WRITE, 0);
+ 	//set_pagetable_entry_ric(1019, 0 ,0xFEC00000, SUPERVISOR|PD_PRESENT|WRITE, 0);	
+-    kheap = make_heap(tot_mem - ((unsigned int) &amp;end));    
++    //kheap = make_heap(tot_mem - ((unsigned int) &amp;end));    
+ }
+ 
+ /**
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000351.html">[Dreamos-dev] r348 - in trunk: . boot include/mem shell
+</A></li>
+	<LI>Next message: <A HREF="000353.html">[Dreamos-dev] r350 - in trunk: . utils/eltorito_iso	utils/eltorito_iso/boot
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#352">[ date ]</a>
+              <a href="thread.html#352">[ thread ]</a>
+              <a href="subject.html#352">[ subject ]</a>
+              <a href="author.html#352">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

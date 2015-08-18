@@ -1,0 +1,173 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r226 - in trunk: . fs include/fs include/sys shell sys
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-April/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r226%20-%20in%20trunk%3A%20.%20fs%20include/fs%20include/sys%20shell%20sys&In-Reply-To=%3C201004132219.o3DMJF7i013864%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000228.html">
+   <LINK REL="Next"  HREF="000230.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r226 - in trunk: . fs include/fs include/sys shell sys</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r226%20-%20in%20trunk%3A%20.%20fs%20include/fs%20include/sys%20shell%20sys&In-Reply-To=%3C201004132219.o3DMJF7i013864%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r226 - in trunk: . fs include/fs include/sys shell sys">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Wed Apr 14 00:19:15 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000228.html">[Dreamos-dev] r225 - in trunk: . fs shell
+</A></li>
+        <LI>Next message: <A HREF="000230.html">[Dreamos-dev] r227 - in trunk: . fs include/fs shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#229">[ date ]</a>
+              <a href="thread.html#229">[ thread ]</a>
+              <a href="subject.html#229">[ subject ]</a>
+              <a href="author.html#229">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-04-14 00:19:07 +0200 (Wed, 14 Apr 2010)
+New Revision: 226
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/initrd.c
+   trunk/fs/unistd.c
+   trunk/include/fs/vfs.h
+   trunk/include/sys/unistd.h
+   trunk/shell/commands.c
+   trunk/sys/stat.c
+Log:
+Aggiunto proptotipo di funzione write.
+Corretto bug #17083 su problema di cd.
+Sistemati alcuni valori di ritorno di stat.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-04-09 23:16:50 UTC (rev 225)
++++ trunk/fs/initrd.c	2010-04-13 22:19:07 UTC (rev 226)
+@@ -153,7 +153,8 @@
+ 	}
+ 	//printf(&quot;Initrd stat function\n&quot;);	
+ 	//buf-&gt;st_uid = 33;	
+-	return 0;
++	if(i==MAX_FILES) return -1;
++	else return 0;
+ }
+ 
+ int initrd_close(int fildes){
+
+Modified: trunk/fs/unistd.c
+===================================================================
+--- trunk/fs/unistd.c	2010-04-09 23:16:50 UTC (rev 225)
++++ trunk/fs/unistd.c	2010-04-13 22:19:07 UTC (rev 226)
+@@ -37,6 +37,11 @@
+ 	return 0;
+ }
+ 
++ssize_t write(int fildes, const void *buf, size_t nbyte){
++	printf(&quot;placeholder for write, coming soon,\n stay tuned\n&quot;);
++	return 0;
++}
++
+ int close(int fildes){
+ 	int mp_id;
+ 	int fs_fd;
+
+Modified: trunk/include/fs/vfs.h
+===================================================================
+--- trunk/include/fs/vfs.h	2010-04-09 23:16:50 UTC (rev 225)
++++ trunk/include/fs/vfs.h	2010-04-13 22:19:07 UTC (rev 226)
+@@ -88,8 +88,8 @@
+ int get_mountpoint_id(char *);
+ char* get_rel_path(int, const char*);
+ int open_dir(char *);
+-int read (int, void*, size_t);
+-int write (int, void*, size_t);
++//int read (int, void*, size_t);
++//int write (int, void*, size_t);
+ int get_abs_path(char *);
+ void vfs_init();
+ 
+
+Modified: trunk/include/sys/unistd.h
+===================================================================
+--- trunk/include/sys/unistd.h	2010-04-09 23:16:50 UTC (rev 225)
++++ trunk/include/sys/unistd.h	2010-04-13 22:19:07 UTC (rev 226)
+@@ -25,6 +25,9 @@
+ #define _SC_OPEN_MAX 4
+ 
+ ssize_t read(int , void *, size_t);
++ssize_t write(int fildes, const void *buf, size_t nbyte);
+ int close(int);
+ 
++
++
+ #endif
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-04-09 23:16:50 UTC (rev 225)
++++ trunk/shell/commands.c	2010-04-13 22:19:07 UTC (rev 226)
+@@ -454,6 +454,7 @@
+ 		}
+ 		else {			
+ 			int abs_size = 0;			
++			abs_size = strlen(current_user.cur_path);
+ 			strcpy(abspath, current_user.cur_path);
+ 			if(abspath[abs_size-1] == '/')
+ 				strncat(abspath, argv[1], strlen(argv[1]));
+
+Modified: trunk/sys/stat.c
+===================================================================
+--- trunk/sys/stat.c	2010-04-09 23:16:50 UTC (rev 225)
++++ trunk/sys/stat.c	2010-04-13 22:19:07 UTC (rev 226)
+@@ -39,7 +39,7 @@
+ 	
+ 	mp_id = get_mountpoint_id((char*) tmp_path);
+ 	if(mp_id == -1) {
+-		printf(&quot;No file\n&quot;);
++		//printf(&quot;No file\n&quot;);
+ 		return -1;
+ 	}
+ 	//printf(&quot;%d\n&quot;, mp_id);
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000228.html">[Dreamos-dev] r225 - in trunk: . fs shell
+</A></li>
+	<LI>Next message: <A HREF="000230.html">[Dreamos-dev] r227 - in trunk: . fs include/fs shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#229">[ date ]</a>
+              <a href="thread.html#229">[ thread ]</a>
+              <a href="subject.html#229">[ subject ]</a>
+              <a href="author.html#229">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

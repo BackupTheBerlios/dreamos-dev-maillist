@@ -1,0 +1,161 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r211 - in trunk: . fs libc shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-March/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r211%20-%20in%20trunk%3A%20.%20fs%20libc%20shell&In-Reply-To=%3C201003092151.o29LpkIK012008%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000213.html">
+   <LINK REL="Next"  HREF="000215.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r211 - in trunk: . fs libc shell</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r211%20-%20in%20trunk%3A%20.%20fs%20libc%20shell&In-Reply-To=%3C201003092151.o29LpkIK012008%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r211 - in trunk: . fs libc shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Tue Mar  9 22:51:46 CET 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000213.html">[Dreamos-dev] r210 - in trunk: . files shell
+</A></li>
+        <LI>Next message: <A HREF="000215.html">[Dreamos-dev] r212 - in trunk: . fs shell sys
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#214">[ date ]</a>
+              <a href="thread.html#214">[ thread ]</a>
+              <a href="subject.html#214">[ subject ]</a>
+              <a href="author.html#214">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-03-09 22:51:37 +0100 (Tue, 09 Mar 2010)
+New Revision: 211
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/libc/string.c
+   trunk/shell/commands.c
+Log:
+Aggiunto supporto per i path relativi in open.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2010-03-08 21:51:30 UTC (rev 210)
++++ trunk/fs/fcntl.c	2010-03-09 21:51:37 UTC (rev 211)
+@@ -20,11 +20,14 @@
+ #include &lt;fcntl.h&gt;
+ #include &lt;stdarg.h&gt;
+ #include &lt;stdio.h&gt;
++#include &lt;string.h&gt;
+ #include &lt;kheap.h&gt;
++#include &lt;shell.h&gt;
+ 
+ int cur_fd;
+ file_descriptor_t fd_list[_SC_OPEN_MAX];
+ struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
++userenv_t current_user;
+ 
+ /**
+   * @author Ivan Gualandri
+@@ -40,7 +43,7 @@
+ 	int ret_fd;
+ 	va_list ap;
+ 	va_start(ap, oflags);
+-	ret_fd = 0;
++	ret_fd = 0;	
+ 	while(ret_fd &lt; _SC_OPEN_MAX){
+ 		//if(fd_list[ret_fd].mountpoint_id == -1) printf(&quot;%d &quot;, ret_fd);		
+ 		ret_fd++;
+@@ -57,7 +60,15 @@
+ 		printf(&quot;No more file descriptors available\n&quot;);
+ 		return -1;
+ 	}
+-	mpid = get_mountpoint_id((char*) path);		
++	if(path[0]!='/') {
++		char abspath[CURPATH_LEN];
++		memset(abspath, '\0', CURPATH_LEN);
++		strcpy(abspath, current_user.cur_path);
++		strncat(abspath, path, strlen(path));
++		//printf(&quot;abspath: %s\n&quot;, abspath);		
++		path = abspath;
++	}	
++	else mpid = get_mountpoint_id((char*) path);		
+ 	//printf(&quot;Cur_fd: %d\n&quot;,cur_fd);
+ 	if(mpid &gt;-1) {
+ 		fd_list[cur_fd].mountpoint_id = mpid;				
+@@ -68,7 +79,7 @@
+ 		return -1;
+ 	}
+ 	if( mpid &gt; -1 &amp;&amp; mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open != NULL){
+-		fd_list[cur_fd].fs_spec_id = (int) mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open(path, oflags);
++			fd_list[cur_fd].fs_spec_id = (int) mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open(path, oflags);
+ 		if(fd_list[cur_fd].fs_spec_id == -1){
+ 			printf(&quot;No file's Found\n&quot;);
+ 			va_end(ap);
+
+Modified: trunk/libc/string.c
+===================================================================
+--- trunk/libc/string.c	2010-03-08 21:51:30 UTC (rev 210)
++++ trunk/libc/string.c	2010-03-09 21:51:37 UTC (rev 211)
+@@ -252,8 +252,7 @@
+ char *strncat (char *dest, const char *src, size_t n)
+ {
+     size_t dlen = strlen (dest);
+-    int i;
+-
++    int i;	
+     for (i=0; i&lt;n &amp;&amp; src[i]; i++)
+ 	dest[dlen+i] = src[i];
+     dest[dlen+i] = '\0';
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-03-08 21:51:30 UTC (rev 210)
++++ trunk/shell/commands.c	2010-03-09 21:51:37 UTC (rev 211)
+@@ -76,6 +76,7 @@
+ 	&quot;whoami        - Show the current user name\n&quot;
+ 	&quot;tester        - Try some functions, 'tester --help' for more info'\n&quot;
+ 	&quot;pwd           - Print current working directory\n&quot;
++	&quot;more		   - read content of a file\n&quot;
+ 	);
+ }
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000213.html">[Dreamos-dev] r210 - in trunk: . files shell
+</A></li>
+	<LI>Next message: <A HREF="000215.html">[Dreamos-dev] r212 - in trunk: . fs shell sys
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#214">[ date ]</a>
+              <a href="thread.html#214">[ thread ]</a>
+              <a href="subject.html#214">[ subject ]</a>
+              <a href="author.html#214">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

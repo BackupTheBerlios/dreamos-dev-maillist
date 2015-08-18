@@ -1,0 +1,3378 @@
+From finarfin at mail.berlios.de  Tue Jun  3 23:05:59 2008
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Tue, 3 Jun 2008 23:05:59 +0200
+Subject: [Dreamos-dev] r3 - in trunk: . drivers hardware include/hardware
+Message-ID: <200806032105.m53L5x7W007828@sheep.berlios.de>
+
+Author: finarfin
+Date: 2008-06-03 23:05:58 +0200 (Tue, 03 Jun 2008)
+New Revision: 3
+
+Modified:
+   trunk/bochsout.txt
+   trunk/dreamos.img
+   trunk/drivers/keyboard.c
+   trunk/hardware/8253.c
+   trunk/include/hardware/8253.h
+   trunk/include/hardware/pic8259.h
+   trunk/kernel.map
+Log:
+Aggiunto header GPL a 8253.h e 8253.c
+Aggiunta define per EOI
+Corretto bug del pitHandler (non lanciava l'EOI)
+Sistemate alcune chiamate per utlizzare i valori dichiarati tramite #DEFINE
+
+
+
+Modified: trunk/bochsout.txt
+===================================================================
+--- trunk/bochsout.txt	2008-05-25 20:04:19 UTC (rev 2)
++++ trunk/bochsout.txt	2008-06-03 21:05:58 UTC (rev 3)
+@@ -33,52 +33,52 @@
+ 00000000000i[     ]   SB16 support: yes
+ 00000000000i[     ]   USB support: yes
+ 00000000000i[     ]   VGA extension support: vbe 
+-00000000000i[MEM0 ] allocated memory at 0xb5150008. after alignment, vector=0xb5151000
++00000000000i[MEM0 ] allocated memory at 0xb52a4008. after alignment, vector=0xb52a5000
+ 00000000000i[MEM0 ] 16,00MB
+ 00000000000i[MEM0 ] rom at 0xfffe0000/131072 ('/usr/share/bochs/BIOS-bochs-latest')
+ 00000000000i[MEM0 ] rom at 0xc0000/38400 ('/usr/share/vgabios/vgabios.bin')
+ 00000000000i[APIC?] set APIC ID to 0
+ 00000000000i[APIC0] 80686
+ 00000000000i[APIC0] local apic in CPU apicid=00 initializing
+-00000000000i[     ] lt_dlhandle is 0x8f7eec8
++00000000000i[     ] lt_dlhandle is 0xaebf108
+ 00000000000i[PLGIN] loaded plugin libbx_unmapped.la
+-00000000000i[     ] lt_dlhandle is 0x8f7f3a0
++00000000000i[     ] lt_dlhandle is 0xaebf5e0
+ 00000000000i[PLGIN] loaded plugin libbx_biosdev.la
+-00000000000i[     ] lt_dlhandle is 0x8f7f9b0
++00000000000i[     ] lt_dlhandle is 0xaebfbf0
+ 00000000000i[PLGIN] loaded plugin libbx_cmos.la
+-00000000000i[     ] lt_dlhandle is 0x8f7fb08
++00000000000i[     ] lt_dlhandle is 0xaebfd48
+ 00000000000i[PLGIN] loaded plugin libbx_dma.la
+-00000000000i[     ] lt_dlhandle is 0x8f399e8
++00000000000i[     ] lt_dlhandle is 0xaec02a8
+ 00000000000i[PLGIN] loaded plugin libbx_pic.la
+-00000000000i[     ] lt_dlhandle is 0x8eeefa0
++00000000000i[     ] lt_dlhandle is 0xaec0c80
+ 00000000000i[PLGIN] loaded plugin libbx_vga.la
+-00000000000i[     ] lt_dlhandle is 0x8eef9a0
++00000000000i[     ] lt_dlhandle is 0xaee69f0
+ 00000000000i[PLGIN] loaded plugin libbx_floppy.la
+-00000000000i[     ] lt_dlhandle is 0x8f31e80
++00000000000i[     ] lt_dlhandle is 0xaee71a8
+ 00000000000i[PLGIN] loaded plugin libbx_harddrv.la
+-00000000000i[     ] lt_dlhandle is 0x8f86f70
++00000000000i[     ] lt_dlhandle is 0xaee7338
+ 00000000000i[PLGIN] loaded plugin libbx_keyboard.la
+-00000000000i[     ] lt_dlhandle is 0x8e55188
++00000000000i[     ] lt_dlhandle is 0xaef8f00
+ 00000000000i[PLGIN] loaded plugin libbx_serial.la
+-00000000000i[     ] lt_dlhandle is 0x8f99d08
++00000000000i[     ] lt_dlhandle is 0xaef9740
+ 00000000000i[PLGIN] loaded plugin libbx_parallel.la
+-00000000000i[     ] lt_dlhandle is 0x8f9a358
++00000000000i[     ] lt_dlhandle is 0xaefa100
+ 00000000000i[PLGIN] loaded plugin libbx_extfpuirq.la
+-00000000000i[     ] lt_dlhandle is 0x8f9a478
++00000000000i[     ] lt_dlhandle is 0xaefa7c8
+ 00000000000i[PLGIN] loaded plugin libbx_gameport.la
+-00000000000i[     ] lt_dlhandle is 0x8f9ac98
++00000000000i[     ] lt_dlhandle is 0xaefb000
+ 00000000000i[PLGIN] loaded plugin libbx_speaker.la
+-00000000000i[     ] lt_dlhandle is 0x8f9b188
++00000000000i[     ] lt_dlhandle is 0xaefb080
+ 00000000000i[PLGIN] loaded plugin libbx_pci.la
+-00000000000i[     ] lt_dlhandle is 0x8f9b8e8
++00000000000i[     ] lt_dlhandle is 0xaefacc8
+ 00000000000i[PLGIN] loaded plugin libbx_pci2isa.la
+-00000000000i[     ] lt_dlhandle is 0x8f9b948
++00000000000i[     ] lt_dlhandle is 0xaefbc90
+ 00000000000i[PLGIN] loaded plugin libbx_pci_ide.la
+ 00000000000i[IOAP ] initializing I/O APIC
+ 00000000000i[IOAP ] set APIC ID to 1
+ 00000000000i[MEM0 ] Register memory access handlers: fec00000-fec00fff
+ 00000000000i[CMOS ] Using local time for initial clock
+-00000000000i[CMOS ] Setting initial clock to: Sun May 25 17:45:07 2008 (time0=1211730307)
++00000000000i[CMOS ] Setting initial clock to: Tue Jun  3 23:07:27 2008 (time0=1212527247)
+ 00000000000i[DMA  ] channel 4 used by cascade
+ 00000000000i[DMA  ] channel 2 used by Floppy Drive
+ 00000000000i[FDD  ] fd0: 'boot/grub.img' ro=0, h=2,t=80,spt=18
+@@ -133,64 +133,35 @@
+ 00000000000i[PLGIN] reset of 'gameport' plugin device by virtual method
+ 00000000000i[PLGIN] reset of 'speaker' plugin device by virtual method
+ 00000000000i[PLGIN] reset of 'pci_ide' plugin device by virtual method
+-00000003445i[BIOS ] $Revision: 1.194 $ $Date: 2007/12/23 19:46:27 $
+-00000317060i[KBD  ] reset-disable command received
+-00000335568i[BIOS ] Starting rombios32
+-00000336264i[BIOS ] ram_size=0x00f00000
+-00000356702i[BIOS ] Found 1 cpu(s)
+-00000372165i[BIOS ] bios_table_addr: 0x000faff8 end=0x000fe05b
+-00000372236i[PCI  ] 440FX PMC write to PAM register 59 (TLB Flush)
+-00000699970i[PCI  ] 440FX PMC write to PAM register 59 (TLB Flush)
+-00001028379i[P2I  ] PCI IRQ routing: PIRQA# set to 0x0b
+-00001028427i[P2I  ] PCI IRQ routing: PIRQB# set to 0x09
+-00001028475i[P2I  ] PCI IRQ routing: PIRQC# set to 0x0b
+-00001028523i[P2I  ] PCI IRQ routing: PIRQD# set to 0x09
+-00001028538i[P2I  ] write: ELCR2 = 0x0a
+-00001029335i[BIOS ] PIIX3 init: elcr=00 0a
+-00001049145i[BIOS ] PCI: bus=0 devfn=0x00: vendor_id=0x8086 device_id=0x1237
+-00001052063i[BIOS ] PCI: bus=0 devfn=0x08: vendor_id=0x8086 device_id=0x7000
+-00001054477i[BIOS ] PCI: bus=0 devfn=0x09: vendor_id=0x8086 device_id=0x7010
+-00001054957i[PIDE ] new BM-DMA address: 0xc000
+-00001055706i[BIOS ] region 4: 0x0000c000
+-00001078786i[BIOS ] MP table addr=0x000fb0d0 MPC table addr=0x000fb000 size=0xd0
+-00001078860i[PCI  ] 440FX PMC write to PAM register 59 (TLB Flush)
+-00001329201i[VBIOS] VGABios $Id: vgabios.c,v 1.66 2006/07/10 07:47:51 vruppert Exp $
+-00001329272i[VGA  ] VBE known Display Interface b0c0
+-00001329304i[VGA  ] VBE known Display Interface b0c4
+-00001332229i[VBIOS] VBE Bios $Id: vbe.c,v 1.58 2006/08/19 09:39:43 vruppert Exp $
+-00001781341i[BIOS ] Booting from 0000:7c00
+-00001800000i[WX   ] dimension update x=720 y=400 fontheight=16 fontwidth=9 bpp=8
+-00007109020i[BIOS ] int13_harddisk: function 41, unmapped device for ELDL=80
+-00007113797i[BIOS ] int13_harddisk: function 08, unmapped device for ELDL=80
+-00007118455i[BIOS ] *** int 15h function AX=00c0, BX=0000 not yet supported!
+-00321838000i[CTRL ] Bochs thread has been asked to quit.
+-00321838000i[CPU0 ] CPU is in protected mode (active)
+-00321838000i[CPU0 ] CS.d_b = 32 bit
+-00321838000i[CPU0 ] SS.d_b = 32 bit
+-00321838000i[CPU0 ] EFER   = 0x00000000
+-00321838000i[CPU0 ] | RAX=0000000000000005  RBX=0000000000000023
+-00321838000i[CPU0 ] | RCX=0000000000000050  RDX=00000000000b8a57
+-00321838000i[CPU0 ] | RSP=0000000000067e70  RBP=0000000000067eac
+-00321838000i[CPU0 ] | RSI=00000000000547b1  RDI=00000000000547b6
+-00321838000i[CPU0 ] |  R8=0000000000000000   R9=0000000000000000
+-00321838000i[CPU0 ] | R10=0000000000000000  R11=0000000000000000
+-00321838000i[CPU0 ] | R12=0000000000000000  R13=0000000000000000
+-00321838000i[CPU0 ] | R14=0000000000000000  R15=0000000000000000
+-00321838000i[CPU0 ] | IOPL=0 id vip vif ac vm rf nt of df IF tf sf zf af pf cf
+-00321838000i[CPU0 ] | SEG selector     base    limit G D
+-00321838000i[CPU0 ] | SEG sltr(index|ti|rpl)     base    limit G D
+-00321838000i[CPU0 ] |  CS:0008( 0001| 0|  0) 00000000 000fffff 1 1
+-00321838000i[CPU0 ] |  DS:0010( 0002| 0|  0) 00000000 000fffff 1 1
+-00321838000i[CPU0 ] |  SS:0010( 0002| 0|  0) 00000000 000fffff 1 1
+-00321838000i[CPU0 ] |  ES:0010( 0002| 0|  0) 00000000 000fffff 1 1
+-00321838000i[CPU0 ] |  FS:0010( 0002| 0|  0) 00000000 000fffff 1 1
+-00321838000i[CPU0 ] |  GS:0010( 0002| 0|  0) 00000000 000fffff 1 1
+-00321838000i[CPU0 ] |  MSR_FS_BASE:0000000000000000
+-00321838000i[CPU0 ] |  MSR_GS_BASE:0000000000000000
+-00321838000i[CPU0 ] | RIP=00000000001002cb (00000000001002cb)
+-00321838000i[CPU0 ] | CR0=0x80000011 CR1=0x0 CR2=0x0000000000000000
+-00321838000i[CPU0 ] | CR3=0x00210000 CR4=0x00000000
+-00321838000i[CPU0 ] >> jmp .+0xfffffffe (0x001002cb) : EBFE
+-00321838000i[CMOS ] Last time is 1211730467 (Sun May 25 17:47:47 2008)
+-00321838000i[     ] restoring default signal behavior
+-00321838000i[CTRL ] quit_sim called with exit code 0
++00000003302i[BIOS ] $Revision: 1.208 $ $Date: 2008/05/18 11:37:57 $
++00000317069i[KBD  ] reset-disable command received
++00000436653i[VBIOS] VGABios $Id: vgabios.c,v 1.66 2006/07/10 07:47:51 vruppert Exp $
++00000436724i[VGA  ] VBE known Display Interface b0c0
++00000436756i[VGA  ] VBE known Display Interface b0c4
++00000439681i[VBIOS] VBE Bios $Id: vbe.c,v 1.58 2006/08/19 09:39:43 vruppert Exp $
++00000600000i[WX   ] dimension update x=720 y=400 fontheight=16 fontwidth=9 bpp=8
++00000804355i[BIOS ] Starting rombios32
++00000805071i[BIOS ] ram_size=0x01000000
++00000825519i[BIOS ] Found 1 cpu(s)
++00000841586i[BIOS ] bios_table_addr: 0x000fb778 end=0x000fcc00
++00000841657i[PCI  ] 440FX PMC write to PAM register 59 (TLB Flush)
++00001169391i[PCI  ] 440FX PMC write to PAM register 59 (TLB Flush)
++00001497800i[P2I  ] PCI IRQ routing: PIRQA# set to 0x0b
++00001497848i[P2I  ] PCI IRQ routing: PIRQB# set to 0x09
++00001497896i[P2I  ] PCI IRQ routing: PIRQC# set to 0x0b
++00001497944i[P2I  ] PCI IRQ routing: PIRQD# set to 0x09
++00001497959i[P2I  ] write: ELCR2 = 0x0a
++00001498760i[BIOS ] PIIX3 init: elcr=00 0a
++00001518574i[BIOS ] PCI: bus=0 devfn=0x00: vendor_id=0x8086 device_id=0x1237
++00001521496i[BIOS ] PCI: bus=0 devfn=0x08: vendor_id=0x8086 device_id=0x7000
++00001523914i[BIOS ] PCI: bus=0 devfn=0x09: vendor_id=0x8086 device_id=0x7010
++00001524394i[PIDE ] new BM-DMA address: 0xc000
++00001525147i[BIOS ] region 4: 0x0000c000
++00001548231i[BIOS ] MP table addr=0x000fb850 MPC table addr=0x000fb780 size=0xd0
++00001549432i[BIOS ] SMBIOS table addr=0x000fb860
++00001549512i[PCI  ] 440FX PMC write to PAM register 59 (TLB Flush)
++00001550353i[BIOS ] bios_table_cur_addr: 0x000fb964
++00007803633i[BIOS ] Booting from 0000:7c00
++00013112173i[BIOS ] int13_harddisk: function 41, unmapped device for ELDL=80
++00013116950i[BIOS ] int13_harddisk: function 08, unmapped device for ELDL=80
++00013121608i[BIOS ] *** int 15h function AX=00c0, BX=0000 not yet supported!
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/drivers/keyboard.c
+===================================================================
+--- trunk/drivers/keyboard.c	2008-05-25 20:04:19 UTC (rev 2)
++++ trunk/drivers/keyboard.c	2008-06-03 21:05:58 UTC (rev 3)
+@@ -28,6 +28,7 @@
+ #include <stdio.h>
+ #include <ctype.h>
+ #include <io.h>
++#include <pic8259.h>
+ 
+ #define LSHIFT_BREAK 0x10E
+ #define RSHIFT_BREAK 0x11A
+@@ -197,7 +198,7 @@
+ 
+ end:
+     /* Send acknowledge */
+-    outportb (0x20, 0x20);
++    outportb (EOI, MASTER_PORT);
+     return;
+ }
+ 
+
+Modified: trunk/hardware/8253.c
+===================================================================
+--- trunk/hardware/8253.c	2008-05-25 20:04:19 UTC (rev 2)
++++ trunk/hardware/8253.c	2008-06-03 21:05:58 UTC (rev 3)
+@@ -1,6 +1,24 @@
++/*
++ * Dreamos
++ * 8253.h
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
++ */
+ #include <io.h>
+ #include <stdio.h>
+ #include <8253.h>
++#include <pic8259.h>
+ 
+ static unsigned int ticks;
+ static unsigned int seconds;
+@@ -11,7 +29,10 @@
+ 	ticks = 0;
+ 	if (++seconds > 86400)
+ 	  seconds = 0;
++      //printf("buh\n");
+     }
++    
++    outportb(EOI, MASTER_PORT);
+ }
+ 
+ void configure_PIT ()
+
+Modified: trunk/include/hardware/8253.h
+===================================================================
+--- trunk/include/hardware/8253.h	2008-05-25 20:04:19 UTC (rev 2)
++++ trunk/include/hardware/8253.h	2008-06-03 21:05:58 UTC (rev 3)
+@@ -1,3 +1,21 @@
++/*
++ * Dreamos
++ * 8253.h
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
++ */
++
+ #ifndef _8253_H
+ #define _8253_H
+ 
+
+Modified: trunk/include/hardware/pic8259.h
+===================================================================
+--- trunk/include/hardware/pic8259.h	2008-05-25 20:04:19 UTC (rev 2)
++++ trunk/include/hardware/pic8259.h	2008-06-03 21:05:58 UTC (rev 3)
+@@ -39,7 +39,9 @@
+ 
+ #define GET_IRR_STATUS 0x0b
+ 
++#define EOI 0x20
+ 
++
+ typedef enum irq_types{
+     TIMER,
+     KEYBOARD,
+
+Modified: trunk/kernel.map
+===================================================================
+--- trunk/kernel.map	2008-05-25 20:04:19 UTC (rev 2)
++++ trunk/kernel.map	2008-06-03 21:05:58 UTC (rev 3)
+@@ -29,238 +29,239 @@
+ 
+                 0x0000000000100000                . = 0x100000
+ 
+-.text           0x0000000000100000     0x3ca9
++.text           0x0000000000100000     0x3cce
+  *(.text)
+  .text          0x0000000000100000       0x1d bl.img
+                 0x0000000000100000                mboot
+                 0x0000000000100014                start
+  *fill*         0x000000000010001d        0x3 00
+- .text          0x0000000000100020      0x2ad kernel.o
++ .text          0x0000000000100020      0x2b2 kernel.o
+                 0x000000000010002a                main_loop
+                 0x0000000000100020                _start
+- *fill*         0x00000000001002cd        0x3 00
+- .text          0x00000000001002d0      0x9af io/video.o
+-                0x0000000000100c04                _kscrolldown
+-                0x00000000001002d0                _kputc
+-                0x0000000000100312                _kputs
+-                0x00000000001003ac                _kbackspace
+-                0x0000000000100adb                _krotate_buffer
+-                0x00000000001004e9                _ksetcursauto
+-                0x0000000000100396                _kcolor
+-                0x00000000001005f9                _kdecbin
+-                0x00000000001004b8                _ksetcursor
+-                0x000000000010054b                _kprintOK
+-                0x00000000001003c2                _ktab
+-                0x00000000001003d0                _kgoto
+-                0x0000000000100466                _knewline
+-                0x0000000000100b5a                _kscrollup
+-                0x00000000001003ff                _kclear
+-                0x00000000001005bf                _kgetline
+-                0x0000000000100929                _kntos
+-                0x0000000000100575                _kgetcolumn
+-                0x00000000001006d0                _kntohex
+-                0x0000000000100a0c                _kshiftAll
+- *fill*         0x0000000000100c7f        0x1 00
+- .text          0x0000000000100c80      0x5b7 drivers/keyboard.o
+-                0x00000000001010b3                _ksetleds
+-                0x00000000001011df                _kgetch
+-                0x00000000001011c6                keyboard_disable
+-                0x00000000001011ad                keyboard_enable
+-                0x0000000000100c80                keyboard_isr
+- *fill*         0x0000000000101237        0x1 00
+- .text          0x0000000000101238      0x19a libc/ctype.o
+-                0x0000000000101308                islower
+-                0x0000000000101358                tolower
+-                0x00000000001012d0                isxdigit
+-                0x0000000000101330                isupper
+-                0x0000000000101260                isalpha
+-                0x0000000000101296                isalnum
+-                0x0000000000101238                isdigit
+-                0x0000000000101395                toupper
+- *fill*         0x00000000001013d2        0x2 00
+- .text          0x00000000001013d4      0x2ea libc/string.o
+-                0x0000000000101551                strstr
+-                0x00000000001013d4                strncpy
+-                0x00000000001015cb                strtok
+-                0x0000000000101654                strncat
+-                0x00000000001014e0                strdup
+-                0x00000000001014a8                memset
+-                0x0000000000101434                _kstrncmp
+-                0x000000000010140d                strlen
+-                0x0000000000101530                strchr
+- *fill*         0x00000000001016be        0x2 00
+- .text          0x00000000001016c0       0x24 io/io.o
+-                0x00000000001016c0                inportb
+-                0x00000000001016da                outportb
+- .text          0x00000000001016e4      0x634 libc/stdio.o
+-                0x00000000001016e4                putchar
+-                0x00000000001017ee                printf
+-                0x0000000000101bc2                gets
+-                0x0000000000101ba7                getchar
+-                0x0000000000101c35                scanf
+-                0x00000000001016fe                atoi
+- .text          0x0000000000101d18      0x19b hardware/cpuid.o
+-                0x0000000000101d18                get_cpuid
+- *fill*         0x0000000000101eb3        0x1 00
+- .text          0x0000000000101eb4       0x67 hardware/keyboard.o
+-                0x0000000000101eb4                keyboard_irq
+- *fill*         0x0000000000101f1b        0x1 00
+- .text          0x0000000000101f1c      0x1d0 processore/gdt.o
+-                0x0000000000101ff8                add_GDTseg
+-                0x0000000000101f1c                init_gdt
+-                0x00000000001020a3                set_gdtr
+- .text          0x00000000001020ec      0x65d processore/idt.o
+-                0x00000000001026ad                add_IDTseg
+-                0x0000000000102421                init_idt
+-                0x0000000000102721                set_idtr
+- *fill*         0x0000000000102749        0x3 00
+- .text          0x000000000010274c      0x39e processore/handlers.o
+-                0x000000000010274c                init_funcTable
+-                0x0000000000102a43                _irqinterrupt
+-                0x00000000001027cd                _globalException
+-                0x00000000001027bd                add_Interrupt
+-                0x0000000000102ad5                _int_rsv
+- *fill*         0x0000000000102aea        0x2 00
+- .text          0x0000000000102aec      0x73e hardware/pic8259.o
+-                0x0000000000102d1d                init_IRQ
+-                0x0000000000102e58                setup_IRQ
+-                0x000000000010308b                disable_IRQ
+-                0x000000000010316b                add_IRQ_handler
+-                0x0000000000102fbf                enable_IRQ
+-                0x000000000010313d                get_current_irq
+- *fill*         0x000000000010322a        0x2 00
+- .text          0x000000000010322c      0x628 mem/fismem.o
+-                0x000000000010322c                init_mem
+-                0x00000000001032f0                request_pages
+-                0x00000000001036b0                add_memarea_element
+-                0x00000000001037c6                get_numpages
+-                0x00000000001037c0                get_memsize
+-                0x00000000001037ec                malloc
+-                0x00000000001037d9                get_bmpelements
+-                0x000000000010344b                release_pages
+-                0x00000000001037a4                calcola_memoria
+-                0x000000000010382a                free
+- .text          0x0000000000103854      0x2c6 mem/paging.o
+-                0x0000000000103964                create_pageTable
+-                0x0000000000103854                init_paging
+-                0x0000000000103a8d                get_pagedir_entry
+-                0x000000000010394e                create_pageDir
+-                0x0000000000103ad4                load_pdbr
+-                0x0000000000103a3d                set_pagetable_entry_ric
+-                0x0000000000103aaa                get_pagetable_entry
+-                0x000000000010397a                set_pagedir_entry
+-                0x00000000001039ba                set_pagedir_entry_ric
+-                0x00000000001039fd                set_pagetable_entry
+- *fill*         0x0000000000103b1a        0x2 00
+- .text          0x0000000000103b1c       0xa8 system/syscall.o
+-                0x0000000000103b1c                sysputch
+-                0x0000000000103b42                syscall_handler
+- .text          0x0000000000103bc4       0xe5 hardware/8253.o
+-                0x0000000000103c7a                sleep
+-                0x0000000000103bc4                PIT_handler
+-                0x0000000000103c1e                configure_PIT
++ *fill*         0x00000000001002d2        0x2 00
++ .text          0x00000000001002d4      0x9ae io/video.o
++                0x0000000000100c07                _kscrolldown
++                0x00000000001002d4                _kputc
++                0x0000000000100316                _kputs
++                0x00000000001003b0                _kbackspace
++                0x0000000000100ade                _krotate_buffer
++                0x00000000001004ed                _ksetcursauto
++                0x000000000010039a                _kcolor
++                0x00000000001005fd                _kdecbin
++                0x00000000001004bc                _ksetcursor
++                0x000000000010054f                _kprintOK
++                0x00000000001003c6                _ktab
++                0x00000000001003d4                _kgoto
++                0x000000000010046a                _knewline
++                0x0000000000100b5d                _kscrollup
++                0x0000000000100403                _kclear
++                0x00000000001005c3                _kgetline
++                0x000000000010092d                _kntos
++                0x0000000000100579                _kgetcolumn
++                0x00000000001006d4                _kntohex
++                0x0000000000100a10                _kshiftAll
++ *fill*         0x0000000000100c82        0x2 00
++ .text          0x0000000000100c84      0x5b7 drivers/keyboard.o
++                0x00000000001010b7                _ksetleds
++                0x00000000001011e3                _kgetch
++                0x00000000001011ca                keyboard_disable
++                0x00000000001011b1                keyboard_enable
++                0x0000000000100c84                keyboard_isr
++ *fill*         0x000000000010123b        0x1 00
++ .text          0x000000000010123c      0x19a libc/ctype.o
++                0x000000000010130c                islower
++                0x000000000010135c                tolower
++                0x00000000001012d4                isxdigit
++                0x0000000000101334                isupper
++                0x0000000000101264                isalpha
++                0x000000000010129a                isalnum
++                0x000000000010123c                isdigit
++                0x0000000000101399                toupper
++ *fill*         0x00000000001013d6        0x2 00
++ .text          0x00000000001013d8      0x2ea libc/string.o
++                0x0000000000101555                strstr
++                0x00000000001013d8                strncpy
++                0x00000000001015cf                strtok
++                0x0000000000101658                strncat
++                0x00000000001014e4                strdup
++                0x00000000001014ac                memset
++                0x0000000000101438                _kstrncmp
++                0x0000000000101411                strlen
++                0x0000000000101534                strchr
++ *fill*         0x00000000001016c2        0x2 00
++ .text          0x00000000001016c4       0x24 io/io.o
++                0x00000000001016c4                inportb
++                0x00000000001016de                outportb
++ .text          0x00000000001016e8      0x634 libc/stdio.o
++                0x00000000001016e8                putchar
++                0x00000000001017f2                printf
++                0x0000000000101bc6                gets
++                0x0000000000101bab                getchar
++                0x0000000000101c39                scanf
++                0x0000000000101702                atoi
++ .text          0x0000000000101d1c      0x19b hardware/cpuid.o
++                0x0000000000101d1c                get_cpuid
++ *fill*         0x0000000000101eb7        0x1 00
++ .text          0x0000000000101eb8       0x67 hardware/keyboard.o
++                0x0000000000101eb8                keyboard_irq
++ *fill*         0x0000000000101f1f        0x1 00
++ .text          0x0000000000101f20      0x1d0 processore/gdt.o
++                0x0000000000101ffc                add_GDTseg
++                0x0000000000101f20                init_gdt
++                0x00000000001020a7                set_gdtr
++ .text          0x00000000001020f0      0x65d processore/idt.o
++                0x00000000001026b1                add_IDTseg
++                0x0000000000102425                init_idt
++                0x0000000000102725                set_idtr
++ *fill*         0x000000000010274d        0x3 00
++ .text          0x0000000000102750      0x39e processore/handlers.o
++                0x0000000000102750                init_funcTable
++                0x0000000000102a47                _irqinterrupt
++                0x00000000001027d1                _globalException
++                0x00000000001027c1                add_Interrupt
++                0x0000000000102ad9                _int_rsv
++ *fill*         0x0000000000102aee        0x2 00
++ .text          0x0000000000102af0      0x73e hardware/pic8259.o
++                0x0000000000102d21                init_IRQ
++                0x0000000000102e5c                setup_IRQ
++                0x000000000010308f                disable_IRQ
++                0x000000000010316f                add_IRQ_handler
++                0x0000000000102fc3                enable_IRQ
++                0x0000000000103141                get_current_irq
++ *fill*         0x000000000010322e        0x2 00
++ .text          0x0000000000103230      0x628 mem/fismem.o
++                0x0000000000103230                init_mem
++                0x00000000001032f4                request_pages
++                0x00000000001036b4                add_memarea_element
++                0x00000000001037ca                get_numpages
++                0x00000000001037c4                get_memsize
++                0x00000000001037f0                malloc
++                0x00000000001037dd                get_bmpelements
++                0x000000000010344f                release_pages
++                0x00000000001037a8                calcola_memoria
++                0x000000000010382e                free
++ .text          0x0000000000103858      0x2c6 mem/paging.o
++                0x0000000000103968                create_pageTable
++                0x0000000000103858                init_paging
++                0x0000000000103a91                get_pagedir_entry
++                0x0000000000103952                create_pageDir
++                0x0000000000103ad8                load_pdbr
++                0x0000000000103a41                set_pagetable_entry_ric
++                0x0000000000103aae                get_pagetable_entry
++                0x000000000010397e                set_pagedir_entry
++                0x00000000001039be                set_pagedir_entry_ric
++                0x0000000000103a01                set_pagetable_entry
++ *fill*         0x0000000000103b1e        0x2 00
++ .text          0x0000000000103b20       0xa8 system/syscall.o
++                0x0000000000103b20                sysputch
++                0x0000000000103b46                syscall_handler
++ .text          0x0000000000103bc8      0x106 hardware/8253.o
++                0x0000000000103c9f                sleep
++                0x0000000000103bc8                PIT_handler
++                0x0000000000103c43                configure_PIT
+ 
+-.rodata         0x0000000000103cac      0x558
++.rodata         0x0000000000103cd0      0x55d
+  *(.rodata)
+- .rodata        0x0000000000103cac      0x151 kernel.o
+- .rodata        0x0000000000103dfd       0x70 io/video.o
+- .rodata        0x0000000000103e6d       0x10 drivers/keyboard.o
+- .rodata        0x0000000000103e7d        0x2 libc/stdio.o
+- .rodata        0x0000000000103e7f       0x3e hardware/cpuid.o
+- .rodata        0x0000000000103ebd       0x1d hardware/keyboard.o
+- *fill*         0x0000000000103eda        0x2 00
+- .rodata        0x0000000000103edc      0x269 processore/handlers.o
+- *fill*         0x0000000000104145        0x3 00
+- .rodata        0x0000000000104148       0x8a mem/fismem.o
+- *fill*         0x00000000001041d2        0x2 00
+- .rodata        0x00000000001041d4       0x23 mem/paging.o
+- *fill*         0x00000000001041f7        0x1 00
+- .rodata        0x00000000001041f8        0xc system/syscall.o
++ .rodata        0x0000000000103cd0      0x151 kernel.o
++ .rodata        0x0000000000103e21       0x70 io/video.o
++ .rodata        0x0000000000103e91       0x10 drivers/keyboard.o
++ .rodata        0x0000000000103ea1        0x2 libc/stdio.o
++ .rodata        0x0000000000103ea3       0x3e hardware/cpuid.o
++ .rodata        0x0000000000103ee1       0x1d hardware/keyboard.o
++ *fill*         0x0000000000103efe        0x2 00
++ .rodata        0x0000000000103f00      0x269 processore/handlers.o
++ *fill*         0x0000000000104169        0x3 00
++ .rodata        0x000000000010416c       0x8a mem/fismem.o
++ *fill*         0x00000000001041f6        0x2 00
++ .rodata        0x00000000001041f8       0x23 mem/paging.o
++ *fill*         0x000000000010421b        0x1 00
++ .rodata        0x000000000010421c        0xc system/syscall.o
++ .rodata        0x0000000000104228        0x5 hardware/8253.o
+ 
+-.rel.dyn        0x0000000000104204        0x0
++.rel.dyn        0x0000000000104230        0x0 load address 0x000000000010422d
+  .rel.text      0x0000000000000000        0x0 bl.img
+ 
+-.data           0x0000000000104220    0x3376c
++.data           0x0000000000104240    0x3376c
+  *(.data)
+- .data          0x0000000000104220        0x0 kernel.o
+- .data          0x0000000000104220        0x9 io/video.o
+-                0x0000000000104224                VIDEO_PTR
+-                0x0000000000104228                VIDEO_CLR
+-                0x0000000000104220                VIDEO_MEM
+- *fill*         0x0000000000104229       0x17 00
+- .data          0x0000000000104240      0x2f8 drivers/keyboard.o
+- .data          0x0000000000104538        0x0 libc/ctype.o
+- .data          0x0000000000104538        0x0 libc/string.o
+- .data          0x0000000000104538        0x0 io/io.o
+- .data          0x0000000000104538        0x0 libc/stdio.o
+- .data          0x0000000000104538        0x0 hardware/cpuid.o
+- .data          0x0000000000104538        0x0 hardware/keyboard.o
+- .data          0x0000000000104538        0x0 processore/gdt.o
+- .data          0x0000000000104538        0x0 processore/idt.o
+- .data          0x0000000000104538        0x0 processore/handlers.o
+- .data          0x0000000000104538        0x0 hardware/pic8259.o
+- .data          0x0000000000104538        0xc mem/fismem.o
+-                0x0000000000104538                prova2
+-                0x000000000010453c                mem_info_root
+-                0x0000000000104540                mem_info
+- .data          0x0000000000104544        0x0 mem/paging.o
+- .data          0x0000000000104544        0x4 system/syscall.o
+-                0x0000000000104544                syscall_table
+- .data          0x0000000000104548        0x0 hardware/8253.o
++ .data          0x0000000000104240        0x0 kernel.o
++ .data          0x0000000000104240        0x9 io/video.o
++                0x0000000000104244                VIDEO_PTR
++                0x0000000000104248                VIDEO_CLR
++                0x0000000000104240                VIDEO_MEM
++ *fill*         0x0000000000104249       0x17 00
++ .data          0x0000000000104260      0x2f8 drivers/keyboard.o
++ .data          0x0000000000104558        0x0 libc/ctype.o
++ .data          0x0000000000104558        0x0 libc/string.o
++ .data          0x0000000000104558        0x0 io/io.o
++ .data          0x0000000000104558        0x0 libc/stdio.o
++ .data          0x0000000000104558        0x0 hardware/cpuid.o
++ .data          0x0000000000104558        0x0 hardware/keyboard.o
++ .data          0x0000000000104558        0x0 processore/gdt.o
++ .data          0x0000000000104558        0x0 processore/idt.o
++ .data          0x0000000000104558        0x0 processore/handlers.o
++ .data          0x0000000000104558        0x0 hardware/pic8259.o
++ .data          0x0000000000104558        0xc mem/fismem.o
++                0x0000000000104558                prova2
++                0x000000000010455c                mem_info_root
++                0x0000000000104560                mem_info
++ .data          0x0000000000104564        0x0 mem/paging.o
++ .data          0x0000000000104564        0x4 system/syscall.o
++                0x0000000000104564                syscall_table
++ .data          0x0000000000104568        0x0 hardware/8253.o
+  *(.bss)
+- .bss           0x0000000000104548        0x0 kernel.o
+- .bss           0x0000000000104548       0x10 io/video.o
+-                0x000000000010454c                is_shifted_once
+-                0x0000000000104548                is_scrolled
+-                0x0000000000104554                resulthex
+-                0x0000000000104550                binlen
+- *fill*         0x0000000000104558        0x8 00
+- .bss           0x0000000000104560      0x434 drivers/keyboard.o
+- .bss           0x0000000000104994        0x0 libc/ctype.o
+- .bss           0x0000000000104994        0x4 libc/string.o
+- .bss           0x0000000000104998        0x0 io/io.o
+- .bss           0x0000000000104998        0x0 libc/stdio.o
+- .bss           0x0000000000104998        0x0 hardware/cpuid.o
+- .bss           0x0000000000104998        0x0 hardware/keyboard.o
+- .bss           0x0000000000104998        0x0 processore/gdt.o
+- .bss           0x0000000000104998        0x0 processore/idt.o
+- .bss           0x0000000000104998        0x0 processore/handlers.o
+- .bss           0x0000000000104998        0x0 hardware/pic8259.o
+- .bss           0x0000000000104998        0x4 mem/fismem.o
+-                0x0000000000104998                num_pages
+- .bss           0x000000000010499c        0x0 mem/paging.o
+- .bss           0x000000000010499c        0x0 system/syscall.o
+- .bss           0x000000000010499c        0x8 hardware/8253.o
++ .bss           0x0000000000104568        0x0 kernel.o
++ .bss           0x0000000000104568       0x10 io/video.o
++                0x000000000010456c                is_shifted_once
++                0x0000000000104568                is_scrolled
++                0x0000000000104574                resulthex
++                0x0000000000104570                binlen
++ *fill*         0x0000000000104578        0x8 00
++ .bss           0x0000000000104580      0x434 drivers/keyboard.o
++ .bss           0x00000000001049b4        0x0 libc/ctype.o
++ .bss           0x00000000001049b4        0x4 libc/string.o
++ .bss           0x00000000001049b8        0x0 io/io.o
++ .bss           0x00000000001049b8        0x0 libc/stdio.o
++ .bss           0x00000000001049b8        0x0 hardware/cpuid.o
++ .bss           0x00000000001049b8        0x0 hardware/keyboard.o
++ .bss           0x00000000001049b8        0x0 processore/gdt.o
++ .bss           0x00000000001049b8        0x0 processore/idt.o
++ .bss           0x00000000001049b8        0x0 processore/handlers.o
++ .bss           0x00000000001049b8        0x0 hardware/pic8259.o
++ .bss           0x00000000001049b8        0x4 mem/fismem.o
++                0x00000000001049b8                num_pages
++ .bss           0x00000000001049bc        0x0 mem/paging.o
++ .bss           0x00000000001049bc        0x0 system/syscall.o
++ .bss           0x00000000001049bc        0x8 hardware/8253.o
+  *(COMMON)
+- COMMON         0x00000000001049a4       0x14 kernel.o
+-                0x00000000001049a4                cpu_vendor
+-                0x00000000001049b0                boot_informations
+-                0x00000000001049b4                current_page_table
+- *fill*         0x00000000001049b8        0x8 00
+- COMMON         0x00000000001049c0     0x233c io/video.o
+-                0x00000000001049c0                downbuffer
+-                0x0000000000105960                upbuffer
+-                0x0000000000106900                binvp
+- *fill*         0x0000000000106cfc        0x4 00
+- COMMON         0x0000000000106d00    0x10004 processore/gdt.o
+-                0x0000000000106d00                Gdt_Table
+-                0x0000000000116d00                current_pos
+- *fill*         0x0000000000116d04       0x1c 00
+- COMMON         0x0000000000116d20      0xc00 processore/idt.o
+-                0x0000000000116d20                IntTable
+-                0x0000000000117120                IDT_Table
+- COMMON         0x0000000000117920       0x40 processore/handlers.o
+-                0x0000000000117920                shareHandler
+- COMMON         0x0000000000117960        0x2 hardware/pic8259.o
+-                0x0000000000117960                slave_cur_mask
+-                0x0000000000117961                master_cur_mask
+- *fill*         0x0000000000117962       0x1e 00
+- COMMON         0x0000000000117980    0x20008 mem/fismem.o
+-                0x0000000000117980                mem_bitmap
+-                0x0000000000137980                tot_mem
+-                0x0000000000137984                bmp_elements
+- COMMON         0x0000000000137988        0x4 mem/paging.o
+-                0x0000000000137988                current_page_dir
++ COMMON         0x00000000001049c4       0x14 kernel.o
++                0x00000000001049c4                cpu_vendor
++                0x00000000001049d0                boot_informations
++                0x00000000001049d4                current_page_table
++ *fill*         0x00000000001049d8        0x8 00
++ COMMON         0x00000000001049e0     0x233c io/video.o
++                0x00000000001049e0                downbuffer
++                0x0000000000105980                upbuffer
++                0x0000000000106920                binvp
++ *fill*         0x0000000000106d1c        0x4 00
++ COMMON         0x0000000000106d20    0x10004 processore/gdt.o
++                0x0000000000106d20                Gdt_Table
++                0x0000000000116d20                current_pos
++ *fill*         0x0000000000116d24       0x1c 00
++ COMMON         0x0000000000116d40      0xc00 processore/idt.o
++                0x0000000000116d40                IntTable
++                0x0000000000117140                IDT_Table
++ COMMON         0x0000000000117940       0x40 processore/handlers.o
++                0x0000000000117940                shareHandler
++ COMMON         0x0000000000117980        0x2 hardware/pic8259.o
++                0x0000000000117980                slave_cur_mask
++                0x0000000000117981                master_cur_mask
++ *fill*         0x0000000000117982       0x1e 00
++ COMMON         0x00000000001179a0    0x20008 mem/fismem.o
++                0x00000000001179a0                mem_bitmap
++                0x00000000001379a0                tot_mem
++                0x00000000001379a4                bmp_elements
++ COMMON         0x00000000001379a8        0x4 mem/paging.o
++                0x00000000001379a8                current_page_dir
+ LOAD bl.img
+ LOAD kernel.o
+ LOAD io/video.o
+
+
+
+From finarfin at mail.berlios.de  Thu Jun  5 19:12:23 2008
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Thu, 5 Jun 2008 19:12:23 +0200
+Subject: [Dreamos-dev] r5 - in trunk: . boot include include/shell shell
+Message-ID: <200806051712.m55HCNfF032537@sheep.berlios.de>
+
+Author: finarfin
+Date: 2008-06-05 19:12:22 +0200 (Thu, 05 Jun 2008)
+New Revision: 5
+
+Added:
+   trunk/boot/os/
+   trunk/include/shell/
+   trunk/include/shell/shell.h
+   trunk/shell/
+   trunk/shell/shell.c
+Log:
+Modifiche di Osiris
+Aggiunta prima bozza di shell 
+Aggiunta automatizzazione nel makefile per aggiornamento automatico 
+immagine.
+
+
+Added: trunk/include/shell/shell.h
+===================================================================
+--- trunk/include/shell/shell.h	2008-06-05 13:06:17 UTC (rev 4)
++++ trunk/include/shell/shell.h	2008-06-05 17:12:22 UTC (rev 5)
+@@ -0,0 +1,6 @@
++// Wrote by Osiris
++
++#ifndef __SHELL_H
++#define __SHELL_H
++void shell();
++#endif
+
+Added: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2008-06-05 13:06:17 UTC (rev 4)
++++ trunk/shell/shell.c	2008-06-05 17:12:22 UTC (rev 5)
+@@ -0,0 +1,107 @@
++/* 
++  Shell Coded by
++	Osiris 
++*/
++
++#include <multiboot.h>
++#include <kernel.h>
++#include <stddef.h>
++#include <video.h>
++#include <pic8259.h>
++#include <8253.h>
++#include <gdt.h>
++#include <idt.h>
++#include <cpuid.h>
++#include <stdio.h>
++#include <string.h>
++#include <fismem.h>
++#include <io.h>
++#include <keyboard.h>
++#include <paging.h>
++#include <use.h>
++#include <shell.h>
++
++void logo()
++{
++	printf("\t-------------------------- \n"
++	       "\tThe Dream Operation System \n"
++	       "\t      v0.01 pre-alpha      \n"
++	       "\t-------------------------- \n");
++	printf("\n\n\n");
++}
++
++void help()
++{
++	printf("help     - See the 'help' list to learn the DreamOS command now avaible\n"
++	       "poweroff - Turn off the machine\n"
++	       "info     - See the system info about Memory and other staffs like that\n"
++		);
++}
++
++void poweroff()
++{
++	asm(	"movl %0, %%eax\n"
++		"int $0xff\n"
++		: : "g"(1)); // valore di enum
++}
++
++void info()
++{
++	printf(":==========: System info: :==========:\n\n");
++        printf("Memory RAM: %d Mb", get_bmpelements());
++        _kputs (LNG_CPU);
++        _kcolor (4);
++        _kgoto (61, _kgetline());
++        _kputs (cpu_vendor);
++        _kcolor(7);  
++	printf("\n");  
++        printf(LNG_FREERAM);
++        _kgoto(60, _kgetline());
++        printf(" %d kb\n", get_memsize()/1024);
++        printf(LNG_FREEPAGE);
++        _kgoto(60, _kgetline());
++        printf(" %d\n", get_numpages());
++        printf(LNG_BITMAP);
++	_kgoto(60, _kgetline());
++	printf(" %d", get_bmpelements());
++        _kgoto(60, _kgetline());
++        printf("\nSize of mem_area: %d\n", sizeof(mem_area));
++        printf("Page Dir Entry n.0 is: %d\n", get_pagedir_entry(0));
++        printf("Page Table Entry n.4 in Page dir 0 is: %d\n", get_pagetable_entry(0,4));
++	printf(":==========: :==========: :==========:\n");
++}
++
++void shell(void)
++{
++	unsigned char cmd[256];
++	//char *cmd=malloc(256); Dio maiale, Page Fault con il puntatore...
++	int a = 1;
++	logo();
++	for (;;)
++	{
++		_kputs("root~# ");
++	        scanf("%s",cmd);
++		if (!(_kstrncmp(cmd,"help",4) ) )
++		{
++			printf("Avaible command: \n");
++			help();
++			cmd[a]=NULL;
++		}
++
++		else if (!(_kstrncmp(cmd,"poweroff",8)))
++		{
++			printf("Poweroff..\n");
++			poweroff();
++			cmd[a]=NULL;
++		}
++		
++		else if (!(_kstrncmp(cmd,"info",4)))
++		{
++			info();
++			cmd[a]=NULL;
++		}
++		
++	}
++
++}
++
+
+
+
+From osiris_h4ck at mail.berlios.de  Thu Jun  5 15:06:18 2008
+From: osiris_h4ck at mail.berlios.de (osiris_h4ck at BerliOS)
+Date: Thu, 5 Jun 2008 15:06:18 +0200
+Subject: [Dreamos-dev] r4 - trunk
+Message-ID: <200806051306.m55D6IOa021871@sheep.berlios.de>
+
+Author: osiris_h4ck
+Date: 2008-06-05 15:06:17 +0200 (Thu, 05 Jun 2008)
+New Revision: 4
+
+Modified:
+   trunk/Makefile
+Log:
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2008-06-03 21:05:58 UTC (rev 3)
++++ trunk/Makefile	2008-06-05 13:06:17 UTC (rev 4)
+@@ -1,5 +1,5 @@
+-CFLAGS = -nostdlib -fomit-frame-pointer -fno-builtin -Wall -march=i386 -I./include -I./include/io -I./include/drivers -I./include/libc -I./include/processore -I./include/hardware -I./include/mem -I./include/system
+-OBJ = kernel.o io/video.o drivers/keyboard.o libc/ctype.o libc/string.o io/io.o libc/stdio.o hardware/cpuid.o hardware/keyboard.o processore/gdt.o processore/idt.o processore/handlers.o hardware/pic8259.o mem/fismem.o mem/paging.o system/syscall.o hardware/8253.o
++CFLAGS = -nostdlib -fomit-frame-pointer -fno-builtin -Wall -march=i386 -I./include -I./include/io -I./include/drivers -I./include/libc -I./include/processore -I./include/hardware -I./include/mem -I./include/system -I./include/shell
++OBJ = kernel.o io/video.o drivers/keyboard.o libc/ctype.o libc/string.o io/io.o libc/stdio.o hardware/cpuid.o hardware/keyboard.o processore/gdt.o processore/idt.o processore/handlers.o hardware/pic8259.o mem/fismem.o mem/paging.o system/syscall.o hardware/8253.o shell/shell.o
+ 
+ dreamos.img: bl.img kernel.bin
+ 	mv kernel.bin dreamos.img
+@@ -28,6 +28,12 @@
+ system/syscall.o : system/syscall.c
+ hardware/8253.o : hardware/8253.c
+ 
++# Autonomatizzazione aggiornamento file immagine distro
++# Only root
++img:
++	mount -o loop boot/grub.img boot/os
++	cp dreamos.img boot/os/boot/grub/
++	umount boot/os
+ 
+ .PHONY: clean install qemu
+ 
+
+
+
+From osiris_h4ck at mail.berlios.de  Thu Jun  5 20:57:22 2008
+From: osiris_h4ck at mail.berlios.de (osiris_h4ck at BerliOS)
+Date: Thu, 5 Jun 2008 20:57:22 +0200
+Subject: [Dreamos-dev] r6 - trunk
+Message-ID: <200806051857.m55IvMki012095@sheep.berlios.de>
+
+Author: osiris_h4ck
+Date: 2008-06-05 20:57:21 +0200 (Thu, 05 Jun 2008)
+New Revision: 6
+
+Added:
+   trunk/start.sh
+Modified:
+   trunk/kernel.c
+Log:
+shellz
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2008-06-05 17:12:22 UTC (rev 5)
++++ trunk/kernel.c	2008-06-05 18:57:21 UTC (rev 6)
+@@ -38,6 +38,7 @@
+ #include <keyboard.h>
+ #include <paging.h>
+ #include <use.h>
++#include <shell.h>
+ 
+ unsigned int *current_page_table;
+ multiboot_info_t *boot_informations;
+@@ -79,22 +80,6 @@
+     init_paging();
+ 
+     get_cpuid();
+-    _kputs (LNG_CPU);
+-    _kcolor (4);
+-    _kgoto (61, _kgetline());
+-    _kputs (cpu_vendor);
+-    _kputs ("\n\n");
+-    _kcolor(7);    
+-    printf(LNG_FREERAM);
+-    _kgoto(60, _kgetline());
+-    printf(" %d kb\n", get_memsize()/1024);
+-    printf(LNG_FREEPAGE);
+-    _kgoto(60, _kgetline());
+-    printf(" %d\n", get_numpages());
+-    printf(LNG_BITMAP);
+-    _kgoto(60, _kgetline());
+-    printf(" %d\n", get_bmpelements());
+-    printf("Size of mem_area: %d\n", sizeof(mem_area));
+     init_mem();
+     asm ("movl $0, %eax\n"
+ 	 "movl $35, %ebx\n"
+@@ -102,11 +87,14 @@
+ 
+     configure_PIT ();
+ 
+-
+     printf("\n");
+-    printf("Page Dir Entry n.0 is: %d\n", get_pagedir_entry(0));
+-    printf("Page Table Entry n.4 in Page dir 0 is: %d\n", get_pagetable_entry(0,4));
+     printf("----\n");
++    printf("Loading the shell..\n");
++    printf("[+] Loading compleate!!\n\n");
+ 
+-    while(1);
++    shell();
++    
++/*    if ( (shell()) != NULL)
++    {	printf("[+] Loading compleate!!\n\n\n");	}
++*/
+ }
+
+Added: trunk/start.sh
+===================================================================
+--- trunk/start.sh	2008-06-05 17:12:22 UTC (rev 5)
++++ trunk/start.sh	2008-06-05 18:57:21 UTC (rev 6)
+@@ -0,0 +1 @@
++make clean && make && make img && qemu -fda boot/grub.img
+
+
+Property changes on: trunk/start.sh
+___________________________________________________________________
+Name: svn:executable
+   + *
+
+
+
+From monto84 at gmail.com  Sat Jun  7 09:28:43 2008
+From: monto84 at gmail.com (Pietro "m0nt0" Montorfano)
+Date: Sat, 07 Jun 2008 09:28:43 +0200
+Subject: [Dreamos-dev] Osservazioni
+Message-ID: <484A38AB.1050202@gmail.com>
+
+Ciao a tutti,
+so di sicuro che passer? per rompipalle e mi spiace se ? cosi, ma oggi 
+ho fatto un checkout per vedere come andava il dreamos e mi piacerebbe 
+codare un po, ho visto per? alcune cose che riporto qui, sono delle 
+opinioni personali e so che avete fatto tutto da 0, c'ero quando tutto 
+era 0 :D comunque non voglio offendere o giudicare male il vostro 
+lavoro, anzi, complimentissimi!!
+
+
+* doc da mettere in txt e non in pdf, i pdf li mettiamo sul sito, magari 
+li traduco in inglese anche che non si sa mai possono essere utili
+* includere nei .h almeno un pelo di commento su che cosa fanno le 
+routine in quel file, ovvero per capire cosa fa keyboard.c in hardware e 
+in drivers va letto il codice, se mettessimo una riga sotto il nome del 
+file prima della gpl con scritto di cosa si occupa quella porzione di 
+codice ? meglio
+* rinominare processore in inglese
+* libc non so come fare ma secondo me sarebbe meglio appoggiarsi alle 
+glibc dato che son gi? fatte e sicuro sono efficenti e prive di bug, mi 
+documento su come magari rendere un os compatibile con quelle
+* cosa ne dite rivedere l'alberatura e magari stendere delle 
+"specifiche", delle regole per come chiamare i files e come metterli insieme
+
+/boot		tutto quello che ha a che fare con il bootloader
+/doc	 	i documenti vari (se diventano tanti pensare ad un'alberatura 
+anche qui)
+/include	tutti gli header
+/drivers	tutto ci? che riguarda i moduli per l'hardware, suddiviso in 
+sottodirectory
+/drivers/cpu	quello che riguarda la cpu
+/drivers/keyboard	quello che riguarda la tastiera
+/drivers/video	quello che riguarda il video
+/drivers/...	cosi via
+/system		tutto ci? che riguarda il sistema, ovvero il kernel principale
+/system/mem	gestione della memoria
+/system/syscall	gestione delle chiamate di sistema
+/opt		tutto ci? che ? opzionale e serve al test / debug
+		shell
+
+la gestione degli irq non saprei come o dove metterla. Facendo in questo 
+modo si ottiene una struttura scalabile e facilmente mantenibile senza 
+contare che per andare a pescare il file che ci interessa ci si arriva 
+in modo abbastanza intuitivo. comunque con una documentazione anche su 
+questo si capisce come fare il tutto.
+
+
+Che ne dite?
+
+Ciao!
+
+Pietro
+
+
+From ivan.gualandri at gmail.com  Sat Jun  7 20:18:38 2008
+From: ivan.gualandri at gmail.com (Ivan Gualandri)
+Date: Sat, 7 Jun 2008 20:18:38 +0200
+Subject: [Dreamos-dev] Osservazioni
+In-Reply-To: <484A38AB.1050202@gmail.com>
+References: <484A38AB.1050202@gmail.com>
+Message-ID: <5dd86e320806071118n3cf5eae0n6fe58fa3d3e8b988@mail.gmail.com>
+
+Eheh io dalla mia qualche risposta te la do :D
+
+On Sat, Jun 7, 2008 at 9:28 AM, Pietro m0nt0 Montorfano
+<monto84 at gmail.com> wrote:
+> Ciao a tutti,
+> so di sicuro che passer? per rompipalle e mi spiace se ? cosi, ma oggi
+> ho fatto un checkout per vedere come andava il dreamos e mi piacerebbe
+> codare un po, ho visto per? alcune cose che riporto qui, sono delle
+> opinioni personali e so che avete fatto tutto da 0, c'ero quando tutto
+> era 0 :D comunque non voglio offendere o giudicare male il vostro
+> lavoro, anzi, complimentissimi!!
+In realta' siamo pesantemente offesi :P (e ancora devo iniziare a leggerla)
+
+>
+> * doc da mettere in txt e non in pdf, i pdf li mettiamo sul sito, magari
+> li traduco in inglese anche che non si sa mai possono essere utili
+per questo non ci sono problemi lato mio
+
+> * includere nei .h almeno un pelo di commento su che cosa fanno le
+> routine in quel file, ovvero per capire cosa fa keyboard.c in hardware e
+> in drivers va letto il codice, se mettessimo una riga sotto il nome del
+> file prima della gpl con scritto di cosa si occupa quella porzione di
+> codice ? meglio
+
+in realta stiamo tentando di documentare il codice con doxygen, anche
+se ancora non e'
+stata distribuita la doc generata. Cmq io i commenti cerco di
+inserirli nei files c.
+
+> * rinominare processore in inglese
+si puo' fare
+
+> * libc non so come fare ma secondo me sarebbe meglio appoggiarsi alle
+> glibc dato che son gi? fatte e sicuro sono efficenti e prive di bug, mi
+> documento su come magari rendere un os compatibile con quelle
+ma tanto la libc e' uno standard e quindi se usiamo la nostra in
+teoria accettera
+programmi scritti con altre libc, cmq si puo' fare, ma come dicevo non
+ne sappiamo molto
+
+> * cosa ne dite rivedere l'alberatura e magari stendere delle
+> "specifiche", delle regole per come chiamare i files e come metterli insieme
+> /boot           tutto quello che ha a che fare con il bootloader
+> /doc            i documenti vari (se diventano tanti pensare ad un'alberatura
+> anche qui)
+> /include        tutti gli header
+> /drivers        tutto ci? che riguarda i moduli per l'hardware, suddiviso in
+> sottodirectory
+> /drivers/cpu    quello che riguarda la cpu
+> /drivers/keyboard       quello che riguarda la tastiera
+> /drivers/video  quello che riguarda il video
+> /drivers/...    cosi via
+> /system         tutto ci? che riguarda il sistema, ovvero il kernel principale
+> /system/mem     gestione della memoria
+> /system/syscall gestione delle chiamate di sistema
+> /opt            tutto ci? che ? opzionale e serve al test / debug
+>                shell
+suona interessante
+
+> la gestione degli irq non saprei come o dove metterla. Facendo in questo
+> modo si ottiene una struttura scalabile e facilmente mantenibile senza
+> contare che per andare a pescare il file che ci interessa ci si arriva
+> in modo abbastanza intuitivo. comunque con una documentazione anche su
+> questo si capisce come fare il tutto.
+la gestione degli irq e' un misto cmq la parte del pic 8259 potrebbe
+andare dentro drivers.
+
+> Che ne dite?
+Non malaccio le varie idee, mo ragioniamo un po' su come sistemare il tutto :D
+
+> Ciao!
+>
+> Pietro
+Ciao, Ivan :O
+
+
+
+-- 
+"elen sila lumenn omentielvo"
+
+
+From finarfin at mail.berlios.de  Tue Jun 10 23:32:31 2008
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Tue, 10 Jun 2008 23:32:31 +0200
+Subject: [Dreamos-dev] r7 - in trunk: . include/shell shell system
+Message-ID: <200806102132.m5ALWVYU003905@sheep.berlios.de>
+
+Author: finarfin
+Date: 2008-06-10 23:32:30 +0200 (Tue, 10 Jun 2008)
+New Revision: 7
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/shell/shell.h
+   trunk/kernel.map
+   trunk/shell/shell.c
+   trunk/system/syscall.c
+Log:
+Aggiunti header GPL a files shell.c e shell.h
+Risolto Bug che impediva a dreamos di funzionare correttamente su versioni di gcc a partire dalla 4.3.0.
+Per maggiori info vedere: https://developer.berlios.de/bugs/?func=detailbug&bug_id=14006&group_id=9715
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/shell/shell.h
+===================================================================
+--- trunk/include/shell/shell.h	2008-06-05 18:57:21 UTC (rev 6)
++++ trunk/include/shell/shell.h	2008-06-10 21:32:30 UTC (rev 7)
+@@ -1,3 +1,22 @@
++/*  DreamOS
++    shell.c
++    This file is part of Foobar.
++    Foobar is free software: you can redistribute it and/or modify
++    it under the terms of the GNU General Public License as published by
++    the Free Software Foundation, either version 3 of the License, or
++    (at your option) any later version.
++    Foobar is distributed in the hope that it will be useful,
++    but WITHOUT ANY WARRANTY; without even the implied warranty of
++    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++    GNU General Public License for more details.
++    You should have received a copy of the GNU General Public License
++    along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
++*/
++
++/* 
++  Shell Coded by
++    Osiris 
++*/
+ // Wrote by Osiris
+ 
+ #ifndef __SHELL_H
+@@ -2,3 +21,5 @@
+ #define __SHELL_H
++
+ void shell();
++
+ #endif
+
+Modified: trunk/kernel.map
+===================================================================
+--- trunk/kernel.map	2008-06-05 18:57:21 UTC (rev 6)
++++ trunk/kernel.map	2008-06-10 21:32:30 UTC (rev 7)
+@@ -29,239 +29,250 @@
+ 
+                 0x0000000000100000                . = 0x100000
+ 
+-.text           0x0000000000100000     0x3cce
++.text           0x0000000000100000     0x3ea3
+  *(.text)
+  .text          0x0000000000100000       0x1d bl.img
+                 0x0000000000100000                mboot
+                 0x0000000000100014                start
+  *fill*         0x000000000010001d        0x3 00
+- .text          0x0000000000100020      0x2b2 kernel.o
++ .text          0x0000000000100020      0x17b kernel.o
+                 0x000000000010002a                main_loop
+                 0x0000000000100020                _start
+- *fill*         0x00000000001002d2        0x2 00
+- .text          0x00000000001002d4      0x9ae io/video.o
+-                0x0000000000100c07                _kscrolldown
+-                0x00000000001002d4                _kputc
+-                0x0000000000100316                _kputs
+-                0x00000000001003b0                _kbackspace
+-                0x0000000000100ade                _krotate_buffer
+-                0x00000000001004ed                _ksetcursauto
+-                0x000000000010039a                _kcolor
+-                0x00000000001005fd                _kdecbin
+-                0x00000000001004bc                _ksetcursor
+-                0x000000000010054f                _kprintOK
+-                0x00000000001003c6                _ktab
+-                0x00000000001003d4                _kgoto
+-                0x000000000010046a                _knewline
+-                0x0000000000100b5d                _kscrollup
+-                0x0000000000100403                _kclear
+-                0x00000000001005c3                _kgetline
+-                0x000000000010092d                _kntos
+-                0x0000000000100579                _kgetcolumn
+-                0x00000000001006d4                _kntohex
+-                0x0000000000100a10                _kshiftAll
+- *fill*         0x0000000000100c82        0x2 00
+- .text          0x0000000000100c84      0x5b7 drivers/keyboard.o
+-                0x00000000001010b7                _ksetleds
+-                0x00000000001011e3                _kgetch
+-                0x00000000001011ca                keyboard_disable
+-                0x00000000001011b1                keyboard_enable
+-                0x0000000000100c84                keyboard_isr
+- *fill*         0x000000000010123b        0x1 00
+- .text          0x000000000010123c      0x19a libc/ctype.o
+-                0x000000000010130c                islower
+-                0x000000000010135c                tolower
+-                0x00000000001012d4                isxdigit
+-                0x0000000000101334                isupper
+-                0x0000000000101264                isalpha
+-                0x000000000010129a                isalnum
+-                0x000000000010123c                isdigit
+-                0x0000000000101399                toupper
+- *fill*         0x00000000001013d6        0x2 00
+- .text          0x00000000001013d8      0x2ea libc/string.o
+-                0x0000000000101555                strstr
+-                0x00000000001013d8                strncpy
+-                0x00000000001015cf                strtok
+-                0x0000000000101658                strncat
+-                0x00000000001014e4                strdup
+-                0x00000000001014ac                memset
+-                0x0000000000101438                _kstrncmp
+-                0x0000000000101411                strlen
+-                0x0000000000101534                strchr
+- *fill*         0x00000000001016c2        0x2 00
+- .text          0x00000000001016c4       0x24 io/io.o
+-                0x00000000001016c4                inportb
+-                0x00000000001016de                outportb
+- .text          0x00000000001016e8      0x634 libc/stdio.o
+-                0x00000000001016e8                putchar
+-                0x00000000001017f2                printf
+-                0x0000000000101bc6                gets
+-                0x0000000000101bab                getchar
+-                0x0000000000101c39                scanf
+-                0x0000000000101702                atoi
+- .text          0x0000000000101d1c      0x19b hardware/cpuid.o
+-                0x0000000000101d1c                get_cpuid
+- *fill*         0x0000000000101eb7        0x1 00
+- .text          0x0000000000101eb8       0x67 hardware/keyboard.o
+-                0x0000000000101eb8                keyboard_irq
+- *fill*         0x0000000000101f1f        0x1 00
+- .text          0x0000000000101f20      0x1d0 processore/gdt.o
+-                0x0000000000101ffc                add_GDTseg
+-                0x0000000000101f20                init_gdt
+-                0x00000000001020a7                set_gdtr
+- .text          0x00000000001020f0      0x65d processore/idt.o
+-                0x00000000001026b1                add_IDTseg
+-                0x0000000000102425                init_idt
+-                0x0000000000102725                set_idtr
+- *fill*         0x000000000010274d        0x3 00
+- .text          0x0000000000102750      0x39e processore/handlers.o
+-                0x0000000000102750                init_funcTable
+-                0x0000000000102a47                _irqinterrupt
+-                0x00000000001027d1                _globalException
+-                0x00000000001027c1                add_Interrupt
+-                0x0000000000102ad9                _int_rsv
+- *fill*         0x0000000000102aee        0x2 00
+- .text          0x0000000000102af0      0x73e hardware/pic8259.o
+-                0x0000000000102d21                init_IRQ
+-                0x0000000000102e5c                setup_IRQ
+-                0x000000000010308f                disable_IRQ
+-                0x000000000010316f                add_IRQ_handler
+-                0x0000000000102fc3                enable_IRQ
+-                0x0000000000103141                get_current_irq
+- *fill*         0x000000000010322e        0x2 00
+- .text          0x0000000000103230      0x628 mem/fismem.o
+-                0x0000000000103230                init_mem
+-                0x00000000001032f4                request_pages
+-                0x00000000001036b4                add_memarea_element
+-                0x00000000001037ca                get_numpages
+-                0x00000000001037c4                get_memsize
+-                0x00000000001037f0                malloc
+-                0x00000000001037dd                get_bmpelements
+-                0x000000000010344f                release_pages
+-                0x00000000001037a8                calcola_memoria
+-                0x000000000010382e                free
+- .text          0x0000000000103858      0x2c6 mem/paging.o
+-                0x0000000000103968                create_pageTable
+-                0x0000000000103858                init_paging
+-                0x0000000000103a91                get_pagedir_entry
+-                0x0000000000103952                create_pageDir
+-                0x0000000000103ad8                load_pdbr
+-                0x0000000000103a41                set_pagetable_entry_ric
+-                0x0000000000103aae                get_pagetable_entry
+-                0x000000000010397e                set_pagedir_entry
+-                0x00000000001039be                set_pagedir_entry_ric
+-                0x0000000000103a01                set_pagetable_entry
+- *fill*         0x0000000000103b1e        0x2 00
+- .text          0x0000000000103b20       0xa8 system/syscall.o
+-                0x0000000000103b20                sysputch
+-                0x0000000000103b46                syscall_handler
+- .text          0x0000000000103bc8      0x106 hardware/8253.o
+-                0x0000000000103c9f                sleep
+-                0x0000000000103bc8                PIT_handler
+-                0x0000000000103c43                configure_PIT
++ *fill*         0x000000000010019b        0x1 00
++ .text          0x000000000010019c      0x9d1 io/video.o
++                0x0000000000100af2                _kscrolldown
++                0x000000000010019c                _kputc
++                0x00000000001001de                _kputs
++                0x0000000000100278                _kbackspace
++                0x00000000001009c7                _krotate_buffer
++                0x00000000001003b5                _ksetcursauto
++                0x0000000000100262                _kcolor
++                0x00000000001004c5                _kdecbin
++                0x0000000000100384                _ksetcursor
++                0x0000000000100417                _kprintOK
++                0x000000000010028e                _ktab
++                0x000000000010029c                _kgoto
++                0x0000000000100331                _knewline
++                0x0000000000100a48                _kscrollup
++                0x00000000001002ca                _kclear
++                0x000000000010048b                _kgetline
++                0x0000000000100809                _kntos
++                0x0000000000100441                _kgetcolumn
++                0x000000000010059c                _kntohex
++                0x00000000001008f8                _kshiftAll
++ *fill*         0x0000000000100b6d        0x3 00
++ .text          0x0000000000100b70      0x5b5 drivers/keyboard.o
++                0x0000000000100fa1                _ksetleds
++                0x00000000001010cd                _kgetch
++                0x00000000001010b4                keyboard_disable
++                0x000000000010109b                keyboard_enable
++                0x0000000000100b70                keyboard_isr
++ *fill*         0x0000000000101125        0x3 00
++ .text          0x0000000000101128      0x19a libc/ctype.o
++                0x00000000001011f8                islower
++                0x0000000000101248                tolower
++                0x00000000001011c0                isxdigit
++                0x0000000000101220                isupper
++                0x0000000000101150                isalpha
++                0x0000000000101186                isalnum
++                0x0000000000101128                isdigit
++                0x0000000000101285                toupper
++ *fill*         0x00000000001012c2        0x2 00
++ .text          0x00000000001012c4      0x2eb libc/string.o
++                0x000000000010143f                strstr
++                0x00000000001012c4                strncpy
++                0x00000000001014bb                strtok
++                0x0000000000101545                strncat
++                0x00000000001013ce                strdup
++                0x0000000000101398                memset
++                0x0000000000101324                _kstrncmp
++                0x00000000001012fd                strlen
++                0x000000000010141e                strchr
++ *fill*         0x00000000001015af        0x1 00
++ .text          0x00000000001015b0       0x23 io/io.o
++                0x00000000001015b0                inportb
++                0x00000000001015c9                outportb
++ *fill*         0x00000000001015d3        0x1 00
++ .text          0x00000000001015d4      0x632 libc/stdio.o
++                0x00000000001015d4                putchar
++                0x00000000001016de                printf
++                0x0000000000101ab2                gets
++                0x0000000000101a97                getchar
++                0x0000000000101b25                scanf
++                0x00000000001015ee                atoi
++ *fill*         0x0000000000101c06        0x2 00
++ .text          0x0000000000101c08      0x18c hardware/cpuid.o
++                0x0000000000101c08                get_cpuid
++ .text          0x0000000000101d94       0x67 hardware/keyboard.o
++                0x0000000000101d94                keyboard_irq
++ *fill*         0x0000000000101dfb        0x1 00
++ .text          0x0000000000101dfc      0x1d0 processore/gdt.o
++                0x0000000000101ed8                add_GDTseg
++                0x0000000000101dfc                init_gdt
++                0x0000000000101f83                set_gdtr
++ .text          0x0000000000101fcc      0x65d processore/idt.o
++                0x000000000010258d                add_IDTseg
++                0x0000000000102301                init_idt
++                0x0000000000102601                set_idtr
++ *fill*         0x0000000000102629        0x3 00
++ .text          0x000000000010262c      0x39f processore/handlers.o
++                0x000000000010262c                init_funcTable
++                0x0000000000102924                _irqinterrupt
++                0x00000000001026ae                _globalException
++                0x000000000010269e                add_Interrupt
++                0x00000000001029b6                _int_rsv
++ *fill*         0x00000000001029cb        0x1 00
++ .text          0x00000000001029cc      0x747 hardware/pic8259.o
++                0x0000000000102bfd                init_IRQ
++                0x0000000000102d39                setup_IRQ
++                0x0000000000102f74                disable_IRQ
++                0x0000000000103054                add_IRQ_handler
++                0x0000000000102ea0                enable_IRQ
++                0x0000000000103026                get_current_irq
++ *fill*         0x0000000000103113        0x1 00
++ .text          0x0000000000103114      0x628 mem/fismem.o
++                0x0000000000103114                init_mem
++                0x00000000001031d8                request_pages
++                0x0000000000103598                add_memarea_element
++                0x00000000001036ae                get_numpages
++                0x00000000001036a8                get_memsize
++                0x00000000001036d4                malloc
++                0x00000000001036c1                get_bmpelements
++                0x0000000000103333                release_pages
++                0x000000000010368c                calcola_memoria
++                0x0000000000103712                free
++ .text          0x000000000010373c      0x2ca mem/paging.o
++                0x000000000010384a                create_pageTable
++                0x000000000010373c                init_paging
++                0x0000000000103979                get_pagedir_entry
++                0x0000000000103834                create_pageDir
++                0x00000000001039c0                load_pdbr
++                0x0000000000103927                set_pagetable_entry_ric
++                0x0000000000103996                get_pagetable_entry
++                0x0000000000103860                set_pagedir_entry
++                0x00000000001038a1                set_pagedir_entry_ric
++                0x00000000001038e6                set_pagetable_entry
++ *fill*         0x0000000000103a06        0x2 00
++ .text          0x0000000000103a08       0xba system/syscall.o
++                0x0000000000103a08                sysputch
++                0x0000000000103a2e                syscall_handler
++ *fill*         0x0000000000103ac2        0x2 00
++ .text          0x0000000000103ac4       0xfa hardware/8253.o
++                0x0000000000103b8f                sleep
++                0x0000000000103ac4                PIT_handler
++                0x0000000000103b2f                configure_PIT
++ *fill*         0x0000000000103bbe        0x2 00
++ .text          0x0000000000103bc0      0x2e3 shell/shell.o
++                0x0000000000103c06                info
++                0x0000000000103db4                shell
++                0x0000000000103bfe                poweroff
++                0x0000000000103be7                help
++                0x0000000000103bc0                logo
+ 
+-.rodata         0x0000000000103cd0      0x55d
++.rodata         0x0000000000103ea4      0x759
+  *(.rodata)
+- .rodata        0x0000000000103cd0      0x151 kernel.o
+- .rodata        0x0000000000103e21       0x70 io/video.o
+- .rodata        0x0000000000103e91       0x10 drivers/keyboard.o
+- .rodata        0x0000000000103ea1        0x2 libc/stdio.o
+- .rodata        0x0000000000103ea3       0x3e hardware/cpuid.o
+- .rodata        0x0000000000103ee1       0x1d hardware/keyboard.o
+- *fill*         0x0000000000103efe        0x2 00
+- .rodata        0x0000000000103f00      0x269 processore/handlers.o
+- *fill*         0x0000000000104169        0x3 00
+- .rodata        0x000000000010416c       0x8a mem/fismem.o
+- *fill*         0x00000000001041f6        0x2 00
+- .rodata        0x00000000001041f8       0x23 mem/paging.o
+- *fill*         0x000000000010421b        0x1 00
+- .rodata        0x000000000010421c        0xc system/syscall.o
+- .rodata        0x0000000000104228        0x5 hardware/8253.o
++ .rodata        0x0000000000103ea4       0xae kernel.o
++ .rodata        0x0000000000103f52       0x70 io/video.o
++ .rodata        0x0000000000103fc2       0x10 drivers/keyboard.o
++ .rodata        0x0000000000103fd2        0x2 libc/stdio.o
++ .rodata        0x0000000000103fd4       0x3e hardware/cpuid.o
++ .rodata        0x0000000000104012       0x1d hardware/keyboard.o
++ *fill*         0x000000000010402f        0x1 00
++ .rodata        0x0000000000104030      0x269 processore/handlers.o
++ *fill*         0x0000000000104299        0x3 00
++ .rodata        0x000000000010429c       0x8a mem/fismem.o
++ *fill*         0x0000000000104326        0x2 00
++ .rodata        0x0000000000104328       0x23 mem/paging.o
++ *fill*         0x000000000010434b        0x1 00
++ .rodata        0x000000000010434c        0xc system/syscall.o
++ .rodata        0x0000000000104358      0x2a5 shell/shell.o
+ 
+-.rel.dyn        0x0000000000104230        0x0 load address 0x000000000010422d
++.rel.dyn        0x0000000000104600        0x0 load address 0x00000000001045fd
+  .rel.text      0x0000000000000000        0x0 bl.img
+ 
+-.data           0x0000000000104240    0x3376c
++.data           0x0000000000104600    0x3376c
+  *(.data)
+- .data          0x0000000000104240        0x0 kernel.o
+- .data          0x0000000000104240        0x9 io/video.o
+-                0x0000000000104244                VIDEO_PTR
+-                0x0000000000104248                VIDEO_CLR
+-                0x0000000000104240                VIDEO_MEM
+- *fill*         0x0000000000104249       0x17 00
+- .data          0x0000000000104260      0x2f8 drivers/keyboard.o
+- .data          0x0000000000104558        0x0 libc/ctype.o
+- .data          0x0000000000104558        0x0 libc/string.o
+- .data          0x0000000000104558        0x0 io/io.o
+- .data          0x0000000000104558        0x0 libc/stdio.o
+- .data          0x0000000000104558        0x0 hardware/cpuid.o
+- .data          0x0000000000104558        0x0 hardware/keyboard.o
+- .data          0x0000000000104558        0x0 processore/gdt.o
+- .data          0x0000000000104558        0x0 processore/idt.o
+- .data          0x0000000000104558        0x0 processore/handlers.o
+- .data          0x0000000000104558        0x0 hardware/pic8259.o
+- .data          0x0000000000104558        0xc mem/fismem.o
+-                0x0000000000104558                prova2
+-                0x000000000010455c                mem_info_root
+-                0x0000000000104560                mem_info
+- .data          0x0000000000104564        0x0 mem/paging.o
+- .data          0x0000000000104564        0x4 system/syscall.o
+-                0x0000000000104564                syscall_table
+- .data          0x0000000000104568        0x0 hardware/8253.o
++ .data          0x0000000000104600        0x0 kernel.o
++ .data          0x0000000000104600        0x9 io/video.o
++                0x0000000000104604                VIDEO_PTR
++                0x0000000000104608                VIDEO_CLR
++                0x0000000000104600                VIDEO_MEM
++ *fill*         0x0000000000104609       0x17 00
++ .data          0x0000000000104620      0x2f8 drivers/keyboard.o
++ .data          0x0000000000104918        0x0 libc/ctype.o
++ .data          0x0000000000104918        0x0 libc/string.o
++ .data          0x0000000000104918        0x0 io/io.o
++ .data          0x0000000000104918        0x0 libc/stdio.o
++ .data          0x0000000000104918        0x0 hardware/cpuid.o
++ .data          0x0000000000104918        0x0 hardware/keyboard.o
++ .data          0x0000000000104918        0x0 processore/gdt.o
++ .data          0x0000000000104918        0x0 processore/idt.o
++ .data          0x0000000000104918        0x0 processore/handlers.o
++ .data          0x0000000000104918        0x0 hardware/pic8259.o
++ .data          0x0000000000104918        0xc mem/fismem.o
++                0x0000000000104918                prova2
++                0x000000000010491c                mem_info_root
++                0x0000000000104920                mem_info
++ .data          0x0000000000104924        0x0 mem/paging.o
++ .data          0x0000000000104924        0x4 system/syscall.o
++                0x0000000000104924                syscall_table
++ .data          0x0000000000104928        0x0 hardware/8253.o
++ .data          0x0000000000104928        0x0 shell/shell.o
+  *(.bss)
+- .bss           0x0000000000104568        0x0 kernel.o
+- .bss           0x0000000000104568       0x10 io/video.o
+-                0x000000000010456c                is_shifted_once
+-                0x0000000000104568                is_scrolled
+-                0x0000000000104574                resulthex
+-                0x0000000000104570                binlen
+- *fill*         0x0000000000104578        0x8 00
+- .bss           0x0000000000104580      0x434 drivers/keyboard.o
+- .bss           0x00000000001049b4        0x0 libc/ctype.o
+- .bss           0x00000000001049b4        0x4 libc/string.o
+- .bss           0x00000000001049b8        0x0 io/io.o
+- .bss           0x00000000001049b8        0x0 libc/stdio.o
+- .bss           0x00000000001049b8        0x0 hardware/cpuid.o
+- .bss           0x00000000001049b8        0x0 hardware/keyboard.o
+- .bss           0x00000000001049b8        0x0 processore/gdt.o
+- .bss           0x00000000001049b8        0x0 processore/idt.o
+- .bss           0x00000000001049b8        0x0 processore/handlers.o
+- .bss           0x00000000001049b8        0x0 hardware/pic8259.o
+- .bss           0x00000000001049b8        0x4 mem/fismem.o
+-                0x00000000001049b8                num_pages
+- .bss           0x00000000001049bc        0x0 mem/paging.o
+- .bss           0x00000000001049bc        0x0 system/syscall.o
+- .bss           0x00000000001049bc        0x8 hardware/8253.o
++ .bss           0x0000000000104928        0x0 kernel.o
++ .bss           0x0000000000104928       0x10 io/video.o
++                0x000000000010492c                is_shifted_once
++                0x0000000000104928                is_scrolled
++                0x0000000000104934                resulthex
++                0x0000000000104930                binlen
++ *fill*         0x0000000000104938        0x8 00
++ .bss           0x0000000000104940      0x434 drivers/keyboard.o
++ .bss           0x0000000000104d74        0x0 libc/ctype.o
++ .bss           0x0000000000104d74        0x4 libc/string.o
++ .bss           0x0000000000104d78        0x0 io/io.o
++ .bss           0x0000000000104d78        0x0 libc/stdio.o
++ .bss           0x0000000000104d78        0x0 hardware/cpuid.o
++ .bss           0x0000000000104d78        0x0 hardware/keyboard.o
++ .bss           0x0000000000104d78        0x0 processore/gdt.o
++ .bss           0x0000000000104d78        0x0 processore/idt.o
++ .bss           0x0000000000104d78        0x0 processore/handlers.o
++ .bss           0x0000000000104d78        0x0 hardware/pic8259.o
++ .bss           0x0000000000104d78        0x4 mem/fismem.o
++                0x0000000000104d78                num_pages
++ .bss           0x0000000000104d7c        0x0 mem/paging.o
++ .bss           0x0000000000104d7c        0x0 system/syscall.o
++ .bss           0x0000000000104d7c        0x8 hardware/8253.o
++ .bss           0x0000000000104d84        0x0 shell/shell.o
+  *(COMMON)
+- COMMON         0x00000000001049c4       0x14 kernel.o
+-                0x00000000001049c4                cpu_vendor
+-                0x00000000001049d0                boot_informations
+-                0x00000000001049d4                current_page_table
+- *fill*         0x00000000001049d8        0x8 00
+- COMMON         0x00000000001049e0     0x233c io/video.o
+-                0x00000000001049e0                downbuffer
+-                0x0000000000105980                upbuffer
+-                0x0000000000106920                binvp
+- *fill*         0x0000000000106d1c        0x4 00
+- COMMON         0x0000000000106d20    0x10004 processore/gdt.o
+-                0x0000000000106d20                Gdt_Table
+-                0x0000000000116d20                current_pos
+- *fill*         0x0000000000116d24       0x1c 00
+- COMMON         0x0000000000116d40      0xc00 processore/idt.o
+-                0x0000000000116d40                IntTable
+-                0x0000000000117140                IDT_Table
+- COMMON         0x0000000000117940       0x40 processore/handlers.o
+-                0x0000000000117940                shareHandler
+- COMMON         0x0000000000117980        0x2 hardware/pic8259.o
+-                0x0000000000117980                slave_cur_mask
+-                0x0000000000117981                master_cur_mask
+- *fill*         0x0000000000117982       0x1e 00
+- COMMON         0x00000000001179a0    0x20008 mem/fismem.o
+-                0x00000000001179a0                mem_bitmap
+-                0x00000000001379a0                tot_mem
+-                0x00000000001379a4                bmp_elements
+- COMMON         0x00000000001379a8        0x4 mem/paging.o
+-                0x00000000001379a8                current_page_dir
++ COMMON         0x0000000000104d84       0x14 kernel.o
++                0x0000000000104d84                cpu_vendor
++                0x0000000000104d90                boot_informations
++                0x0000000000104d94                current_page_table
++ *fill*         0x0000000000104d98        0x8 00
++ COMMON         0x0000000000104da0     0x233c io/video.o
++                0x0000000000104da0                downbuffer
++                0x0000000000105d40                upbuffer
++                0x0000000000106ce0                binvp
++ *fill*         0x00000000001070dc        0x4 00
++ COMMON         0x00000000001070e0    0x10004 processore/gdt.o
++                0x00000000001070e0                Gdt_Table
++                0x00000000001170e0                current_pos
++ *fill*         0x00000000001170e4       0x1c 00
++ COMMON         0x0000000000117100      0xc00 processore/idt.o
++                0x0000000000117100                IntTable
++                0x0000000000117500                IDT_Table
++ COMMON         0x0000000000117d00       0x40 processore/handlers.o
++                0x0000000000117d00                shareHandler
++ COMMON         0x0000000000117d40        0x2 hardware/pic8259.o
++                0x0000000000117d40                slave_cur_mask
++                0x0000000000117d41                master_cur_mask
++ *fill*         0x0000000000117d42       0x1e 00
++ COMMON         0x0000000000117d60    0x20008 mem/fismem.o
++                0x0000000000117d60                mem_bitmap
++                0x0000000000137d60                tot_mem
++                0x0000000000137d64                bmp_elements
++ COMMON         0x0000000000137d68        0x4 mem/paging.o
++                0x0000000000137d68                current_page_dir
+ LOAD bl.img
+ LOAD kernel.o
+ LOAD io/video.o
+@@ -280,28 +291,30 @@
+ LOAD mem/paging.o
+ LOAD system/syscall.o
+ LOAD hardware/8253.o
++LOAD shell/shell.o
+ Address of section .text set to 0x100000
+ OUTPUT(kernel.bin elf32-i386)
+ 
+-.comment        0x0000000000000000      0x26f
++.comment        0x0000000000000000      0x226
+  .comment       0x0000000000000000       0x1c bl.img
+- .comment       0x000000000000001c       0x23 kernel.o
+- .comment       0x000000000000003f       0x23 io/video.o
+- .comment       0x0000000000000062       0x23 drivers/keyboard.o
+- .comment       0x0000000000000085       0x23 libc/ctype.o
+- .comment       0x00000000000000a8       0x23 libc/string.o
+- .comment       0x00000000000000cb       0x23 io/io.o
+- .comment       0x00000000000000ee       0x23 libc/stdio.o
+- .comment       0x0000000000000111       0x23 hardware/cpuid.o
+- .comment       0x0000000000000134       0x23 hardware/keyboard.o
+- .comment       0x0000000000000157       0x23 processore/gdt.o
+- .comment       0x000000000000017a       0x23 processore/idt.o
+- .comment       0x000000000000019d       0x23 processore/handlers.o
+- .comment       0x00000000000001c0       0x23 hardware/pic8259.o
+- .comment       0x00000000000001e3       0x23 mem/fismem.o
+- .comment       0x0000000000000206       0x23 mem/paging.o
+- .comment       0x0000000000000229       0x23 system/syscall.o
+- .comment       0x000000000000024c       0x23 hardware/8253.o
++ .comment       0x000000000000001c       0x1d kernel.o
++ .comment       0x0000000000000039       0x1d io/video.o
++ .comment       0x0000000000000056       0x1d drivers/keyboard.o
++ .comment       0x0000000000000073       0x1d libc/ctype.o
++ .comment       0x0000000000000090       0x1d libc/string.o
++ .comment       0x00000000000000ad       0x1d io/io.o
++ .comment       0x00000000000000ca       0x1d libc/stdio.o
++ .comment       0x00000000000000e7       0x1d hardware/cpuid.o
++ .comment       0x0000000000000104       0x1d hardware/keyboard.o
++ .comment       0x0000000000000121       0x1d processore/gdt.o
++ .comment       0x000000000000013e       0x1d processore/idt.o
++ .comment       0x000000000000015b       0x1d processore/handlers.o
++ .comment       0x0000000000000178       0x1d hardware/pic8259.o
++ .comment       0x0000000000000195       0x1d mem/fismem.o
++ .comment       0x00000000000001b2       0x1d mem/paging.o
++ .comment       0x00000000000001cf       0x1d system/syscall.o
++ .comment       0x00000000000001ec       0x1d hardware/8253.o
++ .comment       0x0000000000000209       0x1d shell/shell.o
+ 
+ .note.GNU-stack
+                 0x0000000000000000        0x0
+@@ -339,3 +352,5 @@
+                 0x0000000000000000        0x0 system/syscall.o
+  .note.GNU-stack
+                 0x0000000000000000        0x0 hardware/8253.o
++ .note.GNU-stack
++                0x0000000000000000        0x0 shell/shell.o
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2008-06-05 18:57:21 UTC (rev 6)
++++ trunk/shell/shell.c	2008-06-10 21:32:30 UTC (rev 7)
+@@ -1,3 +1,18 @@
++/*  DreamOS
++    shell.c
++    This file is part of Foobar.
++    Foobar is free software: you can redistribute it and/or modify
++    it under the terms of the GNU General Public License as published by
++    the Free Software Foundation, either version 3 of the License, or
++    (at your option) any later version.
++    Foobar is distributed in the hope that it will be useful,
++    but WITHOUT ANY WARRANTY; without even the implied warranty of
++    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++    GNU General Public License for more details.
++    You should have received a copy of the GNU General Public License
++    along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
++*/
++
+ /* 
+   Shell Coded by
+ 	Osiris 
+
+Modified: trunk/system/syscall.c
+===================================================================
+--- trunk/system/syscall.c	2008-06-05 18:57:21 UTC (rev 6)
++++ trunk/system/syscall.c	2008-06-10 21:32:30 UTC (rev 7)
+@@ -58,6 +58,7 @@
+      arguments[1] = ecx;
+      arguments[2] = edx;
+      
+-     (*syscall_table[eax])(arguments);
++//      (*syscall_table[eax])(arguments);
++    sysputch(arguments);
+ }
+ 
+
+
+
+From finarfin at mail.berlios.de  Sun Jun 29 15:28:11 2008
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Sun, 29 Jun 2008 15:28:11 +0200
+Subject: [Dreamos-dev] r8 - in trunk: . boot include include/lng mem shell
+Message-ID: <200806291328.m5TDSBNP026410@sheep.berlios.de>
+
+Author: finarfin
+Date: 2008-06-29 15:28:09 +0200 (Sun, 29 Jun 2008)
+New Revision: 8
+
+Modified:
+   trunk/Makefile
+   trunk/TODO
+   trunk/bl.img
+   trunk/bochsout.txt
+   trunk/boot/multicatcher.S
+   trunk/dreamos.img
+   trunk/include/kernel.h
+   trunk/include/lng/en.h
+   trunk/include/lng/it.h
+   trunk/include/use.h
+   trunk/kernel.c
+   trunk/kernel.map
+   trunk/mem/paging.c
+   trunk/shell/shell.c
+Log:
+Aggiunti alcuni messaggi in it.h e en.h
+Alcune modifiche alle stampe di avvio
+Aggiunto un parametro al makefile
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2008-06-10 21:32:30 UTC (rev 7)
++++ trunk/Makefile	2008-06-29 13:28:09 UTC (rev 8)
+@@ -1,4 +1,4 @@
+-CFLAGS = -nostdlib -fomit-frame-pointer -fno-builtin -Wall -march=i386 -I./include -I./include/io -I./include/drivers -I./include/libc -I./include/processore -I./include/hardware -I./include/mem -I./include/system -I./include/shell
++CFLAGS = -nostdlib -fomit-frame-pointer -fno-builtin -fno-stack-protector -Wall -march=i386 -I./include -I./include/io -I./include/drivers -I./include/libc -I./include/processore -I./include/hardware -I./include/mem -I./include/system -I./include/shell
+ OBJ = kernel.o io/video.o drivers/keyboard.o libc/ctype.o libc/string.o io/io.o libc/stdio.o hardware/cpuid.o hardware/keyboard.o processore/gdt.o processore/idt.o processore/handlers.o hardware/pic8259.o mem/fismem.o mem/paging.o system/syscall.o hardware/8253.o shell/shell.o
+ 
+ dreamos.img: bl.img kernel.bin
+
+Modified: trunk/TODO
+===================================================================
+--- trunk/TODO	2008-06-10 21:32:30 UTC (rev 7)
++++ trunk/TODO	2008-06-29 13:28:09 UTC (rev 8)
+@@ -6,15 +6,12 @@
+ - Routine asm per individuare quantita' ram
+ - Le routine di gestione degli irq, devono controllare se effettivamente esiste un IRQ per il device che controllano, in caso affermativo proseguono, in caso negativo si fermano.
+ - Logo dreamos in ASCII ART :D
+-- Inserire gestore PIT (timer)
+ - MMU
+ - Funzioni sullo stato registri EFLAGS e CR*
+ - RIVEDERE PRINTF - Forse non stampa i numeri troppo lunghi - problema degli unsigned int.
+ - Todo rivedere quali sono le eccezioni che hanno un error code e sostituire le relative EXCEPTION(xx) con EXCEPTION_EC(xx)
+-- Eliminare _prova come definizione e come add_IRQ in init_IRQ.
+ - Fare una mega pulizia del codice
+ - Eliminare il maggior numero di messaggi di errore dalla compilazione
+ 
+ PROGETTI A LUNGO TERMINE:
+-- Supporto per il MultiBoot (avvio con Grub)
+ - Implementazione di un migliore scrolling
+
+Modified: trunk/bl.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/bochsout.txt
+===================================================================
+--- trunk/bochsout.txt	2008-06-10 21:32:30 UTC (rev 7)
++++ trunk/bochsout.txt	2008-06-29 13:28:09 UTC (rev 8)
+@@ -1,12 +1,11 @@
+-00000000000i[     ] Bochs x86 Emulator 2.3.6
+-00000000000i[     ]   Build from CVS snapshot, on December 24, 2007
++00000000000i[     ] Bochs x86 Emulator 2.3.7
++00000000000i[     ]   Build from CVS snapshot, on June 3, 2008
+ 00000000000i[     ] System configuration
+ 00000000000i[     ]   processors: 1 (cores=1, HT threads=1)
+ 00000000000i[     ]   A20 line support: yes
+ 00000000000i[     ]   APIC support: yes
+ 00000000000i[     ] CPU configuration
+ 00000000000i[     ]   level: 6
+-00000000000i[     ]   TLB enabled: yes
+ 00000000000i[     ]   SMP support: no
+ 00000000000i[     ]   FPU support: yes
+ 00000000000i[     ]   MMX support: yes
+@@ -20,6 +19,8 @@
+ 00000000000i[     ]   x86-64 support: yes
+ 00000000000i[     ]   SEP support: yes
+ 00000000000i[     ]   MWAIT support: no
++00000000000i[     ]   XSAVE support: no
++00000000000i[     ]   AES support: no
+ 00000000000i[     ] Optimization configuration
+ 00000000000i[     ]   Guest2HostTLB support: yes
+ 00000000000i[     ]   RepeatSpeedups support: yes
+@@ -33,62 +34,62 @@
+ 00000000000i[     ]   SB16 support: yes
+ 00000000000i[     ]   USB support: yes
+ 00000000000i[     ]   VGA extension support: vbe 
+-00000000000i[MEM0 ] allocated memory at 0xb52a4008. after alignment, vector=0xb52a5000
++00000000000i[MEM0 ] allocated memory at 0xb4e32008. after alignment, vector=0xb4e33000
+ 00000000000i[MEM0 ] 16,00MB
+ 00000000000i[MEM0 ] rom at 0xfffe0000/131072 ('/usr/share/bochs/BIOS-bochs-latest')
+-00000000000i[MEM0 ] rom at 0xc0000/38400 ('/usr/share/vgabios/vgabios.bin')
++00000000000i[MEM0 ] rom at 0xc0000/39936 ('/usr/share/vgabios/vgabios.bin')
+ 00000000000i[APIC?] set APIC ID to 0
+ 00000000000i[APIC0] 80686
+ 00000000000i[APIC0] local apic in CPU apicid=00 initializing
+-00000000000i[     ] lt_dlhandle is 0xaebf108
++00000000000i[     ] lt_dlhandle is 0x8ec4458
+ 00000000000i[PLGIN] loaded plugin libbx_unmapped.la
+-00000000000i[     ] lt_dlhandle is 0xaebf5e0
++00000000000i[     ] lt_dlhandle is 0x8ec43e8
+ 00000000000i[PLGIN] loaded plugin libbx_biosdev.la
+-00000000000i[     ] lt_dlhandle is 0xaebfbf0
++00000000000i[     ] lt_dlhandle is 0x8ec7288
+ 00000000000i[PLGIN] loaded plugin libbx_cmos.la
+-00000000000i[     ] lt_dlhandle is 0xaebfd48
++00000000000i[     ] lt_dlhandle is 0x8ec78a8
+ 00000000000i[PLGIN] loaded plugin libbx_dma.la
+-00000000000i[     ] lt_dlhandle is 0xaec02a8
++00000000000i[     ] lt_dlhandle is 0x8ec7f10
+ 00000000000i[PLGIN] loaded plugin libbx_pic.la
+-00000000000i[     ] lt_dlhandle is 0xaec0c80
++00000000000i[     ] lt_dlhandle is 0x8ec8558
+ 00000000000i[PLGIN] loaded plugin libbx_vga.la
+-00000000000i[     ] lt_dlhandle is 0xaee69f0
++00000000000i[     ] lt_dlhandle is 0x8eee2a0
+ 00000000000i[PLGIN] loaded plugin libbx_floppy.la
+-00000000000i[     ] lt_dlhandle is 0xaee71a8
++00000000000i[     ] lt_dlhandle is 0x8eeeae0
+ 00000000000i[PLGIN] loaded plugin libbx_harddrv.la
+-00000000000i[     ] lt_dlhandle is 0xaee7338
++00000000000i[     ] lt_dlhandle is 0x8f00728
+ 00000000000i[PLGIN] loaded plugin libbx_keyboard.la
+-00000000000i[     ] lt_dlhandle is 0xaef8f00
++00000000000i[     ] lt_dlhandle is 0x8da2068
+ 00000000000i[PLGIN] loaded plugin libbx_serial.la
+-00000000000i[     ] lt_dlhandle is 0xaef9740
++00000000000i[     ] lt_dlhandle is 0x8f008e0
+ 00000000000i[PLGIN] loaded plugin libbx_parallel.la
+-00000000000i[     ] lt_dlhandle is 0xaefa100
++00000000000i[     ] lt_dlhandle is 0x8e2ea80
+ 00000000000i[PLGIN] loaded plugin libbx_extfpuirq.la
+-00000000000i[     ] lt_dlhandle is 0xaefa7c8
++00000000000i[     ] lt_dlhandle is 0x8f08280
+ 00000000000i[PLGIN] loaded plugin libbx_gameport.la
+-00000000000i[     ] lt_dlhandle is 0xaefb000
++00000000000i[     ] lt_dlhandle is 0x8f08a98
+ 00000000000i[PLGIN] loaded plugin libbx_speaker.la
+-00000000000i[     ] lt_dlhandle is 0xaefb080
++00000000000i[     ] lt_dlhandle is 0x8f08f18
+ 00000000000i[PLGIN] loaded plugin libbx_pci.la
+-00000000000i[     ] lt_dlhandle is 0xaefacc8
++00000000000i[     ] lt_dlhandle is 0x8f08b10
+ 00000000000i[PLGIN] loaded plugin libbx_pci2isa.la
+-00000000000i[     ] lt_dlhandle is 0xaefbc90
++00000000000i[     ] lt_dlhandle is 0x8f09780
+ 00000000000i[PLGIN] loaded plugin libbx_pci_ide.la
+ 00000000000i[IOAP ] initializing I/O APIC
+ 00000000000i[IOAP ] set APIC ID to 1
+-00000000000i[MEM0 ] Register memory access handlers: fec00000-fec00fff
++00000000000i[MEM0 ] Register memory access handlers: 0xfec00000 - 0xfec00fff
+ 00000000000i[CMOS ] Using local time for initial clock
+-00000000000i[CMOS ] Setting initial clock to: Tue Jun  3 23:07:27 2008 (time0=1212527247)
++00000000000i[CMOS ] Setting initial clock to: Sun Jun 29 12:12:20 2008 (time0=1214734340)
+ 00000000000i[DMA  ] channel 4 used by cascade
+ 00000000000i[DMA  ] channel 2 used by Floppy Drive
+ 00000000000i[FDD  ] fd0: 'boot/grub.img' ro=0, h=2,t=80,spt=18
+ 00000000000i[PCI  ] 440FX Host bridge present at device 0, function 0
+ 00000000000i[PCI  ] PIIX3 PCI-to-ISA bridge present at device 1, function 0
+-00000000000i[MEM0 ] Register memory access handlers: 000a0000-000bffff
++00000000000i[MEM0 ] Register memory access handlers: 0x000a0000 - 0x000bffff
+ 00000000000i[KMAP ] Loading keymap from '/usr/share/bochs/keymaps/x11-pc-it.map'
+ 00000000000i[KMAP ] Loaded 170 symbols
+ 00000000000i[VGA  ] interval=300000
+-00000000000i[MEM0 ] Register memory access handlers: e0000000-e07fffff
++00000000000i[MEM0 ] Register memory access handlers: 0xe0000000 - 0xe07fffff
+ 00000000000i[VGA  ] VBE Bochs Display Extension Enabled
+ 00000000000i[PLGIN] init_mem of 'harddrv' plugin device by virtual method
+ 00000000000i[PLGIN] init_mem of 'keyboard' plugin device by virtual method
+@@ -133,35 +134,35 @@
+ 00000000000i[PLGIN] reset of 'gameport' plugin device by virtual method
+ 00000000000i[PLGIN] reset of 'speaker' plugin device by virtual method
+ 00000000000i[PLGIN] reset of 'pci_ide' plugin device by virtual method
+-00000003302i[BIOS ] $Revision: 1.208 $ $Date: 2008/05/18 11:37:57 $
++00000003302i[BIOS ] $Revision: 1.209 $ $Date: 2008/06/02 20:08:10 $
+ 00000317069i[KBD  ] reset-disable command received
+-00000436653i[VBIOS] VGABios $Id: vgabios.c,v 1.66 2006/07/10 07:47:51 vruppert Exp $
+-00000436724i[VGA  ] VBE known Display Interface b0c0
+-00000436756i[VGA  ] VBE known Display Interface b0c4
+-00000439681i[VBIOS] VBE Bios $Id: vbe.c,v 1.58 2006/08/19 09:39:43 vruppert Exp $
++00000441261i[VBIOS] VGABios $Id: vgabios.c,v 1.67 2008/01/27 09:44:12 vruppert Exp $
++00000441332i[VGA  ] VBE known Display Interface b0c0
++00000441364i[VGA  ] VBE known Display Interface b0c4
++00000444289i[VBIOS] VBE Bios $Id: vbe.c,v 1.60 2008/03/02 07:47:21 vruppert Exp $
+ 00000600000i[WX   ] dimension update x=720 y=400 fontheight=16 fontwidth=9 bpp=8
+-00000804355i[BIOS ] Starting rombios32
+-00000805071i[BIOS ] ram_size=0x01000000
+-00000825519i[BIOS ] Found 1 cpu(s)
+-00000841586i[BIOS ] bios_table_addr: 0x000fb778 end=0x000fcc00
+-00000841657i[PCI  ] 440FX PMC write to PAM register 59 (TLB Flush)
+-00001169391i[PCI  ] 440FX PMC write to PAM register 59 (TLB Flush)
+-00001497800i[P2I  ] PCI IRQ routing: PIRQA# set to 0x0b
+-00001497848i[P2I  ] PCI IRQ routing: PIRQB# set to 0x09
+-00001497896i[P2I  ] PCI IRQ routing: PIRQC# set to 0x0b
+-00001497944i[P2I  ] PCI IRQ routing: PIRQD# set to 0x09
+-00001497959i[P2I  ] write: ELCR2 = 0x0a
+-00001498760i[BIOS ] PIIX3 init: elcr=00 0a
+-00001518574i[BIOS ] PCI: bus=0 devfn=0x00: vendor_id=0x8086 device_id=0x1237
+-00001521496i[BIOS ] PCI: bus=0 devfn=0x08: vendor_id=0x8086 device_id=0x7000
+-00001523914i[BIOS ] PCI: bus=0 devfn=0x09: vendor_id=0x8086 device_id=0x7010
+-00001524394i[PIDE ] new BM-DMA address: 0xc000
+-00001525147i[BIOS ] region 4: 0x0000c000
+-00001548231i[BIOS ] MP table addr=0x000fb850 MPC table addr=0x000fb780 size=0xd0
+-00001549432i[BIOS ] SMBIOS table addr=0x000fb860
+-00001549512i[PCI  ] 440FX PMC write to PAM register 59 (TLB Flush)
+-00001550353i[BIOS ] bios_table_cur_addr: 0x000fb964
+-00007803633i[BIOS ] Booting from 0000:7c00
+-00013112173i[BIOS ] int13_harddisk: function 41, unmapped device for ELDL=80
+-00013116950i[BIOS ] int13_harddisk: function 08, unmapped device for ELDL=80
+-00013121608i[BIOS ] *** int 15h function AX=00c0, BX=0000 not yet supported!
++00000772077i[BIOS ] Starting rombios32
++00000772758i[BIOS ] ram_size=0x01000000
++00000793162i[BIOS ] Found 1 cpu(s)
++00000814996i[BIOS ] bios_table_addr: 0x000fb778 end=0x000fcc00
++00000815024i[PCI  ] 440FX PMC write to PAM register 59 (TLB Flush)
++00001142720i[PCI  ] 440FX PMC write to PAM register 59 (TLB Flush)
++00001470647i[P2I  ] PCI IRQ routing: PIRQA# set to 0x0b
++00001470668i[P2I  ] PCI IRQ routing: PIRQB# set to 0x09
++00001470689i[P2I  ] PCI IRQ routing: PIRQC# set to 0x0b
++00001470710i[P2I  ] PCI IRQ routing: PIRQD# set to 0x09
++00001470720i[P2I  ] write: ELCR2 = 0x0a
++00001471485i[BIOS ] PIIX3 init: elcr=00 0a
++00001479003i[BIOS ] PCI: bus=0 devfn=0x00: vendor_id=0x8086 device_id=0x1237
++00001481189i[BIOS ] PCI: bus=0 devfn=0x08: vendor_id=0x8086 device_id=0x7000
++00001483214i[BIOS ] PCI: bus=0 devfn=0x09: vendor_id=0x8086 device_id=0x7010
++00001483456i[PIDE ] new BM-DMA address: 0xc000
++00001484160i[BIOS ] region 4: 0x0000c000
++00001493477i[BIOS ] MP table addr=0x000fb850 MPC table addr=0x000fb780 size=0xd0
++00001495093i[BIOS ] SMBIOS table addr=0x000fb860
++00001495132i[PCI  ] 440FX PMC write to PAM register 59 (TLB Flush)
++00001495976i[BIOS ] bios_table_cur_addr: 0x000fb964
++00007693783i[BIOS ] Booting from 0000:7c00
++00012879622i[BIOS ] int13_harddisk: function 41, unmapped device for ELDL=80
++00012884399i[BIOS ] int13_harddisk: function 08, unmapped device for ELDL=80
++00012889057i[BIOS ] *** int 15h function AX=00c0, BX=0000 not yet supported!
+
+Modified: trunk/boot/multicatcher.S
+===================================================================
+--- trunk/boot/multicatcher.S	2008-06-10 21:32:30 UTC (rev 7)
++++ trunk/boot/multicatcher.S	2008-06-29 13:28:09 UTC (rev 8)
+@@ -27,12 +27,12 @@
+   dd  start                     ; Kernel start point
+ 
+ [GLOBAL start]
+-[EXTERN _start]                   ; The start point of our C code
++[EXTERN main_loop]                   ; The start point of our C code
+ 
+ start:
+   push    ebx                   ; Load multiboot header
+ 
+ ; Real execution
+   cli                         ; Disable interrupts.  x11-pc-it.map 
+-  call _start                   ; main() procedure, located in kernel.c
++  call main_loop                   ; main() procedure, located in kernel.c
+   jmp $                       ; Enter an infinite loop to "freeze" the OS after the boot
+\ No newline at end of file
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/kernel.h
+===================================================================
+--- trunk/include/kernel.h	2008-06-10 21:32:30 UTC (rev 7)
++++ trunk/include/kernel.h	2008-06-29 13:28:09 UTC (rev 8)
+@@ -26,10 +26,10 @@
+ #define _KERNEL_H
+ 
+ #define asmlinkage __attribute__((regparm(0)))
+-asmlinkage void _start();
+-int main_loop();
++asmlinkage void _start(struct multiboot_info*);
++int main_loop(struct multiboot_info*);
+ 
+ #define DREAMOS_VER "DreamOS ver 0.1 - Rebuild"
+-#define SITEURL "dreamos.altervista.org"
++#define SITEURL "www.dreamos.org"
+ 
+ #endif
+
+Modified: trunk/include/lng/en.h
+===================================================================
+--- trunk/include/lng/en.h	2008-06-10 21:32:30 UTC (rev 7)
++++ trunk/include/lng/en.h	2008-06-29 13:28:09 UTC (rev 8)
+@@ -1,3 +1,18 @@
++/*  DreamOS
++    en.h
++    This file is part of Foobar.
++    Foobar is free software: you can redistribute it and/or modify
++    it under the terms of the GNU General Public License as published by
++    the Free Software Foundation, either version 3 of the License, or
++    (at your option) any later version.
++    Foobar is distributed in the hope that it will be useful,
++    but WITHOUT ANY WARRANTY; without even the implied warranty of
++    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++    GNU General Public License for more details.
++    You should have received a copy of the GNU General Public License
++    along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
++*/
++
+ #ifndef _EN_H_
+ #define _EN_H_
+ 
+@@ -4,6 +19,7 @@
+ #define LNG_SITE "\nSite: "
+ #define LNG_GDT "Initialize GDT   "
+ #define LNG_IDT "Initialize IDT   "
++#define LNG_PIT8253 "Initialize PIT    "
+ #define LNG_PIC8259 "Initialize PIC8259    "
+ #define LNG_CPU "\nCPU: "
+ #define LNG_FREERAM "Free RAM:"
+
+Modified: trunk/include/lng/it.h
+===================================================================
+--- trunk/include/lng/it.h	2008-06-10 21:32:30 UTC (rev 7)
++++ trunk/include/lng/it.h	2008-06-29 13:28:09 UTC (rev 8)
+@@ -1,3 +1,18 @@
++/*  DreamOS
++    it.h
++    This file is part of Foobar.
++    Foobar is free software: you can redistribute it and/or modify
++    it under the terms of the GNU General Public License as published by
++    the Free Software Foundation, either version 3 of the License, or
++    (at your option) any later version.
++    Foobar is distributed in the hope that it will be useful,
++    but WITHOUT ANY WARRANTY; without even the implied warranty of
++    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++    GNU General Public License for more details.
++    You should have received a copy of the GNU General Public License
++    along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
++*/
++
+ #ifndef _IT_H_
+ #define _IT_H_
+ 
+@@ -4,6 +19,7 @@
+ #define LNG_SITE "\nSito: "
+ #define LNG_GDT "Inizializzo GDT   "
+ #define LNG_IDT "Inizializzo IDT   "
++#define LNG_PIC8253 "Inizializzo PIT    "
+ #define LNG_PIC8259 "Inizializzo PIC8259    "
+ #define LNG_CPU "\nProcessore: "
+ #define LNG_FREERAM "Ram Disposizione:"
+
+Modified: trunk/include/use.h
+===================================================================
+--- trunk/include/use.h	2008-06-10 21:32:30 UTC (rev 7)
++++ trunk/include/use.h	2008-06-29 13:28:09 UTC (rev 8)
+@@ -1,13 +1,29 @@
+-#ifndef _IT_H_
+-#define _IT_H_
++/*  DreamOS
++    en.h
++    This file is part of Foobar.
++    Foobar is free software: you can redistribute it and/or modify
++    it under the terms of the GNU General Public License as published by
++    the Free Software Foundation, either version 3 of the License, or
++    (at your option) any later version.
++    Foobar is distributed in the hope that it will be useful,
++    but WITHOUT ANY WARRANTY; without even the implied warranty of
++    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++    GNU General Public License for more details.
++    You should have received a copy of the GNU General Public License
++    along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
++*/
+ 
+-#define LNG_SITE "\nSito: "
+-#define LNG_GDT "Inizializzo GDT   "
+-#define LNG_IDT "Inizializzo IDT   "
+-#define LNG_PIC8259 "Inizializzo PIC8259    "
+-#define LNG_CPU "\nProcessore: "
+-#define LNG_FREERAM "Ram Disposizione:"
+-#define LNG_FREEPAGE "\t- Numero Pagine a disposizione:"
+-#define LNG_BITMAP "\t- Numero elementi della bitmap:"
++#ifndef _EN_H_
++#define _EN_H_
+ 
++#define LNG_SITE "\nSite: "
++#define LNG_GDT "Initialize GDT   "
++#define LNG_IDT "Initialize IDT   "
++#define LNG_PIT8253 "Initialize PIT    "
++#define LNG_PIC8259 "Initialize PIC8259    "
++#define LNG_CPU "\nCPU: "
++#define LNG_FREERAM "Free RAM:"
++#define LNG_FREEPAGE "\t- Number free page:"
++#define LNG_BITMAP "\t- Number bitmap's elements:"
++
+ #endif
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2008-06-10 21:32:30 UTC (rev 7)
++++ trunk/kernel.c	2008-06-29 13:28:09 UTC (rev 8)
+@@ -41,15 +41,16 @@
+ #include <shell.h>
+ 
+ unsigned int *current_page_table;
+-multiboot_info_t *boot_informations;
+-asmlinkage void _start(){
++// multiboot_info_t *boot_informations;
++asmlinkage void _start(struct multiboot_info *boot_info){
+ //     boot_informations = boot_info;    
+-	main_loop();
++	main_loop(boot_info);
+ 	while(1);
+ }
+ 
+-int main_loop()
++int main_loop(struct multiboot_info *boot_info)
+ {
++    int a;
+     _kclear();
+ 
+     _kcolor('\012');
+@@ -60,8 +61,7 @@
+     _kputs(SITEURL);
+     _kputs("\n");
+     _kcolor('\007');
+-    _kputs("\n");
+-
++    _kputs("\n");    
+     _kputs(LNG_GDT);
+     init_gdt();
+     _kprintOK();
+@@ -76,22 +76,21 @@
+     _kputs(LNG_PIC8259);
+     init_IRQ();
+     asm("sti");
+-    _kprintOK();
+-    init_paging();
+-
++    _kprintOK();   
++    init_paging();    
+     get_cpuid();
+     init_mem();
++    printf(LNG_PIT8253);
++    configure_PIT ();    
++    _kprintOK();
+     asm ("movl $0, %eax\n"
+-	 "movl $35, %ebx\n"
+-	 "int $80");
+-
+-    configure_PIT ();
+-
++     "movl $35, %ebx\n"
++     "int $80");
+     printf("\n");
+     printf("----\n");
+     printf("Loading the shell..\n");
+-    printf("[+] Loading compleate!!\n\n");
+-
++    printf("[+] Loading complete!!\n\n");
++    printf("Boot info->mem_upper: %d\n", boot_info->mem_upper);
+     shell();
+     
+ /*    if ( (shell()) != NULL)
+
+Modified: trunk/kernel.map
+===================================================================
+--- trunk/kernel.map	2008-06-10 21:32:30 UTC (rev 7)
++++ trunk/kernel.map	2008-06-29 13:28:09 UTC (rev 8)
+@@ -8,7 +8,6 @@
+ upbuffer            0xfa0             io/video.o
+ IDT_Table           0x800             processore/idt.o
+ cpu_vendor          0xc               kernel.o
+-boot_informations   0x4               kernel.o
+ tot_mem             0x4               mem/fismem.o
+ slave_cur_mask      0x1               hardware/pic8259.o
+ current_page_dir    0x4               mem/paging.o
+@@ -29,250 +28,249 @@
+ 
+                 0x0000000000100000                . = 0x100000
+ 
+-.text           0x0000000000100000     0x3ea3
++.text           0x0000000000100000     0x3edb
+  *(.text)
+  .text          0x0000000000100000       0x1d bl.img
+                 0x0000000000100000                mboot
+                 0x0000000000100014                start
+  *fill*         0x000000000010001d        0x3 00
+- .text          0x0000000000100020      0x17b kernel.o
+-                0x000000000010002a                main_loop
++ .text          0x0000000000100020      0x1b2 kernel.o
++                0x0000000000100034                main_loop
+                 0x0000000000100020                _start
+- *fill*         0x000000000010019b        0x1 00
+- .text          0x000000000010019c      0x9d1 io/video.o
+-                0x0000000000100af2                _kscrolldown
+-                0x000000000010019c                _kputc
+-                0x00000000001001de                _kputs
+-                0x0000000000100278                _kbackspace
+-                0x00000000001009c7                _krotate_buffer
+-                0x00000000001003b5                _ksetcursauto
+-                0x0000000000100262                _kcolor
+-                0x00000000001004c5                _kdecbin
+-                0x0000000000100384                _ksetcursor
+-                0x0000000000100417                _kprintOK
+-                0x000000000010028e                _ktab
+-                0x000000000010029c                _kgoto
+-                0x0000000000100331                _knewline
+-                0x0000000000100a48                _kscrollup
+-                0x00000000001002ca                _kclear
+-                0x000000000010048b                _kgetline
+-                0x0000000000100809                _kntos
+-                0x0000000000100441                _kgetcolumn
+-                0x000000000010059c                _kntohex
+-                0x00000000001008f8                _kshiftAll
+- *fill*         0x0000000000100b6d        0x3 00
+- .text          0x0000000000100b70      0x5b5 drivers/keyboard.o
+-                0x0000000000100fa1                _ksetleds
+-                0x00000000001010cd                _kgetch
+-                0x00000000001010b4                keyboard_disable
+-                0x000000000010109b                keyboard_enable
+-                0x0000000000100b70                keyboard_isr
+- *fill*         0x0000000000101125        0x3 00
+- .text          0x0000000000101128      0x19a libc/ctype.o
+-                0x00000000001011f8                islower
+-                0x0000000000101248                tolower
+-                0x00000000001011c0                isxdigit
+-                0x0000000000101220                isupper
+-                0x0000000000101150                isalpha
+-                0x0000000000101186                isalnum
+-                0x0000000000101128                isdigit
+-                0x0000000000101285                toupper
+- *fill*         0x00000000001012c2        0x2 00
+- .text          0x00000000001012c4      0x2eb libc/string.o
+-                0x000000000010143f                strstr
+-                0x00000000001012c4                strncpy
+-                0x00000000001014bb                strtok
+-                0x0000000000101545                strncat
+-                0x00000000001013ce                strdup
+-                0x0000000000101398                memset
+-                0x0000000000101324                _kstrncmp
+-                0x00000000001012fd                strlen
+-                0x000000000010141e                strchr
+- *fill*         0x00000000001015af        0x1 00
+- .text          0x00000000001015b0       0x23 io/io.o
+-                0x00000000001015b0                inportb
+-                0x00000000001015c9                outportb
+- *fill*         0x00000000001015d3        0x1 00
+- .text          0x00000000001015d4      0x632 libc/stdio.o
+-                0x00000000001015d4                putchar
+-                0x00000000001016de                printf
+-                0x0000000000101ab2                gets
+-                0x0000000000101a97                getchar
+-                0x0000000000101b25                scanf
+-                0x00000000001015ee                atoi
+- *fill*         0x0000000000101c06        0x2 00
+- .text          0x0000000000101c08      0x18c hardware/cpuid.o
+-                0x0000000000101c08                get_cpuid
+- .text          0x0000000000101d94       0x67 hardware/keyboard.o
+-                0x0000000000101d94                keyboard_irq
+- *fill*         0x0000000000101dfb        0x1 00
+- .text          0x0000000000101dfc      0x1d0 processore/gdt.o
+-                0x0000000000101ed8                add_GDTseg
+-                0x0000000000101dfc                init_gdt
+-                0x0000000000101f83                set_gdtr
+- .text          0x0000000000101fcc      0x65d processore/idt.o
+-                0x000000000010258d                add_IDTseg
+-                0x0000000000102301                init_idt
+-                0x0000000000102601                set_idtr
+- *fill*         0x0000000000102629        0x3 00
+- .text          0x000000000010262c      0x39f processore/handlers.o
+-                0x000000000010262c                init_funcTable
+-                0x0000000000102924                _irqinterrupt
+-                0x00000000001026ae                _globalException
+-                0x000000000010269e                add_Interrupt
+-                0x00000000001029b6                _int_rsv
+- *fill*         0x00000000001029cb        0x1 00
+- .text          0x00000000001029cc      0x747 hardware/pic8259.o
+-                0x0000000000102bfd                init_IRQ
+-                0x0000000000102d39                setup_IRQ
+-                0x0000000000102f74                disable_IRQ
+-                0x0000000000103054                add_IRQ_handler
+-                0x0000000000102ea0                enable_IRQ
+-                0x0000000000103026                get_current_irq
+- *fill*         0x0000000000103113        0x1 00
+- .text          0x0000000000103114      0x628 mem/fismem.o
+-                0x0000000000103114                init_mem
+-                0x00000000001031d8                request_pages
+-                0x0000000000103598                add_memarea_element
+-                0x00000000001036ae                get_numpages
+-                0x00000000001036a8                get_memsize
+-                0x00000000001036d4                malloc
+-                0x00000000001036c1                get_bmpelements
+-                0x0000000000103333                release_pages
+-                0x000000000010368c                calcola_memoria
+-                0x0000000000103712                free
+- .text          0x000000000010373c      0x2ca mem/paging.o
+-                0x000000000010384a                create_pageTable
+-                0x000000000010373c                init_paging
+-                0x0000000000103979                get_pagedir_entry
+-                0x0000000000103834                create_pageDir
+-                0x00000000001039c0                load_pdbr
+-                0x0000000000103927                set_pagetable_entry_ric
+-                0x0000000000103996                get_pagetable_entry
+-                0x0000000000103860                set_pagedir_entry
+-                0x00000000001038a1                set_pagedir_entry_ric
+-                0x00000000001038e6                set_pagetable_entry
+- *fill*         0x0000000000103a06        0x2 00
+- .text          0x0000000000103a08       0xba system/syscall.o
+-                0x0000000000103a08                sysputch
+-                0x0000000000103a2e                syscall_handler
+- *fill*         0x0000000000103ac2        0x2 00
+- .text          0x0000000000103ac4       0xfa hardware/8253.o
+-                0x0000000000103b8f                sleep
+-                0x0000000000103ac4                PIT_handler
+-                0x0000000000103b2f                configure_PIT
+- *fill*         0x0000000000103bbe        0x2 00
+- .text          0x0000000000103bc0      0x2e3 shell/shell.o
+-                0x0000000000103c06                info
+-                0x0000000000103db4                shell
+-                0x0000000000103bfe                poweroff
+-                0x0000000000103be7                help
+-                0x0000000000103bc0                logo
++ *fill*         0x00000000001001d2        0x2 00
++ .text          0x00000000001001d4      0x9d1 io/video.o
++                0x0000000000100b2a                _kscrolldown
++                0x00000000001001d4                _kputc
++                0x0000000000100216                _kputs
++                0x00000000001002b0                _kbackspace
++                0x00000000001009ff                _krotate_buffer
++                0x00000000001003ed                _ksetcursauto
++                0x000000000010029a                _kcolor
++                0x00000000001004fd                _kdecbin
++                0x00000000001003bc                _ksetcursor
++                0x000000000010044f                _kprintOK
++                0x00000000001002c6                _ktab
++                0x00000000001002d4                _kgoto
++                0x0000000000100369                _knewline
++                0x0000000000100a80                _kscrollup
++                0x0000000000100302                _kclear
++                0x00000000001004c3                _kgetline
++                0x0000000000100841                _kntos
++                0x0000000000100479                _kgetcolumn
++                0x00000000001005d4                _kntohex
++                0x0000000000100930                _kshiftAll
++ *fill*         0x0000000000100ba5        0x3 00
++ .text          0x0000000000100ba8      0x5b5 drivers/keyboard.o
++                0x0000000000100fd9                _ksetleds
++                0x0000000000101105                _kgetch
++                0x00000000001010ec                keyboard_disable
++                0x00000000001010d3                keyboard_enable
++                0x0000000000100ba8                keyboard_isr
++ *fill*         0x000000000010115d        0x3 00
++ .text          0x0000000000101160      0x19a libc/ctype.o
++                0x0000000000101230                islower
++                0x0000000000101280                tolower
++                0x00000000001011f8                isxdigit
++                0x0000000000101258                isupper
++                0x0000000000101188                isalpha
++                0x00000000001011be                isalnum
++                0x0000000000101160                isdigit
++                0x00000000001012bd                toupper
++ *fill*         0x00000000001012fa        0x2 00
++ .text          0x00000000001012fc      0x2eb libc/string.o
++                0x0000000000101477                strstr
++                0x00000000001012fc                strncpy
++                0x00000000001014f3                strtok
++                0x000000000010157d                strncat
++                0x0000000000101406                strdup
++                0x00000000001013d0                memset
++                0x000000000010135c                _kstrncmp
++                0x0000000000101335                strlen
++                0x0000000000101456                strchr
++ *fill*         0x00000000001015e7        0x1 00
++ .text          0x00000000001015e8       0x23 io/io.o
++                0x00000000001015e8                inportb
++                0x0000000000101601                outportb
++ *fill*         0x000000000010160b        0x1 00
++ .text          0x000000000010160c      0x632 libc/stdio.o
++                0x000000000010160c                putchar
++                0x0000000000101716                printf
++                0x0000000000101aea                gets
++                0x0000000000101acf                getchar
++                0x0000000000101b5d                scanf
++                0x0000000000101626                atoi
++ *fill*         0x0000000000101c3e        0x2 00
++ .text          0x0000000000101c40      0x18c hardware/cpuid.o
++                0x0000000000101c40                get_cpuid
++ .text          0x0000000000101dcc       0x67 hardware/keyboard.o
++                0x0000000000101dcc                keyboard_irq
++ *fill*         0x0000000000101e33        0x1 00
++ .text          0x0000000000101e34      0x1d0 processore/gdt.o
++                0x0000000000101f10                add_GDTseg
++                0x0000000000101e34                init_gdt
++                0x0000000000101fbb                set_gdtr
++ .text          0x0000000000102004      0x65d processore/idt.o
++                0x00000000001025c5                add_IDTseg
++                0x0000000000102339                init_idt
++                0x0000000000102639                set_idtr
++ *fill*         0x0000000000102661        0x3 00
++ .text          0x0000000000102664      0x39f processore/handlers.o
++                0x0000000000102664                init_funcTable
++                0x000000000010295c                _irqinterrupt
++                0x00000000001026e6                _globalException
++                0x00000000001026d6                add_Interrupt
++                0x00000000001029ee                _int_rsv
++ *fill*         0x0000000000102a03        0x1 00
++ .text          0x0000000000102a04      0x747 hardware/pic8259.o
++                0x0000000000102c35                init_IRQ
++                0x0000000000102d71                setup_IRQ
++                0x0000000000102fac                disable_IRQ
++                0x000000000010308c                add_IRQ_handler
++                0x0000000000102ed8                enable_IRQ
++                0x000000000010305e                get_current_irq
++ *fill*         0x000000000010314b        0x1 00
++ .text          0x000000000010314c      0x628 mem/fismem.o
++                0x000000000010314c                init_mem
++                0x0000000000103210                request_pages
++                0x00000000001035d0                add_memarea_element
++                0x00000000001036e6                get_numpages
++                0x00000000001036e0                get_memsize
++                0x000000000010370c                malloc
++                0x00000000001036f9                get_bmpelements
++                0x000000000010336b                release_pages
++                0x00000000001036c4                calcola_memoria
++                0x000000000010374a                free
++ .text          0x0000000000103774      0x2ca mem/paging.o
++                0x0000000000103882                create_pageTable
++                0x0000000000103774                init_paging
++                0x00000000001039b1                get_pagedir_entry
++                0x000000000010386c                create_pageDir
++                0x00000000001039f8                load_pdbr
++                0x000000000010395f                set_pagetable_entry_ric
++                0x00000000001039ce                get_pagetable_entry
++                0x0000000000103898                set_pagedir_entry
++                0x00000000001038d9                set_pagedir_entry_ric
++                0x000000000010391e                set_pagetable_entry
++ *fill*         0x0000000000103a3e        0x2 00
++ .text          0x0000000000103a40       0xba system/syscall.o
++                0x0000000000103a40                sysputch
++                0x0000000000103a66                syscall_handler
++ *fill*         0x0000000000103afa        0x2 00
++ .text          0x0000000000103afc       0xfa hardware/8253.o
++                0x0000000000103bc7                sleep
++                0x0000000000103afc                PIT_handler
++                0x0000000000103b67                configure_PIT
++ *fill*         0x0000000000103bf6        0x2 00
++ .text          0x0000000000103bf8      0x2e3 shell/shell.o
++                0x0000000000103c3e                info
++                0x0000000000103dec                shell
++                0x0000000000103c36                poweroff
++                0x0000000000103c1f                help
++                0x0000000000103bf8                logo
+ 
+-.rodata         0x0000000000103ea4      0x759
++.rodata         0x0000000000103edc      0x759
+  *(.rodata)
+- .rodata        0x0000000000103ea4       0xae kernel.o
+- .rodata        0x0000000000103f52       0x70 io/video.o
+- .rodata        0x0000000000103fc2       0x10 drivers/keyboard.o
+- .rodata        0x0000000000103fd2        0x2 libc/stdio.o
+- .rodata        0x0000000000103fd4       0x3e hardware/cpuid.o
+- .rodata        0x0000000000104012       0x1d hardware/keyboard.o
+- *fill*         0x000000000010402f        0x1 00
+- .rodata        0x0000000000104030      0x269 processore/handlers.o
+- *fill*         0x0000000000104299        0x3 00
+- .rodata        0x000000000010429c       0x8a mem/fismem.o
+- *fill*         0x0000000000104326        0x2 00
+- .rodata        0x0000000000104328       0x23 mem/paging.o
+- *fill*         0x000000000010434b        0x1 00
+- .rodata        0x000000000010434c        0xc system/syscall.o
+- .rodata        0x0000000000104358      0x2a5 shell/shell.o
++ .rodata        0x0000000000103edc       0xd0 kernel.o
++ .rodata        0x0000000000103fac       0x70 io/video.o
++ .rodata        0x000000000010401c       0x10 drivers/keyboard.o
++ .rodata        0x000000000010402c        0x2 libc/stdio.o
++ .rodata        0x000000000010402e       0x3e hardware/cpuid.o
++ .rodata        0x000000000010406c       0x1d hardware/keyboard.o
++ *fill*         0x0000000000104089        0x3 00
++ .rodata        0x000000000010408c      0x269 processore/handlers.o
++ *fill*         0x00000000001042f5        0x3 00
++ .rodata        0x00000000001042f8       0x8a mem/fismem.o
++ *fill*         0x0000000000104382        0x2 00
++ .rodata        0x0000000000104384       0x23 mem/paging.o
++ *fill*         0x00000000001043a7        0x1 00
++ .rodata        0x00000000001043a8        0xc system/syscall.o
++ .rodata        0x00000000001043b4      0x281 shell/shell.o
+ 
+-.rel.dyn        0x0000000000104600        0x0 load address 0x00000000001045fd
++.rel.dyn        0x0000000000104638        0x0 load address 0x0000000000104635
+  .rel.text      0x0000000000000000        0x0 bl.img
+ 
+-.data           0x0000000000104600    0x3376c
++.data           0x0000000000104640    0x3376c
+  *(.data)
+- .data          0x0000000000104600        0x0 kernel.o
+- .data          0x0000000000104600        0x9 io/video.o
+-                0x0000000000104604                VIDEO_PTR
+-                0x0000000000104608                VIDEO_CLR
+-                0x0000000000104600                VIDEO_MEM
+- *fill*         0x0000000000104609       0x17 00
+- .data          0x0000000000104620      0x2f8 drivers/keyboard.o
+- .data          0x0000000000104918        0x0 libc/ctype.o
+- .data          0x0000000000104918        0x0 libc/string.o
+- .data          0x0000000000104918        0x0 io/io.o
+- .data          0x0000000000104918        0x0 libc/stdio.o
+- .data          0x0000000000104918        0x0 hardware/cpuid.o
+- .data          0x0000000000104918        0x0 hardware/keyboard.o
+- .data          0x0000000000104918        0x0 processore/gdt.o
+- .data          0x0000000000104918        0x0 processore/idt.o
+- .data          0x0000000000104918        0x0 processore/handlers.o
+- .data          0x0000000000104918        0x0 hardware/pic8259.o
+- .data          0x0000000000104918        0xc mem/fismem.o
+-                0x0000000000104918                prova2
+-                0x000000000010491c                mem_info_root
+-                0x0000000000104920                mem_info
+- .data          0x0000000000104924        0x0 mem/paging.o
+- .data          0x0000000000104924        0x4 system/syscall.o
+-                0x0000000000104924                syscall_table
+- .data          0x0000000000104928        0x0 hardware/8253.o
+- .data          0x0000000000104928        0x0 shell/shell.o
++ .data          0x0000000000104640        0x0 kernel.o
++ .data          0x0000000000104640        0x9 io/video.o
++                0x0000000000104644                VIDEO_PTR
++                0x0000000000104648                VIDEO_CLR
++                0x0000000000104640                VIDEO_MEM
++ *fill*         0x0000000000104649       0x17 00
++ .data          0x0000000000104660      0x2f8 drivers/keyboard.o
++ .data          0x0000000000104958        0x0 libc/ctype.o
++ .data          0x0000000000104958        0x0 libc/string.o
++ .data          0x0000000000104958        0x0 io/io.o
++ .data          0x0000000000104958        0x0 libc/stdio.o
++ .data          0x0000000000104958        0x0 hardware/cpuid.o
++ .data          0x0000000000104958        0x0 hardware/keyboard.o
++ .data          0x0000000000104958        0x0 processore/gdt.o
++ .data          0x0000000000104958        0x0 processore/idt.o
++ .data          0x0000000000104958        0x0 processore/handlers.o
++ .data          0x0000000000104958        0x0 hardware/pic8259.o
++ .data          0x0000000000104958        0xc mem/fismem.o
++                0x0000000000104958                prova2
++                0x000000000010495c                mem_info_root
++                0x0000000000104960                mem_info
++ .data          0x0000000000104964        0x0 mem/paging.o
++ .data          0x0000000000104964        0x4 system/syscall.o
++                0x0000000000104964                syscall_table
++ .data          0x0000000000104968        0x0 hardware/8253.o
++ .data          0x0000000000104968        0x0 shell/shell.o
+  *(.bss)
+- .bss           0x0000000000104928        0x0 kernel.o
+- .bss           0x0000000000104928       0x10 io/video.o
+-                0x000000000010492c                is_shifted_once
+-                0x0000000000104928                is_scrolled
+-                0x0000000000104934                resulthex
+-                0x0000000000104930                binlen
+- *fill*         0x0000000000104938        0x8 00
+- .bss           0x0000000000104940      0x434 drivers/keyboard.o
+- .bss           0x0000000000104d74        0x0 libc/ctype.o
+- .bss           0x0000000000104d74        0x4 libc/string.o
+- .bss           0x0000000000104d78        0x0 io/io.o
+- .bss           0x0000000000104d78        0x0 libc/stdio.o
+- .bss           0x0000000000104d78        0x0 hardware/cpuid.o
+- .bss           0x0000000000104d78        0x0 hardware/keyboard.o
+- .bss           0x0000000000104d78        0x0 processore/gdt.o
+- .bss           0x0000000000104d78        0x0 processore/idt.o
+- .bss           0x0000000000104d78        0x0 processore/handlers.o
+- .bss           0x0000000000104d78        0x0 hardware/pic8259.o
+- .bss           0x0000000000104d78        0x4 mem/fismem.o
+-                0x0000000000104d78                num_pages
+- .bss           0x0000000000104d7c        0x0 mem/paging.o
+- .bss           0x0000000000104d7c        0x0 system/syscall.o
+- .bss           0x0000000000104d7c        0x8 hardware/8253.o
+- .bss           0x0000000000104d84        0x0 shell/shell.o
++ .bss           0x0000000000104968        0x0 kernel.o
++ .bss           0x0000000000104968       0x10 io/video.o
++                0x000000000010496c                is_shifted_once
++                0x0000000000104968                is_scrolled
++                0x0000000000104974                resulthex
++                0x0000000000104970                binlen
++ *fill*         0x0000000000104978        0x8 00
++ .bss           0x0000000000104980      0x434 drivers/keyboard.o
++ .bss           0x0000000000104db4        0x0 libc/ctype.o
++ .bss           0x0000000000104db4        0x4 libc/string.o
++ .bss           0x0000000000104db8        0x0 io/io.o
++ .bss           0x0000000000104db8        0x0 libc/stdio.o
++ .bss           0x0000000000104db8        0x0 hardware/cpuid.o
++ .bss           0x0000000000104db8        0x0 hardware/keyboard.o
++ .bss           0x0000000000104db8        0x0 processore/gdt.o
++ .bss           0x0000000000104db8        0x0 processore/idt.o
++ .bss           0x0000000000104db8        0x0 processore/handlers.o
++ .bss           0x0000000000104db8        0x0 hardware/pic8259.o
++ .bss           0x0000000000104db8        0x4 mem/fismem.o
++                0x0000000000104db8                num_pages
++ .bss           0x0000000000104dbc        0x0 mem/paging.o
++ .bss           0x0000000000104dbc        0x0 system/syscall.o
++ .bss           0x0000000000104dbc        0x8 hardware/8253.o
++ .bss           0x0000000000104dc4        0x0 shell/shell.o
+  *(COMMON)
+- COMMON         0x0000000000104d84       0x14 kernel.o
+-                0x0000000000104d84                cpu_vendor
+-                0x0000000000104d90                boot_informations
+-                0x0000000000104d94                current_page_table
+- *fill*         0x0000000000104d98        0x8 00
+- COMMON         0x0000000000104da0     0x233c io/video.o
+-                0x0000000000104da0                downbuffer
+-                0x0000000000105d40                upbuffer
+-                0x0000000000106ce0                binvp
+- *fill*         0x00000000001070dc        0x4 00
+- COMMON         0x00000000001070e0    0x10004 processore/gdt.o
+-                0x00000000001070e0                Gdt_Table
+-                0x00000000001170e0                current_pos
+- *fill*         0x00000000001170e4       0x1c 00
+- COMMON         0x0000000000117100      0xc00 processore/idt.o
+-                0x0000000000117100                IntTable
+-                0x0000000000117500                IDT_Table
+- COMMON         0x0000000000117d00       0x40 processore/handlers.o
+-                0x0000000000117d00                shareHandler
+- COMMON         0x0000000000117d40        0x2 hardware/pic8259.o
+-                0x0000000000117d40                slave_cur_mask
+-                0x0000000000117d41                master_cur_mask
+- *fill*         0x0000000000117d42       0x1e 00
+- COMMON         0x0000000000117d60    0x20008 mem/fismem.o
+-                0x0000000000117d60                mem_bitmap
+-                0x0000000000137d60                tot_mem
+-                0x0000000000137d64                bmp_elements
+- COMMON         0x0000000000137d68        0x4 mem/paging.o
+-                0x0000000000137d68                current_page_dir
++ COMMON         0x0000000000104dc4       0x10 kernel.o
++                0x0000000000104dc4                cpu_vendor
++                0x0000000000104dd0                current_page_table
++ *fill*         0x0000000000104dd4        0xc 00
++ COMMON         0x0000000000104de0     0x233c io/video.o
++                0x0000000000104de0                downbuffer
++                0x0000000000105d80                upbuffer
++                0x0000000000106d20                binvp
++ *fill*         0x000000000010711c        0x4 00
++ COMMON         0x0000000000107120    0x10004 processore/gdt.o
++                0x0000000000107120                Gdt_Table
++                0x0000000000117120                current_pos
++ *fill*         0x0000000000117124       0x1c 00
++ COMMON         0x0000000000117140      0xc00 processore/idt.o
++                0x0000000000117140                IntTable
++                0x0000000000117540                IDT_Table
++ COMMON         0x0000000000117d40       0x40 processore/handlers.o
++                0x0000000000117d40                shareHandler
++ COMMON         0x0000000000117d80        0x2 hardware/pic8259.o
++                0x0000000000117d80                slave_cur_mask
++                0x0000000000117d81                master_cur_mask
++ *fill*         0x0000000000117d82       0x1e 00
++ COMMON         0x0000000000117da0    0x20008 mem/fismem.o
++                0x0000000000117da0                mem_bitmap
++                0x0000000000137da0                tot_mem
++                0x0000000000137da4                bmp_elements
++ COMMON         0x0000000000137da8        0x4 mem/paging.o
++                0x0000000000137da8                current_page_dir
+ LOAD bl.img
+ LOAD kernel.o
+ LOAD io/video.o
+@@ -295,26 +293,26 @@
+ Address of section .text set to 0x100000
+ OUTPUT(kernel.bin elf32-i386)
+ 
+-.comment        0x0000000000000000      0x226
+- .comment       0x0000000000000000       0x1c bl.img
+- .comment       0x000000000000001c       0x1d kernel.o
+- .comment       0x0000000000000039       0x1d io/video.o
+- .comment       0x0000000000000056       0x1d drivers/keyboard.o
+- .comment       0x0000000000000073       0x1d libc/ctype.o
+- .comment       0x0000000000000090       0x1d libc/string.o
+- .comment       0x00000000000000ad       0x1d io/io.o
+- .comment       0x00000000000000ca       0x1d libc/stdio.o
+- .comment       0x00000000000000e7       0x1d hardware/cpuid.o
+- .comment       0x0000000000000104       0x1d hardware/keyboard.o
+- .comment       0x0000000000000121       0x1d processore/gdt.o
+- .comment       0x000000000000013e       0x1d processore/idt.o
+- .comment       0x000000000000015b       0x1d processore/handlers.o
+- .comment       0x0000000000000178       0x1d hardware/pic8259.o
+- .comment       0x0000000000000195       0x1d mem/fismem.o
+- .comment       0x00000000000001b2       0x1d mem/paging.o
+- .comment       0x00000000000001cf       0x1d system/syscall.o
+- .comment       0x00000000000001ec       0x1d hardware/8253.o
+- .comment       0x0000000000000209       0x1d shell/shell.o
++.comment        0x0000000000000000      0x229
++ .comment       0x0000000000000000       0x1f bl.img
++ .comment       0x000000000000001f       0x1d kernel.o
++ .comment       0x000000000000003c       0x1d io/video.o
++ .comment       0x0000000000000059       0x1d drivers/keyboard.o
++ .comment       0x0000000000000076       0x1d libc/ctype.o
++ .comment       0x0000000000000093       0x1d libc/string.o
++ .comment       0x00000000000000b0       0x1d io/io.o
++ .comment       0x00000000000000cd       0x1d libc/stdio.o
++ .comment       0x00000000000000ea       0x1d hardware/cpuid.o
++ .comment       0x0000000000000107       0x1d hardware/keyboard.o
++ .comment       0x0000000000000124       0x1d processore/gdt.o
++ .comment       0x0000000000000141       0x1d processore/idt.o
++ .comment       0x000000000000015e       0x1d processore/handlers.o
++ .comment       0x000000000000017b       0x1d hardware/pic8259.o
++ .comment       0x0000000000000198       0x1d mem/fismem.o
++ .comment       0x00000000000001b5       0x1d mem/paging.o
++ .comment       0x00000000000001d2       0x1d system/syscall.o
++ .comment       0x00000000000001ef       0x1d hardware/8253.o
++ .comment       0x000000000000020c       0x1d shell/shell.o
+ 
+ .note.GNU-stack
+                 0x0000000000000000        0x0
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2008-06-10 21:32:30 UTC (rev 7)
++++ trunk/mem/paging.c	2008-06-29 13:28:09 UTC (rev 8)
+@@ -183,6 +183,13 @@
+     return (unsigned int) (*mod_address);
+ }
+ 
++/**
++  * Carica il registro pdbr con la nuova pagedir
++  * @author Ivan Gualandri
++  * @version 1.0
++  * @param pdbase Indirizzo base della page_dir
++  * @return none
++  */
+ void load_pdbr(unsigned int pdbase){
+     volatile unsigned int cr0, pdbr, tmp;
+     cr0=0;
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2008-06-10 21:32:30 UTC (rev 7)
++++ trunk/shell/shell.c	2008-06-29 13:28:09 UTC (rev 8)
+@@ -39,7 +39,7 @@
+ void logo()
+ {
+ 	printf("\t-------------------------- \n"
+-	       "\tThe Dream Operation System \n"
++	       "\tThe Dream Operating System \n"
+ 	       "\t      v0.01 pre-alpha      \n"
+ 	       "\t-------------------------- \n");
+ 	printf("\n\n\n");
+
+
+
+From finarfin at mail.berlios.de  Sun Jun 29 23:43:10 2008
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Sun, 29 Jun 2008 23:43:10 +0200
+Subject: [Dreamos-dev] r9 - in trunk: . shell
+Message-ID: <200806292143.m5TLhAl9027248@sheep.berlios.de>
+
+Author: finarfin
+Date: 2008-06-29 23:43:10 +0200 (Sun, 29 Jun 2008)
+New Revision: 9
+
+Removed:
+   trunk/bochsout.txt
+   trunk/parport.out
+Modified:
+   trunk/dreamos.img
+   trunk/kernel.c
+   trunk/kernel.lds
+   trunk/kernel.map
+   trunk/shell/shell.c
+Log:
+Aggiunta stampa informazioni quantita memoria, sfruttando grub
+Modificata poweroff della shell.
+Modificato file kernel.lds (Linea ENTRY())
+Eliminati alcuni file di output di bochs. 
+
+
+Deleted: trunk/bochsout.txt
+===================================================================
+--- trunk/bochsout.txt	2008-06-29 13:28:09 UTC (rev 8)
++++ trunk/bochsout.txt	2008-06-29 21:43:10 UTC (rev 9)
+@@ -1,168 +0,0 @@
+-00000000000i[     ] Bochs x86 Emulator 2.3.7
+-00000000000i[     ]   Build from CVS snapshot, on June 3, 2008
+-00000000000i[     ] System configuration
+-00000000000i[     ]   processors: 1 (cores=1, HT threads=1)
+-00000000000i[     ]   A20 line support: yes
+-00000000000i[     ]   APIC support: yes
+-00000000000i[     ] CPU configuration
+-00000000000i[     ]   level: 6
+-00000000000i[     ]   SMP support: no
+-00000000000i[     ]   FPU support: yes
+-00000000000i[     ]   MMX support: yes
+-00000000000i[     ]   SSE support: 4
+-00000000000i[     ]   CLFLUSH support: yes
+-00000000000i[     ]   VME support: yes
+-00000000000i[     ]   3dnow! support: yes
+-00000000000i[     ]   PAE support: yes
+-00000000000i[     ]   PGE support: yes
+-00000000000i[     ]   PSE support: yes
+-00000000000i[     ]   x86-64 support: yes
+-00000000000i[     ]   SEP support: yes
+-00000000000i[     ]   MWAIT support: no
+-00000000000i[     ]   XSAVE support: no
+-00000000000i[     ]   AES support: no
+-00000000000i[     ] Optimization configuration
+-00000000000i[     ]   Guest2HostTLB support: yes
+-00000000000i[     ]   RepeatSpeedups support: yes
+-00000000000i[     ]   Icache support: yes
+-00000000000i[     ]   Trace cache support: yes
+-00000000000i[     ]   Fast function calls: yes
+-00000000000i[     ] Devices configuration
+-00000000000i[     ]   ACPI support: no
+-00000000000i[     ]   NE2000 support: yes
+-00000000000i[     ]   PCI support: yes
+-00000000000i[     ]   SB16 support: yes
+-00000000000i[     ]   USB support: yes
+-00000000000i[     ]   VGA extension support: vbe 
+-00000000000i[MEM0 ] allocated memory at 0xb4e32008. after alignment, vector=0xb4e33000
+-00000000000i[MEM0 ] 16,00MB
+-00000000000i[MEM0 ] rom at 0xfffe0000/131072 ('/usr/share/bochs/BIOS-bochs-latest')
+-00000000000i[MEM0 ] rom at 0xc0000/39936 ('/usr/share/vgabios/vgabios.bin')
+-00000000000i[APIC?] set APIC ID to 0
+-00000000000i[APIC0] 80686
+-00000000000i[APIC0] local apic in CPU apicid=00 initializing
+-00000000000i[     ] lt_dlhandle is 0x8ec4458
+-00000000000i[PLGIN] loaded plugin libbx_unmapped.la
+-00000000000i[     ] lt_dlhandle is 0x8ec43e8
+-00000000000i[PLGIN] loaded plugin libbx_biosdev.la
+-00000000000i[     ] lt_dlhandle is 0x8ec7288
+-00000000000i[PLGIN] loaded plugin libbx_cmos.la
+-00000000000i[     ] lt_dlhandle is 0x8ec78a8
+-00000000000i[PLGIN] loaded plugin libbx_dma.la
+-00000000000i[     ] lt_dlhandle is 0x8ec7f10
+-00000000000i[PLGIN] loaded plugin libbx_pic.la
+-00000000000i[     ] lt_dlhandle is 0x8ec8558
+-00000000000i[PLGIN] loaded plugin libbx_vga.la
+-00000000000i[     ] lt_dlhandle is 0x8eee2a0
+-00000000000i[PLGIN] loaded plugin libbx_floppy.la
+-00000000000i[     ] lt_dlhandle is 0x8eeeae0
+-00000000000i[PLGIN] loaded plugin libbx_harddrv.la
+-00000000000i[     ] lt_dlhandle is 0x8f00728
+-00000000000i[PLGIN] loaded plugin libbx_keyboard.la
+-00000000000i[     ] lt_dlhandle is 0x8da2068
+-00000000000i[PLGIN] loaded plugin libbx_serial.la
+-00000000000i[     ] lt_dlhandle is 0x8f008e0
+-00000000000i[PLGIN] loaded plugin libbx_parallel.la
+-00000000000i[     ] lt_dlhandle is 0x8e2ea80
+-00000000000i[PLGIN] loaded plugin libbx_extfpuirq.la
+-00000000000i[     ] lt_dlhandle is 0x8f08280
+-00000000000i[PLGIN] loaded plugin libbx_gameport.la
+-00000000000i[     ] lt_dlhandle is 0x8f08a98
+-00000000000i[PLGIN] loaded plugin libbx_speaker.la
+-00000000000i[     ] lt_dlhandle is 0x8f08f18
+-00000000000i[PLGIN] loaded plugin libbx_pci.la
+-00000000000i[     ] lt_dlhandle is 0x8f08b10
+-00000000000i[PLGIN] loaded plugin libbx_pci2isa.la
+-00000000000i[     ] lt_dlhandle is 0x8f09780
+-00000000000i[PLGIN] loaded plugin libbx_pci_ide.la
+-00000000000i[IOAP ] initializing I/O APIC
+-00000000000i[IOAP ] set APIC ID to 1
+-00000000000i[MEM0 ] Register memory access handlers: 0xfec00000 - 0xfec00fff
+-00000000000i[CMOS ] Using local time for initial clock
+-00000000000i[CMOS ] Setting initial clock to: Sun Jun 29 12:12:20 2008 (time0=1214734340)
+-00000000000i[DMA  ] channel 4 used by cascade
+-00000000000i[DMA  ] channel 2 used by Floppy Drive
+-00000000000i[FDD  ] fd0: 'boot/grub.img' ro=0, h=2,t=80,spt=18
+-00000000000i[PCI  ] 440FX Host bridge present at device 0, function 0
+-00000000000i[PCI  ] PIIX3 PCI-to-ISA bridge present at device 1, function 0
+-00000000000i[MEM0 ] Register memory access handlers: 0x000a0000 - 0x000bffff
+-00000000000i[KMAP ] Loading keymap from '/usr/share/bochs/keymaps/x11-pc-it.map'
+-00000000000i[KMAP ] Loaded 170 symbols
+-00000000000i[VGA  ] interval=300000
+-00000000000i[MEM0 ] Register memory access handlers: 0xe0000000 - 0xe07fffff
+-00000000000i[VGA  ] VBE Bochs Display Extension Enabled
+-00000000000i[PLGIN] init_mem of 'harddrv' plugin device by virtual method
+-00000000000i[PLGIN] init_mem of 'keyboard' plugin device by virtual method
+-00000000000i[PLGIN] init_mem of 'serial' plugin device by virtual method
+-00000000000i[PLGIN] init_mem of 'parallel' plugin device by virtual method
+-00000000000i[PLGIN] init_mem of 'extfpuirq' plugin device by virtual method
+-00000000000i[PLGIN] init_mem of 'gameport' plugin device by virtual method
+-00000000000i[PLGIN] init_mem of 'speaker' plugin device by virtual method
+-00000000000i[PLGIN] init_mem of 'pci_ide' plugin device by virtual method
+-00000000000i[PLGIN] init_dev of 'harddrv' plugin device by virtual method
+-00000000000i[HD   ] Using boot sequence floppy, none, none
+-00000000000i[HD   ] Floppy boot signature check is enabled
+-00000000000i[PLGIN] init_dev of 'keyboard' plugin device by virtual method
+-00000000000i[KBD  ] will paste characters every 10 keyboard ticks
+-00000000000i[PLGIN] init_dev of 'serial' plugin device by virtual method
+-00000000000i[SER  ] com1 at 0x03f8 irq 4
+-00000000000i[PLGIN] init_dev of 'parallel' plugin device by virtual method
+-00000000000i[PAR  ] parallel port 1 at 0x0378 irq 7
+-00000000000i[PLGIN] init_dev of 'extfpuirq' plugin device by virtual method
+-00000000000i[PLGIN] init_dev of 'gameport' plugin device by virtual method
+-00000000000i[PLGIN] init_dev of 'speaker' plugin device by virtual method
+-00000000000i[SPEAK] Failed to open /dev/console: No such file or directory
+-00000000000i[SPEAK] Deactivating beep on console
+-00000000000i[PLGIN] init_dev of 'pci_ide' plugin device by virtual method
+-00000000000i[PCI  ] PIIX3 PCI IDE controller present at device 1, function 1
+-00000000000i[PLGIN] register state of 'harddrv' plugin device by virtual method
+-00000000000i[PLGIN] register state of 'keyboard' plugin device by virtual method
+-00000000000i[PLGIN] register state of 'serial' plugin device by virtual method
+-00000000000i[PLGIN] register state of 'parallel' plugin device by virtual method
+-00000000000i[PLGIN] register state of 'extfpuirq' plugin device by virtual method
+-00000000000i[PLGIN] register state of 'gameport' plugin device by virtual method
+-00000000000i[PLGIN] register state of 'speaker' plugin device by virtual method
+-00000000000i[PLGIN] register state of 'pci_ide' plugin device by virtual method
+-00000000000i[SYS  ] bx_pc_system_c::Reset(HARDWARE) called
+-00000000000i[CPU0 ] cpu hardware reset
+-00000000000i[APIC0] local apic in CPU 0 initializing
+-00000000000i[PLGIN] reset of 'harddrv' plugin device by virtual method
+-00000000000i[PLGIN] reset of 'keyboard' plugin device by virtual method
+-00000000000i[PLGIN] reset of 'serial' plugin device by virtual method
+-00000000000i[PLGIN] reset of 'parallel' plugin device by virtual method
+-00000000000i[PLGIN] reset of 'extfpuirq' plugin device by virtual method
+-00000000000i[PLGIN] reset of 'gameport' plugin device by virtual method
+-00000000000i[PLGIN] reset of 'speaker' plugin device by virtual method
+-00000000000i[PLGIN] reset of 'pci_ide' plugin device by virtual method
+-00000003302i[BIOS ] $Revision: 1.209 $ $Date: 2008/06/02 20:08:10 $
+-00000317069i[KBD  ] reset-disable command received
+-00000441261i[VBIOS] VGABios $Id: vgabios.c,v 1.67 2008/01/27 09:44:12 vruppert Exp $
+-00000441332i[VGA  ] VBE known Display Interface b0c0
+-00000441364i[VGA  ] VBE known Display Interface b0c4
+-00000444289i[VBIOS] VBE Bios $Id: vbe.c,v 1.60 2008/03/02 07:47:21 vruppert Exp $
+-00000600000i[WX   ] dimension update x=720 y=400 fontheight=16 fontwidth=9 bpp=8
+-00000772077i[BIOS ] Starting rombios32
+-00000772758i[BIOS ] ram_size=0x01000000
+-00000793162i[BIOS ] Found 1 cpu(s)
+-00000814996i[BIOS ] bios_table_addr: 0x000fb778 end=0x000fcc00
+-00000815024i[PCI  ] 440FX PMC write to PAM register 59 (TLB Flush)
+-00001142720i[PCI  ] 440FX PMC write to PAM register 59 (TLB Flush)
+-00001470647i[P2I  ] PCI IRQ routing: PIRQA# set to 0x0b
+-00001470668i[P2I  ] PCI IRQ routing: PIRQB# set to 0x09
+-00001470689i[P2I  ] PCI IRQ routing: PIRQC# set to 0x0b
+-00001470710i[P2I  ] PCI IRQ routing: PIRQD# set to 0x09
+-00001470720i[P2I  ] write: ELCR2 = 0x0a
+-00001471485i[BIOS ] PIIX3 init: elcr=00 0a
+-00001479003i[BIOS ] PCI: bus=0 devfn=0x00: vendor_id=0x8086 device_id=0x1237
+-00001481189i[BIOS ] PCI: bus=0 devfn=0x08: vendor_id=0x8086 device_id=0x7000
+-00001483214i[BIOS ] PCI: bus=0 devfn=0x09: vendor_id=0x8086 device_id=0x7010
+-00001483456i[PIDE ] new BM-DMA address: 0xc000
+-00001484160i[BIOS ] region 4: 0x0000c000
+-00001493477i[BIOS ] MP table addr=0x000fb850 MPC table addr=0x000fb780 size=0xd0
+-00001495093i[BIOS ] SMBIOS table addr=0x000fb860
+-00001495132i[PCI  ] 440FX PMC write to PAM register 59 (TLB Flush)
+-00001495976i[BIOS ] bios_table_cur_addr: 0x000fb964
+-00007693783i[BIOS ] Booting from 0000:7c00
+-00012879622i[BIOS ] int13_harddisk: function 41, unmapped device for ELDL=80
+-00012884399i[BIOS ] int13_harddisk: function 08, unmapped device for ELDL=80
+-00012889057i[BIOS ] *** int 15h function AX=00c0, BX=0000 not yet supported!
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2008-06-29 13:28:09 UTC (rev 8)
++++ trunk/kernel.c	2008-06-29 21:43:10 UTC (rev 9)
+@@ -41,6 +41,7 @@
+ #include <shell.h>
+ 
+ unsigned int *current_page_table;
++extern unsigned int end;
+ // multiboot_info_t *boot_informations;
+ asmlinkage void _start(struct multiboot_info *boot_info){
+ //     boot_informations = boot_info;    
+@@ -87,10 +88,10 @@
+      "movl $35, %ebx\n"
+      "int $80");
+     printf("\n");
++    printf("\nMemory (upper) amount-> %d kb \n", boot_info->mem_upper);
+     printf("----\n");
+     printf("Loading the shell..\n");
+-    printf("[+] Loading complete!!\n\n");
+-    printf("Boot info->mem_upper: %d\n", boot_info->mem_upper);
++    printf("[+] Loading complete!!\n\n");    
+     shell();
+     
+ /*    if ( (shell()) != NULL)
+
+Modified: trunk/kernel.lds
+===================================================================
+--- trunk/kernel.lds	2008-06-29 13:28:09 UTC (rev 8)
++++ trunk/kernel.lds	2008-06-29 21:43:10 UTC (rev 9)
+@@ -1,6 +1,6 @@
+ OUTPUT_FORMAT("binary")
+ OUTPUT_ARCH(i386)
+-ENTRY(_start)
++ENTRY(start)
+ 
+ SECTIONS
+ {
+@@ -9,4 +9,5 @@
+ 	.text : { *(.text) }
+ 	.rodata : { *(.rodata) }
+ 	.data : { *(.data) *(.bss) *(COMMON) }
++    
+ }
+
+Modified: trunk/kernel.map
+===================================================================
+--- trunk/kernel.map	2008-06-29 13:28:09 UTC (rev 8)
++++ trunk/kernel.map	2008-06-29 21:43:10 UTC (rev 9)
+@@ -28,7 +28,7 @@
+ 
+                 0x0000000000100000                . = 0x100000
+ 
+-.text           0x0000000000100000     0x3edb
++.text           0x0000000000100000     0x3ee9
+  *(.text)
+  .text          0x0000000000100000       0x1d bl.img
+                 0x0000000000100000                mboot
+@@ -161,116 +161,116 @@
+                 0x0000000000103afc                PIT_handler
+                 0x0000000000103b67                configure_PIT
+  *fill*         0x0000000000103bf6        0x2 00
+- .text          0x0000000000103bf8      0x2e3 shell/shell.o
+-                0x0000000000103c3e                info
+-                0x0000000000103dec                shell
++ .text          0x0000000000103bf8      0x2f1 shell/shell.o
++                0x0000000000103c4c                info
++                0x0000000000103dfa                shell
+                 0x0000000000103c36                poweroff
+                 0x0000000000103c1f                help
+                 0x0000000000103bf8                logo
+ 
+-.rodata         0x0000000000103edc      0x759
++.rodata         0x0000000000103eec      0x789
+  *(.rodata)
+- .rodata        0x0000000000103edc       0xd0 kernel.o
+- .rodata        0x0000000000103fac       0x70 io/video.o
+- .rodata        0x000000000010401c       0x10 drivers/keyboard.o
+- .rodata        0x000000000010402c        0x2 libc/stdio.o
+- .rodata        0x000000000010402e       0x3e hardware/cpuid.o
+- .rodata        0x000000000010406c       0x1d hardware/keyboard.o
+- *fill*         0x0000000000104089        0x3 00
+- .rodata        0x000000000010408c      0x269 processore/handlers.o
+- *fill*         0x00000000001042f5        0x3 00
+- .rodata        0x00000000001042f8       0x8a mem/fismem.o
+- *fill*         0x0000000000104382        0x2 00
+- .rodata        0x0000000000104384       0x23 mem/paging.o
+- *fill*         0x00000000001043a7        0x1 00
+- .rodata        0x00000000001043a8        0xc system/syscall.o
+- .rodata        0x00000000001043b4      0x281 shell/shell.o
++ .rodata        0x0000000000103eec       0xd9 kernel.o
++ .rodata        0x0000000000103fc5       0x70 io/video.o
++ .rodata        0x0000000000104035       0x10 drivers/keyboard.o
++ .rodata        0x0000000000104045        0x2 libc/stdio.o
++ .rodata        0x0000000000104047       0x3e hardware/cpuid.o
++ .rodata        0x0000000000104085       0x1d hardware/keyboard.o
++ *fill*         0x00000000001040a2        0x2 00
++ .rodata        0x00000000001040a4      0x269 processore/handlers.o
++ *fill*         0x000000000010430d        0x3 00
++ .rodata        0x0000000000104310       0x8a mem/fismem.o
++ *fill*         0x000000000010439a        0x2 00
++ .rodata        0x000000000010439c       0x23 mem/paging.o
++ *fill*         0x00000000001043bf        0x1 00
++ .rodata        0x00000000001043c0        0xc system/syscall.o
++ .rodata        0x00000000001043cc      0x2a9 shell/shell.o
+ 
+-.rel.dyn        0x0000000000104638        0x0 load address 0x0000000000104635
++.rel.dyn        0x0000000000104678        0x0 load address 0x0000000000104675
+  .rel.text      0x0000000000000000        0x0 bl.img
+ 
+-.data           0x0000000000104640    0x3376c
++.data           0x0000000000104680    0x3376c
+  *(.data)
+- .data          0x0000000000104640        0x0 kernel.o
+- .data          0x0000000000104640        0x9 io/video.o
+-                0x0000000000104644                VIDEO_PTR
+-                0x0000000000104648                VIDEO_CLR
+-                0x0000000000104640                VIDEO_MEM
+- *fill*         0x0000000000104649       0x17 00
+- .data          0x0000000000104660      0x2f8 drivers/keyboard.o
+- .data          0x0000000000104958        0x0 libc/ctype.o
+- .data          0x0000000000104958        0x0 libc/string.o
+- .data          0x0000000000104958        0x0 io/io.o
+- .data          0x0000000000104958        0x0 libc/stdio.o
+- .data          0x0000000000104958        0x0 hardware/cpuid.o
+- .data          0x0000000000104958        0x0 hardware/keyboard.o
+- .data          0x0000000000104958        0x0 processore/gdt.o
+- .data          0x0000000000104958        0x0 processore/idt.o
+- .data          0x0000000000104958        0x0 processore/handlers.o
+- .data          0x0000000000104958        0x0 hardware/pic8259.o
+- .data          0x0000000000104958        0xc mem/fismem.o
+-                0x0000000000104958                prova2
+-                0x000000000010495c                mem_info_root
+-                0x0000000000104960                mem_info
+- .data          0x0000000000104964        0x0 mem/paging.o
+- .data          0x0000000000104964        0x4 system/syscall.o
+-                0x0000000000104964                syscall_table
+- .data          0x0000000000104968        0x0 hardware/8253.o
+- .data          0x0000000000104968        0x0 shell/shell.o
++ .data          0x0000000000104680        0x0 kernel.o
++ .data          0x0000000000104680        0x9 io/video.o
++                0x0000000000104684                VIDEO_PTR
++                0x0000000000104688                VIDEO_CLR
++                0x0000000000104680                VIDEO_MEM
++ *fill*         0x0000000000104689       0x17 00
++ .data          0x00000000001046a0      0x2f8 drivers/keyboard.o
++ .data          0x0000000000104998        0x0 libc/ctype.o
++ .data          0x0000000000104998        0x0 libc/string.o
++ .data          0x0000000000104998        0x0 io/io.o
++ .data          0x0000000000104998        0x0 libc/stdio.o
++ .data          0x0000000000104998        0x0 hardware/cpuid.o
++ .data          0x0000000000104998        0x0 hardware/keyboard.o
++ .data          0x0000000000104998        0x0 processore/gdt.o
++ .data          0x0000000000104998        0x0 processore/idt.o
++ .data          0x0000000000104998        0x0 processore/handlers.o
++ .data          0x0000000000104998        0x0 hardware/pic8259.o
++ .data          0x0000000000104998        0xc mem/fismem.o
++                0x0000000000104998                prova2
++                0x000000000010499c                mem_info_root
++                0x00000000001049a0                mem_info
++ .data          0x00000000001049a4        0x0 mem/paging.o
++ .data          0x00000000001049a4        0x4 system/syscall.o
++                0x00000000001049a4                syscall_table
++ .data          0x00000000001049a8        0x0 hardware/8253.o
++ .data          0x00000000001049a8        0x0 shell/shell.o
+  *(.bss)
+- .bss           0x0000000000104968        0x0 kernel.o
+- .bss           0x0000000000104968       0x10 io/video.o
+-                0x000000000010496c                is_shifted_once
+-                0x0000000000104968                is_scrolled
+-                0x0000000000104974                resulthex
+-                0x0000000000104970                binlen
+- *fill*         0x0000000000104978        0x8 00
+- .bss           0x0000000000104980      0x434 drivers/keyboard.o
+- .bss           0x0000000000104db4        0x0 libc/ctype.o
+- .bss           0x0000000000104db4        0x4 libc/string.o
+- .bss           0x0000000000104db8        0x0 io/io.o
+- .bss           0x0000000000104db8        0x0 libc/stdio.o
+- .bss           0x0000000000104db8        0x0 hardware/cpuid.o
+- .bss           0x0000000000104db8        0x0 hardware/keyboard.o
+- .bss           0x0000000000104db8        0x0 processore/gdt.o
+- .bss           0x0000000000104db8        0x0 processore/idt.o
+- .bss           0x0000000000104db8        0x0 processore/handlers.o
+- .bss           0x0000000000104db8        0x0 hardware/pic8259.o
+- .bss           0x0000000000104db8        0x4 mem/fismem.o
+-                0x0000000000104db8                num_pages
+- .bss           0x0000000000104dbc        0x0 mem/paging.o
+- .bss           0x0000000000104dbc        0x0 system/syscall.o
+- .bss           0x0000000000104dbc        0x8 hardware/8253.o
+- .bss           0x0000000000104dc4        0x0 shell/shell.o
++ .bss           0x00000000001049a8        0x0 kernel.o
++ .bss           0x00000000001049a8       0x10 io/video.o
++                0x00000000001049ac                is_shifted_once
++                0x00000000001049a8                is_scrolled
++                0x00000000001049b4                resulthex
++                0x00000000001049b0                binlen
++ *fill*         0x00000000001049b8        0x8 00
++ .bss           0x00000000001049c0      0x434 drivers/keyboard.o
++ .bss           0x0000000000104df4        0x0 libc/ctype.o
++ .bss           0x0000000000104df4        0x4 libc/string.o
++ .bss           0x0000000000104df8        0x0 io/io.o
++ .bss           0x0000000000104df8        0x0 libc/stdio.o
++ .bss           0x0000000000104df8        0x0 hardware/cpuid.o
++ .bss           0x0000000000104df8        0x0 hardware/keyboard.o
++ .bss           0x0000000000104df8        0x0 processore/gdt.o
++ .bss           0x0000000000104df8        0x0 processore/idt.o
++ .bss           0x0000000000104df8        0x0 processore/handlers.o
++ .bss           0x0000000000104df8        0x0 hardware/pic8259.o
++ .bss           0x0000000000104df8        0x4 mem/fismem.o
++                0x0000000000104df8                num_pages
++ .bss           0x0000000000104dfc        0x0 mem/paging.o
++ .bss           0x0000000000104dfc        0x0 system/syscall.o
++ .bss           0x0000000000104dfc        0x8 hardware/8253.o
++ .bss           0x0000000000104e04        0x0 shell/shell.o
+  *(COMMON)
+- COMMON         0x0000000000104dc4       0x10 kernel.o
+-                0x0000000000104dc4                cpu_vendor
+-                0x0000000000104dd0                current_page_table
+- *fill*         0x0000000000104dd4        0xc 00
+- COMMON         0x0000000000104de0     0x233c io/video.o
+-                0x0000000000104de0                downbuffer
+-                0x0000000000105d80                upbuffer
+-                0x0000000000106d20                binvp
+- *fill*         0x000000000010711c        0x4 00
+- COMMON         0x0000000000107120    0x10004 processore/gdt.o
+-                0x0000000000107120                Gdt_Table
+-                0x0000000000117120                current_pos
+- *fill*         0x0000000000117124       0x1c 00
+- COMMON         0x0000000000117140      0xc00 processore/idt.o
+-                0x0000000000117140                IntTable
+-                0x0000000000117540                IDT_Table
+- COMMON         0x0000000000117d40       0x40 processore/handlers.o
+-                0x0000000000117d40                shareHandler
+- COMMON         0x0000000000117d80        0x2 hardware/pic8259.o
+-                0x0000000000117d80                slave_cur_mask
+-                0x0000000000117d81                master_cur_mask
+- *fill*         0x0000000000117d82       0x1e 00
+- COMMON         0x0000000000117da0    0x20008 mem/fismem.o
+-                0x0000000000117da0                mem_bitmap
+-                0x0000000000137da0                tot_mem
+-                0x0000000000137da4                bmp_elements
+- COMMON         0x0000000000137da8        0x4 mem/paging.o
+-                0x0000000000137da8                current_page_dir
++ COMMON         0x0000000000104e04       0x10 kernel.o
++                0x0000000000104e04                cpu_vendor
++                0x0000000000104e10                current_page_table
++ *fill*         0x0000000000104e14        0xc 00
++ COMMON         0x0000000000104e20     0x233c io/video.o
++                0x0000000000104e20                downbuffer
++                0x0000000000105dc0                upbuffer
++                0x0000000000106d60                binvp
++ *fill*         0x000000000010715c        0x4 00
++ COMMON         0x0000000000107160    0x10004 processore/gdt.o
++                0x0000000000107160                Gdt_Table
++                0x0000000000117160                current_pos
++ *fill*         0x0000000000117164       0x1c 00
++ COMMON         0x0000000000117180      0xc00 processore/idt.o
++                0x0000000000117180                IntTable
++                0x0000000000117580                IDT_Table
++ COMMON         0x0000000000117d80       0x40 processore/handlers.o
++                0x0000000000117d80                shareHandler
++ COMMON         0x0000000000117dc0        0x2 hardware/pic8259.o
++                0x0000000000117dc0                slave_cur_mask
++                0x0000000000117dc1                master_cur_mask
++ *fill*         0x0000000000117dc2       0x1e 00
++ COMMON         0x0000000000117de0    0x20008 mem/fismem.o
++                0x0000000000117de0                mem_bitmap
++                0x0000000000137de0                tot_mem
++                0x0000000000137de4                bmp_elements
++ COMMON         0x0000000000137de8        0x4 mem/paging.o
++                0x0000000000137de8                current_page_dir
+ LOAD bl.img
+ LOAD kernel.o
+ LOAD io/video.o
+
+Deleted: trunk/parport.out
+===================================================================
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2008-06-29 13:28:09 UTC (rev 8)
++++ trunk/shell/shell.c	2008-06-29 21:43:10 UTC (rev 9)
+@@ -55,9 +55,12 @@
+ 
+ void poweroff()
+ {
+-	asm(	"movl %0, %%eax\n"
++	/*asm(	"movl %0, %%eax\n"
+ 		"int $0xff\n"
+-		: : "g"(1)); // valore di enum
++		: : "g"(1)); // valore di enum*/
++    asm("hlt");
++    printf("E' ora possibile spegnere il computer\n");
++    while(1);
+ }
+ 
+ void info()
+
+
+

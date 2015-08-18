@@ -1,0 +1,462 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r48 - in trunk: . libc processore shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-January/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r48%20-%20in%20trunk%3A%20.%20libc%20processore%20shell&In-Reply-To=%3C200901181839.n0IIdP78021179%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000047.html">
+   <LINK REL="Next"  HREF="000049.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r48 - in trunk: . libc processore shell</H1>
+    <B>shainer at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r48%20-%20in%20trunk%3A%20.%20libc%20processore%20shell&In-Reply-To=%3C200901181839.n0IIdP78021179%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r48 - in trunk: . libc processore shell">shainer at mail.berlios.de
+       </A><BR>
+    <I>Sun Jan 18 19:39:25 CET 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000047.html">[Dreamos-dev] r47 - in trunk: . hardware include include/misc mem	misc processore shell
+</A></li>
+        <LI>Next message: <A HREF="000049.html">[Dreamos-dev] r49 - in trunk: . hardware include include/lng	include/mem mem shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#48">[ date ]</a>
+              <a href="thread.html#48">[ thread ]</a>
+              <a href="subject.html#48">[ subject ]</a>
+              <a href="author.html#48">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: shainer
+Date: 2009-01-18 19:39:25 +0100 (Sun, 18 Jan 2009)
+New Revision: 48
+
+Added:
+   trunk/README.txt
+Modified:
+   trunk/bl.img
+   trunk/dreamos.img
+   trunk/libc/stdio.c
+   trunk/processore/handlers.c
+   trunk/processore/idt.c
+   trunk/shell/shell.c
+Log:
+Aggiunto README con istruzioni per compilare/eseguire l'OS.
+Possibilit?\195?\160 di limitare il numero di caratteri/cifre presi in input con scanf.
+Di conseguenza, adesso inserire un comando della shell pi?\195?\185 grande di 255 caratteri non causa problemi.
+Pulizia codice in handlers.c
+Per ogni eccezione con codice di errore, la macro ?\195?\168 diventata EXCEPTION_EC.
+
+
+
+Added: trunk/README.txt
+===================================================================
+--- trunk/README.txt	2009-01-17 23:48:29 UTC (rev 47)
++++ trunk/README.txt	2009-01-18 18:39:25 UTC (rev 48)
+@@ -0,0 +1,133 @@
++---------------------------
++ DreamOS
++---------------------------
++
++1. Cosa &#232; DreamOS
++	a. Cosa NON &#232; DreamOS
++2. Installare DreamOS
++	a. Requisiti necessari
++	b. Scaricare da SVN
++	c. Compilare DreamOS
++	d. Mettere su Floppy (opzionale)
++	e. Fare la entry per GRUB (opzionale)
++3. Usare DreamOS
++	a. L'avvio
++	b. Uso della CLI
++4. Feedback
++	a. Come segnalare bug
++	b. Come mandare un feedback
++
++
++- 1 -----------------------
++--- Cosa &#232; DreamOS --------
++
++Il DreamOS &#232; un sistema operativo open source rilasciato sotto licenza GPLv3 sviluppato partendo da 0 puramente per scopi didattici o comunque per capire come funzionano i sistemi operativi.
++Il team di sviluppo attuale &#232; composto dagli sviluppatori
++
++Ivan - Finarfin (<A HREF="http://earyrian.elenhost.org">http://earyrian.elenhost.org</A>)
++Lisa - Shainer (<A HREF="http://shandril.altervista.org">http://shandril.altervista.org</A>)
++
++e dai contributori:
++
++Osiris
++Celeron
++Hamcha
++m0nt0.
++
++	- a -- Cosa NON &#232; DreamOS -
++
++DreamOS non &#232; un sistema operativo completo e pronto per essere utilizzato per l'uso quotidiano, non &#232; basato su Kernel esistenti e non &#232; supportato/sponsorizzato da alcuna societ&#224;.
++
++- 2 -----------------------
++--- Installare DreamOS ----
++
++Per Installazione s'intende compilare e mettere DreamOS su un supporto per l'avvio, visto che attualmente DreamOS non &#232; predisposto per installazioni vere e proprie.
++
++	- a - Requisiti necessari -
++
++DreamOS &#232; un sistema operativo sviluppato per funzionare su cpu con architettura Intel x86/IA32 (i386/i686) e attualmente &#232; sviluppato in modo da partire da floppy anche se, utilizzando GRUB, si pu&#242; farlo partire avendo l'immagine compilata sull'Hard-disk.
++DreamOS pu&#242; essere anche emulato usando Software come qEmu o Bochs.
++
++Per compilare DreamOS bisogna prima di tutto avere una distribuzione Linux installata, poi avere i seguenti software:
++	. Nasm
++	. GCC
++	. make
++
++Opzionalmente un emulatore di cpu se non si vuole provare il sistema operativo su hardware reale e SVN se volete scaricare le versioni pi&#249; recenti da repository.
++
++	- b -- Scaricare da SVN ---
++
++Potete scaricare i sorgenti di DreamOS da SVN attraverso il repository <A HREF="svn://svn.berlios.de/dreamos/trunk">svn://svn.berlios.de/dreamos/trunk</A>
++Per i meno pratici il comando da eseguire &#232;: (assicuratevi di avere il pacchetto SVN installato)
++	svn checkout <A HREF="svn://svn.berlios.de/dreamos/trunk">svn://svn.berlios.de/dreamos/trunk</A>
++
++Alla fine del download dovreste avere una cartella trunk/ con tutti i sorgenti al suo interno
++
++	- c -- Compilare DreamOS --
++
++Posizionatevi dentro la cartella con i sorgenti ed eseguite il comando:
++	sh start sh
++Se avete qemu installato vi partira' in automatico, se invece avete bochs, al termine della compilazione con lo script start.sh dovete dare:
++bochs
++
++	- d -- Mettere su floppy -- (Opzionale)
++
++Se avete un lettore floppy e volete provare l'ebrezza di usarlo su una macchina reale, allora in questo caso dopo avre lanciato sempre sh start.sh, andate dentro boot/ e date:
++	dd if=grub.img of=/dev/fd0
++E riavviate la macchina con il floppy inserito.
++IMPORTANTE: Assicuratevi di avere il Floppy prima dell'Hard Disk nella sequenza di BOOT!
++
++	- e - Fare la entry per GRUB (Opzionale)
++
++Se volete provare dreamos su pc reale e non avete il floppy potete farlo anche avendo grub come Boot Manager, riavviate il pc, quando si presenta grub premete il tasto c e inserite dei comandi tipo questi:
++root (hdx, y)
++kernel /path/al/file/dreamos.img
++boot
++
++Se invece volete creare una entry apposita su Grub potete farlo nel seguente modo:
++ Aprite il file /boot/grub/grub.conf e aggiugente alla fine le seguenti righe:
++	title DreamOS 0.1
++	root (hd0,0)
++	kernel /path/al/file/dreamos.img
++	boot
++Naturalmenet modificando /path/al/file/dreamos.img con la path al file dreamos.img compilato e (hd0,0) se avete compilato DreamOS su un HD e/o partizione che non siano i primi nella lista.
++
++- 3 -----------------------
++---- Usare DreamOS --------
++
++L'Interattivit&#224; di DreamOS al momento si ferma ad una CLI (Command Line Interface, Interfaccia a linea di comando) con un numero limitato di comandi utilizzabili, la maggior parte a scopo di test.
++
++	- a ------- L'Avvio -------
++
++L'avvio di DreamOS contiene il loading di tutte le funzioni necessarie al funzionamento del S.O. e della CLI, alla fine dell'avvio verr&#224; chiesto un Username che verr&#224; usato in seguito nella CLI.
++
++	- b ---- Uso della CLI ----
++
++La CLI di DreamOS ha una struttura molto comune a quella *NIX
++	Username~# Comando inserito
++Dove Username &#232; l'username inserito durante l'avvio.
++Si pu&#242; avere una lista di comandi disponibili attraverso il comando:
++	help
++Inoltre sono presenti alcuni comandi che rimarcano la controparte *NIX come uname (uname --help) o echo.
++
++- 4 -----------------------
++---- Feedback -------------
++
++	- a -- Come segnalare Bug -
++	
++Per segnalare bug riscontrati durante l'uso di DreamOS bisogna segnalarli usando il modulo di berliOS presente alla pagina:
++	<A HREF="http://developer.berlios.de/bugs/?group_id=9715">http://developer.berlios.de/bugs/?group_id=9715</A>
++Oppure potete segnalarlo sul forum osdev.it, precisamente:
++	<A HREF="http://forum.osdev.it/viewforum.php?f=7">http://forum.osdev.it/viewforum.php?f=7</A>
++Ovviamente controllate che il bug riscontrato non sia stato gia segnalato!
++
++	- b - Come mandare un feedback
++
++Potete mandare un resoconto o comunque raccontare la vostra esperienza con DreamOS sul forum di osdev.it:
++	<A HREF="http://forum.osdev.it/">http://forum.osdev.it/</A>
++
++	
++
++DreamOS 2003-2008 by finarfin/shainer
++<A HREF="http://www.dreamos.org">http://www.dreamos.org</A>
++<A HREF="http://www.osdev.it">http://www.osdev.it</A>
+
+Modified: trunk/bl.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/libc/stdio.c
+===================================================================
+--- trunk/libc/stdio.c	2009-01-17 23:48:29 UTC (rev 47)
++++ trunk/libc/stdio.c	2009-01-18 18:39:25 UTC (rev 48)
+@@ -200,6 +200,8 @@
+     va_list scan;
+     char *input;
+     int count=0;
++    char maxchars[5] = {0};
++    int i=0, nmax=0;
+ 
+     char *s_ptr;
+     int *i_ptr;
+@@ -212,18 +214,35 @@
+ 	    input = gets();
+             count += strlen (input);
+ 
+-	    switch (*++format) {
++            if (isdigit(*++format)) {
++              while (isdigit(*format)) {
++                maxchars[i++] = *format;
++                format++;
++              }
++              maxchars[i] = '\0';
++              nmax = atoi(maxchars);
++            }
++
++	    switch (*format) {
+ 	    case 's':
+ 		s_ptr = va_arg (scan, char *);
+-		s_ptr = strncpy (s_ptr, input, strlen (input));
++
++                if (nmax == 0 || strlen(input) &lt;= nmax)
++		  s_ptr = strncpy (s_ptr, input, strlen (input));
++                else
++                  s_ptr = strncpy (s_ptr, input, nmax);
+ 		break;
+ 
+ 	    case 'd':
+ 		i_ptr = va_arg (scan, int *);
+-		*i_ptr = atoi (input);
++
++                if (nmax != 0 &amp;&amp; strlen(input) &gt; nmax)
++                  input[nmax] = '\0';
++		*i_ptr = atoi(input);
+                 break;
+ 	    }
+ 	}
+     }
++    va_end (scan);
+     return count;
+ }
+
+Modified: trunk/processore/handlers.c
+===================================================================
+--- trunk/processore/handlers.c	2009-01-17 23:48:29 UTC (rev 47)
++++ trunk/processore/handlers.c	2009-01-18 18:39:25 UTC (rev 48)
+@@ -69,32 +69,95 @@
+   *
+   * Questa funzione gestira a livello centralizzato le varie eccezione
+   */
+-void _globalException(int n, int error){
+-	if(n==DIVIDE_ERROR)_kputs(&quot;Divide Error\n&quot;);
+-	else if(n==DEBUG_EXC) _kputs(&quot;Debug Exception\n&quot;);
+-	else if(n==NMI_INTERRUPT) _kputs(&quot;Nmi Exception\n&quot;);
+-	else if(n==OVERFLOW) _kputs(&quot;OverFlow Exception\n&quot;);
+-	else if(n==BOUND_RANGE_EXCEED) _kputs(&quot;Bound Exception\n&quot;);
+-	else if(n==DEV_NOT_AVL) _kputs(&quot;Device Not Available Exception\n&quot;);
+-	else if(n==COPROC_SEG_OVERRUN) _kputs(&quot;CoProcessor Segment Overrun\n&quot;);
+-	else if(n==BREAKPOINT) _kputs(&quot;BreakPoint\n&quot;);
+-	else if(n==INVALID_TSS) _kputs(&quot;Invalid TSS\n&quot;);
+-	else if(n==SEGMENT_NOT_PRESENT) _kputs(&quot;Segment Not Present\n&quot;);
+-	else if(n==STACK_SEGMENT_FAULT) _kputs(&quot;Stack Segment Fault Exception\n&quot;);
+-	else if(n==GENERAL_PROTECTION) _kputs(&quot;General Protection Exception\n&quot;);
+-    else if(n==INVALID_OPCODE) _kputs(&quot;Invalid Opcode Exception\n&quot;);
+-    else if(n==BOUND_RANGE_EXCEED) _kputs(&quot;Bound exception\n&quot;);
+-    else if(n==PAGE_FAULT) page_fault_handler (error);    
+-    else if(n==INT_RSV) _kputs(&quot;Intel Reserved\n&quot;);
+-    else if(n==FLOATING_POINT_ERR) _kputs(&quot;Floating Point Exception\n&quot;);
+-    else if(n==ALIGNMENT_CHECK) _kputs(&quot;Alignment Check Exception\n&quot;);             
+-    else if(n==MACHINE_CHECK) _kputs(&quot;Machine Check Exception\n&quot;);
+-    else if(n==DOUBLE_FAULT) {
+-        _kputs(&quot;DoubleFault Exception\n&quot;);
+-        _kputs(&quot;Ottimo direi\n&quot;);
+-    }
+-    else if(n==SIMD_FP_EXC) _kputs(&quot;Simd Floating Point Exception\n&quot;);
+-    else _kputs(&quot;Cose non buone avvengono\n&quot;);
++void _globalException(int n, int error)
++{
++  switch (n) {
++
++    case DIVIDE_ERROR:
++    _kputs(&quot;Divide Error\n&quot;);
++    break;
++
++    case DEBUG_EXC:
++    _kputs(&quot;Debug Exception\n&quot;);
++    break;
++
++    case NMI_INTERRUPT:
++    _kputs(&quot;NMI Exception\n&quot;);
++    break;
++
++    case OVERFLOW:
++    _kputs(&quot;OverFlow Exception\n&quot;);
++    break;
++	 
++    case BOUND_RANGE_EXCEED:
++    _kputs(&quot;Bound Exception\n&quot;);
++    break;
++
++    case DEV_NOT_AVL:
++    _kputs(&quot;Device Not Available Exception\n&quot;);
++    break;
++
++    case COPROC_SEG_OVERRUN:
++    _kputs(&quot;CoProcessor Segment Overrun\n&quot;);
++    break;
++
++    case BREAKPOINT:
++    _kputs(&quot;BreakPoint\n&quot;);
++    break;
++
++    case INVALID_TSS:
++    _kputs(&quot;Invalid TSS\n&quot;);
++    break;
++
++    case SEGMENT_NOT_PRESENT:
++    _kputs(&quot;Segment Not Present\n&quot;);
++    break;
++
++    case STACK_SEGMENT_FAULT:
++    _kputs(&quot;Stack Segment Fault Exception\n&quot;);
++    break;
++
++    case GENERAL_PROTECTION:
++    _kputs(&quot;General Protection Exception\n&quot;);
++    break;
++
++    case INVALID_OPCODE:
++    _kputs(&quot;Invalid Opcode Exception\n&quot;);
++    break;
++
++    case PAGE_FAULT:
++    page_fault_handler (error);
++    break;
++
++    case INT_RSV:
++    _kputs(&quot;Intel Reserved\n&quot;);
++    break;
++
++    case FLOATING_POINT_ERR:
++    _kputs(&quot;Floating Point Exception\n&quot;);
++    break;
++
++    case ALIGNMENT_CHECK:
++    _kputs(&quot;Alignment Check Exception\n&quot;);
++    break;
++
++    case MACHINE_CHECK:
++    _kputs(&quot;Machine Check Exception\n&quot;);
++    break;
++
++    case DOUBLE_FAULT:
++    _kputs(&quot;Double Fault Exception\n&quot;);
++    break;
++
++    case SIMD_FP_EXC:
++    _kputs (&quot;Simd Floating Point Exception\n&quot;);
++    break;
++
++    default:
++    _kputs (&quot;Unknown exception\n&quot;);
++    break;
++
++  }
+ }
+ 
+ void _irqinterrupt(){
+
+Modified: trunk/processore/idt.c
+===================================================================
+--- trunk/processore/idt.c	2009-01-17 23:48:29 UTC (rev 47)
++++ trunk/processore/idt.c	2009-01-18 18:39:25 UTC (rev 48)
+@@ -36,17 +36,17 @@
+ EXCEPTION(5);
+ EXCEPTION(6);
+ EXCEPTION(7);
+-EXCEPTION(8);
++EXCEPTION_EC(8);
+ EXCEPTION(9);
+-EXCEPTION(10);
+-EXCEPTION(11);
+-EXCEPTION(12);
+-EXCEPTION(13);
++EXCEPTION_EC(10);
++EXCEPTION_EC(11);
++EXCEPTION_EC(12);
++EXCEPTION_EC(13);
+ EXCEPTION_EC(14);
+ // PAGEFAULT();
+ EXCEPTION(15);
+ EXCEPTION(16);
+-EXCEPTION(17);
++EXCEPTION_EC(17);
+ EXCEPTION(18);
+ EXCEPTION(19);
+ SYSCALL(80);
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-01-17 23:48:29 UTC (rev 47)
++++ trunk/shell/shell.c	2009-01-18 18:39:25 UTC (rev 48)
+@@ -75,7 +75,7 @@
+ 	memset(user, 0, strlen(user));
+ 
+ 	printf(&quot;[?] Enter your username: &quot;);
+-	scanf (&quot;%s&quot;,user);
++	scanf (&quot;%23s&quot;,user);
+ 
+ 	while (!strlen(user))
+ 	{		
+@@ -94,7 +94,7 @@
+ 	for (;;)
+ 	{
+ 	    printf(&quot;%s~# &quot;,user);
+-	    scanf(&quot;%s&quot;,cmd);
++	    scanf(&quot;%255s&quot;,cmd);
+         
+             options (cmd);
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000047.html">[Dreamos-dev] r47 - in trunk: . hardware include include/misc mem	misc processore shell
+</A></li>
+	<LI>Next message: <A HREF="000049.html">[Dreamos-dev] r49 - in trunk: . hardware include include/lng	include/mem mem shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#48">[ date ]</a>
+              <a href="thread.html#48">[ thread ]</a>
+              <a href="subject.html#48">[ subject ]</a>
+              <a href="author.html#48">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

@@ -1,0 +1,195 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r144 - in trunk: . fs include include/fs
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-October/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r144%20-%20in%20trunk%3A%20.%20fs%20include%20include/fs&In-Reply-To=%3C200910091943.n99JhgBJ007880%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000145.html">
+   <LINK REL="Next"  HREF="000147.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r144 - in trunk: . fs include include/fs</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r144%20-%20in%20trunk%3A%20.%20fs%20include%20include/fs&In-Reply-To=%3C200910091943.n99JhgBJ007880%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r144 - in trunk: . fs include include/fs">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Fri Oct  9 21:43:42 CEST 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000145.html">[Dreamos-dev] r143 - in trunk: . boot fs shell
+</A></li>
+        <LI>Next message: <A HREF="000147.html">[Dreamos-dev] r145 - in trunk: . fs include/fs include/libc shell	sys
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#146">[ date ]</a>
+              <a href="thread.html#146">[ thread ]</a>
+              <a href="subject.html#146">[ subject ]</a>
+              <a href="author.html#146">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-10-09 21:43:40 +0200 (Fri, 09 Oct 2009)
+New Revision: 144
+
+Modified:
+   trunk/bl.img
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/fs/initrd.c
+   trunk/fs/vfs.c
+   trunk/include/fs/initrd.h
+   trunk/include/fs/vfs.h
+   trunk/include/version.h
+Log:
+Aggiunta anche una funzione dummy_open.
+La open ora chiama la funzione open specifica del fs se presente
+Aggiornato numero versione
+
+
+Modified: trunk/bl.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2009-10-06 16:47:22 UTC (rev 143)
++++ trunk/fs/fcntl.c	2009-10-09 19:43:40 UTC (rev 144)
+@@ -23,10 +23,12 @@
+ 
+ int cur_fd;
+ file_descriptor_t fd_list[_SC_OPEN_MAX];
+-int  open(const char *path, int flags,  ...){
++struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
++
++int  open(const char *path, int oflags,  ...){
+ 	int prova;
+ 	va_list ap;
+-	va_start(ap, flags);
++	va_start(ap, oflags);
+ 	
+ 	prova = va_arg(ap, int);
+ 	printf(&quot;Prova vale: %d e il path: %s e cur_fd: %d\n&quot;, prova,path,cur_fd);
+@@ -34,6 +36,8 @@
+ 	else {		
+ 		fd_list[cur_fd].mountpoint_id = get_mountpoint_id(path);
+ 		printf(&quot;Mpoint id: %d\n&quot;, fd_list[cur_fd].mountpoint_id);
++		if(mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open != NULL)
++			mountpoint_list[get_mountpoint_id(path)].operations.open(path, 0);		
+ 		cur_fd++;
+ 	}	
+ 	va_end(ap);
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2009-10-06 16:47:22 UTC (rev 143)
++++ trunk/fs/initrd.c	2009-10-09 19:43:40 UTC (rev 144)
+@@ -28,3 +28,7 @@
+ 	printf(&quot;Sono una dummy_opendir, ti piaccio? path: %s\n&quot;, path);
+ 	return NULL;
+ }
++
++int dummy_open(char *path, int flags){
++	printf(&quot;Hi, i'm a dummy open. And i do nothing!!!\n&quot;);
++}
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2009-10-06 16:47:22 UTC (rev 143)
++++ trunk/fs/vfs.c	2009-10-09 19:43:40 UTC (rev 144)
+@@ -51,10 +51,12 @@
+  		mountpoint_list[i].gid = 0;
+  		mountpoint_list[i].pmask = 0;
+  		mountpoint_list[i].dev_id = 0;
+-	 	mountpoint_list[i].start_address = 0;
+-	 	//mountpoint_list[0].dir_op.opendir_f = NULL;	
++	 	mountpoint_list[i].start_address = 0;	 	
+ 	 	mountpoint_list[i].dir_op.opendir_f = fake_opendir;
+-	 	//mountpoint_list[i].operations = NULL;
++		mountpoint_list[i].operations.open = NULL;
++		mountpoint_list[i].operations.close = NULL;
++		mountpoint_list[i].operations.read = NULL;
++		mountpoint_list[i].operations.write = NULL;
+  		i++;
+ 	}
+ 	
+@@ -65,6 +67,7 @@
+  	mountpoint_list[0].dev_id = 0;
+  	mountpoint_list[0].start_address = 0;
+  	mountpoint_list[0].dir_op.opendir_f = dummy_opendir;
++ 	mountpoint_list[0].operations.open = dummy_open;
+  	//mountpoint_list[0].operations = kmalloc(sizeof(struct super_node_operations));
+ 
+ 	strcpy(mountpoint_list[1].mountpoint,&quot;/dev&quot;); 	
+
+Modified: trunk/include/fs/initrd.h
+===================================================================
+--- trunk/include/fs/initrd.h	2009-10-06 16:47:22 UTC (rev 143)
++++ trunk/include/fs/initrd.h	2009-10-09 19:43:40 UTC (rev 144)
+@@ -36,4 +36,5 @@
+ 
+ void dummy();
+ DIR *dummy_opendir(const char *);
++int dummy_open(char *, int );
+ #endif
+
+Modified: trunk/include/fs/vfs.h
+===================================================================
+--- trunk/include/fs/vfs.h	2009-10-06 16:47:22 UTC (rev 143)
++++ trunk/include/fs/vfs.h	2009-10-09 19:43:40 UTC (rev 144)
+@@ -37,7 +37,7 @@
+ 
+ struct super_node_operations {
+ 	/*Qui vanno i puntatori alle funzioni sul supernode*/
+-	void (*open)(char *, int );
++	void (*open)(const char *, int );
+ 	void (*close)(int);
+ 	int (*read)(int, void*, size_t);
+ 	int (*write)(int, void*, size_t);
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-10-06 16:47:22 UTC (rev 143)
++++ trunk/include/version.h	2009-10-09 19:43:40 UTC (rev 144)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL &quot;2.0&quot;
+ #define EXTRAVERSION &quot;-trunk&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r138&quot;
++#define REV_NUM &quot;-r139&quot;
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000145.html">[Dreamos-dev] r143 - in trunk: . boot fs shell
+</A></li>
+	<LI>Next message: <A HREF="000147.html">[Dreamos-dev] r145 - in trunk: . fs include/fs include/libc shell	sys
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#146">[ date ]</a>
+              <a href="thread.html#146">[ thread ]</a>
+              <a href="subject.html#146">[ subject ]</a>
+              <a href="author.html#146">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

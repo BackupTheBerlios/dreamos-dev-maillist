@@ -1,0 +1,180 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r197 - in trunk: . shell sys utils
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-February/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r197%20-%20in%20trunk%3A%20.%20shell%20sys%20utils&In-Reply-To=%3C201002112217.o1BMHdMn024260%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000198.html">
+   <LINK REL="Next"  HREF="000200.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r197 - in trunk: . shell sys utils</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r197%20-%20in%20trunk%3A%20.%20shell%20sys%20utils&In-Reply-To=%3C201002112217.o1BMHdMn024260%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r197 - in trunk: . shell sys utils">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Thu Feb 11 23:17:39 CET 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000198.html">[Dreamos-dev] r196 - in trunk: . fs shell sys
+</A></li>
+        <LI>Next message: <A HREF="000200.html">[Dreamos-dev] r198 - in trunk: . fs include/fs
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#199">[ date ]</a>
+              <a href="thread.html#199">[ thread ]</a>
+              <a href="subject.html#199">[ subject ]</a>
+              <a href="author.html#199">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-02-11 23:17:39 +0100 (Thu, 11 Feb 2010)
+New Revision: 197
+
+Modified:
+   trunk/dreamos.img
+   trunk/initfs
+   trunk/shell/commands.c
+   trunk/sys/dirent.c
+   trunk/utils/initfscp.c
+Log:
+Aggiornata stampa help di intifscp.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/initfs
+===================================================================
+(Binary files differ)
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-02-07 21:41:55 UTC (rev 196)
++++ trunk/shell/commands.c	2010-02-11 22:17:39 UTC (rev 197)
+@@ -351,7 +351,7 @@
+ 	
+ }
+ 
+-void ls ( ) {
++void ls() {
+ 	int i=0, j=0;
+ 	//int flag = 0;
+ 	DIR *dirp;
+@@ -363,6 +363,12 @@
+ 	//if(if argc &gt; 1 &amp;&amp; strcmp(argv[1], &quot;-l&quot;) == 0) flag =1;
+ 	dirp = opendir(current_user.cur_path);
+ 	if(dirp!=NULL){
++		/*while(i&lt;j){
++			if(strcmp(mountpoint_list[i].mountpoint, current_user.cur_path)){
++				
++			}
++			i++;
++		}*/
+ 		struct dirent* cur_dir_entry;
+ 		cur_dir_entry = readdir(dirp);
+ 		while(cur_dir_entry!=NULL){			
+
+Modified: trunk/sys/dirent.c
+===================================================================
+--- trunk/sys/dirent.c	2010-02-07 21:41:55 UTC (rev 196)
++++ trunk/sys/dirent.c	2010-02-11 22:17:39 UTC (rev 197)
+@@ -25,6 +25,13 @@
+ 
+ struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
+ 
++/**
++  * @author Ivan Gualandri
++  * @param char* path percorso del file da aprire
++  * @return DIR* puntatore alla cartella aperta se esiste, NULL altrimenti
++  *
++  * Dato un path contenente una cartella viene aperta se presente, e si torna il puntatore a DIR*
++  */
+ DIR *opendir(const char *path){
+ 	int mpoint_id = 0;
+ 	char* rel_path;	
+@@ -45,9 +52,18 @@
+ 	return NULL;
+ }
+ 
++/**
++  * @author Ivan Gualandri
++  * @param DIR* dirp la cartella aperta
++  * @return struct dirent Struttura dati contenente il prossimo elemento della cartella. 
++  * 
++  * ad ogni chiamata su dirp torna il successivo elemento presente in quel path. Se non ve ne sono piu torna NULL
++  *  
++  */
+ struct dirent *readdir(DIR *dirp){
+ 	//printf(&quot;Handle: %d\n&quot;, dirp-&gt;handle);
+-	if(mountpoint_list[dirp-&gt;handle].dir_op.readdir_f!=NULL){
++	if(dirp == NULL) return NULL;
++	else if(mountpoint_list[dirp-&gt;handle].dir_op.readdir_f!=NULL){
+ 		//printf(&quot;Trovata readdir\n&quot;);
+ 		return mountpoint_list[dirp-&gt;handle].dir_op.readdir_f(dirp);
+ 	}
+@@ -55,6 +71,12 @@
+ 	return NULL;
+ }
+ 
++/**
++  * @author Ivan Gualandri
++  * @param DIR* dirp
++  *
++  * Dato un puntatore a DIR lo chiude liberando le strutture dati.
++  */
+ int closedir(DIR *dirp){
+ 	//printf(&quot;Closing directory\n&quot;);
+ 	free(dirp);
+
+Modified: trunk/utils/initfscp.c
+===================================================================
+--- trunk/utils/initfscp.c	2010-02-07 21:41:55 UTC (rev 196)
++++ trunk/utils/initfscp.c	2010-02-11 22:17:39 UTC (rev 197)
+@@ -23,7 +23,11 @@
+ 
+ int main(int argc, char* argv[]){
+ 	unsigned int offset;
+-	if(argc &lt;= 1) usage(argv[0]);
++	if(argc &lt;= 1) {
++		if(argv[0][0] == '.')
++		version(argv[0]+2);
++		usage(argv[0]);		
++	}
+ 	else {
+ 		if(!strcmp(argv[1], &quot;--version&quot;) || !strcmp(argv[1], &quot;-v&quot;)) version(argv[0]+2);
+ 		else if(!strcmp(argv[1], &quot;--help&quot;) || !strcmp(argv[1], &quot;-h&quot;)) usage(argv[0]);
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000198.html">[Dreamos-dev] r196 - in trunk: . fs shell sys
+</A></li>
+	<LI>Next message: <A HREF="000200.html">[Dreamos-dev] r198 - in trunk: . fs include/fs
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#199">[ date ]</a>
+              <a href="thread.html#199">[ thread ]</a>
+              <a href="subject.html#199">[ subject ]</a>
+              <a href="author.html#199">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

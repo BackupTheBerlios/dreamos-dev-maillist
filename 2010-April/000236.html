@@ -1,0 +1,146 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r233 - in trunk: . mem
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-April/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r233%20-%20in%20trunk%3A%20.%20mem&In-Reply-To=%3C201004181743.o3IHhrCr028686%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000235.html">
+   <LINK REL="Next"  HREF="000237.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r233 - in trunk: . mem</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r233%20-%20in%20trunk%3A%20.%20mem&In-Reply-To=%3C201004181743.o3IHhrCr028686%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r233 - in trunk: . mem">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun Apr 18 19:43:53 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000235.html">[Dreamos-dev] r232 - in trunk: . hardware mem processore
+</A></li>
+        <LI>Next message: <A HREF="000237.html">[Dreamos-dev] r234 - in trunk: . fs mem shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#236">[ date ]</a>
+              <a href="thread.html#236">[ thread ]</a>
+              <a href="subject.html#236">[ subject ]</a>
+              <a href="author.html#236">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-04-18 19:43:48 +0200 (Sun, 18 Apr 2010)
+New Revision: 233
+
+Modified:
+   trunk/dreamos.img
+   trunk/mem/fismem.c
+   trunk/mem/paging.c
+Log:
+Modifiche minori
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/mem/fismem.c
+===================================================================
+--- trunk/mem/fismem.c	2010-04-18 14:35:39 UTC (rev 232)
++++ trunk/mem/fismem.c	2010-04-18 17:43:48 UTC (rev 233)
+@@ -44,7 +44,7 @@
+ //     int remainder=0;
+     mem_info = mem_info_root;
+     while(i&lt;BITMAP_SIZE){
+-        if(i&lt;32)mem_bitmap.mem_map[i] = 0xFFFFFFFF;
++        if(i&lt;64)mem_bitmap.mem_map[i] = 0xFFFFFFFF;
+         else mem_bitmap.mem_map[i] = 0x00000000;
+         i++;
+     }
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2010-04-18 14:35:39 UTC (rev 232)
++++ trunk/mem/paging.c	2010-04-18 17:43:48 UTC (rev 233)
+@@ -36,38 +36,40 @@
+ 
+ unsigned int *current_page_dir;
+ unsigned int *current_page_table;
+-unsigned int *second_pagedir;
++//unsigned int *third_pagetable;
+ unsigned int *second_pagetable;
+ size_t tot_mem;
+ unsigned int end;
+ 
+ void init_paging(){
+-    int i;
+-    //unsigned int apic_location;
++    int i;    
+     printf(LNG_PAGING);
+-    _kprintOK();    
+-	//apic_location = create_pageTable();
++    _kprintOK();    	
+     current_page_dir = create_pageDir();  
+-    second_pagedir = create_pageDir();  
+-    //second_pagetable = create_pageTable();
++    second_pagetable = create_pageTable();      
++    //third_pagetable = create_pageTable();      
+     #ifdef DEBUG
+     printf(&quot;Pd baseAddress: %d\n&quot;, (unsigned int) current_page_dir);
+     #endif
+     i=0;    
+     while(i&lt;PD_LIMIT){
+-        current_page_dir[i] = 0x00000000;
+-        second_pagedir[i] = 0x00000000;
++        current_page_dir[i] = 0x00000000;        
+         i++;
+     }    
+     set_pagedir_entry(1023, (unsigned int)current_page_dir, PD_PRESENT|SUPERVISOR, 0);    
+     current_page_table=create_pageTable();
++    second_pagetable = create_pageTable();
++    //third_pagetable = create_pageTable();
+     i=0;
+     while(i&lt;PT_LIMIT){
+         current_page_table[i] = 0x00000000;
++        second_pagetable[i] = 0x00000000;
++        //third_pagetable[i] = 0x00000000;
+         i++;
+     }
+     set_pagedir_entry(0, (unsigned int)current_page_table, PD_PRESENT|SUPERVISOR|WRITE,0);    
+     set_pagedir_entry(1, (unsigned int)second_pagetable, PD_PRESENT|SUPERVISOR|WRITE,0);    
++    //set_pagedir_entry(2, (unsigned int)third_pagetable, PD_PRESENT|SUPERVISOR|WRITE,0);    
+     i=0;
+     while(i&lt;PT_LIMIT){
+         set_pagetable_entry(i,i*0x1000,SUPERVISOR|PD_PRESENT|WRITE,0);        
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000235.html">[Dreamos-dev] r232 - in trunk: . hardware mem processore
+</A></li>
+	<LI>Next message: <A HREF="000237.html">[Dreamos-dev] r234 - in trunk: . fs mem shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#236">[ date ]</a>
+              <a href="thread.html#236">[ thread ]</a>
+              <a href="subject.html#236">[ subject ]</a>
+              <a href="author.html#236">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

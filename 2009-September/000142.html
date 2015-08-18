@@ -1,0 +1,237 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r140 - in trunk: . include mem shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-September/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r140%20-%20in%20trunk%3A%20.%20include%20mem%20shell&In-Reply-To=%3C200909270831.n8R8Vmqa020054%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000141.html">
+   <LINK REL="Next"  HREF="000143.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r140 - in trunk: . include mem shell</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r140%20-%20in%20trunk%3A%20.%20include%20mem%20shell&In-Reply-To=%3C200909270831.n8R8Vmqa020054%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r140 - in trunk: . include mem shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun Sep 27 10:31:48 CEST 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000141.html">[Dreamos-dev] r139 - in trunk: . include shell
+</A></li>
+        <LI>Next message: <A HREF="000143.html">[Dreamos-dev] r141 - in trunk: . shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#142">[ date ]</a>
+              <a href="thread.html#142">[ thread ]</a>
+              <a href="subject.html#142">[ subject ]</a>
+              <a href="author.html#142">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-09-27 10:31:46 +0200 (Sun, 27 Sep 2009)
+New Revision: 140
+
+Modified:
+   trunk/bl.img
+   trunk/dreamos.img
+   trunk/include/kernel.h
+   trunk/kernel.c
+   trunk/mem/fismem.c
+   trunk/mem/kheap.c
+   trunk/shell/testing.c
+Log:
+Segnata come occupata in memoria logica zona del modulo
+Modificato il valore del ciclo di try_module
+
+
+Modified: trunk/bl.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/kernel.h
+===================================================================
+--- trunk/include/kernel.h	2009-09-24 08:59:59 UTC (rev 139)
++++ trunk/include/kernel.h	2009-09-27 08:31:46 UTC (rev 140)
+@@ -25,9 +25,12 @@
+ #ifndef _KERNEL_H
+ #define _KERNEL_H
+ 
++#include &lt;multiboot.h&gt;
+ #define asmlinkage __attribute__((regparm(0)))
+ 
+ extern multiboot_info_t *boot_informations;
++//extern char *module_start;
++extern unsigned int module_end;
+ asmlinkage void _start(struct multiboot_info*);
+ extern char *module_start;
+ int main_loop(struct multiboot_info*);
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2009-09-24 08:59:59 UTC (rev 139)
++++ trunk/kernel.c	2009-09-27 08:31:46 UTC (rev 140)
+@@ -48,6 +48,7 @@
+ extern unsigned int end;
+ multiboot_info_t *boot_informations;
+ char *module_start;
++unsigned int module_end;
+ asmlinkage void _start(struct multiboot_info *boot_info)
+ {
+     boot_informations = boot_info;    
+@@ -59,6 +60,8 @@
+ {
+     _kclear();
+     syscall_init();
++    module_start = *((unsigned int*)boot_info-&gt;mods_addr);
++	module_end = *((unsigned int*)(boot_info-&gt;mods_addr+4));
+     _kcolor('\012');
+     _kputs(DREAMOS_VER);
+     _kcolor('\007');
+@@ -96,9 +99,8 @@
+     get_cpuid (sinfo);
+         
+     vfs_init();
+-	if(boot_info-&gt;mods_count &gt; 0) printf(&quot;Found n. %d Modules\n&quot;, boot_info-&gt;mods_count);	
+-	module_start = *((unsigned int*)boot_info-&gt;mods_addr);
+-	//printf(&quot;Address of module: 0x%x\n&quot;, tmp);
++	if(boot_info-&gt;mods_count &gt; 0) printf(&quot;Found n. %d Modules\n&quot;, boot_info-&gt;mods_count);		
++	printf(&quot;Address of module: 0x%x - 0x%d\n&quot;, *((unsigned int*)boot_info-&gt;mods_addr),module_end-(unsigned int) module_start);
+     printf(&quot;\n&quot;);
+     printf(&quot;----\n&quot;);
+     printf(LNG_SHELL);    
+
+Modified: trunk/mem/fismem.c
+===================================================================
+--- trunk/mem/fismem.c	2009-09-24 08:59:59 UTC (rev 139)
++++ trunk/mem/fismem.c	2009-09-27 08:31:46 UTC (rev 140)
+@@ -218,38 +218,6 @@
+ 
+ size_t calcola_memoria()
+ {
+-/*    unsigned int *mem_position;
+-    asm(&quot;cli&quot;);
+-    outportb(0xFF, MASTER_PORT_1);                     //Disabilito gli interrupt hardware
+-    outportb(0xFF, SLAVE_PORT_1);
+-    mem_position = (unsigned int*) BASE_MEM;
+-    *mem_position = VALUE_MEM;
+-
+-      while(*mem_position == VALUE_MEM)
+-      {
+-
+-            *mem_position = ANTI_VALUE_MEM;
+-            asm(&quot;&quot;: : :&quot;memory&quot;);
+-
+-            	 if (*mem_position == ANTI_VALUE_MEM)
+-		 {
+-              	 	  *mem_position += OFFSET_MEM;
+-                	  asm(&quot;&quot;: : :&quot;memory&quot;);
+-            	 }
+-	    
+-            else 
+-		break;
+-
+-            asm(&quot;&quot;: : :&quot;memory&quot;);
+-    }
+-
+-
+-    outportb(master_cur_mask, MASTER_PORT_1);         //Abilito gli interrupt hardware
+-    outportb(slave_cur_mask, SLAVE_PORT_1);
+-    asm(&quot;sti&quot;);
+-    mem_position = 16777216;
+-    tot_mem = (unsigned long) mem_position;
+-    return (unsigned long) mem_position;*/
+     return tot_mem;
+ }
+ 
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2009-09-24 08:59:59 UTC (rev 139)
++++ trunk/mem/kheap.c	2009-09-27 08:31:46 UTC (rev 140)
+@@ -28,6 +28,7 @@
+ #include &lt;ordered_list.h&gt;
+ #include &lt;stddef.h&gt;
+ #include &lt;stdio.h&gt;
++#include &lt;kernel.h&gt;
+ #define KHEAP_LIST_ADDRESS 0xC0000000
+ 
+ // #define DEBUG 1
+@@ -37,6 +38,8 @@
+ heap_t *kheap_tmp;
+ unsigned int address_cur = (unsigned int) &end;
+ unsigned int node_address;
++char *module_start;
++unsigned int module_end;
+ 
+ void* kmalloc(unsigned int size)
+ {
+@@ -83,6 +86,7 @@
+     heap_t* new_heap;
+     heap_node_t* first_node;
+ 	heap_node_t* apic_node;
++	heap_node_t* module_node;
+ 
+     new_heap = (heap_t*)KHEAP_LIST_ADDRESS;
+     node_address = KHEAP_LIST_ADDRESS + sizeof(heap_t);
+@@ -113,6 +117,10 @@
+ 	apic_node-&gt;size = 4096;
+ 	apic_node-&gt;next = NULL;
+ 	insert_list (apic_node, &amp;(new_heap-&gt;used_list));
++	module_node = alloc_node();
++	module_node-&gt;start_address = (unsigned int)module_start;
++	module_node-&gt;size = module_end - (unsigned int)module_start;	
++	insert_list(module_node, &amp;(new_heap-&gt;used_list));
+     return (heap_t*) new_heap;
+ }
+     
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2009-09-24 08:59:59 UTC (rev 139)
++++ trunk/shell/testing.c	2009-09-27 08:31:46 UTC (rev 140)
+@@ -113,7 +113,7 @@
+ 	int j=0;
+ 	char* mod_address;
+ 	mod_address = module_start;	
+-	while(j&lt;101){
++	while(j&lt;67){
+ 		putchar(mod_address[j]);
+ 		j++;
+ 	}
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000141.html">[Dreamos-dev] r139 - in trunk: . include shell
+</A></li>
+	<LI>Next message: <A HREF="000143.html">[Dreamos-dev] r141 - in trunk: . shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#142">[ date ]</a>
+              <a href="thread.html#142">[ thread ]</a>
+              <a href="subject.html#142">[ subject ]</a>
+              <a href="author.html#142">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

@@ -1,0 +1,268 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r83 - in trunk: . include include/io include/libc	include/misc io libc misc
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-May/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r83%20-%20in%20trunk%3A%20.%20include%20include/io%20include/libc%0A%09include/misc%20io%20libc%20misc&In-Reply-To=%3C200905241718.n4OHIuik007350%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   
+   <LINK REL="Next"  HREF="000085.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r83 - in trunk: . include include/io include/libc	include/misc io libc misc</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r83%20-%20in%20trunk%3A%20.%20include%20include/io%20include/libc%0A%09include/misc%20io%20libc%20misc&In-Reply-To=%3C200905241718.n4OHIuik007350%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r83 - in trunk: . include include/io include/libc	include/misc io libc misc">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun May 24 19:18:56 CEST 2009</I>
+    <P><UL>
+        
+        <LI>Next message: <A HREF="000085.html">[Dreamos-dev] r84 - in trunk: . include shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#84">[ date ]</a>
+              <a href="thread.html#84">[ thread ]</a>
+              <a href="subject.html#84">[ subject ]</a>
+              <a href="author.html#84">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-05-24 19:18:39 +0200 (Sun, 24 May 2009)
+New Revision: 83
+
+Modified:
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/include/io/io.h
+   trunk/include/libc/stddef.h
+   trunk/include/misc/debug.h
+   trunk/include/version.h
+   trunk/io/io.c
+   trunk/kernel.c
+   trunk/libc/string.c
+   trunk/misc/debug.c
+Log:
+Corretta strcpy.
+Applicazione patch varie. 
+Aggiornamento Makefile.
+Aggiornamento informazioni di versione
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2009-04-25 16:48:26 UTC (rev 82)
++++ trunk/Makefile	2009-05-24 17:18:39 UTC (rev 83)
+@@ -4,10 +4,28 @@
+ 
+ NAME = DreamOS
+ VERSION = 0
+-PATCHLEVEL = 1.1
++PATCHLEVEL = 1.2
+ EXTRAVERSION = -trunk
+ 
+-CFLAGS = -nostdlib -nostdinc -fomit-frame-pointer -fno-builtin -fno-stack-protector -Wall -march=i686 -m32 -I./include -I./include/io -I./include/drivers -I./include/libc -I./include/processore -I./include/hardware -I./include/mem -I./include/system -I./include/shell -I./include/misc
++CFLAGS = -nostdlib\
++	 -nostdinc\
++	 -fomit-frame-pointer\
++     -fno-builtin\
++	 -fno-stack-protector\
++	 -Wall\
++	 -march=i686\
++     -m32\
++	 -I./include\
++	 -I./include/io\
++	 -I./include/drivers\
++     -I./include/libc\
++	 -I./include/processore\
++	 -I./include/hardware\
++	 -I./include/mem\
++	 -I./include/system\
++	 -I./include/shell\
++	 -I./include/misc\
++	 -DBOCHS_DEBUG
+ 
+ OBJ = kernel.o\
+       io/video.o\
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/io/io.h
+===================================================================
+--- trunk/include/io/io.h	2009-04-25 16:48:26 UTC (rev 82)
++++ trunk/include/io/io.h	2009-05-24 17:18:39 UTC (rev 83)
+@@ -25,8 +25,11 @@
+  
+ #ifndef _IO_H
+ #define _IO_H
++
++#define sti() __asm__ __volatile__ (&quot;sti&quot;);
++#define cli() __asm__ __volatile__ (&quot;cli&quot;);
+  
+-unsigned char inportb (int);
+-void outportb (int, int);
++inline unsigned char inportb (int);
++inline void outportb (int, int);
+  
+ #endif
+
+Modified: trunk/include/libc/stddef.h
+===================================================================
+--- trunk/include/libc/stddef.h	2009-04-25 16:48:26 UTC (rev 82)
++++ trunk/include/libc/stddef.h	2009-05-24 17:18:39 UTC (rev 83)
+@@ -25,8 +25,16 @@
+ #ifndef __STDDEF__H
+ #define __STDDEF__H
+ 
+-#define NULL 0
++#ifndef NULL
++#define NULL ((void*)0)
++#endif
+ 
++#ifndef EOF
++#define EOF (-1)
++#endif
++
++#define BUFSIZ 512
++
+ #define KERNEL_SIZE 0x200
+ 
+ typedef unsigned int size_t;
+
+Modified: trunk/include/misc/debug.h
+===================================================================
+--- trunk/include/misc/debug.h	2009-04-25 16:48:26 UTC (rev 82)
++++ trunk/include/misc/debug.h	2009-05-24 17:18:39 UTC (rev 83)
+@@ -70,5 +70,5 @@
+ #define REGISTER_TRACE_DISABLE	0x8AE4
+ 
+ void dbg_bochs_print( const unsigned char * );
+-inline void dbg_bochs_send_cmd( const int port, const int cmd );
++static inline void dbg_bochs_send_cmd( const int, const int );
+ #endif /* ! _DEBUG_H */
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-04-25 16:48:26 UTC (rev 82)
++++ trunk/include/version.h	2009-05-24 17:18:39 UTC (rev 83)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL &quot;1.2&quot;
+ #define EXTRAVERSION &quot;-trunk&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r78&quot;
++#define REV_NUM &quot;-r82&quot;
+
+Modified: trunk/io/io.c
+===================================================================
+--- trunk/io/io.c	2009-04-25 16:48:26 UTC (rev 82)
++++ trunk/io/io.c	2009-05-24 17:18:39 UTC (rev 83)
+@@ -25,14 +25,14 @@
+ 
+ #include &lt;io.h&gt;
+ 
+-unsigned char inportb (int portnum)
++inline unsigned char inportb (int portnum)
+ {
+   unsigned char data=0;
+-  asm(&quot;inb %%dx, %%al&quot; : &quot;=a&quot; (data) : &quot;d&quot; (portnum));
++  __asm__ __volatile__ (&quot;inb %%dx, %%al&quot; : &quot;=a&quot; (data) : &quot;d&quot; (portnum));
+   return data;
+ }
+ 
+-void outportb (int data, int portnum)
++inline void outportb (int data, int portnum)
+ {
+-  asm(&quot;outb %%al, %%dx&quot; :: &quot;a&quot; (data),&quot;d&quot; (portnum));
++  __asm__ __volatile__ (&quot;outb %%al, %%dx&quot; :: &quot;a&quot; (data),&quot;d&quot; (portnum));
+ }
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2009-04-25 16:48:26 UTC (rev 82)
++++ trunk/kernel.c	2009-05-24 17:18:39 UTC (rev 83)
+@@ -101,9 +101,9 @@
+     _kprintOK();
+ 		printf(&quot;[+] Address: 0x%x\n&quot;, &amp;end);		   	        
+ 		printf(&quot;\n\n&quot;);
+-		#ifdef BOCHS_DEBUG
++#ifdef BOCHS_DEBUG
+ 		dbg_bochs_print(&quot;DreamOS Debug\n&quot;);
+-		#endif
++#endif
+ 		shell();
+ 
+     return 0;
+
+Modified: trunk/libc/string.c
+===================================================================
+--- trunk/libc/string.c	2009-04-25 16:48:26 UTC (rev 82)
++++ trunk/libc/string.c	2009-05-24 17:18:39 UTC (rev 83)
+@@ -40,13 +40,15 @@
+     return dest;
+ }
+ 
+-char *strcpy(char *dest, register const char *src)
++char *strcpy (char *dest, const char *src)
+ {
+-	register char *s = dest;
+-	while (*s++ = *src++)
+-		/* nothing */ ;
++  int i;
+ 
+-	return dest;
++  for (i=0; src[i]; i++)
++    *(dest+i) = *(src+i);
++  dest[i] = '\0';
++
++  return dest;
+ }
+ 
+ /*
+
+Modified: trunk/misc/debug.c
+===================================================================
+--- trunk/misc/debug.c	2009-04-25 16:48:26 UTC (rev 82)
++++ trunk/misc/debug.c	2009-05-24 17:18:39 UTC (rev 83)
+@@ -42,7 +42,7 @@
+ /**
+  *  Send cmd to bochs port
+  */
+-inline void dbg_bochs_send_cmd( const int port, const int cmd )
++static inline void dbg_bochs_send_cmd( const int port, const int cmd )
+ {
+-    outportb(port, cmd);
++    outportb(cmd, port);
+ }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	
+	<LI>Next message: <A HREF="000085.html">[Dreamos-dev] r84 - in trunk: . include shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#84">[ date ]</a>
+              <a href="thread.html#84">[ thread ]</a>
+              <a href="subject.html#84">[ subject ]</a>
+              <a href="author.html#84">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

@@ -1,0 +1,425 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r125 - in trunk: . fs include include/io include/libc	io libc shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-August/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r125%20-%20in%20trunk%3A%20.%20fs%20include%20include/io%20include/libc%0A%09io%20libc%20shell&In-Reply-To=%3C200908301827.n7UIR3vO020657%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000126.html">
+   
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r125 - in trunk: . fs include include/io include/libc	io libc shell</H1>
+    <B>osiris_h4ck at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r125%20-%20in%20trunk%3A%20.%20fs%20include%20include/io%20include/libc%0A%09io%20libc%20shell&In-Reply-To=%3C200908301827.n7UIR3vO020657%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r125 - in trunk: . fs include include/io include/libc	io libc shell">osiris_h4ck at mail.berlios.de
+       </A><BR>
+    <I>Sun Aug 30 20:27:03 CEST 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000126.html">[Dreamos-dev] r124 - trunk/fs
+</A></li>
+        
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#127">[ date ]</a>
+              <a href="thread.html#127">[ thread ]</a>
+              <a href="subject.html#127">[ subject ]</a>
+              <a href="author.html#127">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: osiris_h4ck
+Date: 2009-08-30 20:27:01 +0200 (Sun, 30 Aug 2009)
+New Revision: 125
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/vfs.c
+   trunk/include/io/video.h
+   trunk/include/libc/stdio.h
+   trunk/include/libc/string.h
+   trunk/include/version.h
+   trunk/io/video.c
+   trunk/libc/stdio.c
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+Log:
+- Apportate varie modiche a diversi headers
+- Sistemati alcuni comandi nella shell
+- Sistemate alcune API e funzioni varie
+
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2009-08-30 11:50:37 UTC (rev 124)
++++ trunk/fs/vfs.c	2009-08-30 18:27:01 UTC (rev 125)
+@@ -30,7 +30,7 @@
+ void vfs_init(){
+ 	int i=0;
+  	printf(&quot;\nPreparing VFS\n&quot;);
+- 	while(i&lt;MAX_MOUNTPOINT){
++ 	while(i&lt;MAX_MOUNTPOINT) {
+  		strcpy(mountpoint_list[i].mountpoint,&quot;&quot;);
+  		mountpoint_list[i].uid = 0;
+  		mountpoint_list[i].gid = 0;
+@@ -40,6 +40,7 @@
+ 	 	mountpoint_list[i].operations = NULL;
+  		i++;
+ 	}
++	
+  	strcpy(mountpoint_list[0].mountpoint,&quot;/&quot;);
+  	mountpoint_list[0].uid = 0;
+  	mountpoint_list[0].gid = 0;
+@@ -47,9 +48,9 @@
+  	mountpoint_list[0].dev_id = 0;
+  	mountpoint_list[0].start_address = 0;
+  	mountpoint_list[0].operations = kmalloc(sizeof(struct super_node_operations));
+- 	
+-    strcpy(mountpoint_list[1].mountpoint,&quot;/dev&quot;); 	
+-    mountpoint_list[1].uid = 0;
++
++	strcpy(mountpoint_list[1].mountpoint,&quot;/dev&quot;); 	
++	mountpoint_list[1].uid = 0;
+  	mountpoint_list[1].gid = 0;
+  	mountpoint_list[1].pmask = 0;
+  	mountpoint_list[1].dev_id = 0;
+@@ -57,16 +58,21 @@
+  	mountpoint_list[1].operations = kmalloc(sizeof(struct super_node_operations));
+ 	
+ 	strcpy(mountpoint_list[2].mountpoint,&quot;/dev/video&quot;); 	
+-    mountpoint_list[2].uid = 0;
++	mountpoint_list[2].uid = 0;
+  	mountpoint_list[2].gid = 0;
+  	mountpoint_list[2].pmask = 0;
+  	mountpoint_list[2].dev_id = 0;
+  	mountpoint_list[2].start_address = 0;
+  	mountpoint_list[2].operations = kmalloc(sizeof(struct super_node_operations));
++	
++	strcpy(mountpoint_list[3].mountpoint,&quot;/root&quot;);
++ 	mountpoint_list[3].uid = 0;
++ 	mountpoint_list[3].gid = 0;
++ 	mountpoint_list[3].pmask = 0;
++ 	mountpoint_list[3].dev_id = 0;
++ 	mountpoint_list[3].start_address = 0;
++ 	mountpoint_list[3].operations = kmalloc(sizeof(struct super_node_operations));
+ 
+-	//printf(&quot;Created mountpoint: %s\n&quot;, mountpoint_list[0].mountpoint);
+-	//printf(&quot;Created mountpoint: %s\n&quot;, mountpoint_list[1].mountpoint);
+- 	//initrd = kmalloc(sizeof(struct inode)); 	 	
+ }
+ 
+ void open_vfs (struct inode *node){
+@@ -86,7 +92,7 @@
+                        }					   					   
+                        i++;
+                }
+-			   if(last!=-1) printf(&quot;Changing dir %s	\n&quot;, mountpoint_list[last].mountpoint, last);
++			   if(last!=-1) printf(&quot;Changing dir %s\n&quot;, mountpoint_list[last].mountpoint, last);
+                return last;
+ }
+ 
+@@ -101,11 +107,9 @@
+ 		mp_size = strlen(mountpoint_list[mountpoint_id].mountpoint);		
+ 		while(j&lt;rel_size){			
+ 			tmp_path[j] = path[mp_size + j];			
+-			//_kputc(path[mp_size + j]);
+ 			j++;
+ 		}
+ 		tmp_path[j]='\0';
+-		//printf(&quot;\n&quot;);
+ 	}	
+ 	return tmp_path;
+ }
+
+Modified: trunk/include/io/video.h
+===================================================================
+--- trunk/include/io/video.h	2009-08-30 11:50:37 UTC (rev 124)
++++ trunk/include/io/video.h	2009-08-30 18:27:01 UTC (rev 125)
+@@ -53,5 +53,4 @@
+ 
+ unsigned short shell_mess_col, shell_mess_line;
+ 
+-
+ #endif /* _VIDEO_H */
+
+Modified: trunk/include/libc/stdio.h
+===================================================================
+--- trunk/include/libc/stdio.h	2009-08-30 11:50:37 UTC (rev 124)
++++ trunk/include/libc/stdio.h	2009-08-30 18:27:01 UTC (rev 125)
+@@ -31,6 +31,7 @@
+ void putchar (char);
+ int atoi (const char *);
+ int printf (const char *, ...);
++int puts (char *s);
+ int scanf (const char *, ...);
+ 
+ #endif
+
+Modified: trunk/include/libc/string.h
+===================================================================
+--- trunk/include/libc/string.h	2009-08-30 11:50:37 UTC (rev 124)
++++ trunk/include/libc/string.h	2009-08-30 18:27:01 UTC (rev 125)
+@@ -29,16 +29,17 @@
+ #include &lt;stddef.h&gt;
+ 
+ int _kstrncmp (const char *, const char *, int);
+-int strcmp (const char *, const char *);
+ void *memset(void *, register const int, register size_t);
+ extern void * memmove(void *,const void *,size_t);
+ void *memcpy(void *, const void *, size_t );
+ size_t strlen (const char *);
+-char *strncpy (char *, register const char *, size_t);
++
++int strcmp (const char *, const char *);
+ char *strchr (register const char *, register int);
+ char *strstr (const char *, const char *);
++char *strncat (char *, const char *, size_t);
++
+ char *strtok (char *, const char *);
+-char *strncat (char *, const char *, size_t);
+ char *strcpy (char *, register const char *);
+-
++char *strncpy (char *, register const char *, size_t);
+ #endif
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-08-30 11:50:37 UTC (rev 124)
++++ trunk/include/version.h	2009-08-30 18:27:01 UTC (rev 125)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL &quot;2.0&quot;
+ #define EXTRAVERSION &quot;-trunk&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r118&quot;
++#define REV_NUM &quot;-r124&quot;
+
+Modified: trunk/io/video.c
+===================================================================
+--- trunk/io/video.c	2009-08-30 11:50:37 UTC (rev 124)
++++ trunk/io/video.c	2009-08-30 18:27:01 UTC (rev 125)
+@@ -34,7 +34,7 @@
+      *VIDEO_PTR = (char*) 0xb8000,
+     VIDEO_CLR = 0x7;
+ 
+-/* Scrolling buffer */
++// Scrolling buffer 
+ char upbuffer[_SCR_H][_SCR_W*2];
+ char downbuffer[_SCR_H][_SCR_W*2];
+ int is_scrolled=0;
+
+Modified: trunk/libc/stdio.c
+===================================================================
+--- trunk/libc/stdio.c	2009-08-30 11:50:37 UTC (rev 124)
++++ trunk/libc/stdio.c	2009-08-30 18:27:01 UTC (rev 125)
+@@ -31,10 +31,35 @@
+ #include &lt;keyboard.h&gt;
+ #include &lt;kheap.h&gt;
+ #include &lt;debug.h&gt;
++#include &lt;string.h&gt;
+ 
+ #define LEFT 1
+ #define RIGHT 0
+ 
++char *VIDEO_MEMZ = (char*) 0xb8000,
++	 *VIDEO_PTRZ = (char*) 0xb8000,
++	 VIDEO_CLRZ = 0x7;
++	 
++int last_Xz=0, last_Yz=0;
++
++/* 
++ *  puts() function
++ *  print *s
++ *  do newline
++ */
++int puts(char *s)
++{
++  while( *s != 0 ) {
++	if (last_Xz &amp;&amp; last_Yz) _kscrolldown ();
++	*VIDEO_PTRZ++ = s;
++	*VIDEO_PTRZ++ = VIDEO_CLRZ;
++	_kshiftAll();
++	_ksetcursauto();
++	 s++;
++  }
++   _knewline();
++}
++
+ /*
+  * Print a character
+  */
+@@ -46,8 +71,7 @@
+ 	char s[2];
+ 	s[0] = ch;
+ 	s[1] = '\0';
+-
+-   _kputs (s);
++	_kputs(s);
+ }
+ 
+ /*
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-08-30 11:50:37 UTC (rev 124)
++++ trunk/shell/commands.c	2009-08-30 18:27:01 UTC (rev 125)
+@@ -79,10 +79,18 @@
+ 
+ void echo()
+ {
+-    int c;
++    /*int c;
+     for (c = 1; c &lt; argc; c++)
+         printf (&quot;%s &quot;, argv[c]);
+-    printf (&quot;\n&quot;);
++    printf (&quot;\n&quot;);*/
++    if ( argc == 1 ) {
++         printf(&quot;&quot;);
++    } else {
++		while ( --argc &gt; 0 ) {
++		printf(&quot;%s &quot;,*++argv);
++        }
++   }
++   printf(&quot;\n&quot;);
+ }
+ 
+ void poweroff()
+@@ -388,40 +396,46 @@
+ 	
+ }
+ 
+-void ls(){
++void ls ( ) {
+ 	int i=0, j=0;
+-    while ( strcmp(mountpoint_list[i].mountpoint, &quot;&quot;) ) {
+-         	j = j++;
+-			i = i++;
+-    }
++	while ( strcmp(mountpoint_list[i].mountpoint, &quot;&quot;) ) {
++         	j++;
++		i++;
++	}
+ 	i = 0;
+-	while( i&lt;j &amp;&amp; strcmp(mountpoint_list[i].mountpoint, &quot;&quot;) ) {
+-		if (argc &lt; 2) {
+-			printf(&quot;%s &quot;, mountpoint_list[i].mountpoint);
++	while( i &lt; j ) {
++		if (argc == 1) {
++			_kcolor(1);
++			printf(&quot;%s   &quot;, mountpoint_list[i].mountpoint);
+ 		}
+ 		else {
+-			if  ( (_kstrncmp(argv[1], &quot;-l&quot;, 2) ) == 0 ) 
+-				printf(&quot;%s \t uid=%d(%s), gid=%d(%s)\n&quot;, mountpoint_list[i].mountpoint, mountpoint_list[i].uid, current_user.username, 
+-				       mountpoint_list[i].gid, current_user.username);
+-			else
+-				printf(&quot;No option %s found. &quot;, argv[1]);
++			if  ( (_kstrncmp(argv[1], &quot;-l&quot;, 2) ) == 0 )
++				printf(&quot;uid=%d(%s), gid=%d(%s) - &quot;, 
++							mountpoint_list[i].uid,
++							current_user.username,
++							mountpoint_list[i].gid, 
++							current_user.username);
++				_kcolor(1);
++				printf(&quot;%s\n&quot;, mountpoint_list[i].mountpoint);
++				_kcolor(7);
+ 		}
+-	 i++; 
+-   }
+-	printf(&quot;\n&quot;);
++		i++; 
++	}
++	_kcolor(7);
++	printf(&quot; --&gt;   Total: %d\n&quot;, j);
+ }
+ 
+-void cd(){
++void cd( ){
+ 	char *relpath;	
+-	if(argc &gt; 2) printf(&quot;Too many arguments\n&quot;);
+-	else if(argc &lt;2) printf(&quot;Too few arguments\n&quot;);
++	if(argc != 2) printf(&quot;Bad usage. Try 'ls -l' and then 'cd dir'.\n&quot;);
+ 	else {
+ 		int i=0;
+ 		int rel_size = 0;		
+ 		i = get_mountpoint_id(argv[1]);
+ 		//printf(&quot;path: %s\n&quot;, argv[1]);
+ 		rel_size = strlen(argv[1]) - strlen(mountpoint_list[i].mountpoint);
+-		if(i == -1 || (i==0  &amp;&amp; strcmp(&quot;/&quot;, argv[1]))) printf(&quot;cd: %s: No such file or directory\n&quot;, argv[1]);
++		if(i == -1 || (i==0  &amp;&amp; strcmp(&quot;/&quot;, argv[1]))) 
++			printf(&quot;cd: %s: No such file or directory\n&quot;, argv[1]);
+ 		else strcpy(current_user.cur_path, argv[1]);
+ 		if(rel_size &gt;0){
+ 			relpath = get_rel_path(i, argv[1]);
+@@ -433,10 +447,3 @@
+ void whoami(){
+ 	printf(&quot;%s\n&quot;, current_user.username);
+ }
+-
+-void try_strcpy(){
+-	char string1[50], string2[50];
+-	strcpy(string1, &quot;Io sono una stringa di tipo 1&quot;);
+-	strcpy(string2, &quot;Ed io sono quella di tipo 2&quot;);
+-	printf(&quot;%s - %d\n%s - %d\n&quot;, string1, strlen(string1), string2, strlen(string2));
+-}
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-08-30 11:50:37 UTC (rev 124)
++++ trunk/shell/shell.c	2009-08-30 18:27:01 UTC (rev 125)
+@@ -93,7 +93,6 @@
+ 	{ &quot;ls&quot;,       ls},
+ 	{ &quot;cd&quot;,       cd},
+ 	{ &quot;whoami&quot;,   whoami},
+-	{ &quot;try_strcpy&quot;, try_strcpy},
+         };
+ 
+   int i = 0;
+@@ -117,7 +116,12 @@
+   
+   for (;;)
+   {
+-    printf(&quot;%s~:%s# &quot;,current_user.username, current_user.cur_path);
++    //printf(&quot;[%s]~:%s# &quot;,current_user.username, current_user.cur_path);
++    //_kcolor(4);
++    printf(&quot;%s~:%s# &quot;, current_user.username, 
++				  current_user.cur_path,
++				  current_user.username);
++    //_kcolor(7);
+     scanf(&quot;%254s&quot;,cmd);
+         
+     /* elimina eventuali spazi all'inizio del comando */
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000126.html">[Dreamos-dev] r124 - trunk/fs
+</A></li>
+	
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#127">[ date ]</a>
+              <a href="thread.html#127">[ thread ]</a>
+              <a href="subject.html#127">[ subject ]</a>
+              <a href="author.html#127">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

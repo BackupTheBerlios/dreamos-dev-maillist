@@ -1,0 +1,254 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r281 - in trunk: . fs hardware include/fs shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-August/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r281%20-%20in%20trunk%3A%20.%20fs%20hardware%20include/fs%20shell&In-Reply-To=%3C20100804144234.3F3C6480EC5%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   
+   <LINK REL="Next"  HREF="000285.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r281 - in trunk: . fs hardware include/fs shell</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r281%20-%20in%20trunk%3A%20.%20fs%20hardware%20include/fs%20shell&In-Reply-To=%3C20100804144234.3F3C6480EC5%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r281 - in trunk: . fs hardware include/fs shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Wed Aug  4 16:42:34 CEST 2010</I>
+    <P><UL>
+        
+        <LI>Next message: <A HREF="000285.html">[Dreamos-dev] r282 - in trunk: . include include/lng shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#284">[ date ]</a>
+              <a href="thread.html#284">[ thread ]</a>
+              <a href="subject.html#284">[ subject ]</a>
+              <a href="author.html#284">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-08-04 16:42:34 +0200 (Wed, 04 Aug 2010)
+New Revision: 281
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/fs/initrd.c
+   trunk/hardware/pic8259.c
+   trunk/include/fs/initrd.h
+   trunk/shell/commands.c
+   trunk/shell/user_shell.c
+Log:
+Eliminata chiamata da init_idt e init_gdt in pic8259.c
+Sistemata gestione dei descrittori di files in initrd_open
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2010-07-25 07:28:44 UTC (rev 280)
++++ trunk/fs/fcntl.c	2010-08-04 14:42:34 UTC (rev 281)
+@@ -42,8 +42,7 @@
+ 	char *newpath;
+ 	va_list ap;
+ 	va_start(ap, oflags);
+-	ret_fd = 0;	
+-	//printf(&quot;Path: %s\n&quot;, path);	
++	ret_fd = 0;		
+ 	prova = va_arg(ap, int);
+ 	newpath = kmalloc(CURPATH_LEN * sizeof(char));
+ 	memset(newpath, '\0', CURPATH_LEN);
+@@ -59,6 +58,7 @@
+ 		return -1;
+ 	}
+ 	strcpy(newpath, path);	
++	//printf(&quot;Path: %s %s\n&quot;, path, newpath);	
+ 	error = get_abs_path((char*) newpath);
+ 	//printf(&quot;After get_abs: %s %s\n&quot;, newpath, current_user.cur_path);	
+     mpid = get_mountpoint_id((char*) newpath);		
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-07-25 07:28:44 UTC (rev 280)
++++ trunk/fs/initrd.c	2010-08-04 14:42:34 UTC (rev 281)
+@@ -102,48 +102,52 @@
+ 	int j = 0;
+ 	int ret_fd = -1;
+ 	module_var = fs_headers;
++	//printf(&quot;J vale: %d fs_spec: %d cur_idfd: %d\n&quot;, j, fs_specs-&gt;nfiles, cur_irdfd);
+ 	if(cur_irdfd &gt;= MAX_INITRD_DESCRIPTORS) {
+ 		int i=0;
+ 		cur_irdfd=0;
+ 		while(ird_descriptors[i].file_descriptor!=-1 &amp;&amp; i &lt; MAX_INITRD_DESCRIPTORS) i++;			
+ 		cur_irdfd = i;
++		//printf(&quot;i: %d\n&quot;, i);
+ 	}
+-	else {
+-		while (j &lt; fs_specs-&gt;nfiles) {
+-			if(!strcmp(path, module_var[j].fileName)){
+-				if(module_var[j].file_type == FS_DIRECTORY || module_var[j].file_type == FS_MOUNTPOINT)
+-					return -1;
+-				ird_descriptors[cur_irdfd].file_descriptor	= j;
+-				//printf(&quot;%s Found. Size: %d FS fd val: %d - ID File val: %d\n&quot;, path, module_var[j].length, cur_irdfd, ird_descriptors[cur_irdfd].file_descriptor);
+-				ret_fd = cur_irdfd;				
+-				//printf(&quot;ret_fd: %d --- %d\n&quot;, cur_irdfd, j);
+-				ird_descriptors[cur_irdfd].cur_pos = 0;
+-				if(flags&amp;O_APPEND) {
+-					printf(&quot;Appendiamoci\n&quot;);
+-					ird_descriptors[cur_irdfd].cur_pos = module_var[j].length;
+-				}
+-				//else printf(&quot;Pero' non ci appendiamo\n&quot;);
+-				return cur_irdfd++; 
++	while (j &lt; fs_specs-&gt;nfiles) {
++		//printf(&quot;.&quot;);
++		if(!strcmp(path, module_var[j].fileName)){
++			if(module_var[j].file_type == FS_DIRECTORY || module_var[j].file_type == FS_MOUNTPOINT)
++			//Erroneus file type
++				return -1;
++			ird_descriptors[cur_irdfd].file_descriptor	= j;
++			ret_fd = cur_irdfd;				
++			//printf(&quot;ret_fd: %d --- %d\n&quot;, cur_irdfd, j);
++			ird_descriptors[cur_irdfd].cur_pos = 0;
++			if(flags&amp;O_APPEND) {
++				printf(&quot;Appendiamoci\n&quot;);
++				ird_descriptors[cur_irdfd].cur_pos = module_var[j].length;
+ 			}
+-			j++;
++			//else printf(&quot;Pero' non ci appendiamo\n&quot;);
++			return cur_irdfd++; 
+ 		}
+-		if(flags&amp;O_CREAT) {
+-			printf(&quot;O_CREAT Flag\n&quot;);
+-			if(fs_specs-&gt;nfiles &lt; MAX_FILES ){			
+-				module_var[fs_specs-&gt;nfiles].magic=0xBF;
+-				strcpy(module_var[fs_specs-&gt;nfiles].fileName, path);
+-				module_var[fs_specs-&gt;nfiles].file_type = FS_FILE;
+-				module_var[fs_specs-&gt;nfiles].uid = current_user.uid;
+-				module_var[fs_specs-&gt;nfiles].offset = ++fs_end;
+-				module_var[fs_specs-&gt;nfiles].length = 0;
+-				ird_descriptors[cur_irdfd].file_descriptor	= fs_specs-&gt;nfiles;
+-				ird_descriptors[cur_irdfd].cur_pos = 0;
+-				fs_specs-&gt;nfiles++;				
+-				return cur_irdfd++; 
+-			}
+-			return -1;
++		j++;
++	}
++	//printf(&quot;\n&quot;);
++	if(flags&amp;O_CREAT) {
++		printf(&quot;O_CREAT Flag\n&quot;);
++		if(fs_specs-&gt;nfiles &lt; MAX_FILES ){			
++			module_var[fs_specs-&gt;nfiles].magic=0xBF;
++			strcpy(module_var[fs_specs-&gt;nfiles].fileName, path);
++			module_var[fs_specs-&gt;nfiles].file_type = FS_FILE;
++			module_var[fs_specs-&gt;nfiles].uid = current_user.uid;
++			module_var[fs_specs-&gt;nfiles].offset = ++fs_end;
++			module_var[fs_specs-&gt;nfiles].length = 0;
++			ird_descriptors[cur_irdfd].file_descriptor	= fs_specs-&gt;nfiles;
++			ird_descriptors[cur_irdfd].cur_pos = 0;
++			fs_specs-&gt;nfiles++;				
++			return cur_irdfd++; 
+ 		}
++		return -1;
+ 	}
++	
++	printf(&quot;Qua\n&quot;);
+ 	return -1;	
+ }
+ 
+
+Modified: trunk/hardware/pic8259.c
+===================================================================
+--- trunk/hardware/pic8259.c	2010-07-25 07:28:44 UTC (rev 280)
++++ trunk/hardware/pic8259.c	2010-08-04 14:42:34 UTC (rev 281)
+@@ -85,8 +85,8 @@
+     enable_IRQ(TIMER);
+     enable_IRQ(TO_SLAVE_PIC);
+    
+-    init_idt();
+-    init_gdt();
++    //init_idt();
++    //init_gdt();
+ 
+     setup_IRQ();
+     asm(&quot;sti&quot;);
+
+Modified: trunk/include/fs/initrd.h
+===================================================================
+--- trunk/include/fs/initrd.h	2010-07-25 07:28:44 UTC (rev 280)
++++ trunk/include/fs/initrd.h	2010-08-04 14:42:34 UTC (rev 281)
+@@ -50,8 +50,8 @@
+     \brief File Descriptor relativo ai files aperti.
+  */
+ struct initrd_fd{
+-	int file_descriptor;
+-	int cur_pos;
++	int file_descriptor; /*!&lt; id del file aperto all'interno del file system (posizione nel vettore dei files */
++	int cur_pos; /*!&lt; Posizione attuale all'interno del file, per operazioni di lettura/scrittura*/
+ };
+ 
+ typedef struct initrd_t initrd_t;
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-07-25 07:28:44 UTC (rev 280)
++++ trunk/shell/commands.c	2010-08-04 14:42:34 UTC (rev 281)
+@@ -570,7 +570,7 @@
+ 					printf(&quot;Type your text here, actually only one line available!!\n&quot;);
+ 					scanf(&quot;%s&quot;, text);
+ 					write(fd,text, strlen(text));
+-					close(fd);
++					if(close(fd)==-1) printf(&quot;something went wrong\n&quot;);
+ 				}
+ 			}
+ 		}
+
+Modified: trunk/shell/user_shell.c
+===================================================================
+--- trunk/shell/user_shell.c	2010-07-25 07:28:44 UTC (rev 280)
++++ trunk/shell/user_shell.c	2010-08-04 14:42:34 UTC (rev 281)
+@@ -31,8 +31,7 @@
+ 	//memset(path,0,8);
+ 	//strcpy(path, &quot;/passwd&quot;);		
+ 	memset(checking_user.username, '\0', 50);
+-	memset(checking_user.password, '\0', 50);
+-	/*printf(&quot;Username provided: %s\n&quot;);*/
++	memset(checking_user.password, '\0', 50);	
+ 	puts(username);
+ 	dbg_bochs_print((const unsigned char*)&quot;Logging In\n&quot;);
+ 	fd = open(&quot;/passwd&quot;, O_RDONLY,0);
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	
+	<LI>Next message: <A HREF="000285.html">[Dreamos-dev] r282 - in trunk: . include include/lng shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#284">[ date ]</a>
+              <a href="thread.html#284">[ thread ]</a>
+              <a href="subject.html#284">[ subject ]</a>
+              <a href="author.html#284">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

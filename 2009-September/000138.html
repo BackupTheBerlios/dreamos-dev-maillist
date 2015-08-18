@@ -1,0 +1,265 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r136 - in trunk: . boot fs include include/shell	include/sys shell sys
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-September/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r136%20-%20in%20trunk%3A%20.%20boot%20fs%20include%20include/shell%0A%09include/sys%20shell%20sys&In-Reply-To=%3C200909202131.n8KLVJ76030236%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000137.html">
+   <LINK REL="Next"  HREF="000139.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r136 - in trunk: . boot fs include include/shell	include/sys shell sys</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r136%20-%20in%20trunk%3A%20.%20boot%20fs%20include%20include/shell%0A%09include/sys%20shell%20sys&In-Reply-To=%3C200909202131.n8KLVJ76030236%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r136 - in trunk: . boot fs include include/shell	include/sys shell sys">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun Sep 20 23:31:19 CEST 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000137.html">[Dreamos-dev] r135 - in trunk: . fs sys
+</A></li>
+        <LI>Next message: <A HREF="000139.html">[Dreamos-dev] r137 - in trunk: . fs include include/fs	include/shell include/sys shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#138">[ date ]</a>
+              <a href="thread.html#138">[ thread ]</a>
+              <a href="subject.html#138">[ subject ]</a>
+              <a href="author.html#138">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-09-20 23:30:33 +0200 (Sun, 20 Sep 2009)
+New Revision: 136
+
+Added:
+   trunk/boot/grub.img
+Removed:
+   trunk/boot/grub.img
+Modified:
+   trunk/dreamos.img
+   trunk/fs/vfs.c
+   trunk/include/kernel.h
+   trunk/include/shell/testing.h
+   trunk/include/sys/dirent.h
+   trunk/kernel.c
+   trunk/shell/commands.c
+   trunk/shell/testing.c
+   trunk/sys/dirent.c
+Log:
+Aggiornato grub.img con un file caricato da grub come modulo
+Aggiunta opzione try_module al comando tester
+Alcune migliorie alla opendir 
+Creazione funzioni placeholder per la opendir dei vari mountpoint
+Controllo numero moduli caricati da grub nell'avvio
+
+
+Deleted: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Added: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+
+Property changes on: trunk/boot/grub.img
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2009-09-17 20:35:51 UTC (rev 135)
++++ trunk/fs/vfs.c	2009-09-20 21:30:33 UTC (rev 136)
+@@ -25,6 +25,7 @@
+ #include &lt;kheap.h&gt;
+ #include &lt;unistd.h&gt;
+ #include &lt;initrd.h&gt;
++#include &lt;dirent.h&gt;
+ 
+ struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
+ 
+@@ -38,7 +39,8 @@
+  		mountpoint_list[i].pmask = 0;
+  		mountpoint_list[i].dev_id = 0;
+ 	 	mountpoint_list[i].start_address = 0;
+-	 	mountpoint_list[0].dir_op.opendir_f = NULL;	
++	 	//mountpoint_list[0].dir_op.opendir_f = NULL;	
++	 	mountpoint_list[i].dir_op.opendir_f = fake_opendir;
+ 	 	//mountpoint_list[i].operations = NULL;
+  		i++;
+ 	}
+
+Modified: trunk/include/kernel.h
+===================================================================
+--- trunk/include/kernel.h	2009-09-17 20:35:51 UTC (rev 135)
++++ trunk/include/kernel.h	2009-09-20 21:30:33 UTC (rev 136)
+@@ -26,7 +26,10 @@
+ #define _KERNEL_H
+ 
+ #define asmlinkage __attribute__((regparm(0)))
++
++extern multiboot_info_t *boot_informations;
+ asmlinkage void _start(struct multiboot_info*);
++extern char *module_start;
+ int main_loop(struct multiboot_info*);
+ 
+ #define DREAMOS_VER &quot;DreamOS ver 0.2.0 - trunk&quot;
+
+Modified: trunk/include/shell/testing.h
+===================================================================
+--- trunk/include/shell/testing.h	2009-09-17 20:35:51 UTC (rev 135)
++++ trunk/include/shell/testing.h	2009-09-20 21:30:33 UTC (rev 136)
+@@ -20,4 +20,5 @@
+ void try_kmalloc();
+ void try_printmem(void);
+ void do_fault();
+-void help_tester();
+\ No newline at end of file
++void help_tester();
++void try_module();
+
+Modified: trunk/include/sys/dirent.h
+===================================================================
+--- trunk/include/sys/dirent.h	2009-09-17 20:35:51 UTC (rev 135)
++++ trunk/include/sys/dirent.h	2009-09-20 21:30:33 UTC (rev 136)
+@@ -50,5 +50,5 @@
+ void           rewinddir(DIR *);
+ void           seekdir(DIR *, long int);
+ long int       telldir(DIR *);
+-
++DIR* fake_opendir (const char *);
+ #endif
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2009-09-17 20:35:51 UTC (rev 135)
++++ trunk/kernel.c	2009-09-20 21:30:33 UTC (rev 136)
+@@ -47,6 +47,7 @@
+ unsigned int *current_page_table;
+ extern unsigned int end;
+ multiboot_info_t *boot_informations;
++char *module_start;
+ asmlinkage void _start(struct multiboot_info *boot_info)
+ {
+     boot_informations = boot_info;    
+@@ -95,10 +96,12 @@
+     get_cpuid (sinfo);
+         
+     vfs_init();
+-
++	if(boot_info-&gt;mods_count &gt; 0) printf(&quot;Found n. %d Modules\n&quot;, boot_info-&gt;mods_count);	
++	module_start = *((unsigned int*)boot_info-&gt;mods_addr);
++	//printf(&quot;Address of module: 0x%x\n&quot;, tmp);
+     printf(&quot;\n&quot;);
+     printf(&quot;----\n&quot;);
+-    printf(LNG_SHELL);
++    printf(LNG_SHELL);    
+     _kprintOK();
+ 		printf(&quot;[+] Address: 0x%x\n&quot;, &amp;end);		   	        
+ 		printf(&quot;\n\n&quot;);
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-09-17 20:35:51 UTC (rev 135)
++++ trunk/shell/commands.c	2009-09-20 21:30:33 UTC (rev 136)
+@@ -410,6 +410,7 @@
+ 					{ &quot;try_strtok&quot;, try_strtok },
+ 					{ &quot;do_fault&quot;, do_fault },
+ 					{ &quot;try_printmem&quot;, try_printmem },
++					{ &quot;try_module&quot;, try_module },
+ 					{ &quot;--help&quot;, help_tester },
+ 					};
+ 	if (argc != 2) {
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2009-09-17 20:35:51 UTC (rev 135)
++++ trunk/shell/testing.c	2009-09-20 21:30:33 UTC (rev 136)
+@@ -23,7 +23,12 @@
+ #include &lt;mouse.h&gt;
+ #include &lt;vfs.h&gt;
+ #include &lt;testing.h&gt;
++#include &lt;multiboot.h&gt;
++#include &lt;kernel.h&gt;
+ 
++//multiboot_info_t *boot_informations;
++char *module_start;
++
+ void try_strtok()
+ {
+ 	char *s = &quot;Hello World&quot;;
+@@ -100,4 +105,15 @@
+ 		&quot;  -&gt; try_strtok        - Test strtok() function in string.h\n&quot;
+ 		&quot;  -&gt; try_printmem      - Print used locations of memory\n&quot;
+ 		);	
+-}
+\ No newline at end of file
++}
++
++void try_module(){
++	int j=0;
++	char* mod_address;
++	mod_address = module_start;	
++	while(j&lt;36){
++		_kputc(mod_address[j]);
++		j++;
++	}
++	_kputs(&quot;\n&quot;);
++}
+
+Modified: trunk/sys/dirent.c
+===================================================================
+--- trunk/sys/dirent.c	2009-09-17 20:35:51 UTC (rev 135)
++++ trunk/sys/dirent.c	2009-09-20 21:30:33 UTC (rev 136)
+@@ -40,7 +40,12 @@
+ 		return NULL;
+ 	}
+ }
++
+ int closedir(DIR *dirp){
+ 	printf(&quot;Closing directory\n&quot;);
+-	//free(dirp);
++	free(dirp);
+ }
++
++DIR* fake_opendir (const char *path){
++	printf(&quot;One day, when i will grow up, i could open that path: %s\n&quot;, path);
++}
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000137.html">[Dreamos-dev] r135 - in trunk: . fs sys
+</A></li>
+	<LI>Next message: <A HREF="000139.html">[Dreamos-dev] r137 - in trunk: . fs include include/fs	include/shell include/sys shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#138">[ date ]</a>
+              <a href="thread.html#138">[ thread ]</a>
+              <a href="subject.html#138">[ subject ]</a>
+              <a href="author.html#138">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

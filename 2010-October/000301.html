@@ -1,0 +1,112 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r298 - in trunk: . boot include/mem misc
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-October/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r298%20-%20in%20trunk%3A%20.%20boot%20include/mem%20misc&In-Reply-To=%3C20101003210602.3582D480F75%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   
+   <LINK REL="Next"  HREF="000302.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r298 - in trunk: . boot include/mem misc</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r298%20-%20in%20trunk%3A%20.%20boot%20include/mem%20misc&In-Reply-To=%3C20101003210602.3582D480F75%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r298 - in trunk: . boot include/mem misc">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun Oct  3 23:06:02 CEST 2010</I>
+    <P><UL>
+        
+        <LI>Next message: <A HREF="000302.html">[Dreamos-dev] r299 - in trunk: . boot include/misc mem misc
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#301">[ date ]</a>
+              <a href="thread.html#301">[ thread ]</a>
+              <a href="subject.html#301">[ subject ]</a>
+              <a href="author.html#301">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-10-03 23:06:02 +0200 (Sun, 03 Oct 2010)
+New Revision: 298
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/include/mem/heap.h
+   trunk/misc/ordered_array.c
+Log:
+Aggiunto elemento in heap_t
+Corretto cast in create new_array
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/mem/heap.h
+===================================================================
+--- trunk/include/mem/heap.h	2010-09-24 13:37:30 UTC (rev 297)
++++ trunk/include/mem/heap.h	2010-10-03 21:06:02 UTC (rev 298)
+@@ -38,6 +38,7 @@
+ 	ordered_array_t index; /*!&lt; Indice degli holes */
+ 	unsigned int start_address; /*!&lt; Indirizzo di inizio dell'heap */
+ 	unsigned int end_address; /*!&lt; Indirizzo di fine dell'heap */
++	unsigned int max_address; /*!&lt; Indirizzo massimo dove possiamo espandere l'heap */
+ }new_heap_t;
+ 
+ /*! \struct header_t 
+
+Modified: trunk/misc/ordered_array.c
+===================================================================
+--- trunk/misc/ordered_array.c	2010-09-24 13:37:30 UTC (rev 297)
++++ trunk/misc/ordered_array.c	2010-10-03 21:06:02 UTC (rev 298)
+@@ -50,10 +50,10 @@
+     ordered_array_t tmp_array;
+     tmp_array.size_max = size;
+     tmp_array.size = 0;
+-    tmp_array.array = (void_t)start;
++    tmp_array.array = (void_t*)start;
+     tmp_array.less_than = predicate;    
+     /* Questa parte e' memsettbile dopo che sara' fatta */
+-    //printf(&quot;SizeMax: %d\n&quot;, tmp_array.size_max);
++    printf(&quot;SizeMax: %d\n&quot;, tmp_array.size_max);
+     //memset(tmp_array.array, 0, tmp_array.size_max);
+     return tmp_array;
+ }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	
+	<LI>Next message: <A HREF="000302.html">[Dreamos-dev] r299 - in trunk: . boot include/misc mem misc
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#301">[ date ]</a>
+              <a href="thread.html#301">[ thread ]</a>
+              <a href="subject.html#301">[ subject ]</a>
+              <a href="author.html#301">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

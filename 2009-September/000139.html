@@ -1,0 +1,219 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r137 - in trunk: . fs include include/fs	include/shell include/sys shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-September/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r137%20-%20in%20trunk%3A%20.%20fs%20include%20include/fs%0A%09include/shell%20include/sys%20shell&In-Reply-To=%3C200909232036.n8NKagc8004098%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000138.html">
+   <LINK REL="Next"  HREF="000140.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r137 - in trunk: . fs include include/fs	include/shell include/sys shell</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r137%20-%20in%20trunk%3A%20.%20fs%20include%20include/fs%0A%09include/shell%20include/sys%20shell&In-Reply-To=%3C200909232036.n8NKagc8004098%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r137 - in trunk: . fs include include/fs	include/shell include/sys shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Wed Sep 23 22:36:42 CEST 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000138.html">[Dreamos-dev] r136 - in trunk: . boot fs include include/shell	include/sys shell sys
+</A></li>
+        <LI>Next message: <A HREF="000140.html">[Dreamos-dev] r138 - in trunk: . shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#139">[ date ]</a>
+              <a href="thread.html#139">[ thread ]</a>
+              <a href="subject.html#139">[ subject ]</a>
+              <a href="author.html#139">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-09-23 22:36:41 +0200 (Wed, 23 Sep 2009)
+New Revision: 137
+
+Added:
+   trunk/fs/initfs
+Modified:
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/include/fs/fcntl.h
+   trunk/include/shell/testing.h
+   trunk/include/sys/types.h
+   trunk/include/version.h
+   trunk/shell/commands.c
+   trunk/shell/testing.c
+Log:
+Aggiunto file initfs in fs/ per ora file di testo
+Aggiunto comando test try_open
+Aggiunti alcuni prototipi e define in fcntl.h
+
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2009-09-20 21:30:33 UTC (rev 136)
++++ trunk/fs/fcntl.c	2009-09-23 20:36:41 UTC (rev 137)
+@@ -17,8 +17,15 @@
+  */
+  
+ #include &lt;fcntl.h&gt;
++#include &lt;stdarg.h&gt;
++#include &lt;stdio.h&gt;
+ 
+-int  open(const char *path, int flags, ...){
+-	printf(&quot;Tmp\n&quot;);
++int  open(const char *path, int flags,  ...){
++	int prova;
++	va_list ap;
++	va_start(ap, flags);
++	
++	prova = va_arg(ap, int);
++	printf(&quot;Prov vale: %d e il path: %s\n&quot;, prova,path);
+ }
+ 
+
+Added: trunk/fs/initfs
+===================================================================
+--- trunk/fs/initfs	2009-09-20 21:30:33 UTC (rev 136)
++++ trunk/fs/initfs	2009-09-23 20:36:41 UTC (rev 137)
+@@ -0,0 +1,4 @@
++informazioni a buffo per non lasciare
++un file da 0 byte.....
++
++boh
+
+Modified: trunk/include/fs/fcntl.h
+===================================================================
+--- trunk/include/fs/fcntl.h	2009-09-20 21:30:33 UTC (rev 136)
++++ trunk/include/fs/fcntl.h	2009-09-23 20:36:41 UTC (rev 137)
+@@ -19,6 +19,14 @@
+ #ifndef _FCNTL_H
+ #define _FCNTL_H
+ 
++#include &lt;sys/types.h&gt;
+ 
++#define O_RDONLY	00000000
++#define O_WRONLY    00000001
++#define O_RDWR      00000002
++
++int  creat(const char *, mode_t);
++int  fcntl(int, int, ...);
+ int  open(const char *, int, ...);
++
+ #endif
+
+Modified: trunk/include/shell/testing.h
+===================================================================
+--- trunk/include/shell/testing.h	2009-09-20 21:30:33 UTC (rev 136)
++++ trunk/include/shell/testing.h	2009-09-23 20:36:41 UTC (rev 137)
+@@ -15,10 +15,15 @@
+  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+  
+- 
++#ifndef TESTING_H
++#define TESTING_H
++
+ void try_strtok();
+ void try_kmalloc();
+ void try_printmem(void);
+ void do_fault();
+ void help_tester();
+ void try_module();
++void try_open();
++
++#endif
+
+Modified: trunk/include/sys/types.h
+===================================================================
+--- trunk/include/sys/types.h	2009-09-20 21:30:33 UTC (rev 136)
++++ trunk/include/sys/types.h	2009-09-23 20:36:41 UTC (rev 137)
+@@ -22,4 +22,6 @@
+ typedef unsigned int ino_t;
+ typedef unsigned int dev_t;
+ 
++typedef unsigned int mode_t;
++
+ #endif
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-09-20 21:30:33 UTC (rev 136)
++++ trunk/include/version.h	2009-09-23 20:36:41 UTC (rev 137)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL &quot;2.0&quot;
+ #define EXTRAVERSION &quot;-trunk&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r127&quot;
++#define REV_NUM &quot;-r131&quot;
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-09-20 21:30:33 UTC (rev 136)
++++ trunk/shell/commands.c	2009-09-23 20:36:41 UTC (rev 137)
+@@ -411,6 +411,7 @@
+ 					{ &quot;do_fault&quot;, do_fault },
+ 					{ &quot;try_printmem&quot;, try_printmem },
+ 					{ &quot;try_module&quot;, try_module },
++					{ &quot;try_open&quot;, try_open},
+ 					{ &quot;--help&quot;, help_tester },
+ 					};
+ 	if (argc != 2) {
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2009-09-20 21:30:33 UTC (rev 136)
++++ trunk/shell/testing.c	2009-09-23 20:36:41 UTC (rev 137)
+@@ -111,9 +111,13 @@
+ 	int j=0;
+ 	char* mod_address;
+ 	mod_address = module_start;	
+-	while(j&lt;36){
+-		_kputc(mod_address[j]);
++	while(j&lt;101){
++		putchar(mod_address[j]);
+ 		j++;
+ 	}
+ 	_kputs(&quot;\n&quot;);
+ }
++
++void try_open(){
++	open(&quot;Prova&quot;, 0, 42);
++}
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000138.html">[Dreamos-dev] r136 - in trunk: . boot fs include include/shell	include/sys shell sys
+</A></li>
+	<LI>Next message: <A HREF="000140.html">[Dreamos-dev] r138 - in trunk: . shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#139">[ date ]</a>
+              <a href="thread.html#139">[ thread ]</a>
+              <a href="subject.html#139">[ subject ]</a>
+              <a href="author.html#139">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

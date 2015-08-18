@@ -1,0 +1,253 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r301 - in trunk: . boot drivers include/drivers mem	misc
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-October/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r301%20-%20in%20trunk%3A%20.%20boot%20drivers%20include/drivers%20mem%0A%09misc&In-Reply-To=%3C20101011175311.34AB7480F6C%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000303.html">
+   <LINK REL="Next"  HREF="000305.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r301 - in trunk: . boot drivers include/drivers mem	misc</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r301%20-%20in%20trunk%3A%20.%20boot%20drivers%20include/drivers%20mem%0A%09misc&In-Reply-To=%3C20101011175311.34AB7480F6C%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r301 - in trunk: . boot drivers include/drivers mem	misc">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Mon Oct 11 19:53:11 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000303.html">[Dreamos-dev] r300 - in trunk: . boot mem misc
+</A></li>
+        <LI>Next message: <A HREF="000305.html">[Dreamos-dev] r302 - in trunk: . boot mem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#304">[ date ]</a>
+              <a href="thread.html#304">[ thread ]</a>
+              <a href="subject.html#304">[ subject ]</a>
+              <a href="author.html#304">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-10-11 19:53:10 +0200 (Mon, 11 Oct 2010)
+New Revision: 301
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/drivers/keyboard.c
+   trunk/include/drivers/keyboard.h
+   trunk/kernel.c
+   trunk/mem/fismem.c
+   trunk/mem/heap.c
+   trunk/mem/paging.c
+   trunk/misc/ordered_array.c
+Log:
+Shadow e' stata dichiarata come static
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/drivers/keyboard.c
+===================================================================
+--- trunk/drivers/keyboard.c	2010-10-08 22:01:29 UTC (rev 300)
++++ trunk/drivers/keyboard.c	2010-10-11 17:53:10 UTC (rev 301)
+@@ -80,7 +80,7 @@
+ 
+ extern unsigned int last_tab;
+ 
+-int shadow=0;
++static int shadow=0;
+ 
+ /*
+  * The keyboard handler
+@@ -315,5 +315,6 @@
+ }
+ 
+ int get_shadow(){
++	//printf(&quot;Address shadow: %u\n&quot;, &amp;shadow);
+ 	return shadow;
+ }
+
+Modified: trunk/include/drivers/keyboard.h
+===================================================================
+--- trunk/include/drivers/keyboard.h	2010-10-08 22:01:29 UTC (rev 300)
++++ trunk/include/drivers/keyboard.h	2010-10-11 17:53:10 UTC (rev 301)
+@@ -61,7 +61,6 @@
+ 
+ /* Procedures */
+ 
+-extern int shadow;
+ 
+ void keyboard_isr (void);
+ void keyboard_enable (void);
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2010-10-08 22:01:29 UTC (rev 300)
++++ trunk/kernel.c	2010-10-11 17:53:10 UTC (rev 301)
+@@ -91,8 +91,7 @@
+     init_IRQ();   
+     _kprintOK();            	
+     printf(LNG_PIT8253);
+-    configure_PIT ();   
+-    //_kprintOK();   
++    configure_PIT ();       
+     set_memorysize((boot_info-&gt;mem_upper+boot_info-&gt;mem_lower)*1024);
+     init_mem();       
+     asm(&quot;sti&quot;);
+@@ -114,7 +113,7 @@
+     printf(&quot;\n&quot;);
+     printf(&quot;----\n&quot;);
+     //set_shadow(DISABLED);
+-    /*printf(&quot;The shadow: %d\n&quot;, get_shadow());*/
++    //printf(&quot;The shadow: %d\n&quot;, get_shadow());
+     printf(LNG_SHELL);    
+     _kprintOK();
+ 		printf(&quot;[+] Address: 0x%x\n&quot;, &amp;end);		   	        
+
+Modified: trunk/mem/fismem.c
+===================================================================
+--- trunk/mem/fismem.c	2010-10-08 22:01:29 UTC (rev 300)
++++ trunk/mem/fismem.c	2010-10-11 17:53:10 UTC (rev 301)
+@@ -118,7 +118,8 @@
+      add_memarea_element(indirizzo, n_pages);
+     #ifdef DEBUG
+     printf(&quot;Next_free: %d\n&quot;, mem_info-&gt;next_free);
+-    #endif
++    printf(&quot;%u\n&quot;, indirizzo);
++    #endif    
+     return (void*) indirizzo;
+ }
+ 
+@@ -210,7 +211,7 @@
+ 
+ /**
+   * Calcola la quantita' di memoria
+-  * @author Ivan Gualandri and Osiris
++  * @author Ivan Gualandri
+   * @version 1.0
+   * @return size_t Dimensione della memoria.
+   * Questa funzione andra'completamente modificata appena si aggiungera il boot con grub.
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-10-08 22:01:29 UTC (rev 300)
++++ trunk/mem/heap.c	2010-10-11 17:53:10 UTC (rev 301)
+@@ -33,7 +33,7 @@
+ 
+ 
+ void init_newmem(){
+-	//placement_address = address_cur;
++	//placement_address = address_cur;	
+ 	n_heap = (new_heap_t*)new_heap(HEAP_START_ADDRESS, HEAP_INDEX_SIZE);
+ }
+ 
+@@ -44,7 +44,7 @@
+ new_heap_t *new_heap(unsigned int start, unsigned int size){
+ 	new_heap_t* t_heap =(new_heap_t*) new_malloc(sizeof(new_heap_t));
+ 	if(start%0x1000 == 0){
+-		printf(&quot;all right\n&quot;);
++		//printf(&quot;all right\n&quot;);
+ 		t_heap-&gt;start_address = start;
+ 		t_heap-&gt;end_address = start + size;	
+ 		t_heap-&gt;index = new_array((void*)start,size, &amp;header_t_less_than);
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2010-10-08 22:01:29 UTC (rev 300)
++++ trunk/mem/paging.c	2010-10-11 17:53:10 UTC (rev 301)
+@@ -238,7 +238,7 @@
+     unsigned int *new_pt;
+ 	void *new_p;
+     //printf(&quot;Test\n&quot;);
+-        /* Ricava l'indirizzo che ha causato l'eccezione */
++    /* Ricava l'indirizzo che ha causato l'eccezione */
+     asm (&quot;movl %%cr2, %0&quot;:&quot;=r&quot; (fault_addr));
+     //if(fault_addr &gt; 0) printf(&quot;Ok &quot;);
+ 	//printf(&quot;Fault addr: %u\n&quot;, fault_addr); 
+@@ -257,6 +257,7 @@
+     if (pd_entry == 0) {
+ 	    int i=0;
+ 	    new_pt = create_pageTable();
++	    if(new_pt==4468736) printf(&quot;Eccolo qua lo stronzo\n&quot;);
+ 	    while(i&lt;PT_LIMIT){
+ 	      new_pt[i] = 0x00000000;
+ 	      i++;
+@@ -273,7 +274,9 @@
+ 	printf (&quot;Entry corrente della pagetable: %d\n&quot;, pt_entry);
+ 	#endif
+ 	if (pt_entry == 0) {
++		//Si configura una entry della pagetable.
+ 	    new_p = request_pages (1, ADD_LIST);
++	    if(new_p==4468736) printf(&quot;Eccolo qua lo stronzo\n&quot;);
+ 	    set_pagetable_entry_ric (pdir, ptable, (unsigned int)new_p, PD_PRESENT|SUPERVISOR|WRITE, 0);
+ 	    #ifdef DEBUG
+ 	    printf (&quot;Nuova entry dopo la mappatura: %d\n&quot;, get_pagetable_entry (pdir, ptable));
+
+Modified: trunk/misc/ordered_array.c
+===================================================================
+--- trunk/misc/ordered_array.c	2010-10-08 22:01:29 UTC (rev 300)
++++ trunk/misc/ordered_array.c	2010-10-11 17:53:10 UTC (rev 301)
+@@ -44,16 +44,21 @@
+   * @return Pointer to a new ordered_array_t
+   */
+ ordered_array_t new_array(void* start, unsigned int size, lessthan_predicate_t predicate){
+-    //int i;
+-    //i=0;
++    int i;
+     //printf(&quot;Make array code goes here...\n&quot;);        
+     ordered_array_t tmp_array;
+     tmp_array.array = (type_t*)start;
++    //printf(&quot;Address: %u\n&quot;, &amp;tmp_array);
+     tmp_array.size_max = size;
+     tmp_array.size = 0;	    
+     tmp_array.less_than = predicate;    
+     /* Questa parte e' memsettbile dopo che sara' fatta */
+     printf(&quot;SizeMax: %d\n&quot;, tmp_array.size_max);
++    i=0;    
++    while(i &lt; tmp_array.size_max){
++		tmp_array.array[i] = 0x0;
++		i++;
++	}
+     //memset(tmp_array.array, 0, tmp_array.size_max);
+     return tmp_array;
+ }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000303.html">[Dreamos-dev] r300 - in trunk: . boot mem misc
+</A></li>
+	<LI>Next message: <A HREF="000305.html">[Dreamos-dev] r302 - in trunk: . boot mem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#304">[ date ]</a>
+              <a href="thread.html#304">[ thread ]</a>
+              <a href="subject.html#304">[ subject ]</a>
+              <a href="author.html#304">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

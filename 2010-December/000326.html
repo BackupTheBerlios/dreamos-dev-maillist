@@ -1,0 +1,121 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r323 - in trunk: . include/mem mem
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-December/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r323%20-%20in%20trunk%3A%20.%20include/mem%20mem&In-Reply-To=%3C20101205203629.653F1480C9D%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000325.html">
+   <LINK REL="Next"  HREF="000327.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r323 - in trunk: . include/mem mem</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r323%20-%20in%20trunk%3A%20.%20include/mem%20mem&In-Reply-To=%3C20101205203629.653F1480C9D%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r323 - in trunk: . include/mem mem">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun Dec  5 21:36:29 CET 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000325.html">[Dreamos-dev] r322 - in trunk: . boot include/mem mem
+</A></li>
+        <LI>Next message: <A HREF="000327.html">[Dreamos-dev] r324 - in trunk: . mem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#326">[ date ]</a>
+              <a href="thread.html#326">[ thread ]</a>
+              <a href="subject.html#326">[ subject ]</a>
+              <a href="author.html#326">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-12-05 21:36:29 +0100 (Sun, 05 Dec 2010)
+New Revision: 323
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/mem/heap.h
+   trunk/mem/heap.c
+Log:
+expand: caricato valore nuovo indirizzo disponibile nell'heap
+contract: creato header e funzione placeholder
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/mem/heap.h
+===================================================================
+--- trunk/include/mem/heap.h	2010-12-04 22:13:01 UTC (rev 322)
++++ trunk/include/mem/heap.h	2010-12-05 20:36:29 UTC (rev 323)
+@@ -70,6 +70,7 @@
+ void init_newmem();
+ 
+ unsigned int new_malloc(unsigned int);
++unsigned int contract(unsigned int, new_heap_t);
+ short int locate_smallest_hole(unsigned int, unsigned short int, new_heap_t*);
+ short int header_t_less_than(void *,void *);
+ #endif
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-12-04 22:13:01 UTC (rev 322)
++++ trunk/mem/heap.c	2010-12-05 20:36:29 UTC (rev 323)
+@@ -136,14 +136,21 @@
+ void expand(unsigned int new_size, new_heap_t *t_heap){
+ 	unsigned int old_size = t_heap-&gt;end_address - t_heap-&gt;start_address; 
+ 	/** First of all: Align the space required*/
+-	if(new_size&amp;0xFFFFF000 != 0){
++	if((new_size&amp;0xFFFFF000) != 0){
+ 		new_size&amp;=0xFFFFF000;
+ 		new_size+=0x1000;
+-	}
+-	/**/
++	}	
++	/**We have pages created when #PF occurs, so we only need to update 
++	 * t_heap-&gt;end_address*/
++	t_heap-&gt;end_address = t_heap-&gt;start_address + new_size;	
+ 	printf(&quot;Placeholder for expand\n&quot;);	
+ }
+ 
++unsigned int contract(unsigned int new_size, new_heap_t t_heap){
++	printf(&quot;PlaceHolder for new function contract\n&quot;);
++	return 0;
++}
++
+ short int locate_smallest_hole(unsigned int size, unsigned short int p_align, new_heap_t* in_heap){
+ 	unsigned int index = 0; 
+ 	printf(&quot;Size index: %d\n&quot;, in_heap-&gt;index.size);
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000325.html">[Dreamos-dev] r322 - in trunk: . boot include/mem mem
+</A></li>
+	<LI>Next message: <A HREF="000327.html">[Dreamos-dev] r324 - in trunk: . mem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#326">[ date ]</a>
+              <a href="thread.html#326">[ thread ]</a>
+              <a href="subject.html#326">[ subject ]</a>
+              <a href="author.html#326">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

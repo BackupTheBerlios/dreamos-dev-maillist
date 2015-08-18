@@ -1,0 +1,285 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r167 - in trunk: . fs include include/fs shell sys
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-January/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r167%20-%20in%20trunk%3A%20.%20fs%20include%20include/fs%20shell%20sys&In-Reply-To=%3C201001072240.o07MeLDF016477%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000168.html">
+   <LINK REL="Next"  HREF="000170.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r167 - in trunk: . fs include include/fs shell sys</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r167%20-%20in%20trunk%3A%20.%20fs%20include%20include/fs%20shell%20sys&In-Reply-To=%3C201001072240.o07MeLDF016477%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r167 - in trunk: . fs include include/fs shell sys">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Thu Jan  7 23:40:21 CET 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000168.html">[Dreamos-dev] r166 - in trunk: . fs include libc sys utils
+</A></li>
+        <LI>Next message: <A HREF="000170.html">[Dreamos-dev] r168 - in trunk: . fs include/fs include/libc
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#169">[ date ]</a>
+              <a href="thread.html#169">[ thread ]</a>
+              <a href="subject.html#169">[ subject ]</a>
+              <a href="author.html#169">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-01-07 23:40:20 +0100 (Thu, 07 Jan 2010)
+New Revision: 167
+
+Added:
+   trunk/Makefile.am
+Modified:
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/fs/initrd.c
+   trunk/include/fs/vfs.h
+   trunk/include/version.h
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+   trunk/shell/testing.c
+   trunk/sys/dirent.c
+Log:
+Modificata initfs_open
+Aggiornata la open (ora assegna al campo fs_spec_id di fd_list
+il valore ritornato dalla initfs_open
+Aggiunto Makefile.am per dare una compilazione piu pulita.
+Eliminati alcuni warning.
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2010-01-07 21:55:44 UTC (rev 166)
++++ trunk/Makefile	2010-01-07 22:40:20 UTC (rev 167)
+@@ -7,6 +7,8 @@
+ PATCHLEVEL = 2.0
+ EXTRAVERSION = -trunk
+ 
++include Makefile.am
++
+ CFLAGS = -nostdlib\
+ 	 -nostdinc\
+ 	 -fomit-frame-pointer\
+@@ -65,10 +67,10 @@
+ 	mv kernel.bin dreamos.img
+ 
+ bl.img : boot/multicatcher.S
+-	nasm -f elf ./boot/multicatcher.S -o bl.img
++	$(ASM) -f elf ./boot/multicatcher.S -o bl.img
+ 
+ kernel.bin: $(OBJ)
+-	ld -static --oformat elf32-i386 --output=kernel.bin --script=kernel.lds bl.img $(OBJ) -Ttext 0x100000 -Map kernel.map
++	$(LD) -static --oformat elf32-i386 --output=kernel.bin --script=kernel.lds bl.img $(OBJ) -Ttext 0x100000 -Map kernel.map
+ 	make -f utils/Makefile
+ 
+ kernel.o: kernel.c
+
+Added: trunk/Makefile.am
+===================================================================
+--- trunk/Makefile.am	2010-01-07 21:55:44 UTC (rev 166)
++++ trunk/Makefile.am	2010-01-07 22:40:20 UTC (rev 167)
+@@ -0,0 +1,17 @@
++ARCH = x86
++
++
++PROMPT = &quot; -&gt; &quot; 
++
++LD = @echo &quot;   &quot; $(PROMPT) LD &quot;    &quot; $ &amp;&amp; ld
++CC = @echo &quot;   &quot; $(PROMPT) CC &quot;    &quot; $&lt; &amp;&amp; gcc
++ASM = @echo &quot;   &quot; $(PROMPT) ASM &quot;   &quot; $&lt; &amp;&amp; nasm
++AR = @echo &quot;   &quot; $(PROMPT) AR &quot;    &quot; $ &amp;&amp; ar
++CD = @echo  $(PROMPT) CD &quot;        &quot; $(DIR) &amp;&amp; cd
++
++
++.c.o: 
++	$(CC) -c $(CFLAGS) -o &quot;$@&quot; &quot;$&lt;&quot;
++
++.s.o:
++	$(ASM) $(ASFLAGS) $&lt;
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2010-01-07 21:55:44 UTC (rev 166)
++++ trunk/fs/fcntl.c	2010-01-07 22:40:20 UTC (rev 167)
+@@ -45,12 +45,15 @@
+ 	else {		
+ 		mpid = get_mountpoint_id(path);
+ 		fd_list[cur_fd].mountpoint_id = mpid;				
+-		path = get_rel_path(mpid, path);
+-		printf(&quot;Mpoint id: %d %s\n&quot;, fd_list[cur_fd].mountpoint_id, path);		
+-		if(mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open != NULL)
+-			mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open(path, oflags);
+-		else 
++		path = get_rel_path(mpid, path);		
++		if(mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open != NULL){
++			fd_list[cur_fd].fs_spec_id = (int) mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open(path, oflags);
++			printf(&quot;Mpoint id: %d %s fs_spec_fd: %d\n&quot;, fd_list[cur_fd].mountpoint_id, path, fd_list[cur_fd].fs_spec_id);		
++		}
++		else {
+ 			printf(&quot;No OPEN services found here\n&quot;);		
++			return -1;
++		}
+ 	}	
+ 	va_end(ap);
+ 	return cur_fd++;
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-01-07 21:55:44 UTC (rev 166)
++++ trunk/fs/initrd.c	2010-01-07 22:40:20 UTC (rev 167)
+@@ -53,7 +53,6 @@
+ 
+ int initfs_open(const char *path, int flags, ...){
+ 	initrd_file_t *module_var;
+-	int ifs_fd;	
+ 	int j = 0;
+ 	module_var = fs_headers;	
+ 	while (j &lt; fs_specs-&gt;nfiles) {
+
+Modified: trunk/include/fs/vfs.h
+===================================================================
+--- trunk/include/fs/vfs.h	2010-01-07 21:55:44 UTC (rev 166)
++++ trunk/include/fs/vfs.h	2010-01-07 22:40:20 UTC (rev 167)
+@@ -38,7 +38,7 @@
+ 
+ struct super_node_operations {
+ 	/*Qui vanno i puntatori alle funzioni sul supernode*/
+-	void (*open)(const char *, int );
++	int (*open)(const char *, int );
+ 	void (*close)(int);
+ 	int (*read)(int, void*, size_t);
+ 	int (*write)(int, void*, size_t);
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2010-01-07 21:55:44 UTC (rev 166)
++++ trunk/include/version.h	2010-01-07 22:40:20 UTC (rev 167)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL &quot;2.0&quot;
+ #define EXTRAVERSION &quot;-trunk&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r165&quot;
++#define REV_NUM &quot;-r167&quot;
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-01-07 21:55:44 UTC (rev 166)
++++ trunk/shell/commands.c	2010-01-07 22:40:20 UTC (rev 167)
+@@ -422,7 +422,7 @@
+ 		return;
+ 	} else { 
+ 		for ( i = 0 ; i &lt;= MAX_TEST ; i++) {
+-			if ( (strcmp(argv[1], testing[i].cmd_testname) ) == NULL ) {
++			if ( (strcmp(argv[1], testing[i].cmd_testname) ) == (int) NULL ) {
+ 				 (testing[i].func)();
+ 				break;
+ 			} 
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2010-01-07 21:55:44 UTC (rev 166)
++++ trunk/shell/shell.c	2010-01-07 22:40:20 UTC (rev 167)
+@@ -72,7 +72,7 @@
+ {
+   char cmd[CMD_LEN];
+   char *cmd_ptr;
+-  char *user = kmalloc(USER_LEN);
++  //char *user = kmalloc(USER_LEN);
+   
+   static struct cmd shell_cmd[NUM_COM] = {
+ 	{ &quot;aalogo&quot;,   aalogo      },
+@@ -127,7 +127,7 @@
+         goto end;
+ 
+     for (i = NUM_COM; i &gt;= 0; --i) {
+-        if(strcmp(argv[0], shell_cmd[i].cmdname) == NULL) {
++        if(strcmp(argv[0], shell_cmd[i].cmdname) == (int) NULL) {
+             (*shell_cmd[i].h_func)();
+             break;
+         }
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-01-07 21:55:44 UTC (rev 166)
++++ trunk/shell/testing.c	2010-01-07 22:40:20 UTC (rev 167)
+@@ -139,6 +139,7 @@
+ 	char *prova;
+ 	int i;
+ 	i=0;
++	prova = NULL;
+ 	while(i&lt;50){
+ 		appoggio[i] = '\0';
+ 		i++;
+
+Modified: trunk/sys/dirent.c
+===================================================================
+--- trunk/sys/dirent.c	2010-01-07 21:55:44 UTC (rev 166)
++++ trunk/sys/dirent.c	2010-01-07 22:40:20 UTC (rev 167)
+@@ -29,7 +29,7 @@
+ 	int mpoint_id = 0;
+ 	char* rel_path;
+ 
+-	mpoint_id = get_mountpoint_id(path);
++	mpoint_id = get_mountpoint_id((char*)path);
+ 	rel_path = get_rel_path(mpoint_id, path);	
+ 	printf(&quot;%d - %s\n&quot;, mpoint_id, rel_path);
+ 	if(mountpoint_list[mpoint_id].dir_op.opendir_f!=NULL) {
+@@ -39,13 +39,16 @@
+ 		printf(&quot;Could not open_dir no function found\n&quot;);
+ 		return NULL;
+ 	}
++	return NULL;
+ }
+ 
+ int closedir(DIR *dirp){
+ 	printf(&quot;Closing directory\n&quot;);
+ 	free(dirp);
++	return 0;
+ }
+ 
+ DIR* fake_opendir (const char *path){
+ 	printf(&quot;One day, when i will grow up, i could open that path: %s\n&quot;, path);
++	return NULL;
+ }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000168.html">[Dreamos-dev] r166 - in trunk: . fs include libc sys utils
+</A></li>
+	<LI>Next message: <A HREF="000170.html">[Dreamos-dev] r168 - in trunk: . fs include/fs include/libc
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#169">[ date ]</a>
+              <a href="thread.html#169">[ thread ]</a>
+              <a href="subject.html#169">[ subject ]</a>
+              <a href="author.html#169">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

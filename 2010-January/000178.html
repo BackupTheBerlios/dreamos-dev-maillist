@@ -1,0 +1,121 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r176 - in trunk: . fs
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-January/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r176%20-%20in%20trunk%3A%20.%20fs&In-Reply-To=%3C201001092314.o09NE5KF022130%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000177.html">
+   <LINK REL="Next"  HREF="000179.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r176 - in trunk: . fs</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r176%20-%20in%20trunk%3A%20.%20fs&In-Reply-To=%3C201001092314.o09NE5KF022130%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r176 - in trunk: . fs">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun Jan 10 00:14:05 CET 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000177.html">[Dreamos-dev] r175 - trunk
+</A></li>
+        <LI>Next message: <A HREF="000179.html">[Dreamos-dev] r177 - in trunk: boot include include/shell shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#178">[ date ]</a>
+              <a href="thread.html#178">[ thread ]</a>
+              <a href="subject.html#178">[ subject ]</a>
+              <a href="author.html#178">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-01-10 00:14:05 +0100 (Sun, 10 Jan 2010)
+New Revision: 176
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+Log:
+Aggiunti controlli in open nel caso di non esistenza del mountpoint.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2010-01-09 16:11:26 UTC (rev 175)
++++ trunk/fs/fcntl.c	2010-01-09 23:14:05 UTC (rev 176)
+@@ -36,6 +36,7 @@
+ int open(const char *path, int oflags,  ...){
+ 	int prova;
+ 	int mpid;
++	int ret_fd;
+ 	va_list ap;
+ 	va_start(ap, oflags);
+ 	
+@@ -44,20 +45,27 @@
+ 	if(cur_fd &gt;= _SC_OPEN_MAX) cur_fd=0;
+ 	else {		
+ 		mpid = get_mountpoint_id(path);		
+-		fd_list[cur_fd].mountpoint_id = mpid;				
+-		path = get_rel_path(mpid, path);		
++		if(mpid &gt;-1) {
++			fd_list[cur_fd].mountpoint_id = mpid;				
++			path = get_rel_path(mpid, path);		
++		} else {
++			printf(&quot;That path doesn't exist\n&quot;);
++			va_end(ap);
++			return -1;
++		}
+ 		if( mpid &gt; -1 &amp;&amp; mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open &gt; NULL){
+ 			fd_list[cur_fd].fs_spec_id = (int) mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open(path, oflags);
+ 			//printf(&quot;Mpoint id: %d %s fs_spec_fd: %d\n&quot;, fd_list[cur_fd].mountpoint_id, path, fd_list[cur_fd].fs_spec_id);			
+ 		}
+ 		else {
+-			if(mpid&gt;-1) printf(&quot;No OPEN services found here\n&quot;);		
+-			else printf(&quot;That path doesn't exist\n&quot;);
++			if(mpid&gt;-1) printf(&quot;No OPEN services found here\n&quot;);					
+ 			va_end(ap);
+ 			return -1;
+ 		}
+ 	}	
+ 	va_end(ap)
++	/*TODO: fare controlo dopo cur_fd del prossimo libero*/
++	ret_fd = cur_fd;	
+ 	return cur_fd++;
+ }
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000177.html">[Dreamos-dev] r175 - trunk
+</A></li>
+	<LI>Next message: <A HREF="000179.html">[Dreamos-dev] r177 - in trunk: boot include include/shell shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#178">[ date ]</a>
+              <a href="thread.html#178">[ thread ]</a>
+              <a href="subject.html#178">[ subject ]</a>
+              <a href="author.html#178">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

@@ -1,0 +1,232 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r285 - in trunk: . files fs hardware shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-August/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r285%20-%20in%20trunk%3A%20.%20files%20fs%20hardware%20shell&In-Reply-To=%3C20100805214631.1C974480EFF%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000287.html">
+   <LINK REL="Next"  HREF="000289.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r285 - in trunk: . files fs hardware shell</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r285%20-%20in%20trunk%3A%20.%20files%20fs%20hardware%20shell&In-Reply-To=%3C20100805214631.1C974480EFF%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r285 - in trunk: . files fs hardware shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Thu Aug  5 23:46:31 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000287.html">[Dreamos-dev] r284 - in branches/0.2.1: . boot files fs hardware	include shell
+</A></li>
+        <LI>Next message: <A HREF="000289.html">[Dreamos-dev] r286 - in trunk: . include include/mem mem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#288">[ date ]</a>
+              <a href="thread.html#288">[ thread ]</a>
+              <a href="subject.html#288">[ subject ]</a>
+              <a href="author.html#288">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-08-05 23:46:30 +0200 (Thu, 05 Aug 2010)
+New Revision: 285
+
+Modified:
+   trunk/README
+   trunk/files/README
+   trunk/fs/initrd.c
+   trunk/hardware/pic8259.c
+   trunk/kernel.c
+   trunk/shell/user_shell.c
+Log:
+Aggiornamenti vari files. 
+
+
+Modified: trunk/README
+===================================================================
+--- trunk/README	2010-08-05 21:44:14 UTC (rev 284)
++++ trunk/README	2010-08-05 21:46:30 UTC (rev 285)
+@@ -9,26 +9,26 @@
+ 	b. Scaricare da SVN
+ 	c. Compilare DreamOS
+ 	d. Mettere su Floppy (opzionale)
+-	e. Creare la entry per GRUB (opzionale)
++	e. Fare la entry per GRUB (opzionale)
+ 3. Usare DreamOS
+ 	a. L'avvio
+ 	b. Uso della CLI
+ 4. Feedback
+ 	a. Come segnalare bug
+-	b. Come inoltrare un feedback
++	b. Come mandare un feedback
+ 
+ 
+ - 1 -----------------------
+ --- Cosa &#232; DreamOS --------
+ 
+-DreamOS &#232; un sistema operativo open source rilasciato sotto licenza GPLv3 sviluppato partendo da 0 puramente per scopi didattici o comunque per capire come funzionano i sistemi operativi.
++Il DreamOS &#232; un sistema operativo open source rilasciato sotto licenza GPLv3 sviluppato partendo da 0 puramente per scopi didattici o comunque per capire come funzionano i sistemi operativi.
+ Il team di sviluppo attuale &#232; composto dagli sviluppatori
+ 
++Ivan Gualandri - Finarfin (<A HREF="http://earyrian.elenhost.org">http://earyrian.elenhost.org</A>)
++
++
+ Alessandro (celeron) 
+ Diego Stamigni (osiris_h4ck)
+-Finessi Manuel (theking0)
+-Giuseppe Massaro (n3mes1s)
+-Ivan Gualandri (finarfin)
+ Lorenzo De Liso (blackz)
+ Michele Morelli (dt-)
+ 
+@@ -43,7 +43,7 @@
+ 
+ 	- a - Requisiti necessari -
+ 
+-DreamOS &#232; un sistema operativo sviluppato per funzionare su cpu con architettura Intel x86/IA32 (i386/i686) e attualmente &#232; sviluppato in modo da partire da floppy anche se, utilizzando GRUB, &#232; possibile farlo partire avendo l'immagine compilata sull'Hard-disk.
++DreamOS &#232; un sistema operativo sviluppato per funzionare su cpu con architettura Intel x86/IA32 (i386/i686) e attualmente &#232; sviluppato in modo da partire da floppy anche se, utilizzando GRUB, si pu&#242; farlo partire avendo l'immagine compilata sull'Hard-disk.
+ DreamOS pu&#242; essere anche emulato usando Software come qEmu o Bochs.
+ 
+ Per compilare DreamOS bisogna prima di tutto avere una distribuzione Linux installata, poi avere i seguenti software:
+@@ -90,7 +90,7 @@
+ 	boot
+ Naturalmenet modificando /path/al/file/dreamos.img con la path al file dreamos.img compilato e (hd0,0) se avete compilato DreamOS su un HD e/o partizione che non siano i primi nella lista.
+ 
+-Attaualmente &#232; stato aggiunto uno script per inserire dreamos in grub, esso &#232; ancora nelle prime fasi, e quindi non sempre potrebbe inserire la entry corretta. Lo script &#232; stato scritto in python quindi richiede che quest'ultimo sia installto, per le istruzioni sull'utilizzo nella cartella doc &#232; presente il file: HOWTO_use_grub_script che pu&#242; fornirvi maggiori informazioni.
++Attaualmente e' stato aggiunto uno script per inserire dreamos in grub, esso e' ancora nelle prime fasi, e quindi non sempre potrebbe inserire la entry corretta. Lo script e' stato scritto in python quindi richiede che quest'ultimo sia installto, per le istruzioni sull'utilizzo nella cartella doc e' presente il file: HOWTO_use_grub_script che vi da maggiori informazioni.
+ 
+ - 3 -----------------------
+ ---- Usare DreamOS --------
+@@ -129,9 +129,9 @@
+ 	<A HREF="http://forum.osdev.it/">http://forum.osdev.it/</A>
+ Oppure ci trovate su irc: 
+ 	Server: irc.azzurra.org
+-	Chan: #dreamos	
++	Chan: #dreamos
++	
+ 
+-
+-2003-2010, DreamOS. 
++DreamOS 2003-2009 by finarfin/shainer
+ <A HREF="http://www.dreamos.org">http://www.dreamos.org</A>
+ <A HREF="http://www.osdev.it">http://www.osdev.it</A>
+
+Modified: trunk/files/README
+===================================================================
+--- trunk/files/README	2010-08-05 21:44:14 UTC (rev 284)
++++ trunk/files/README	2010-08-05 21:46:30 UTC (rev 285)
+@@ -1,4 +1,4 @@
+-DREAMOS 0.2.0-trunk
++DREAMOS 0.3-trunk
+ 
+ Welcome to the dreamOS operating system.
+ 
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-08-05 21:44:14 UTC (rev 284)
++++ trunk/fs/initrd.c	2010-08-05 21:46:30 UTC (rev 285)
+@@ -50,7 +50,7 @@
+ 		i++;
+ 	}
+ 	cur_irdfd = 0;
+-	printf(&quot;Number of files present: %d\n&quot;, fs_specs-&gt;nfiles);
++	//printf(&quot;Number of files present: %d\n&quot;, fs_specs-&gt;nfiles);
+ 	fs_end = fs_headers[(fs_specs-&gt;nfiles)-1].offset + fs_headers[(fs_specs-&gt;nfiles)-1].length;
+ 	printf(&quot;Fs_end: %d\n&quot;, fs_end);
+ 	return fs_specs-&gt;nfiles;
+
+Modified: trunk/hardware/pic8259.c
+===================================================================
+--- trunk/hardware/pic8259.c	2010-08-05 21:44:14 UTC (rev 284)
++++ trunk/hardware/pic8259.c	2010-08-05 21:46:30 UTC (rev 285)
+@@ -89,15 +89,15 @@
+     //init_gdt();
+ 
+     setup_IRQ();
+-    asm(&quot;sti&quot;);
+-                    
+-    i=0;
++    
++        i=0;
+     while(i&lt;IRQ_NUM){
+         shareHandler[i] = NULL;
+         i++;
+     }
+     add_IRQ_handler(1, keyboard_isr);
+     add_IRQ_handler(0, PIT_handler);
++    asm(&quot;sti&quot;);                  
+ }
+ 
+ void setup_IRQ(){
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2010-08-05 21:44:14 UTC (rev 284)
++++ trunk/kernel.c	2010-08-05 21:46:30 UTC (rev 285)
+@@ -107,13 +107,13 @@
+     vfs_init();
+     initfs_init();
+ 	if(boot_info-&gt;mods_count &gt; 0) printf(&quot;Found n. %d Modules\n&quot;, boot_info-&gt;mods_count);		
+-	printf(&quot;Address of module: 0x%x - 0x%x\n&quot;, *((unsigned int*)boot_info-&gt;mods_addr),module_end-(unsigned int) module_start);
++	//printf(&quot;Address of module: 0x%x - 0x%x\n&quot;, *((unsigned int*)boot_info-&gt;mods_addr),module_end-(unsigned int) module_start);
+     printf(&quot;\n&quot;);
+     printf(&quot;----\n&quot;);
+     printf(LNG_SHELL);    
+     _kprintOK();
+ 		printf(&quot;[+] Address: 0x%x\n&quot;, &amp;end);		   	        
+-		printf(&quot;\n\n&quot;);
++		printf(&quot;\n&quot;);
+ #ifdef BOCHS_DEBUG
+ 		dbg_bochs_print((const unsigned char*)&quot;DreamOS Debug String for Bochs\n&quot;);
+ #endif
+
+Modified: trunk/shell/user_shell.c
+===================================================================
+--- trunk/shell/user_shell.c	2010-08-05 21:44:14 UTC (rev 284)
++++ trunk/shell/user_shell.c	2010-08-05 21:46:30 UTC (rev 285)
+@@ -87,9 +87,10 @@
+ 	//if(err ==0) return err;
+ 	status++;	
+ 	strcpy(checking_user-&gt;password, appo);
+-	printf(&quot;Status: %sd\n&quot;, status);
++	//printf(&quot;Status: %sd\n&quot;, status);
+ 	return status;
+ }
+ 
+ int pwd_check(char* password, char* realpass){
++	return 0;
+ }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000287.html">[Dreamos-dev] r284 - in branches/0.2.1: . boot files fs hardware	include shell
+</A></li>
+	<LI>Next message: <A HREF="000289.html">[Dreamos-dev] r286 - in trunk: . include include/mem mem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#288">[ date ]</a>
+              <a href="thread.html#288">[ thread ]</a>
+              <a href="subject.html#288">[ subject ]</a>
+              <a href="author.html#288">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

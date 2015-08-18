@@ -1,0 +1,171 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r282 - in trunk: . include include/lng shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-August/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r282%20-%20in%20trunk%3A%20.%20include%20include/lng%20shell&In-Reply-To=%3C20100805175131.EE450480EFA%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000284.html">
+   <LINK REL="Next"  HREF="000286.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r282 - in trunk: . include include/lng shell</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r282%20-%20in%20trunk%3A%20.%20include%20include/lng%20shell&In-Reply-To=%3C20100805175131.EE450480EFA%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r282 - in trunk: . include include/lng shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Thu Aug  5 19:51:31 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000284.html">[Dreamos-dev] r281 - in trunk: . fs hardware include/fs shell
+</A></li>
+        <LI>Next message: <A HREF="000286.html">[Dreamos-dev] r283 - branches
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#285">[ date ]</a>
+              <a href="thread.html#285">[ thread ]</a>
+              <a href="subject.html#285">[ subject ]</a>
+              <a href="author.html#285">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-08-05 19:51:31 +0200 (Thu, 05 Aug 2010)
+New Revision: 282
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/lng/en.h
+   trunk/include/use.h
+   trunk/shell/shell.c
+   trunk/shell/user_shell.c
+Log:
+Fixati alcuni problemi del controllo di password. Anche se resta disattivato.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/lng/en.h
+===================================================================
+--- trunk/include/lng/en.h	2010-08-04 14:42:34 UTC (rev 281)
++++ trunk/include/lng/en.h	2010-08-05 17:51:31 UTC (rev 282)
+@@ -29,7 +29,7 @@
+ #define LNG_BITMAP &quot;\t- Number bitmap's elements:&quot;
+ #define LNG_SHELL &quot;Loading the shell&quot;
+ #define LNG_USER &quot;[?] Enter your username: &quot;
+-#define LNG_PWD &quot;[?] Insert your password\n&quot;
++#define LNG_PWD &quot;[?] Insert your password &quot;
+ #define LNG_USER_R &quot;[x] Please, insert your username :)\n&quot;
+ #define LNG_UNKNOWN_CMD &quot;Unknown command:&quot;
+ #define LNG_MOUSE_SETUP &quot;Setting up mouse driver..&quot;
+
+Modified: trunk/include/use.h
+===================================================================
+--- trunk/include/use.h	2010-08-04 14:42:34 UTC (rev 281)
++++ trunk/include/use.h	2010-08-05 17:51:31 UTC (rev 282)
+@@ -31,7 +31,7 @@
+ #define LNG_SHELL &quot;Carico la shell&quot;
+ #define LNG_USER &quot;[?] Inserisci il nome utente: &quot;
+ #define LNG_USER_R &quot;[x] Per favore, inserisci il nome utente :)\n&quot;
+-#define LNG_PWD &quot;[?] Per favore, inserisci la password\n&quot;
++#define LNG_PWD &quot;[?] Per favore, inserisci la password: &quot;
+ #define LNG_UNKNOWN_CMD &quot;Comando sconosciuto:&quot;
+ #define LNG_MOUSE_SETUP &quot;Inizializzo il driver del mouse..&quot;
+ #define LNG_MOUSE_REMOVE &quot;Disattivo il driver del mouse..&quot;
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2010-08-04 14:42:34 UTC (rev 281)
++++ trunk/shell/shell.c	2010-08-05 17:51:31 UTC (rev 282)
+@@ -45,6 +45,7 @@
+ userenv_t current_user;
+ int hst_flag;
+ char cmd[CMD_LEN];
++//#define PWD_CHECK 1
+ /*struct cmd shell_cmd[NUM_COM] = {
+  { &quot;aalogo&quot;,   aalogo,    &quot;  Show an ascii art logo&quot; },
+  { &quot;clear&quot;,    _kclear,   &quot;   Clear the screen&quot; },
+@@ -139,9 +140,11 @@
+     printf(LNG_USER_R);
+     #ifdef PWD_CHECK
+     printf(LNG_PWD);
++    set_shadow(1);
+     scanf (&quot;%23s&quot;,password);
++    set_shadow(0);
+     #endif
+-    //printf(&quot;Vediamo %s\n&quot;, current_user.username);
++    //printf(&quot;Vediamo %s pwd: %s\n&quot;, current_user.username, password);
+     dbg_bochs_print((const unsigned char*)&quot;Asking username&quot;);
+     ret_val = user_chk(current_user.username, password);
+   } while ((!strlen(current_user.username) || ret_val!=1));
+
+Modified: trunk/shell/user_shell.c
+===================================================================
+--- trunk/shell/user_shell.c	2010-08-04 14:42:34 UTC (rev 281)
++++ trunk/shell/user_shell.c	2010-08-05 17:51:31 UTC (rev 282)
+@@ -24,6 +24,7 @@
+ #include &lt;debug.h&gt;
+ #include &lt;use.h&gt;
+ 
++//#define PWD_CHECK 1
+ int user_chk(char *username, char* usr_pwd){
+ 	int fd = -1;
+ 	struct passwd_user checking_user;
+@@ -32,13 +33,14 @@
+ 	//strcpy(path, &quot;/passwd&quot;);		
+ 	memset(checking_user.username, '\0', 50);
+ 	memset(checking_user.password, '\0', 50);	
+-	puts(username);
++	//puts(username);
++	//printf(&quot;user: %s\n&quot;, username);
+ 	dbg_bochs_print((const unsigned char*)&quot;Logging In\n&quot;);
+ 	fd = open(&quot;/passwd&quot;, O_RDONLY,0);
+ 	/*if(fd != -1) printf(&quot;File passwd found\n&quot;);
+ 	else printf(&quot;not found\n&quot;);*/
+ 	if(fd&lt;0) return 0;
+-	while(user_get(fd, &amp;checking_user)==2){
++	while(user_get(fd, &amp;checking_user)==2){		
+ 		#ifdef PWD_CHECK
+ 		if(!strcmp(username, checking_user.username) &amp;&amp; !strcmp(usr_pwd, checking_user.password)) return 1;
+ 		#else
+@@ -85,6 +87,7 @@
+ 	//if(err ==0) return err;
+ 	status++;	
+ 	strcpy(checking_user-&gt;password, appo);
++	printf(&quot;Status: %sd\n&quot;, status);
+ 	return status;
+ }
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000284.html">[Dreamos-dev] r281 - in trunk: . fs hardware include/fs shell
+</A></li>
+	<LI>Next message: <A HREF="000286.html">[Dreamos-dev] r283 - branches
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#285">[ date ]</a>
+              <a href="thread.html#285">[ thread ]</a>
+              <a href="subject.html#285">[ subject ]</a>
+              <a href="author.html#285">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

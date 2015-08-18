@@ -1,0 +1,168 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r112 - in trunk: . include
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-August/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r112%20-%20in%20trunk%3A%20.%20include&In-Reply-To=%3C200908032133.n73LXFdR003161%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000113.html">
+   <LINK REL="Next"  HREF="000115.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r112 - in trunk: . include</H1>
+    <B>osiris_h4ck at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r112%20-%20in%20trunk%3A%20.%20include&In-Reply-To=%3C200908032133.n73LXFdR003161%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r112 - in trunk: . include">osiris_h4ck at mail.berlios.de
+       </A><BR>
+    <I>Mon Aug  3 23:33:15 CEST 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000113.html">[Dreamos-dev] r111 - in trunk: . boot fs include/shell include/sys	shell
+</A></li>
+        <LI>Next message: <A HREF="000115.html">[Dreamos-dev] r113 - in trunk: . include
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#114">[ date ]</a>
+              <a href="thread.html#114">[ thread ]</a>
+              <a href="subject.html#114">[ subject ]</a>
+              <a href="author.html#114">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: osiris_h4ck
+Date: 2009-08-03 23:33:14 +0200 (Mon, 03 Aug 2009)
+New Revision: 112
+
+Modified:
+   trunk/dreamos.img
+   trunk/grub.py
+   trunk/include/version.h
+Log:
+- Reso grub.py pi?\195?\185 figo e funzionale, eddaije :)
+
+
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/grub.py
+===================================================================
+--- trunk/grub.py	2009-08-03 21:11:52 UTC (rev 111)
++++ trunk/grub.py	2009-08-03 21:33:14 UTC (rev 112)
+@@ -1,9 +1,13 @@
+-#GrubScript ver 0.1
++# Liza feat. Lord Osiris
++# GrubScript ver 0.2
++
+ import sys
+ import os
++import commands
++trunk = commands.getoutput(&quot;cat .svn/entries | head -n 4 | tail -n 1&quot;)
++patchlevel = commands.getoutput(&quot;cat include/version.h | grep PATCHLEVEL | cut -b 21-23&quot;)
+ 
+ if os.getuid() != 0:
+-	print &quot;--------------------DreamOS v0.2 Grub Autogen--------------------&quot;
+ 	print &quot;[-] You need to run this install script as root!&quot;
+ 	sys.exit(1)
+ 
+@@ -26,8 +30,8 @@
+ # Manca il controllo errori
+ fd = open(&quot;/boot/grub/menu.lst&quot;, &quot;a&quot;)
+ 
+-print &quot;--------------------DreamOS v0.2 Grub Autogen--------------------&quot;
+-print &quot;Inserire la partizione dei sorgenti:&quot;,
++print &quot;------------ DreamOS Grub Autogen --------------&quot;
++print &quot;Inserire la partizione dei sorgenti (ex. hda2): &quot;,
+ pn = raw_input()
+ partition = grub_hd(pn)
+ 
+@@ -40,25 +44,31 @@
+ else:
+ 	cwd = sub_mount(mp, cwd)
+ 	
+-print &quot;+---------------------------------INFO----------------------------------+&quot;
+-print &quot;| Title: DreamOS v0.2 trunk                                           |&quot;
+-print &quot;| Root: &quot; + partition + &quot;                                                         |&quot;
+-print &quot;| Kernel: &quot; + cwd
+-print &quot;+-----------------------------------------------------------------------+&quot;
++
++print &quot;+--------------------------- INFO ------------------------------+&quot;
++print &quot;| Title: DreamOS v0.&quot; + patchlevel + &quot;-&quot; + trunk +&quot;                                     |&quot;
++print &quot;| Root: &quot; + partition + &quot;                                  		|&quot;
++print &quot;| Kernel: &quot; + cwd +&quot;	|&quot;
++print &quot;+---------------------------------------------------------------+&quot;
++
+ print &quot;Procedere alla scrittura? (y/n):&quot;,
+ answer = raw_input()
+ 
+ if answer == 'y':
+-	fd.write(&quot;\ntitle\tDreamOS v0.2 trunk&quot;)
++	fd.write(&quot;\ntitle\tDreamOS v0.&quot; + patchlevel + &quot;-&quot; + trunk +&quot;&quot;)
+ 	fd.write(&quot;\nroot\t&quot; + partition)
+ 	fd.write(&quot;\nkernel\t&quot; + cwd)
+ 	fd.write(&quot;\nboot\n&quot;)
+-fd.close()
++	fd.close()
++	print &quot;&quot;
++        print &quot;Changes added to /boot/grub/menu.lst: &quot;
++        print &quot;\n+title\tDreamOS trunk&quot;
++        print &quot;+root\t&quot; + partition
++        print &quot;+kernel\t&quot; + cwd
++        print &quot;+boot\n&quot;
++        print &quot;[+] Done.&quot;
+ 
+-print &quot;&quot;
+-print &quot;Changes added to /boot/grub/menu.lst: &quot;
+-print &quot;\n+title\tDreamOS v0.2 trunk&quot;
+-print &quot;+root\t&quot; + partition
+-print &quot;+kernel\t&quot; + cwd
+-print &quot;+boot\n&quot;
+-print &quot;[+] Done.&quot;
++
++elif answer == 'n':
++	print &quot;Ok, bye :)&quot;
++
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-08-03 21:11:52 UTC (rev 111)
++++ trunk/include/version.h	2009-08-03 21:33:14 UTC (rev 112)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL &quot;2.0&quot;
+ #define EXTRAVERSION &quot;-trunk&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r105&quot;
++#define REV_NUM &quot;-r111&quot;
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000113.html">[Dreamos-dev] r111 - in trunk: . boot fs include/shell include/sys	shell
+</A></li>
+	<LI>Next message: <A HREF="000115.html">[Dreamos-dev] r113 - in trunk: . include
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#114">[ date ]</a>
+              <a href="thread.html#114">[ thread ]</a>
+              <a href="subject.html#114">[ subject ]</a>
+              <a href="author.html#114">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

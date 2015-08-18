@@ -1,0 +1,18 @@
+From ivan.gualandri at gmail.com  Fri May 30 12:00:38 2008
+From: ivan.gualandri at gmail.com (Ivan Gualandri)
+Date: Fri, 30 May 2008 12:00:38 +0200
+Subject: [Dreamos-dev] Benvenuti nella nuova mailing List
+Message-ID: <5dd86e320805300300o3b696fc6m2625d18fb5873d29@mail.gmail.com>
+
+Eccoci nella nuova mailng list hostata da berlios relativa a dreamos.
+
+Abbiamo attivato anche la mailing per i commits.
+Occorrera' vedere se arriveranno le mails dai commit.
+
+^__^
+Ciao a tuttti
+
+-- 
+"elen sila lumenn omentielvo"
+
+

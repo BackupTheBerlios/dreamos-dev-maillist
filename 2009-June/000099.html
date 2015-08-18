@@ -1,0 +1,259 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r97 - in trunk: . drivers hardware include/drivers io	processore shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-June/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r97%20-%20in%20trunk%3A%20.%20drivers%20hardware%20include/drivers%20io%0A%09processore%20shell&In-Reply-To=%3C200906231813.n5NID8LW018191%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000098.html">
+   
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r97 - in trunk: . drivers hardware include/drivers io	processore shell</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r97%20-%20in%20trunk%3A%20.%20drivers%20hardware%20include/drivers%20io%0A%09processore%20shell&In-Reply-To=%3C200906231813.n5NID8LW018191%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r97 - in trunk: . drivers hardware include/drivers io	processore shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Tue Jun 23 20:13:08 CEST 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000098.html">[Dreamos-dev] r96 - in trunk: . drivers include mem shell
+</A></li>
+        
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#99">[ date ]</a>
+              <a href="thread.html#99">[ thread ]</a>
+              <a href="subject.html#99">[ subject ]</a>
+              <a href="author.html#99">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-06-23 20:13:07 +0200 (Tue, 23 Jun 2009)
+New Revision: 97
+
+Modified:
+   trunk/dreamos.img
+   trunk/drivers/mouse.c
+   trunk/hardware/pic8259.c
+   trunk/include/drivers/mouse.h
+   trunk/io/video.c
+   trunk/processore/handlers.c
+   trunk/shell/commands.c
+Log:
+IRQ: ora get_current_irq gestisce correttamente anhce l'irq slave
+Aggiunti alcuni commenti su delle funzioni, per la documentazione 
+generata da doxygen
+Sistemato il gestore delle IRQ per utilizzare la nuova get_current_irq
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/drivers/mouse.c
+===================================================================
+--- trunk/drivers/mouse.c	2009-06-21 21:44:10 UTC (rev 96)
++++ trunk/drivers/mouse.c	2009-06-23 18:13:07 UTC (rev 97)
+@@ -54,6 +54,11 @@
+ 	_kprintOK();
+ }
+ 
++/**
++  * Disable the mouse driver
++  * @author Ivan Gualandri, Diego Stamigni, DT
++  * @version 1.0
++  */
+ void mouse_dead()
+ {
+ 	printf(LNG_MOUSE_REMOVE);
+@@ -63,6 +68,11 @@
+ 	_kprintOK();
+ }
+ 
++/**
++ * Mouse wait for a command
++ * @param type: 1 for sending - 0 for receive
++ * @return none
++ **/
+ void mouse_waitcmd(unsigned char type)
+ {
+ 	register unsigned int _time_out=100000;
+@@ -90,6 +100,10 @@
+ 	}
+ }
+ 
++/**
++ * Send data to mouse
++ * @param data data to send
++ **/
+ void mouse_write (unsigned char a_write)
+ {
+ 	mouse_waitcmd(1);
+@@ -98,6 +112,10 @@
+ 	outportb(0x60, a_write);
+ }
+ 
++/**
++ * Read data from mouse
++ * @return data received from mouse
++ **/
+ unsigned char mouse_read()
+ {
+ 	mouse_waitcmd(0);
+
+Modified: trunk/hardware/pic8259.c
+===================================================================
+--- trunk/hardware/pic8259.c	2009-06-21 21:44:10 UTC (rev 96)
++++ trunk/hardware/pic8259.c	2009-06-23 18:13:07 UTC (rev 97)
+@@ -179,12 +179,12 @@
+     int cur_irq;
+     outportb(MASTER_PORT,GET_IRR_STATUS);
+     cur_irq = inportb(MASTER_PORT);
+-//     if(cur_irq!=1) printf(&quot;%d\n&quot;, cur_irq);
+-    if(cur_irq == 0) {
++    if(cur_irq == 4) {		
+       outportb(SLAVE_PORT, GET_IRR_STATUS);
+       cur_irq = inportb(SLAVE_PORT);
++	  //printf(&quot;Slave irq number: %d\n&quot;, cur_irq);
++	  return 8 + find_first_bit(cur_irq);
+     }
+-//     printf(&quot;%d\n&quot;, find_first_bit(cur_irq));
+     return find_first_bit(cur_irq);
+ }
+ 
+
+Modified: trunk/include/drivers/mouse.h
+===================================================================
+--- trunk/include/drivers/mouse.h	2009-06-21 21:44:10 UTC (rev 96)
++++ trunk/include/drivers/mouse.h	2009-06-23 18:13:07 UTC (rev 97)
+@@ -30,33 +30,11 @@
+ #define MOUSE_DISABLE_PACKET 0xF5
+ #define MOUSE_USE_DEFAULT_SETTINGS 0xF6
+ 
+-/**
+- * mouse_init()
+- * @description inizializza il mouse 
+- **/
+ void mouse_init();
+-/**
+- * mouse_send_data()
+- * @description manda dati al mouse
+- * @param data:
+- * i dati da mandare
+- **/
+ void mouse_waitcmd(unsigned char type);
+ 
+ void mouse_write (unsigned char a_write);
+-/**
+- * mouse_receive_data()
+- * @description riceve dati dal mouse
+- * @return i dati ricevuti
+- **/
+ unsigned char mouse_read();
+-/**
+- * mouse_waitcmd()
+- * @description fa attendere il mouse per un comando
+- * @param type:
+- * 1 per mandare
+- * 0 per ricevere
+- **/
+ 
+ void mouse_dead();
+ void mouse_IRQhandler();
+
+Modified: trunk/io/video.c
+===================================================================
+--- trunk/io/video.c	2009-06-21 21:44:10 UTC (rev 96)
++++ trunk/io/video.c	2009-06-23 18:13:07 UTC (rev 97)
+@@ -1,4 +1,4 @@
+-	/***************************************************************************
++/***************************************************************************
+  *            video.c
+  *
+  *  Sat Mar 31 07:47:55 2007
+
+Modified: trunk/processore/handlers.c
+===================================================================
+--- trunk/processore/handlers.c	2009-06-21 21:44:10 UTC (rev 96)
++++ trunk/processore/handlers.c	2009-06-23 18:13:07 UTC (rev 97)
+@@ -165,11 +165,11 @@
+     irqn = get_current_irq();  
+     IRQ_s* tmpHandler; 
+     if(irqn&gt;=0) {
+-		if(irqn==2) {
++		/*if(irqn==2) {
+ 			outportb(SLAVE_PORT,GET_IRR_STATUS);
+ 			irqn = inportb(SLAVE_PORT);
+ 			irqn = 8 + find_first_bit(irqn);			
+-		}
++		}*/
+         tmpHandler = shareHandler[irqn];		
+ 		if(tmpHandler!=0) {
+ 	    	tmpHandler-&gt;IRQ_func();
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-06-21 21:44:10 UTC (rev 96)
++++ trunk/shell/commands.c	2009-06-23 18:13:07 UTC (rev 97)
+@@ -223,21 +223,21 @@
+   _kputs(&quot;DreamOS Credits\n\n&quot;);                
+   _kputs(&quot;Main Developers:\n&quot;);
+   _kcolor('\012');
+-   printf(&quot;Shainer - Lisa\n&quot;
+-	  &quot;Osiris\n&quot;
++   printf(&quot;Shainer - Lisa\n&quot;	  
+           &quot;Finarfin - Ivan\n\n\n&quot;            
+          );
+ 
+   _kcolor('\011');
+   _kputs(&quot;Contributors:\n&quot;);
+   _kcolor('\012');
+-  _kputs(&quot;vinc94\n&quot;
+-	  &quot;tk0\n&quot;
+-	  &quot;DT\n&quot;
+-         &quot;Celeron\n&quot;
+-	 &quot;Hamcha\n&quot;
+-         &quot;m0nt0\n&quot;
+-         &quot;and many others (3 or 4 :P)\n\n&quot;);
++  _kputs(	&quot;Osiris\n&quot;
++		    &quot;vinc94\n&quot;
++	  		&quot;tk0\n&quot;
++	  		&quot;DT\n&quot;
++         	&quot;Celeron\n&quot;
++	 		&quot;Hamcha\n&quot;
++         	&quot;m0nt0\n&quot;
++         	&quot;and many others (3 or 4 :P)\n\n&quot;);
+   _kcolor('\007');
+ }
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000098.html">[Dreamos-dev] r96 - in trunk: . drivers include mem shell
+</A></li>
+	
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#99">[ date ]</a>
+              <a href="thread.html#99">[ thread ]</a>
+              <a href="subject.html#99">[ subject ]</a>
+              <a href="author.html#99">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

@@ -1,0 +1,250 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r50 - in trunk: . include/libc libc shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-January/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r50%20-%20in%20trunk%3A%20.%20include/libc%20libc%20shell&In-Reply-To=%3C200901192140.n0JLeJrI010243%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000049.html">
+   <LINK REL="Next"  HREF="000051.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r50 - in trunk: . include/libc libc shell</H1>
+    <B>shainer at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r50%20-%20in%20trunk%3A%20.%20include/libc%20libc%20shell&In-Reply-To=%3C200901192140.n0JLeJrI010243%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r50 - in trunk: . include/libc libc shell">shainer at mail.berlios.de
+       </A><BR>
+    <I>Mon Jan 19 22:40:19 CET 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000049.html">[Dreamos-dev] r49 - in trunk: . hardware include include/lng	include/mem mem shell
+</A></li>
+        <LI>Next message: <A HREF="000051.html">[Dreamos-dev] r51 - in trunk: . hardware include include/hardware	shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#50">[ date ]</a>
+              <a href="thread.html#50">[ thread ]</a>
+              <a href="subject.html#50">[ subject ]</a>
+              <a href="author.html#50">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: shainer
+Date: 2009-01-19 22:40:18 +0100 (Mon, 19 Jan 2009)
+New Revision: 50
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/libc/string.h
+   trunk/libc/string.c
+   trunk/shell/shell.c
+Log:
+Introdotta strcmp in string.c
+Sistemato il bug per cui la shell prendeva per validi comandi che iniziassero con quelli esistenti (ad esempio: helpaaa).
+Sistemata la echo in modo che non stampi caratteri strani.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/libc/string.h
+===================================================================
+--- trunk/include/libc/string.h	2009-01-18 23:28:01 UTC (rev 49)
++++ trunk/include/libc/string.h	2009-01-19 21:40:18 UTC (rev 50)
+@@ -29,6 +29,7 @@
+ #include &lt;stddef.h&gt;
+ 
+ int _kstrncmp (const char *, const char *, int);
++int strcmp (const char *, const char *);
+ void *memset(void *, const int, int);
+ extern void * memmove(void *,const void *,size_t);
+ size_t strlen (const char *);
+
+Modified: trunk/libc/string.c
+===================================================================
+--- trunk/libc/string.c	2009-01-18 23:28:01 UTC (rev 49)
++++ trunk/libc/string.c	2009-01-19 21:40:18 UTC (rev 50)
+@@ -69,6 +69,33 @@
+   return 0;
+ }
+ 
++/*
++ * Compare s1 and s2
++ */
++int strcmp (const char *s1, const char *s2)
++{
++  int s1n = strlen(s1);
++  int s2n = strlen(s2);
++
++  if (s1n &gt; s2n)
++    return 1;
++  else if (s1n &lt; s2n)
++    return -1;
++
++  while (*s1 == *s2 &amp;&amp; s1n&gt;=0)
++  {
++    s1++;
++    s2++;
++    s1n--;
++  }
++
++  if (s1n&gt;0) {
++    if (*s1 &gt; *s2) return 1;
++    else return -1;
++  }
++  return 0;
++}
++
+ /* Fill memory location dest with c for n times */
+ void *memset(void *dest, const int c, int n)
+ {
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-01-18 23:28:01 UTC (rev 49)
++++ trunk/shell/shell.c	2009-01-19 21:40:18 UTC (rev 50)
+@@ -99,32 +99,34 @@
+         
+             options (cmd);
+ 
+-		if (!(_kstrncmp(cmd,&quot;help&quot;,4) ) )
++		if (strcmp(argv[0], &quot;help&quot;) == 0)
+ 		{
+-			printf(&quot;Available command: \n&quot;);
++			
++			printf(&quot;Available commands:\n&quot;);
+ 			help();
+ 		}
+ 
+-		else if (!(_kstrncmp(cmd, &quot;echo&quot;, 4) ) )
++		else if (strcmp(argv[0], &quot;echo&quot;) == 0)
+ 		{
+-			strncpy(string,cmd,strlen(cmd));
+-			memmove(string, string+5, strlen(string));
+-			printf(&quot;%s\n&quot;,string);
+-			memset(string+5, 0, strlen(string));
++			int c;
++
++			for (c=1; c&lt;argc; c++)
++			  printf (&quot;%s &quot;, argv[c]);
++			printf (&quot;\n&quot;);
+ 		}
+ 
+-		else if (!(_kstrncmp(cmd,&quot;poweroff&quot;,8)))
++		else if (strcmp(argv[0], &quot;poweroff&quot;) == 0)
+ 		{
+ 			printf(&quot;Poweroff..\n&quot;);
+ 			poweroff();
+ 		}
+ 		
+-		else if (!(_kstrncmp(cmd, &quot;clear&quot;, 5)))
++		else if (strcmp(argv[0], &quot;clear&quot;) == 0)
+ 		{
+ 			_kclear();
+ 		}
+ 
+-		else if (!(_kstrncmp(cmd, &quot;uname&quot;,5)))
++		else if (strcmp (argv[0], &quot;uname&quot;) == 0)
+ 		{
+ 			/*if (argv[2] != &quot; &quot;)
+ 			{
+@@ -160,7 +162,7 @@
+ 
+ 		}
+ 
+-		else if (!(_kstrncmp(cmd, &quot;cpuid&quot;,5)))
++		else if (strcmp(argv[0], &quot;cpuid&quot;) == 0)
+ 		{
+ 			struct cpuinfo_generic *sh_info = get_cpuid();
+ 
+@@ -169,12 +171,12 @@
+ 			printf (&quot;Type: %s\n&quot;, sh_info-&gt;cpu_type);
+ 		}
+ 
+-		else if (!(_kstrncmp(cmd, &quot;answer&quot;,6)))
++		else if (strcmp(argv[0], &quot;answer&quot;) == 0)
+       		{
+           		  printf(&quot;42\n&quot;);			  
+ 			  outportb('4',0xe9);
+         	}
+-		else if (!(_kstrncmp(cmd, &quot;sleep&quot;, 5)))
++		else if (strcmp(argv[0], &quot;sleep&quot;) == 0)
+ 		{
+ 			int s;
+ 
+@@ -185,7 +187,7 @@
+ 		 	} else printf (&quot;Missing operand\n&quot;);
+ 		}
+ 
+-        else if (!(_kstrncmp(cmd,&quot;kmalloc&quot;,7)))
++        else if (strcmp(argv[0], &quot;kmalloc&quot;) == 0)
+         {
+             printf(&quot;kmalloc try: ...\n&quot;);
+             int *b;
+@@ -208,7 +210,7 @@
+ 
+         }
+ 
+-        else if (!(_kstrncmp(cmd,&quot;do_fault&quot;,8)))
++        else if (strcmp(argv[0], &quot;do_fault&quot;) == 0)
+     	{  
+              printf (&quot;Genero un pagefault scrivendo 10 nella locazione 0xa0000000...\n&quot;);
+              int *prova;
+@@ -236,12 +238,12 @@
+           print_heap_list (kheap-&gt;free_nodes);
+         }*/
+ 
+-        else if (!(_kstrncmp(cmd,&quot;printmem&quot;,8))) print_heap_list(kheap-&gt;used_list);        
+-	else if (!(_kstrncmp(cmd,&quot;date&quot;,4))) date();                
+-        else if (!(_kstrncmp(cmd,&quot;aalogo&quot;,6))) 
++        else if (strcmp(argv[0], &quot;printmem&quot;) == 0) print_heap_list(kheap-&gt;used_list);        
++	else if (strcmp(argv[0], &quot;date&quot;) == 0) date();                
++        else if (strcmp(argv[0], &quot;aalogo&quot;) == 0) 
+ 		aalogo();
+         
+-        else if (!(_kstrncmp(cmd,&quot;credits&quot;,7)))
++        else if (strcmp(argv[0], &quot;credits&quot;) == 0)
+             {
+                 _kcolor('\011');
+                 _kputs(&quot;DreamOS Credits\n\n&quot;);                
+@@ -262,7 +264,7 @@
+             }
+         else if (strlen(cmd)&gt;0)
+ 	    {
+-            printf(LNG_UNKNOWN_CMD &quot;%s\n&quot;, cmd);            
++            printf(LNG_UNKNOWN_CMD &quot; %s\n&quot;, argv[0]);            
+         }
+ 
+ 	memset(string+5, 0, strlen(string));
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000049.html">[Dreamos-dev] r49 - in trunk: . hardware include include/lng	include/mem mem shell
+</A></li>
+	<LI>Next message: <A HREF="000051.html">[Dreamos-dev] r51 - in trunk: . hardware include include/hardware	shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#50">[ date ]</a>
+              <a href="thread.html#50">[ thread ]</a>
+              <a href="subject.html#50">[ subject ]</a>
+              <a href="author.html#50">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

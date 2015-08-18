@@ -1,0 +1,198 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r106 - in branches/0.1.3: . include shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-July/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r106%20-%20in%20branches/0.1.3%3A%20.%20include%20shell&In-Reply-To=%3C200907141955.n6EJtAYt011349%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000107.html">
+   <LINK REL="Next"  HREF="000109.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r106 - in branches/0.1.3: . include shell</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r106%20-%20in%20branches/0.1.3%3A%20.%20include%20shell&In-Reply-To=%3C200907141955.n6EJtAYt011349%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r106 - in branches/0.1.3: . include shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Tue Jul 14 21:55:10 CEST 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000107.html">[Dreamos-dev] r105 - branches
+</A></li>
+        <LI>Next message: <A HREF="000109.html">[Dreamos-dev] r107 - branches/0.1.3/boot
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#108">[ date ]</a>
+              <a href="thread.html#108">[ thread ]</a>
+              <a href="subject.html#108">[ subject ]</a>
+              <a href="author.html#108">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-07-14 21:55:09 +0200 (Tue, 14 Jul 2009)
+New Revision: 106
+
+Added:
+   branches/0.1.3/CHANGELOG
+Modified:
+   branches/0.1.3/Makefile
+   branches/0.1.3/dreamos.img
+   branches/0.1.3/include/kernel.h
+   branches/0.1.3/include/version.h
+   branches/0.1.3/shell/commands.c
+Log:
+Modifica informazioni di release su vari files, eliminati numeri di revisione.
+
+
+Added: branches/0.1.3/CHANGELOG
+===================================================================
+--- branches/0.1.3/CHANGELOG	2009-07-14 18:12:23 UTC (rev 105)
++++ branches/0.1.3/CHANGELOG	2009-07-14 19:55:09 UTC (rev 106)
+@@ -0,0 +1,30 @@
++DreamOS ver 0.1.3 Codename: wensleydale - Changelog
++
++Compilazione: Sistemato codice per il makefile
++Compilazione: Aggiunta parametro per abilitare Debug di Bochs in fase di compilazione
++Compilazione: Aggiornamenti script start.sh
++Compilazione: Eliminato dal Makefile il riferimento a hardware/keyboard.c che non era utilizzato.
++
++libc: Correzione di strcpy
++libc: Disabilitazione syscall per putchar. E modifica putchar
++
++misc: aggiunto script grub.py per l'inserimento di uan entry in grub dell'os
++misc: aggiunto in doc il file su come utilizzare lo script di grub
++misc: corretto bug sulla data #15831
++misc: aggiunto comando modprobe (per abilitare alcuni driver, per ora solo il mouse)
++misc: aggiornamento readme
++
++Shell: Modifica gestione comandi ora viene usata una struct con due campi al posto che i 2 vettori di prima
++Shell: Modificato comando sleep, nella struttura dei comandi (vedi bug #15810).
++Shell: spostata definizione della struct cmd da shell.c in shell.h
++
++hardware: abilitato irq per il pic slave
++hardware: miglioramento gestione irq (prima non venivano rilevate le irq dello slave)
++hardware: implementazione prima bozza di driver mouse (rileva movimento se abilitato)
++hardware: eliminato file hardware/keyboard.c perche non piu utilizzato.
++
++io: Invertiti parametri di outportb per seguire la chiamata standard
++io: aggiunto \r nelle stampe per printf e affini
++
++mem: mappata pagina 0xFEE00000 dell'apic nella mem logica
++mem: mappata pagina 0xFEC00000 dell'apic nella mem logica
+
+Modified: branches/0.1.3/Makefile
+===================================================================
+--- branches/0.1.3/Makefile	2009-07-14 18:12:23 UTC (rev 105)
++++ branches/0.1.3/Makefile	2009-07-14 19:55:09 UTC (rev 106)
+@@ -5,7 +5,7 @@
+ NAME = DreamOS
+ VERSION = 0
+ PATCHLEVEL = 1.3
+-EXTRAVERSION = -trunk
++EXTRAVERSION = -adam
+ 
+ CFLAGS = -nostdlib\
+ 	 -nostdinc\
+
+Modified: branches/0.1.3/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: branches/0.1.3/include/kernel.h
+===================================================================
+--- branches/0.1.3/include/kernel.h	2009-07-14 18:12:23 UTC (rev 105)
++++ branches/0.1.3/include/kernel.h	2009-07-14 19:55:09 UTC (rev 106)
+@@ -29,7 +29,7 @@
+ asmlinkage void _start(struct multiboot_info*);
+ int main_loop(struct multiboot_info*);
+ 
+-#define DREAMOS_VER &quot;DreamOS ver 0.1.3 - trunk&quot;
++#define DREAMOS_VER &quot;DreamOS ver 0.1.3 - adam&quot;
+ #define SITEURL &quot;www.dreamos.org&quot;
+ 
+ #endif
+
+Modified: branches/0.1.3/include/version.h
+===================================================================
+--- branches/0.1.3/include/version.h	2009-07-14 18:12:23 UTC (rev 105)
++++ branches/0.1.3/include/version.h	2009-07-14 19:55:09 UTC (rev 106)
+@@ -22,6 +22,6 @@
+ 
+ #define VERSION &quot;0&quot;
+ #define PATCHLEVEL &quot;1.3&quot;
+-#define EXTRAVERSION &quot;-trunk&quot;
++#define EXTRAVERSION &quot;-adam&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r101&quot;
++#define REV_NUM &quot;-r105&quot;
+
+Modified: branches/0.1.3/shell/commands.c
+===================================================================
+--- branches/0.1.3/shell/commands.c	2009-07-14 18:12:23 UTC (rev 105)
++++ branches/0.1.3/shell/commands.c	2009-07-14 19:55:09 UTC (rev 106)
+@@ -40,11 +40,11 @@
+   _kcolor (5);
+   printf(&quot;\n&quot;);
+   printf(&quot;\t\t\t The Dream Operating System \n&quot;
+-	 &quot;\t\t           v%s.%s%s %s      \n\n&quot;
++	 &quot;\t\t             v%s.%s%s       \n\n&quot;
+ 	 &quot;\t\t\t   Welcome to DreamOS\n&quot;
+ 	 &quot;\t  Where dreams don't become Reality and remain dreams. \n&quot;
+ 	 &quot;\t          R.I.P - Rest in peace with dreamos ^_^        \n&quot;, 
+-	 VERSION, PATCHLEVEL, EXTRAVERSION, REV_NUM);
++	 VERSION, PATCHLEVEL, EXTRAVERSION);
+ 	
+   printf(&quot;\n\n\n\n&quot;);
+   _kcolor(7);
+@@ -136,7 +136,7 @@
+   infos = kmalloc(sizeof(struct utsname *));
+   uname(infos);
+   if (!(strcmp(argv[1], &quot;-a&quot;)) || !(strcmp(argv[1], &quot;--all&quot;)))
+-    printf(&quot;%s %s.%s%s Rev: %s #1 CEST 2009 %s\n&quot;, infos-&gt;sysname, infos-&gt;version, infos-&gt;release, EXTRAVERSION,REV_NUM, cpu_vendor);
++    printf(&quot;%s %s.%s%s #1 CEST 2009 %s\n&quot;, infos-&gt;sysname, infos-&gt;version, infos-&gt;release, EXTRAVERSION, cpu_vendor);
+   else if (!(strcmp(argv[1], &quot;-r&quot;)) || !(strcmp(argv[1], &quot;--rev&quot;)))
+     printf(&quot;%s.%s%s\n&quot;, infos-&gt;version, infos-&gt;release, EXTRAVERSION);
+   else if (!(strcmp(argv[1], &quot;-h&quot;) ) || !(strcmp(argv[1], &quot;--help&quot;)))
+@@ -165,8 +165,8 @@
+   printf( &quot;Version: '%s'\n&quot;
+ 	  &quot;Patchlevel: '%s'\n&quot;
+ 	  &quot;Extraversion: '%s'\n&quot;
+-	  &quot;Name: '%s'\n&quot;
+-	  &quot;Revision: '%s'\n&quot;,VERSION,PATCHLEVEL,EXTRAVERSION,NAME,REV_NUM);
++	  &quot;Name: '%s'\n&quot;,
++	  VERSION,PATCHLEVEL,EXTRAVERSION,NAME);
+ 
+   // CPU Info
+   _kputs (LNG_CPU);
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000107.html">[Dreamos-dev] r105 - branches
+</A></li>
+	<LI>Next message: <A HREF="000109.html">[Dreamos-dev] r107 - branches/0.1.3/boot
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#108">[ date ]</a>
+              <a href="thread.html#108">[ thread ]</a>
+              <a href="subject.html#108">[ subject ]</a>
+              <a href="author.html#108">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

@@ -1,0 +1,215 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r194 - in trunk: . fs include/fs include/sys shell sys
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-February/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r194%20-%20in%20trunk%3A%20.%20fs%20include/fs%20include/sys%20shell%20sys&In-Reply-To=%3C201002071712.o17HCPZq007799%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000195.html">
+   <LINK REL="Next"  HREF="000197.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r194 - in trunk: . fs include/fs include/sys shell sys</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r194%20-%20in%20trunk%3A%20.%20fs%20include/fs%20include/sys%20shell%20sys&In-Reply-To=%3C201002071712.o17HCPZq007799%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r194 - in trunk: . fs include/fs include/sys shell sys">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun Feb  7 18:12:25 CET 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000195.html">[Dreamos-dev] r193 - in trunk: . fs shell sys
+</A></li>
+        <LI>Next message: <A HREF="000197.html">[Dreamos-dev] r195 - in trunk: . shell sys
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#196">[ date ]</a>
+              <a href="thread.html#196">[ thread ]</a>
+              <a href="subject.html#196">[ subject ]</a>
+              <a href="author.html#196">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-02-07 18:12:23 +0100 (Sun, 07 Feb 2010)
+New Revision: 194
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/initrd.c
+   trunk/fs/vfs.c
+   trunk/include/fs/initrd.h
+   trunk/include/sys/dirent.h
+   trunk/shell/commands.c
+   trunk/sys/dirent.c
+Log:
+Aggiunta readdir
+Modificato comando cd (per ora fa alcuni test)
+Per ora il comportamento e' garantito solo in caso di cd /
+Viene fatta una lista dei files tramite readdir.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-02-07 14:02:41 UTC (rev 193)
++++ trunk/fs/initrd.c	2010-02-07 17:12:23 UTC (rev 194)
+@@ -55,9 +55,10 @@
+ 		pdir = kmalloc(sizeof(DIR));
+ 		strcpy(pdir-&gt;path, path);
+ 		pdir-&gt;handle = 0x01;
++		pdir-&gt;cur_entry = 0x00;
+ 		pdir-&gt;entry.d_ino = 0x00;
+ 		strcpy(pdir-&gt;entry.d_name, module_var[0].fileName);
+-		printf(&quot;First occorrency: %s\n&quot;, pdir-&gt;entry.d_name);
++		//printf(&quot;First occorrency: %s\n&quot;, pdir-&gt;entry.d_name);
+ 		return pdir;
+ 	}
+ 	else {
+@@ -67,7 +68,21 @@
+ }
+ 
+ struct dirent *initrd_readdir(DIR *dirp){
+-	printf(&quot;Placeholder for futre readdir of initrd\n&quot;);
++	initrd_file_t *fs_type;
++	struct dirent *cur_dir;
++	int nfiles;	
++	nfiles = fs_specs-&gt;nfiles;
++	if(dirp-&gt;cur_entry &lt; nfiles){	
++		fs_type = (initrd_file_t *)(module_start + sizeof(initrd_t));	
++		dirp-&gt;entry.d_ino =  dirp-&gt;cur_entry;
++		strcpy(dirp-&gt;entry.d_name, fs_type[dirp-&gt;cur_entry].fileName);	
++		//printf(&quot;%s\n&quot;, dirp-&gt;entry.d_name);
++		dirp-&gt;cur_entry++;
++		//printf(&quot;Placeholder for future readdir of initrd Number of files: %d\n&quot;, dirp-&gt;cur_entry);
++		return &amp;(dirp-&gt;entry);
++	}
++	else return NULL;
++	return NULL;
+ }
+ 
+ int initfs_open(const char *path, int flags, ...){
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2010-02-07 14:02:41 UTC (rev 193)
++++ trunk/fs/vfs.c	2010-02-07 17:12:23 UTC (rev 194)
+@@ -68,6 +68,7 @@
+  	mountpoint_list[0].dev_id = 0;
+  	mountpoint_list[0].start_address = module_start;
+  	mountpoint_list[0].dir_op.opendir_f = initfs_opendir;
++ 	mountpoint_list[0].dir_op.readdir_f = initrd_readdir;
+  	mountpoint_list[0].operations.open = initfs_open;
+  	mountpoint_list[0].operations.close = initrd_close;
+  	mountpoint_list[0].operations.read = initfs_read;
+
+Modified: trunk/include/fs/initrd.h
+===================================================================
+--- trunk/include/fs/initrd.h	2010-02-07 14:02:41 UTC (rev 193)
++++ trunk/include/fs/initrd.h	2010-02-07 17:12:23 UTC (rev 194)
+@@ -60,7 +60,7 @@
+ void dummy();
+ int initfs_init();
+ DIR *initfs_opendir(const char *);
+-struct dirent *readdir(DIR *);
++struct dirent *initrd_readdir(DIR *);
+ int initfs_open(const char *, int, ...);
+ ssize_t initfs_read(int, char *, size_t);
+ int initrd_close(int);
+
+Modified: trunk/include/sys/dirent.h
+===================================================================
+--- trunk/include/sys/dirent.h	2010-02-07 14:02:41 UTC (rev 193)
++++ trunk/include/sys/dirent.h	2010-02-07 17:12:23 UTC (rev 194)
+@@ -38,6 +38,7 @@
+ typedef struct 
+ {
+   int handle; /**&lt; Filesystem directory handle*/
++  int cur_entry;
+   char path[NAME_MAX + 1]; /**&lt; dir path*/
+   struct dirent entry; /**&lt; Next directory item*/
+ } DIR;
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-02-07 14:02:41 UTC (rev 193)
++++ trunk/shell/commands.c	2010-02-07 17:12:23 UTC (rev 194)
+@@ -383,6 +383,7 @@
+ void cd( ){
+ 	char *relpath;	
+ 	DIR *dirp;
++	struct dirent* prova;
+ 	if(argc != 2) {
+ 		printf(&quot;Bad usage. Try 'ls -l' and then 'cd dir'.\n&quot;);
+ 		return;
+@@ -403,7 +404,11 @@
+ 		}
+ 	}
+ 	dirp = opendir(argv[1]);
+-	readdir(dirp);
++	prova = readdir(dirp);
++	while(prova!=NULL){
++		printf(&quot;%s\n&quot;, prova-&gt;d_name);
++		prova = readdir(dirp);
++	}
+ }
+ 
+ void whoami(){
+
+Modified: trunk/sys/dirent.c
+===================================================================
+--- trunk/sys/dirent.c	2010-02-07 14:02:41 UTC (rev 193)
++++ trunk/sys/dirent.c	2010-02-07 17:12:23 UTC (rev 194)
+@@ -36,6 +36,7 @@
+ 	if(mountpoint_list[mpoint_id].dir_op.opendir_f!=NULL) {
+ 		pdir = mountpoint_list[mpoint_id].dir_op.opendir_f(rel_path);
+ 		pdir-&gt;handle = mpoint_id;
++		return pdir;
+ 	}
+ 	else {
+ 		printf(&quot;Could not open_dir no function found\n&quot;);
+@@ -45,8 +46,10 @@
+ }
+ 
+ struct dirent *readdir(DIR *dirp){
++	//printf(&quot;Handle: %d\n&quot;, dirp-&gt;handle);
+ 	if(mountpoint_list[dirp-&gt;handle].dir_op.readdir_f!=NULL){
+-		printf(&quot;Trovata readdir\n&quot;);
++		//printf(&quot;Trovata readdir\n&quot;);
++		return mountpoint_list[dirp-&gt;handle].dir_op.readdir_f(dirp);
+ 	}
+ 	else printf(&quot;No readdir - No party\n&quot;);
+ }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000195.html">[Dreamos-dev] r193 - in trunk: . fs shell sys
+</A></li>
+	<LI>Next message: <A HREF="000197.html">[Dreamos-dev] r195 - in trunk: . shell sys
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#196">[ date ]</a>
+              <a href="thread.html#196">[ thread ]</a>
+              <a href="subject.html#196">[ subject ]</a>
+              <a href="author.html#196">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

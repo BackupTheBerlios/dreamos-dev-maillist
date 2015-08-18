@@ -1,0 +1,347 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r111 - in trunk: . boot fs include/shell include/sys	shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-August/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r111%20-%20in%20trunk%3A%20.%20boot%20fs%20include/shell%20include/sys%0A%09shell&In-Reply-To=%3C200908032127.n73LRH9H002530%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   
+   <LINK REL="Next"  HREF="000114.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r111 - in trunk: . boot fs include/shell include/sys	shell</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r111%20-%20in%20trunk%3A%20.%20boot%20fs%20include/shell%20include/sys%0A%09shell&In-Reply-To=%3C200908032127.n73LRH9H002530%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r111 - in trunk: . boot fs include/shell include/sys	shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Mon Aug  3 23:27:17 CEST 2009</I>
+    <P><UL>
+        
+        <LI>Next message: <A HREF="000114.html">[Dreamos-dev] r112 - in trunk: . include
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#113">[ date ]</a>
+              <a href="thread.html#113">[ thread ]</a>
+              <a href="subject.html#113">[ subject ]</a>
+              <a href="author.html#113">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-08-03 23:11:52 +0200 (Mon, 03 Aug 2009)
+New Revision: 111
+
+Added:
+   trunk/boot/grub.img
+   trunk/boot/grub2.xpm.gz
+   trunk/include/sys/unistd.h
+Removed:
+   trunk/boot/grub.img
+Modified:
+   trunk/Makefile
+   trunk/dreamos-image.iso
+   trunk/dreamos.img
+   trunk/fs/vfs.c
+   trunk/grub.py
+   trunk/include/shell/shell.h
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+Log:
+Aggiunto header sys/unistd.h (appena iniziato)
+Aggiunta struttura dati per utente (per ora ha il path corrente e lo username)
+Inserita immagine al menu di grub ( solo nell'immagine di floppy e cd)
+Corretti numeri versione per lo script grub.py
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2009-07-25 09:16:31 UTC (rev 110)
++++ trunk/Makefile	2009-08-03 21:11:52 UTC (rev 111)
+@@ -18,7 +18,7 @@
+ 	 -I./include\
+ 	 -I./include/io\
+ 	 -I./include/drivers\
+-     -I./include/libc\
++         -I./include/libc\
+ 	 -I./include/processore\
+ 	 -I./include/hardware\
+ 	 -I./include/mem\
+@@ -26,6 +26,7 @@
+ 	 -I./include/shell\
+ 	 -I./include/misc\
+ 	 -I./include/fs\
++	 -I./include/sys \
+ 	 -DBOCHS_DEBUG
+ 
+ OBJ = kernel.o\
+
+Deleted: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Added: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+
+Property changes on: trunk/boot/grub.img
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Added: trunk/boot/grub2.xpm.gz
+===================================================================
+(Binary files differ)
+
+
+Property changes on: trunk/boot/grub2.xpm.gz
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Modified: trunk/dreamos-image.iso
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2009-07-25 09:16:31 UTC (rev 110)
++++ trunk/fs/vfs.c	2009-08-03 21:11:52 UTC (rev 111)
+@@ -22,6 +22,7 @@
+ #include &lt;stddef.h&gt;
+ #include &lt;string.h&gt;
+ #include &lt;kheap.h&gt;
++#include &lt;unistd.h&gt;
+ 
+ struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
+ 
+@@ -71,6 +72,9 @@
+ 				printf(&quot;Changing dir %s\n&quot;, mountpoint_list[i].mountpoint);
+ 				return i;
+ 			}
++			else{
++				/* Continua a cercare il mountpoint e se nn lo trova torna errore.*/				
++			}	
+ 			i++;
+ 		}		
+ 		return -1;		
+
+Modified: trunk/grub.py
+===================================================================
+--- trunk/grub.py	2009-07-25 09:16:31 UTC (rev 110)
++++ trunk/grub.py	2009-08-03 21:11:52 UTC (rev 111)
+@@ -3,7 +3,7 @@
+ import os
+ 
+ if os.getuid() != 0:
+-	print &quot;--------------------DreamOS v0.1.2 Grub Autogen--------------------&quot;
++	print &quot;--------------------DreamOS v0.2 Grub Autogen--------------------&quot;
+ 	print &quot;[-] You need to run this install script as root!&quot;
+ 	sys.exit(1)
+ 
+@@ -26,7 +26,7 @@
+ # Manca il controllo errori
+ fd = open(&quot;/boot/grub/menu.lst&quot;, &quot;a&quot;)
+ 
+-print &quot;--------------------DreamOS v0.1.2 Grub Autogen--------------------&quot;
++print &quot;--------------------DreamOS v0.2 Grub Autogen--------------------&quot;
+ print &quot;Inserire la partizione dei sorgenti:&quot;,
+ pn = raw_input()
+ partition = grub_hd(pn)
+@@ -41,7 +41,7 @@
+ 	cwd = sub_mount(mp, cwd)
+ 	
+ print &quot;+---------------------------------INFO----------------------------------+&quot;
+-print &quot;| Title: DreamOS v0.1.2 trunk                                           |&quot;
++print &quot;| Title: DreamOS v0.2 trunk                                           |&quot;
+ print &quot;| Root: &quot; + partition + &quot;                                                         |&quot;
+ print &quot;| Kernel: &quot; + cwd
+ print &quot;+-----------------------------------------------------------------------+&quot;
+@@ -49,7 +49,7 @@
+ answer = raw_input()
+ 
+ if answer == 'y':
+-	fd.write(&quot;\ntitle\tDreamOS v0.1.2 trunk&quot;)
++	fd.write(&quot;\ntitle\tDreamOS v0.2 trunk&quot;)
+ 	fd.write(&quot;\nroot\t&quot; + partition)
+ 	fd.write(&quot;\nkernel\t&quot; + cwd)
+ 	fd.write(&quot;\nboot\n&quot;)
+@@ -57,7 +57,7 @@
+ 
+ print &quot;&quot;
+ print &quot;Changes added to /boot/grub/menu.lst: &quot;
+-print &quot;\n+title\tDreamOS v0.1.2 trunk&quot;
++print &quot;\n+title\tDreamOS v0.2 trunk&quot;
+ print &quot;+root\t&quot; + partition
+ print &quot;+kernel\t&quot; + cwd
+ print &quot;+boot\n&quot;
+
+Modified: trunk/include/shell/shell.h
+===================================================================
+--- trunk/include/shell/shell.h	2009-07-25 09:16:31 UTC (rev 110)
++++ trunk/include/shell/shell.h	2009-08-03 21:11:52 UTC (rev 111)
+@@ -20,14 +20,23 @@
+ 
+ #define USER_LEN 24
+ #define CMD_LEN 256
++#define CURPATH_LEN 256
+ 
+ struct cmd {
+ 	const char cmdname[CMD_LEN];
+ 	void (*h_func)(void);
+ };
+ 
+-extern char cur_path[256];
++struct user_env {
++	char username[USER_LEN];
++	char cur_path[CURPATH_LEN];
++};
+ 
++//extern char cur_path[256];
++typedef struct user_env userenv_t;
++
++extern userenv_t current_user;
++
+ void shell(void);
+ 
+ #endif
+
+Added: trunk/include/sys/unistd.h
+===================================================================
+--- trunk/include/sys/unistd.h	2009-07-25 09:16:31 UTC (rev 110)
++++ trunk/include/sys/unistd.h	2009-08-03 21:11:52 UTC (rev 111)
+@@ -0,0 +1,24 @@
++/*
++ * Dreamos
++ * unistd.h
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++#ifndef __UNISTD_H
++#define __UNISTD_H
++
++#define _SC_OPEN_MAX 5
++
++#endif
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-07-25 09:16:31 UTC (rev 110)
++++ trunk/shell/commands.c	2009-08-03 21:11:52 UTC (rev 111)
+@@ -24,7 +24,7 @@
+ #include &lt;vfs.h&gt;
+ 
+ struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
+-char cur_path[256];
++userenv_t current_user;
+ 
+ void aalogo()
+ {
+@@ -404,6 +404,6 @@
+ 		//printf(&quot;Argc: %d &quot;, argc);
+ 		i = open_dir(argv[1]);
+ 		if(i == -1) printf(&quot;Path not found\n&quot;);
+-		else strcpy(cur_path, mountpoint_list[i].mountpoint);		
++		else strcpy(current_user.cur_path, mountpoint_list[i].mountpoint);		
+ 	}
+ }
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-07-25 09:16:31 UTC (rev 110)
++++ trunk/shell/shell.c	2009-08-03 21:11:52 UTC (rev 111)
+@@ -41,6 +41,7 @@
+ 
+ #define NUM_COM 17
+ 
++userenv_t current_user;
+ /*
+  * Inserisce gli argomenti di un comando in un array di stringhe
+  * argc = numero degli argomenti
+@@ -72,7 +73,7 @@
+   char cmd[CMD_LEN];
+   char *cmd_ptr;
+   char *user = kmalloc(USER_LEN);
+-
++  
+   static struct cmd shell_cmd[NUM_COM] = {
+ 	{ &quot;aalogo&quot;,   aalogo      },
+ 	{ &quot;clear&quot;,    _kclear     },
+@@ -96,24 +97,25 @@
+   int i = 0;
+ 
+   memset(cmd, '\0', CMD_LEN);
+-  memset(user, '\0', USER_LEN);
++  memset(current_user.username, '\0', USER_LEN);
++  memset(current_user.cur_path, '\0', CURPATH_LEN);
+   printf(LNG_WELCOME);
+   
+   do {		
+     printf(LNG_USER);
+-    scanf (&quot;%23s&quot;,user);
++    scanf (&quot;%23s&quot;,current_user.username);
+     printf(LNG_USER_R);
+-  } while (!strlen(user));
++  } while (!strlen(current_user.username));
+  
+   _kclear();
+   aalogo();
+   printf(&quot;\n\n\n\n&quot;);
+   argc=1;  
+-  strcpy(cur_path, &quot;&quot;);
++  strcpy(current_user.cur_path, &quot;&quot;);
+   
+   for (;;)
+   {
+-    printf(&quot;%s~%s# &quot;,user, cur_path);
++    printf(&quot;%s~:%s# &quot;,current_user.username, current_user.cur_path);
+     scanf(&quot;%254s&quot;,cmd);
+         
+     /* elimina eventuali spazi all'inizio del comando */
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	
+	<LI>Next message: <A HREF="000114.html">[Dreamos-dev] r112 - in trunk: . include
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#113">[ date ]</a>
+              <a href="thread.html#113">[ thread ]</a>
+              <a href="subject.html#113">[ subject ]</a>
+              <a href="author.html#113">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

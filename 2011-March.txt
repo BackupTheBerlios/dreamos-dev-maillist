@@ -1,0 +1,1224 @@
+From finarfin at mail.berlios.de  Fri Mar  4 21:27:15 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Fri,  4 Mar 2011 21:27:15 +0100
+Subject: [Dreamos-dev] r346 - in trunk: . boot mem misc
+Message-ID: <20110304202716.0595F481285@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-03-04 21:27:15 +0100 (Fri, 04 Mar 2011)
+New Revision: 346
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/mem/heap.c
+   trunk/misc/ordered_array.c
+Log:
+Sistemato insert_array ora usa t_array->less_than per il confronto.
+Piccola correzione in new_free
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2011-02-24 22:18:00 UTC (rev 345)
++++ trunk/mem/heap.c	2011-03-04 20:27:15 UTC (rev 346)
+@@ -264,9 +264,9 @@
+ 	if(((unsigned int)footer + sizeof(footer_t)) == t_heap->end_address){
+ 		unsigned int old_size = t_heap->end_address - t_heap->start_address;
+ 		unsigned int new_size = contract((unsigned int)header - t_heap->start_address, t_heap);
+-		/**We need to resize?*/
+-		//printf("Test\n");
++		/**We need to resize?*/		
+ 		if(header->size - (old_size-new_size) > 0){
++			header->size = old_size-new_size;			
+ 			footer = (footer_t *) (unsigned int)header + header->size - sizeof(footer_t);
+ 			footer->magic = HEAP_MAGIC;
+ 			footer->header = header;
+
+Modified: trunk/misc/ordered_array.c
+===================================================================
+--- trunk/misc/ordered_array.c	2011-02-24 22:18:00 UTC (rev 345)
++++ trunk/misc/ordered_array.c	2011-03-04 20:27:15 UTC (rev 346)
+@@ -73,7 +73,7 @@
+     //Qui va un ciclo tipo: che termina o quando l'elemento va inserito in coda, o quando trova
+     //la sua posizione dove mettersi. && t_array->t_array[i].size>=elem->size Questa e' l'idea, ma va 
+     //sistemato il codice.
+-    while(i<t_array->size && header_t_less_than(t_array->array[i], elem)){				
++    while(i<t_array->size && t_array->less_than(t_array->array[i], elem)){				
+         i++;
+ 	}
+     if(i==t_array->size){
+
+
+
+From finarfin at mail.berlios.de  Wed Mar  9 21:25:58 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Wed,  9 Mar 2011 21:25:58 +0100
+Subject: [Dreamos-dev] r347 - in trunk: . boot include/mem mem
+Message-ID: <20110309202558.5E046481479@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-03-09 21:25:58 +0100 (Wed, 09 Mar 2011)
+New Revision: 347
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/include/mem/heap.h
+   trunk/mem/heap.c
+Log:
+Aggiunta funzione temporanea n_free.
+il comando try_newheap ora chiama la n_free. 
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/mem/heap.h
+===================================================================
+--- trunk/include/mem/heap.h	2011-03-04 20:27:15 UTC (rev 346)
++++ trunk/include/mem/heap.h	2011-03-09 20:25:58 UTC (rev 347)
+@@ -75,6 +75,7 @@
+ short int locate_smallest_hole(unsigned int, unsigned short int, new_heap_t*);
+ short int header_t_less_than(void *,void *);
+ 
++void n_free(unsigned int);
+ #ifdef OLD_MEM_DISABLED
+ void* kmalloc(unsigned int);
+ void kfree(unsigned int);
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2011-03-04 20:27:15 UTC (rev 346)
++++ trunk/mem/heap.c	2011-03-09 20:25:58 UTC (rev 347)
+@@ -284,3 +284,7 @@
+ 			insert_array((void_t*) header, &t_heap->index);
+ 	}	
+ }
++
++void n_free(unsigned int address){
++	new_free(address, n_heap);
++}
+
+
+
+From finarfin at mail.berlios.de  Wed Mar  9 22:11:20 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Wed,  9 Mar 2011 22:11:20 +0100
+Subject: [Dreamos-dev] r348 - in trunk: . boot include/mem shell
+Message-ID: <20110309211120.C1703481479@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-03-09 22:11:20 +0100 (Wed, 09 Mar 2011)
+New Revision: 348
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/include/mem/heap.h
+   trunk/shell/testing.c
+Log:
+Corrected new_free header problems. 
+Updated try_newheap in testing.c
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/mem/heap.h
+===================================================================
+--- trunk/include/mem/heap.h	2011-03-09 20:25:58 UTC (rev 347)
++++ trunk/include/mem/heap.h	2011-03-09 21:11:20 UTC (rev 348)
+@@ -67,7 +67,7 @@
+ 
+ void *new_alloc(unsigned int, unsigned short int, new_heap_t*);
+ void expand(unsigned int, new_heap_t*);
+-void new_free();
++void new_free(void*, new_heap_t*);
+ void init_newmem();
+ 
+ unsigned int new_malloc(unsigned int);
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2011-03-09 20:25:58 UTC (rev 347)
++++ trunk/shell/testing.c	2011-03-09 21:11:20 UTC (rev 348)
+@@ -114,13 +114,13 @@
+ 	//printf("testB - testA = %u", testB - testA);
+ 	testC=new_malloc(8);
+ 	printf("-Address of testC Hex: 0x%x\n", testC);
+-	new_free(testC);
+-	new_free(testB);
++	n_free(testC);
++	n_free(testB);
+ 	unsigned int testD;
+ 	testD = new_malloc(12);
+ 	printf("-Address of testD Hex: 0x%x\n", testD);
+-	new_free(testA);
+-	new_free(testD);
++	n_free(testA);
++	n_free(testD);
+ 	printf("DONE\n");
+ }
+ 
+
+
+
+From finarfin at mail.berlios.de  Thu Mar 10 21:03:18 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Thu, 10 Mar 2011 21:03:18 +0100
+Subject: [Dreamos-dev] r349 - in trunk: . boot mem
+Message-ID: <20110310200318.91E6F4813F4@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-03-10 21:03:18 +0100 (Thu, 10 Mar 2011)
+New Revision: 349
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/kernel.c
+   trunk/mem/heap.c
+   trunk/mem/paging.c
+Log:
+Cleaned some useless comments. 
+Added (but actually disabled) kmalloc and kfree functions into heap.c
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2011-03-09 21:11:20 UTC (rev 348)
++++ trunk/kernel.c	2011-03-10 20:03:18 UTC (rev 349)
+@@ -99,11 +99,11 @@
+     _kprintOK();   
+     init_paging();
+ 
+-    /*
++    
+     init_newmem();     
+     try_newheap();
+     while(1);            
+-    */
++    
+     _kprintOK();    	
+     printf("Memory (upper) amount-> %d Mb \n", boot_info->mem_upper/1024);
+     printf("Memory (lower) amount-> %d kb \n", boot_info->mem_lower);	
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2011-03-09 21:11:20 UTC (rev 348)
++++ trunk/mem/heap.c	2011-03-10 20:03:18 UTC (rev 349)
+@@ -85,11 +85,7 @@
+ }
+ 
+ void *new_alloc(unsigned int size, unsigned short int p_aligned, new_heap_t* t_heap){
+-	//#define MEMDEBUG 1
+-	#ifdef  MEMDEBUG
+ 	unsigned int real_size = size +sizeof(header_t) + sizeof(footer_t);	
+-	//printf("Size of:\n\theader_t: %d\n\tfooter_t: %d\n\treal_size: %d\n\tsize: %d\n", sizeof(header_t), sizeof(footer_t), real_size, size);	
+-	//printf("Real size: %d\n", real_size);
+ 	unsigned int min_index = locate_smallest_hole(real_size, PAGE_ALIGNED, t_heap);
+ 	//printf("Real size: %d - min_index: %d\n", real_size, min_index);
+ 	if(min_index == -1 ){
+@@ -97,10 +93,8 @@
+ 		unsigned int old_len = t_heap->end_address - t_heap->start_address;		
+ 		unsigned int old_end_address = t_heap->end_address;			
+ 		/**expand the current heap*/
+-		//printf("Old len value: %x - ", old_len);
+ 		expand(old_len+real_size, t_heap);
+ 		unsigned int new_len = t_heap->end_address - t_heap->start_address;		
+-		//printf("New len value: %x\n", old_len);		
+ 		min_index=0;
+ 		unsigned int latest_i = -1;
+ 		unsigned int val = 0x0;
+@@ -132,25 +126,19 @@
+ 			footer_t* footer = (footer_t*) (header + header->size - sizeof(footer_t));
+ 			footer->magic = HEAP_MAGIC;
+ 			footer->header = header;
+-		}
+-		//printf("Recursing!!! \n");
++		}	
+ 		return new_alloc(size, p_aligned, t_heap);
+ 	}
+ 	else {
+ 		header_t *header = get_array(min_index, &t_heap->index);
+ 		unsigned int hole_address = (unsigned int)header;
+ 		unsigned int hole_size = header->size;
+-		//printf("HOLE FOUND\n");
+-		//printf(" In new_alloc: Header: 0x%x\t Real Size: 0x%x\n", header->magic, real_size);
+ 		if(hole_size - real_size < sizeof(header_t) + sizeof(footer_t)){
+ 			/*We can't split the hole!*/
+-			//printf("A good step forward");
+ 			size = hole_size + real_size;
+ 			real_size = hole_size;			
+ 		}
+ 		else remove_array(min_index, &t_heap->index);
+-		//Temporaneamente commentato!	
+-		//#ifdef DEBUG
+ 		header_t *block_header  = (header_t *)hole_address;
+ 		block_header->magic = HEAP_MAGIC;
+ 		block_header->size = real_size;
+@@ -158,8 +146,6 @@
+ 		footer_t *block_footer = (footer_t *)(hole_address + size + sizeof(header_t));
+ 		block_footer->magic = HEAP_MAGIC;
+ 		block_footer->header = block_header;
+-		//printf("Block_header: %x - End of block_footer: %x\n", (unsigned int)block_header, (unsigned int)block_footer);
+-		//#endif
+ 		if(hole_size - real_size >0){
+ 			/**We need to add a new hole. The new_hole address is given by:
+ 			 * the current hole address + size + sizeof(header_t) + sizeof(footer_t) 
+@@ -175,9 +161,7 @@
+ 			insert_array((void *)head_hole, &t_heap->index);			
+ 		}	
+ 		return (void *)((unsigned int)block_header+sizeof(header_t));
+-		//get_array(0, &t_heap->index);
+ 	}	
+-	#endif
+ 	return NULL;
+ }
+ 
+@@ -210,7 +194,7 @@
+ 	while(index < in_heap->index.size){
+ 		unsigned int h_size;
+ 		header_t *header = (header_t *)get_array(index, &in_heap->index);
+-		printf("Header: 0x%x\tSize: 0x%x\n", header->magic, header->size);
++		//printf("Header: 0x%x\tSize: 0x%x\n", header->magic, header->size);
+ 		h_size = header->size;
+ 		if(h_size >= size)
+ 			break;
+@@ -235,7 +219,6 @@
+ 	/**Unify left*/
+ 	/**Test if on the left i have a hole*/
+ 	footer_t* left_footer = (footer_t*) ((unsigned int) header - sizeof(footer_t));
+-	//printf("Address of header: %x - Footer: %x Left: %x\n", header, footer, footer->magic);
+ 	if(left_footer->magic == HEAP_MAGIC && left_footer->header->is_hole == HEAP_HOLE){
+ 		//printf("unify left\n");
+ 		/**I have found a hole on the left of my current header i need to save the size of
+@@ -286,5 +269,15 @@
+ }
+ 
+ void n_free(unsigned int address){
+-	new_free(address, n_heap);
++	new_free((void*)address, n_heap);
+ }
++
++#ifdef OLD_MEM_DISABLED
++void* kmalloc(unsigned int size){
++	new_malloc(size);
++}
++
++void kfree(unsigned int address){
++	n_free(address);
++}
++#endif
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2011-03-09 21:11:20 UTC (rev 348)
++++ trunk/mem/paging.c	2011-03-10 20:03:18 UTC (rev 349)
+@@ -84,7 +84,7 @@
+     load_pdbr((unsigned int)current_page_dir);
+ 	//set_pagetable_entry_ric(1019, 512 ,0xFEE00000, SUPERVISOR|PD_PRESENT|WRITE, 0);
+ 	//set_pagetable_entry_ric(1019, 0 ,0xFEC00000, SUPERVISOR|PD_PRESENT|WRITE, 0);	
+-    kheap = make_heap(tot_mem - ((unsigned int) &end));    
++    //kheap = make_heap(tot_mem - ((unsigned int) &end));    
+ }
+ 
+ /**
+
+
+
+From finarfin at mail.berlios.de  Sun Mar 13 10:08:19 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun, 13 Mar 2011 10:08:19 +0100
+Subject: [Dreamos-dev] r350 - in trunk: . utils/eltorito_iso
+	utils/eltorito_iso/boot
+Message-ID: <20110313090819.EA5374813A4@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-03-13 10:08:19 +0100 (Sun, 13 Mar 2011)
+New Revision: 350
+
+Modified:
+   trunk/Makefile
+   trunk/utils/eltorito_iso/boot/dreamos.img
+   trunk/utils/eltorito_iso/initfs
+Log:
+Added makefile option for make an iso-image.
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2011-03-10 20:03:18 UTC (rev 349)
++++ trunk/Makefile	2011-03-13 09:08:19 UTC (rev 350)
+@@ -140,6 +140,9 @@
+ install:
+ 	mkfs.ext2 /dev/fd0
+ 	dd if=boot/grub.img of=/dev/fd0
++	
++iso-image:
++	./utils/eltorito_gen.sh
+ 
+ qemu: dreamos.img
+ 	dd if=/dev/zero bs=$(shell let bs=1474560 -$(shell stat --format=%s dreamos.img); echo $$bs) count=1 2>/dev/null | cat dreamos.img - > dreamos_padded.img
+
+Modified: trunk/utils/eltorito_iso/boot/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/utils/eltorito_iso/initfs
+===================================================================
+(Binary files differ)
+
+
+
+From finarfin at mail.berlios.de  Sun Mar 13 11:08:31 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun, 13 Mar 2011 11:08:31 +0100
+Subject: [Dreamos-dev] r351 - in trunk: . boot mem shell utils
+Message-ID: <20110313100831.A5D904813A4@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-03-13 11:08:31 +0100 (Sun, 13 Mar 2011)
+New Revision: 351
+
+Modified:
+   trunk/Makefile
+   trunk/README
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/kernel.c
+   trunk/mem/paging.c
+   trunk/shell/testing.c
+   trunk/utils/README.eltorito_gen
+Log:
+Removed debug tests.
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2011-03-13 09:08:19 UTC (rev 350)
++++ trunk/Makefile	2011-03-13 10:08:31 UTC (rev 351)
+@@ -130,7 +130,7 @@
+ 	 sed -i -e "/^#define NAME/s/\".*\"/\"$(NAME)\"/" include/version.h
+ 	 sed -i -e "/^#define REV_NUM/s/\".*\"/\""-r`cat .svn/entries | head -n 4 | tail -n 1`"\"/" include/version.h
+ 
+-.PHONY: clean install qemu
++.PHONY: clean install iso-image qemu
+ 
+ clean:
+ 	rm -f *.img *.bin *.map 
+
+Modified: trunk/README
+===================================================================
+--- trunk/README	2011-03-13 09:08:19 UTC (rev 350)
++++ trunk/README	2011-03-13 10:08:31 UTC (rev 351)
+@@ -2,8 +2,8 @@
+  DreamOS
+ ---------------------------
+ 
+-1. Cosa ? DreamOS
+-	a. Cosa NON ? DreamOS
++1. Cosa ?? DreamOS
++	a. Cosa NON ?? DreamOS
+ 2. Installare DreamOS
+ 	a. Requisiti necessari
+ 	b. Scaricare da SVN
+@@ -19,10 +19,10 @@
+ 
+ 
+ - 1 -----------------------
+---- Cosa ? DreamOS --------
++--- Cosa ?? DreamOS --------
+ 
+-Il DreamOS ? un sistema operativo open source rilasciato sotto licenza GPLv3 sviluppato partendo da 0 puramente per scopi didattici o comunque per capire come funzionano i sistemi operativi.
+-Il team di sviluppo attuale ? composto dagli sviluppatori
++Il DreamOS ?? un sistema operativo open source rilasciato sotto licenza GPLv3 sviluppato partendo da 0 puramente per scopi didattici o comunque per capire come funzionano i sistemi operativi.
++Il team di sviluppo attuale ?? composto dagli sviluppatori
+ 
+ Ivan Gualandri - Finarfin (http://www.osdev.it http://italialinux.altervista.org) - Creatore e Main Developer 
+ 
+@@ -30,31 +30,31 @@
+ Alessandro (celeron) 
+ 
+ 
+-	- a -- Cosa NON ? DreamOS -
++	- a -- Cosa NON ?? DreamOS -
+ 
+-DreamOS non ? un sistema operativo completo e pronto per essere utilizzato per l'uso quotidiano, non ? basato su Kernel esistenti e non ? supportato/sponsorizzato da alcuna societ?.
++DreamOS non ?? un sistema operativo completo e pronto per essere utilizzato per l'uso quotidiano, non ?? basato su Kernel esistenti e non ?? supportato/sponsorizzato da alcuna societ??.
+ 
+ - 2 -----------------------
+ --- Installare DreamOS ----
+ 
+-Per Installazione s'intende compilare e mettere DreamOS su un supporto per l'avvio, visto che attualmente DreamOS non ? predisposto per installazioni vere e proprie.
++Per Installazione s'intende compilare e mettere DreamOS su un supporto per l'avvio, visto che attualmente DreamOS non ?? predisposto per installazioni vere e proprie.
+ 
+ 	- a - Requisiti necessari -
+ 
+-DreamOS ? un sistema operativo sviluppato per funzionare su cpu con architettura Intel x86/IA32 (i386/i686) e attualmente ? sviluppato in modo da partire da floppy anche se, utilizzando GRUB, si pu? farlo partire avendo l'immagine compilata sull'Hard-disk.
+-DreamOS pu? essere anche emulato usando Software come qEmu o Bochs.
++DreamOS ?? un sistema operativo sviluppato per funzionare su cpu con architettura Intel x86/IA32 (i386/i686) e attualmente ?? sviluppato in modo da partire da floppy anche se, utilizzando GRUB, si pu?? farlo partire avendo l'immagine compilata sull'Hard-disk.
++DreamOS pu?? essere anche emulato usando Software come qEmu o Bochs.
+ 
+ Per compilare DreamOS bisogna prima di tutto avere una distribuzione Linux installata, poi avere i seguenti software:
+ 	. Nasm
+ 	. GCC
+ 	. make
+ 
+-Opzionalmente un emulatore di cpu se non si vuole provare il sistema operativo su hardware reale e SVN se volete scaricare le versioni pi? recenti da repository.
++Opzionalmente un emulatore di cpu se non si vuole provare il sistema operativo su hardware reale e SVN se volete scaricare le versioni pi?? recenti da repository.
+ 
+ 	- b -- Scaricare da SVN ---
+ 
+ Potete scaricare i sorgenti di DreamOS da SVN attraverso il repository svn://svn.berlios.de/dreamos/trunk
+-Per i meno pratici il comando da eseguire ?: (assicuratevi di avere il pacchetto SVN installato)
++Per i meno pratici il comando da eseguire ??: (assicuratevi di avere il pacchetto SVN installato)
+ 	svn checkout svn://svn.berlios.de/dreamos/trunk
+ 
+ Alla fine del download dovreste avere una cartella trunk/ con tutti i sorgenti al suo interno
+@@ -93,11 +93,11 @@
+ - 3 -----------------------
+ ---- Usare DreamOS --------
+ 
+-L'Interattivit? di DreamOS al momento si ferma ad una CLI (Command Line Interface, Interfaccia a linea di comando) con un numero limitato di comandi utilizzabili, la maggior parte a scopo di test.
++L'Interattivit?? di DreamOS al momento si ferma ad una CLI (Command Line Interface, Interfaccia a linea di comando) con un numero limitato di comandi utilizzabili, la maggior parte a scopo di test.
+ 
+ 	- a ------- L'Avvio -------
+ 
+-L'avvio di DreamOS contiene il loading di tutte le funzioni necessarie al funzionamento del S.O. e della CLI, alla fine dell'avvio verr? chiesto un Username che verr? usato in seguito nella CLI.
++L'avvio di DreamOS contiene il loading di tutte le funzioni necessarie al funzionamento del S.O. e della CLI, alla fine dell'avvio verr?? chiesto un Username che verr?? usato in seguito nella CLI.
+ Per poter accedere l'username deve essere definito nel file passwd. Di default sono definiti 2 utenti: root e user.
+ Attualmente non viene richiesta alcuna password
+ 
+@@ -105,8 +105,8 @@
+ 
+ La CLI di DreamOS ha una struttura molto comune a quella *NIX
+ 	Username~# Comando inserito
+-Dove Username ? l'username inserito durante l'avvio.
+-Si pu? avere una lista di comandi disponibili attraverso il comando:
++Dove Username ?? l'username inserito durante l'avvio.
++Si pu?? avere una lista di comandi disponibili attraverso il comando:
+ 	help
+ Inoltre sono presenti alcuni comandi che rimarcano la controparte *NIX come uname (uname --help) o echo.
+ 
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2011-03-13 09:08:19 UTC (rev 350)
++++ trunk/kernel.c	2011-03-13 10:08:31 UTC (rev 351)
+@@ -99,11 +99,11 @@
+     _kprintOK();   
+     init_paging();
+ 
+-    
++    /*
+     init_newmem();     
+     try_newheap();
+     while(1);            
+-    
++    */
+     _kprintOK();    	
+     printf("Memory (upper) amount-> %d Mb \n", boot_info->mem_upper/1024);
+     printf("Memory (lower) amount-> %d kb \n", boot_info->mem_lower);	
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2011-03-13 09:08:19 UTC (rev 350)
++++ trunk/mem/paging.c	2011-03-13 10:08:31 UTC (rev 351)
+@@ -84,7 +84,7 @@
+     load_pdbr((unsigned int)current_page_dir);
+ 	//set_pagetable_entry_ric(1019, 512 ,0xFEE00000, SUPERVISOR|PD_PRESENT|WRITE, 0);
+ 	//set_pagetable_entry_ric(1019, 0 ,0xFEC00000, SUPERVISOR|PD_PRESENT|WRITE, 0);	
+-    //kheap = make_heap(tot_mem - ((unsigned int) &end));    
++    kheap = make_heap(tot_mem - ((unsigned int) &end));    
+ }
+ 
+ /**
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2011-03-13 09:08:19 UTC (rev 350)
++++ trunk/shell/testing.c	2011-03-13 10:08:31 UTC (rev 351)
+@@ -100,6 +100,7 @@
+ }
+ 
+ void try_newheap(){
++	#ifdef NEW_HEAP_TEST
+ 	unsigned int testA;
+ 	unsigned int testB;
+ 	unsigned int testC;
+@@ -122,6 +123,7 @@
+ 	n_free(testA);
+ 	n_free(testD);
+ 	printf("DONE\n");
++	#endif
+ }
+ 
+ void help_tester()
+
+Modified: trunk/utils/README.eltorito_gen
+===================================================================
+--- trunk/utils/README.eltorito_gen	2011-03-13 09:08:19 UTC (rev 350)
++++ trunk/utils/README.eltorito_gen	2011-03-13 10:08:31 UTC (rev 351)
+@@ -9,5 +9,5 @@
+  eltorito_gen.sh
+  
+  E questo creera automaticamente, il file dreamos.iso se presenti i 2 files:
+- 1. ../dreamos.img
+- 2. ../initfs
++ 1. ./dreamos.img
++ 2. ./initfs
+
+
+
+From finarfin at mail.berlios.de  Mon Mar 14 22:10:29 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Mon, 14 Mar 2011 22:10:29 +0100
+Subject: [Dreamos-dev] r352 - in trunk: . boot include/mem mem shell
+Message-ID: <20110314211029.97F024814E6@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-03-14 22:10:29 +0100 (Mon, 14 Mar 2011)
+New Revision: 352
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/include/mem/heap.h
+   trunk/mem/heap.c
+   trunk/shell/commands.c
+Log:
+Minor changes.
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/mem/heap.h
+===================================================================
+--- trunk/include/mem/heap.h	2011-03-13 10:08:31 UTC (rev 351)
++++ trunk/include/mem/heap.h	2011-03-14 21:10:29 UTC (rev 352)
+@@ -78,7 +78,7 @@
+ void n_free(unsigned int);
+ #ifdef OLD_MEM_DISABLED
+ void* kmalloc(unsigned int);
+-void kfree(unsigned int);
++void free(void*);
+ #endif
+ 
+ #endif
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2011-03-13 10:08:31 UTC (rev 351)
++++ trunk/mem/heap.c	2011-03-14 21:10:29 UTC (rev 352)
+@@ -274,10 +274,10 @@
+ 
+ #ifdef OLD_MEM_DISABLED
+ void* kmalloc(unsigned int size){
+-	new_malloc(size);
++	return (void *)	new_malloc(size);
+ }
+ 
+-void kfree(unsigned int address){
++void free(void* address){
+ 	n_free(address);
+ }
+ #endif
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2011-03-13 10:08:31 UTC (rev 351)
++++ trunk/shell/commands.c	2011-03-14 21:10:29 UTC (rev 352)
+@@ -198,12 +198,7 @@
+ 
+   printf("\n:==========: :===========: :==========:\n\n");
+ }
+-/*
+-void printmem(void)
+-{
+-  print_heap_list(kheap->used_list);
+-}
+-*/
++
+ void credits(void)
+ {
+   _kcolor(BRIGHT_BLUE);
+
+
+
+From finarfin at mail.berlios.de  Mon Mar 14 22:39:13 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Mon, 14 Mar 2011 22:39:13 +0100
+Subject: [Dreamos-dev] r353 - in trunk: . boot include/mem mem
+Message-ID: <20110314213914.38C454814E6@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-03-14 22:39:13 +0100 (Mon, 14 Mar 2011)
+New Revision: 353
+
+Modified:
+   trunk/Makefile
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/include/mem/heap.h
+   trunk/include/mem/kheap.h
+   trunk/kernel.c
+   trunk/mem/heap.c
+   trunk/mem/kheap.c
+   trunk/mem/paging.c
+Log:
+Added in Makefile option for choose memory manager.
+Actually available two options: LEGACY and LATEST (broken)
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2011-03-14 21:10:29 UTC (rev 352)
++++ trunk/Makefile	2011-03-14 21:39:13 UTC (rev 353)
+@@ -6,7 +6,7 @@
+ VERSION = 0
+ PATCHLEVEL = 3
+ EXTRAVERSION = -trunk
+-
++MEMORY = LEGACY 
+ include Makefile.am
+ 
+ CFLAGS = -nostdlib\
+@@ -29,7 +29,8 @@
+ 	 -I./include/misc\
+ 	 -I./include/fs\
+ 	 -I./include/sys \
+-	 -DBOCHS_DEBUG
++	 -DBOCHS_DEBUG\
++	 -D$(MEMORY)
+ 
+ OBJ = kernel.o\
+       io/video.o\
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/mem/heap.h
+===================================================================
+--- trunk/include/mem/heap.h	2011-03-14 21:10:29 UTC (rev 352)
++++ trunk/include/mem/heap.h	2011-03-14 21:39:13 UTC (rev 353)
+@@ -76,7 +76,7 @@
+ short int header_t_less_than(void *,void *);
+ 
+ void n_free(unsigned int);
+-#ifdef OLD_MEM_DISABLED
++#ifdef LATEST
+ void* kmalloc(unsigned int);
+ void free(void*);
+ #endif
+
+Modified: trunk/include/mem/kheap.h
+===================================================================
+--- trunk/include/mem/kheap.h	2011-03-14 21:10:29 UTC (rev 352)
++++ trunk/include/mem/kheap.h	2011-03-14 21:39:13 UTC (rev 353)
+@@ -49,14 +49,16 @@
+ extern heap_t *kheap;
+ 
+ heap_t* make_heap(unsigned int);
+-void* kmalloc(unsigned int);
+ //void kfree(unsigned int);
+ void try_alloc();
+ heap_node_t* alloc_node();
+ void free_node(heap_node_t*);
+ 
+ void* alloc(unsigned int, heap_t*);
++#ifdef LEGACY
++void* kmalloc(unsigned int);
+ void free (void *);
++#endif
+ 
+ void print_heap_list (heap_node_t *);
+ 
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2011-03-14 21:10:29 UTC (rev 352)
++++ trunk/kernel.c	2011-03-14 21:39:13 UTC (rev 353)
+@@ -98,7 +98,9 @@
+     asm("sti");
+     _kprintOK();   
+     init_paging();
+-
++    #ifdef LATEST
++    init_newmem();
++	#endif
+     /*
+     init_newmem();     
+     try_newheap();
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2011-03-14 21:10:29 UTC (rev 352)
++++ trunk/mem/heap.c	2011-03-14 21:39:13 UTC (rev 353)
+@@ -272,7 +272,7 @@
+ 	new_free((void*)address, n_heap);
+ }
+ 
+-#ifdef OLD_MEM_DISABLED
++#ifdef LATEST
+ void* kmalloc(unsigned int size){
+ 	return (void *)	new_malloc(size);
+ }
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2011-03-14 21:10:29 UTC (rev 352)
++++ trunk/mem/kheap.c	2011-03-14 21:39:13 UTC (rev 353)
+@@ -37,6 +37,7 @@
+ unsigned int address_cur = (unsigned int) &end;
+ unsigned int node_address;
+ 
++#ifdef LEGACY
+ void* kmalloc(unsigned int size)
+ {
+    unsigned int temp;
+@@ -49,7 +50,7 @@
+    }
+      return (void *) temp;
+ }
+-
++#endif
+ /* Test procedure ("try_heap" shell command") */
+ void try_alloc()
+ {
+@@ -220,6 +221,7 @@
+   * @param Start_address of the block
+   * @return none
+   */
++#ifdef LEGACY
+ void free (void *location)
+ {
+   heap_node_t *busy = kheap->used_list;
+@@ -288,7 +290,7 @@
+ 
+ //     printf ("Address not found in list\n");
+ }
+-
++#endif
+ /**
+   * Print a heap list
+   * @author shainer
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2011-03-14 21:10:29 UTC (rev 352)
++++ trunk/mem/paging.c	2011-03-14 21:39:13 UTC (rev 353)
+@@ -84,7 +84,9 @@
+     load_pdbr((unsigned int)current_page_dir);
+ 	//set_pagetable_entry_ric(1019, 512 ,0xFEE00000, SUPERVISOR|PD_PRESENT|WRITE, 0);
+ 	//set_pagetable_entry_ric(1019, 0 ,0xFEC00000, SUPERVISOR|PD_PRESENT|WRITE, 0);	
++    #ifdef LEGACY
+     kheap = make_heap(tot_mem - ((unsigned int) &end));    
++    #endif
+ }
+ 
+ /**
+
+
+
+From finarfin at mail.berlios.de  Mon Mar 14 22:55:04 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Mon, 14 Mar 2011 22:55:04 +0100
+Subject: [Dreamos-dev] r354 - in trunk: . boot fs hardware include/mem mem
+	shell sys
+Message-ID: <20110314215505.0B0974814E6@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-03-14 22:55:04 +0100 (Mon, 14 Mar 2011)
+New Revision: 354
+
+Modified:
+   trunk/Makefile
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/fs/initrd.c
+   trunk/fs/vfs.c
+   trunk/hardware/cpuid.c
+   trunk/include/mem/heap.h
+   trunk/mem/heap.c
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+   trunk/sys/dirent.c
+Log:
+Aggiunte le ifdef nei vari punti dove si doveva includere o kheap.h o 
+heap.h
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2011-03-14 21:39:13 UTC (rev 353)
++++ trunk/Makefile	2011-03-14 21:55:04 UTC (rev 354)
+@@ -6,7 +6,7 @@
+ VERSION = 0
+ PATCHLEVEL = 3
+ EXTRAVERSION = -trunk
+-MEMORY = LEGACY 
++MEMORY = LEGACY
+ include Makefile.am
+ 
+ CFLAGS = -nostdlib\
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2011-03-14 21:39:13 UTC (rev 353)
++++ trunk/fs/fcntl.c	2011-03-14 21:55:04 UTC (rev 354)
+@@ -21,7 +21,12 @@
+ #include <stdarg.h>
+ #include <stdio.h>
+ #include <string.h>
++#ifdef LEGACY
+ #include <kheap.h>
++#endif
++#ifdef LATEST
++#include <heap.h>
++#endif
+ #include <shell.h>
+ 
+ int cur_fd;
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2011-03-14 21:39:13 UTC (rev 353)
++++ trunk/fs/initrd.c	2011-03-14 21:55:04 UTC (rev 354)
+@@ -23,7 +23,12 @@
+ #include <types.h>
+ #include <string.h>
+ #include <vfs.h>
++#ifdef LEGACY
+ #include <kheap.h>
++#endif
++#ifdef LATEST
++#include <heap.h>
++#endif
+ #include <fcntl.h>
+ #include <sys/stat.h>
+ #include <commands.h>
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2011-03-14 21:39:13 UTC (rev 353)
++++ trunk/fs/vfs.c	2011-03-14 21:55:04 UTC (rev 354)
+@@ -19,7 +19,12 @@
+ #include <video.h>
+ #include <vfs.h>
+ #include <stdio.h>
++#ifdef LEGACY
+ #include <kheap.h>
++#endif
++#ifdef LATEST
++#include <heap.h>
++#endif
+ #include <stddef.h>
+ #include <string.h>
+ #include <kheap.h>
+
+Modified: trunk/hardware/cpuid.c
+===================================================================
+--- trunk/hardware/cpuid.c	2011-03-14 21:39:13 UTC (rev 353)
++++ trunk/hardware/cpuid.c	2011-03-14 21:55:04 UTC (rev 354)
+@@ -22,7 +22,12 @@
+  */
+ 
+ #include <cpuid.h>
++#ifdef LEGACY
+ #include <kheap.h>
++#endif
++#ifdef LATEST
++#include <heap.h>
++#endif
+ #include <string.h>
+ 
+ /*
+
+Modified: trunk/include/mem/heap.h
+===================================================================
+--- trunk/include/mem/heap.h	2011-03-14 21:39:13 UTC (rev 353)
++++ trunk/include/mem/heap.h	2011-03-14 21:55:04 UTC (rev 354)
+@@ -75,7 +75,7 @@
+ short int locate_smallest_hole(unsigned int, unsigned short int, new_heap_t*);
+ short int header_t_less_than(void *,void *);
+ 
+-void n_free(unsigned int);
++void n_free(void*);
+ #ifdef LATEST
+ void* kmalloc(unsigned int);
+ void free(void*);
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2011-03-14 21:39:13 UTC (rev 353)
++++ trunk/mem/heap.c	2011-03-14 21:55:04 UTC (rev 354)
+@@ -268,7 +268,7 @@
+ 	}	
+ }
+ 
+-void n_free(unsigned int address){
++void n_free(void *address){
+ 	new_free((void*)address, n_heap);
+ }
+ 
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2011-03-14 21:39:13 UTC (rev 353)
++++ trunk/shell/commands.c	2011-03-14 21:55:04 UTC (rev 354)
+@@ -25,6 +25,7 @@
+ #include <testing.h>
+ #include <fcntl.h>
+ #include <stat.h>
++#include <heap.h>
+ 
+ int argc;
+ char **argv;
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2011-03-14 21:39:13 UTC (rev 353)
++++ trunk/shell/shell.c	2011-03-14 21:55:04 UTC (rev 354)
+@@ -40,7 +40,9 @@
+ #include <sys/utsname.h>
+ #include <user_shell.h>
+ #include <debug.h>
+-
++#ifdef LATEST
++#include <heap.h>
++#endif
+ #define NUM_COM 30
+ userenv_t current_user;
+ int hst_flag;
+
+Modified: trunk/sys/dirent.c
+===================================================================
+--- trunk/sys/dirent.c	2011-03-14 21:39:13 UTC (rev 353)
++++ trunk/sys/dirent.c	2011-03-14 21:55:04 UTC (rev 354)
+@@ -21,7 +21,12 @@
+ #include <stdio.h>
+ #include <string.h>
+ #include <vfs.h>
++#ifdef LEGACY
+ #include <kheap.h>
++#endif
++#ifdef LATEST
++#include <heap.h>
++#endif
+ #include <shell.h>
+ 
+ /**
+
+
+
+From finarfin at mail.berlios.de  Wed Mar 16 21:16:07 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Wed, 16 Mar 2011 21:16:07 +0100
+Subject: [Dreamos-dev] r355 - in trunk: . boot include/misc mem misc
+Message-ID: <20110316201608.42730480EF1@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-03-16 21:16:07 +0100 (Wed, 16 Mar 2011)
+New Revision: 355
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/include/misc/debug.h
+   trunk/mem/heap.c
+   trunk/mem/kheap.c
+   trunk/misc/debug.c
+   trunk/misc/ordered_array.c
+Log:
+Added dbg_bochs_print_digit, for print integer number inside bochs
+Added some debug print (for bochs console)
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/misc/debug.h
+===================================================================
+--- trunk/include/misc/debug.h	2011-03-14 21:55:04 UTC (rev 354)
++++ trunk/include/misc/debug.h	2011-03-16 20:16:07 UTC (rev 355)
+@@ -70,6 +70,7 @@
+ #define REGISTER_TRACE_DISABLE	0x8AE4
+ 
+ void dbg_bochs_print( const unsigned char * );
++void dbg_bochs_print_digit(unsigned int);
+ inline void dbg_bochs_send_cmd( const int, const int );
+ 
+ #endif /* ! _DEBUG_H */
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2011-03-14 21:55:04 UTC (rev 354)
++++ trunk/mem/heap.c	2011-03-16 20:16:07 UTC (rev 355)
+@@ -77,7 +77,7 @@
+ 		//If i have a heap, then i have vm management enabled, and i can call alloc...
+ 		void* new_address = new_alloc(size, PAGE_ALIGNED, n_heap);	
+ 		//printf("Heap defined\n");
+-		printf("Start Address: %x End Address: %x\n", n_heap->start_address, n_heap->end_address);
++		//printf("Start Address: %x End Address: %x\n", n_heap->start_address, n_heap->end_address);
+ 		//printf("Address_cur value: %x\n", address_cur);
+ 		return (unsigned int)new_address;
+ 	}
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2011-03-14 21:55:04 UTC (rev 354)
++++ trunk/mem/kheap.c	2011-03-16 20:16:07 UTC (rev 355)
+@@ -54,7 +54,7 @@
+ /* Test procedure ("try_heap" shell command") */
+ void try_alloc()
+ {
+-   
++    #ifdef LEGACY
+     printf("try_alloc(): Used list address: %d, Value: %d\n", &(kheap->used_list), kheap->used_list);
+     alloc(50, kheap);
+     alloc(60, kheap);
+@@ -67,6 +67,7 @@
+     print_heap_list (kheap->free_list);
+     printf("Free nodes\n");
+     print_heap_list(kheap->free_nodes);
++    #endif
+ }
+ 
+ /**
+
+Modified: trunk/misc/debug.c
+===================================================================
+--- trunk/misc/debug.c	2011-03-14 21:55:04 UTC (rev 354)
++++ trunk/misc/debug.c	2011-03-16 20:16:07 UTC (rev 355)
+@@ -25,6 +25,7 @@
+ 
+ #include <debug.h>
+ #include <io.h>
++#include <video.h>
+ /******************************
+  *		Debug Func
+  ******************************/
+@@ -43,6 +44,16 @@
+ }
+ 
+ /**
++ *  Print an integer
++ */
++void dbg_bochs_print_digit(unsigned int number){
++	char buffer[10];
++	_kntos(buffer, number, 10);
++	dbg_bochs_print(buffer);
++	dbg_bochs_print("\n");
++}
++
++/**
+  *  Send cmd to bochs port
+  */
+ inline void dbg_bochs_send_cmd( const int port, const int cmd )
+
+Modified: trunk/misc/ordered_array.c
+===================================================================
+--- trunk/misc/ordered_array.c	2011-03-14 21:55:04 UTC (rev 354)
++++ trunk/misc/ordered_array.c	2011-03-16 20:16:07 UTC (rev 355)
+@@ -27,8 +27,8 @@
+ #include <stdio.h>
+ #include <heap.h>
+ #include <string.h>
++#include <debug.h>
+ 
+-
+ short int standard_lessthan (type_t a, type_t b){
+ 	if(a<b) return 1;
+ 	else return 0;
+@@ -79,6 +79,7 @@
+     if(i==t_array->size){
+ 		/*header_t* hel;
+ 		printf("i = t_arraysize\n");*/
++		dbg_bochs_print("Insert array - if\n");
+ 		t_array->array[t_array->size] = elem;
+ 		t_array->size++;		
+ 		//hel = (header_t*) t_array->array[0];
+@@ -94,6 +95,8 @@
+ 			t_array->array[i] = tmp;
+ 			tmp = tmp2;			
+ 		}
++		dbg_bochs_print("Insert array - else\n");
++		dbg_bochs_print_digit(t_array->size);
+ 		t_array->size++;
+ 	}    
+     //print_array(t_array);
+@@ -112,7 +115,9 @@
+ 		return t_array->array[index];
+ 	}
+ 	else {		
+-		printf("get_array: PANIC");
++		dbg_bochs_print("Panic - get_array\n");		
++		dbg_bochs_print_digit(t_array->size);
++		printf("get_array: PANIC - %d", t_array->size);
+ 		while(1);
+ 	}
+ }
+
+
+

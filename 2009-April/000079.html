@@ -1,0 +1,145 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r78 - in branches/0.1.2: . include
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-April/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r78%20-%20in%20branches/0.1.2%3A%20.%20include&In-Reply-To=%3C200904251536.n3PFaPf5013872%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000078.html">
+   <LINK REL="Next"  HREF="000080.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r78 - in branches/0.1.2: . include</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r78%20-%20in%20branches/0.1.2%3A%20.%20include&In-Reply-To=%3C200904251536.n3PFaPf5013872%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r78 - in branches/0.1.2: . include">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sat Apr 25 17:36:25 CEST 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000078.html">[Dreamos-dev] r77 - branches
+</A></li>
+        <LI>Next message: <A HREF="000080.html">[Dreamos-dev] r79 - trunk/include
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#79">[ date ]</a>
+              <a href="thread.html#79">[ thread ]</a>
+              <a href="subject.html#79">[ subject ]</a>
+              <a href="author.html#79">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-04-25 17:36:23 +0200 (Sat, 25 Apr 2009)
+New Revision: 78
+
+Added:
+   branches/0.1.2/CHANGELOG
+Modified:
+   branches/0.1.2/dreamos.img
+   branches/0.1.2/include/kernel.h
+   branches/0.1.2/include/version.h
+Log:
+Versione 0.1.2 - Kernel Name: wensleydale
+Maggiori info le trovate nel changelog
+
+
+
+Added: branches/0.1.2/CHANGELOG
+===================================================================
+--- branches/0.1.2/CHANGELOG	2009-04-25 15:17:11 UTC (rev 77)
++++ branches/0.1.2/CHANGELOG	2009-04-25 15:36:23 UTC (rev 78)
+@@ -0,0 +1,28 @@
++DreamOS ver 0.1.2 Codename: wensleydale - Changelog
++
++Gestione Memoria: ora lo spazio allocato e' uguale a quello della richiesta
++Gestione Memoria: bug #15504 corretti alcuni valori di ritorno di Alloc.
++Gestione Memoria: kmalloc controlla che il valore con la quale venga chiamata sia &gt;0
++Gestione Memoria: Dalla funziome make_heap levato comando start
++
++Shell: Applicata patch che risolve problemi relativi al cursore, inserimento utente e backspace (by vinc94)
++Shell: Comando kmalloc diminuito numero di elementi visualizzati
++Shell: bug #14839 comando non riconosciuto se veniva premuto prima di tutti backspace (by vinc94)
++Shell: Reinserita stampa numero rev alla schermata di avvio.
++Shell: Correzione bug sulla pressione del tasto esc, nr. #15557
++
++Clock: Corretto giorno della settimana (veniva stampato sempre il giorno precedente)
++
++Cpuid: Gli header spostati da cpuid.h a cpuid.c
++Cpuid: Risolto bug che non faceva vedere il processore in uname -i se nn veniva dato prima il comando cpuid
++
++Misc: Eliminato TODO, le cose da fare verranno inserite come task 
++Misc: Eliminata versione commentata di kmalloc
++Misc: Eliminazione diversi warning di compilazione (vedi task #4308)
++Misc: Aggiornato il comando credits.
++
++Debug: Introdotte prime funzioni per il debug in bochs (by tk0)
++
++Libc: Aggiunta funzione memcpy
++
++i/o: Levato da gets \t
+
+Modified: branches/0.1.2/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: branches/0.1.2/include/kernel.h
+===================================================================
+--- branches/0.1.2/include/kernel.h	2009-04-25 15:17:11 UTC (rev 77)
++++ branches/0.1.2/include/kernel.h	2009-04-25 15:36:23 UTC (rev 78)
+@@ -29,7 +29,7 @@
+ asmlinkage void _start(struct multiboot_info*);
+ int main_loop(struct multiboot_info*);
+ 
+-#define DREAMOS_VER &quot;DreamOS ver 0.1 - Rebuild&quot;
++#define DREAMOS_VER &quot;DreamOS ver 0.1.2 - wensleydale&quot;
+ #define SITEURL &quot;www.dreamos.org&quot;
+ 
+ #endif
+
+Modified: branches/0.1.2/include/version.h
+===================================================================
+--- branches/0.1.2/include/version.h	2009-04-25 15:17:11 UTC (rev 77)
++++ branches/0.1.2/include/version.h	2009-04-25 15:36:23 UTC (rev 78)
+@@ -21,7 +21,7 @@
+  */
+ 
+ #define VERSION &quot;0&quot;
+-#define PATCHLEVEL &quot;1.1&quot;
+-#define EXTRAVERSION &quot;-trunk&quot;
++#define PATCHLEVEL &quot;1.2&quot;
++#define EXTRAVERSION &quot;-wensleydale&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r76&quot;
++#define REV_NUM &quot;-r77&quot;
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000078.html">[Dreamos-dev] r77 - branches
+</A></li>
+	<LI>Next message: <A HREF="000080.html">[Dreamos-dev] r79 - trunk/include
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#79">[ date ]</a>
+              <a href="thread.html#79">[ thread ]</a>
+              <a href="subject.html#79">[ subject ]</a>
+              <a href="author.html#79">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

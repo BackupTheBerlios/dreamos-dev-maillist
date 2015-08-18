@@ -1,0 +1,105 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r329 - in trunk: include/mem mem
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-December/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r329%20-%20in%20trunk%3A%20include/mem%20mem&In-Reply-To=%3C20101230224749.2A6A548078C%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000331.html">
+   
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r329 - in trunk: include/mem mem</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r329%20-%20in%20trunk%3A%20include/mem%20mem&In-Reply-To=%3C20101230224749.2A6A548078C%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r329 - in trunk: include/mem mem">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Thu Dec 30 23:47:48 CET 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000331.html">[Dreamos-dev] r328 - in trunk: . mem
+</A></li>
+        
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#332">[ date ]</a>
+              <a href="thread.html#332">[ thread ]</a>
+              <a href="subject.html#332">[ subject ]</a>
+              <a href="author.html#332">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-12-30 23:47:48 +0100 (Thu, 30 Dec 2010)
+New Revision: 329
+
+Modified:
+   trunk/include/mem/heap.h
+   trunk/mem/heap.c
+Log:
+Started unify left (in free). 
+
+
+Modified: trunk/include/mem/heap.h
+===================================================================
+--- trunk/include/mem/heap.h	2010-12-29 22:28:04 UTC (rev 328)
++++ trunk/include/mem/heap.h	2010-12-30 22:47:48 UTC (rev 329)
+@@ -51,7 +51,7 @@
+ typedef struct {
+ 	unsigned int magic; /*!&lt;For header identification*/	
+ 	short int is_hole; /*!&lt;1 se si tratta di un hole 0 se si tratta di un block*/
+-	int size;  /*!&lt;Total size of the block (including header and footer)*/
++	int size;  /*!&lt;Total size of the block (IMPORTANT: including header and footer)*/
+ }__attribute__((packed)) header_t;
+ 
+ /*! \struct footer_t 
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-12-29 22:28:04 UTC (rev 328)
++++ trunk/mem/heap.c	2010-12-30 22:47:48 UTC (rev 329)
+@@ -21,6 +21,7 @@
+  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+ 
++/**Please remember that header-&gt;size include also sizeof header + sizeof footer*/
+ #include &lt;heap.h&gt;
+ #include &lt;stdio.h&gt;
+ #include &lt;ordered_array.h&gt;
+@@ -224,5 +225,7 @@
+ 	/**Set header as a hole*/
+ 	header-&gt;is_hole = HEAP_HOLE;
+ 	char to_add = 1;
++	/**Unify left*/
++	footer_t* test_f = (footer_t*) (unsigned int)(header - sizeof(footer_t));
+ 	/**TODO: unify left and unify right*/
+ }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000331.html">[Dreamos-dev] r328 - in trunk: . mem
+</A></li>
+	
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#332">[ date ]</a>
+              <a href="thread.html#332">[ thread ]</a>
+              <a href="subject.html#332">[ subject ]</a>
+              <a href="author.html#332">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

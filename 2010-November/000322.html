@@ -1,0 +1,92 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r319 - trunk/mem
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-November/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r319%20-%20trunk/mem&In-Reply-To=%3C20101123215842.DDFBF480750%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000321.html">
+   <LINK REL="Next"  HREF="000323.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r319 - trunk/mem</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r319%20-%20trunk/mem&In-Reply-To=%3C20101123215842.DDFBF480750%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r319 - trunk/mem">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Tue Nov 23 22:58:42 CET 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000321.html">[Dreamos-dev] r318 - in trunk: include/mem mem
+</A></li>
+        <LI>Next message: <A HREF="000323.html">[Dreamos-dev] r320 - in trunk: . boot mem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#322">[ date ]</a>
+              <a href="thread.html#322">[ thread ]</a>
+              <a href="subject.html#322">[ subject ]</a>
+              <a href="author.html#322">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-11-23 22:58:42 +0100 (Tue, 23 Nov 2010)
+New Revision: 319
+
+Modified:
+   trunk/mem/heap.c
+Log:
+new_alloc: aggiunta nuovo hole nel caso si necessiti uno split.
+
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-11-20 14:52:18 UTC (rev 318)
++++ trunk/mem/heap.c	2010-11-23 21:58:42 UTC (rev 319)
+@@ -113,7 +113,14 @@
+ 		block_header-&gt;is_hole= HEAP_BLOCK;
+ 		#endif
+ 		if(hole_size - real_size &gt;0){
+-			printf(&quot;Add a new hole!\n&quot;);
++			/*We need to add a new hole. The new_hole address is given by:
++			 * the current hole address + size + sizeof(header_t) + sizeof(footer_t) 
++			 * */
++			header_t *head_hole = (header_t *)hole_address + sizeof(header_t) + size + sizeof(footer_t);
++			head_hole-&gt;magic = HEAP_MAGIC;
++			head_hole-&gt;is_hole = HEAP_HOLE;
++			head_hole-&gt;size = hole_size - real_size;
++			printf(&quot;Add a new hole!\n&quot;);			
+ 		}
+ 		//get_array(0, &amp;t_heap-&gt;index);
+ 	}	
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000321.html">[Dreamos-dev] r318 - in trunk: include/mem mem
+</A></li>
+	<LI>Next message: <A HREF="000323.html">[Dreamos-dev] r320 - in trunk: . boot mem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#322">[ date ]</a>
+              <a href="thread.html#322">[ thread ]</a>
+              <a href="subject.html#322">[ subject ]</a>
+              <a href="author.html#322">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

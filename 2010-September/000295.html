@@ -1,0 +1,197 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r292 - in trunk: . mem shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-September/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r292%20-%20in%20trunk%3A%20.%20mem%20shell&In-Reply-To=%3C20100904221539.BDEDF48102A%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000294.html">
+   <LINK REL="Next"  HREF="000296.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r292 - in trunk: . mem shell</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r292%20-%20in%20trunk%3A%20.%20mem%20shell&In-Reply-To=%3C20100904221539.BDEDF48102A%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r292 - in trunk: . mem shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun Sep  5 00:15:39 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000294.html">[Dreamos-dev] r291 - in trunk: . include include/mem mem
+</A></li>
+        <LI>Next message: <A HREF="000296.html">[Dreamos-dev] r293 - in trunk: . include/mem include/misc mem misc
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#295">[ date ]</a>
+              <a href="thread.html#295">[ thread ]</a>
+              <a href="subject.html#295">[ subject ]</a>
+              <a href="author.html#295">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-09-05 00:15:39 +0200 (Sun, 05 Sep 2010)
+New Revision: 292
+
+Modified:
+   trunk/dreamos.img
+   trunk/mem/heap.c
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+   trunk/shell/testing.c
+Log:
+Ripristinata la modifica di DT ora i comandi sono una struttura dati globale.
+Prosegue lo sviluppo delle funzioni per la nuova gestione della memoria.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-09-03 21:16:52 UTC (rev 291)
++++ trunk/mem/heap.c	2010-09-04 22:15:39 UTC (rev 292)
+@@ -32,7 +32,10 @@
+ 	if(start%0x1000 == 0){
+ 		printf(&quot;all right\n&quot;);
+ 		t_heap-&gt;start_address = HEAP_START_ADDRESS;
+-		printf(&quot;Start_address: 0x%u\n&quot;, t_heap-&gt;start_address);
++		t_heap-&gt;end_address = HEAP_START_ADDRESS + HEAP_START_SIZE;
++		printf(&quot;Start_address: %u\n&quot;, t_heap-&gt;start_address);		
++		printf(&quot;End Address: %u\n&quot;, t_heap-&gt;end_address);
++		n_heap=t_heap;
+ 	}
+ 	else printf(&quot;ERROR\n&quot;);
+ }
+@@ -48,6 +51,7 @@
+ 	}
+ 	else {
+ 		printf(&quot;Heap defined\n&quot;);
++		printf(&quot;Start Address: %u End Address: %u\n&quot;, n_heap-&gt;start_address, n_heap-&gt;end_address);
+ 		return 0;
+ 	}
+ 	return 0;
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-09-03 21:16:52 UTC (rev 291)
++++ trunk/shell/commands.c	2010-09-04 22:15:39 UTC (rev 292)
+@@ -57,17 +57,18 @@
+   _kcolor(WHITE);
+ }
+ 
+-/*void help()
++void help()
+ {
+   printf (&quot;Available commands:\n&quot;);
+   int i=0;
+-  while(i&lt;5)
++  while(i&lt;19)
+   {
+ 	printf(&quot;%s   %s\n&quot;, shell_cmd[i].cmdname, shell_cmd[i].cmddesc);
+ 	i++;
+   }
+-}*/
+-void help()
++}
++
++/*void help()
+ {
+   printf (&quot;Available commands:\n&quot;);
+   printf(
+@@ -90,7 +91,7 @@
+ 	&quot;more		   - read content of a file\n&quot;
+ 	&quot;newfile	   - create a newfile\n&quot;
+ 	);
+-}
++}*/
+ 
+ 
+ void echo()
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2010-09-03 21:16:52 UTC (rev 291)
++++ trunk/shell/shell.c	2010-09-04 22:15:39 UTC (rev 292)
+@@ -46,7 +46,7 @@
+ int hst_flag;
+ char cmd[CMD_LEN];
+ //#define PWD_CHECK 1
+-/*struct cmd shell_cmd[NUM_COM] = {
++struct cmd shell_cmd[NUM_COM] = {
+  { &quot;aalogo&quot;,   aalogo,    &quot;  Show an ascii art logo&quot; },
+  { &quot;clear&quot;,    _kclear,   &quot;   Clear the screen&quot; },
+  { &quot;poweroff&quot;, poweroff,  &quot;Turn off the machine&quot; },
+@@ -65,7 +65,8 @@
+  { &quot;tester&quot;,   tester,    &quot;  Try some functions, 'tester --help' for more info'&quot; },	
+  { &quot;pwd&quot;,      pwd,       &quot;     Print current working directory&quot; },
+  { &quot;more&quot;,     more,      &quot;    Read content of a file&quot; },
+-};*/
++ { &quot;newfile&quot;, newfile,	  &quot;	Create a new file&quot;},
++};
+ /*
+  * Inserisce gli argomenti di un comando in un array di stringhe
+  * argc = numero degli argomenti
+@@ -100,7 +101,7 @@
+   
+   char *cmd_ptr;
+   char password[30];
+-  static struct cmd shell_cmd[NUM_COM] = {
++  /*static struct cmd shell_cmd[NUM_COM] = {
+ 	{ &quot;aalogo&quot;,   aalogo      },
+ 	{ &quot;clear&quot;,    _kclear     },
+ 	{ &quot;poweroff&quot;, poweroff    },
+@@ -120,7 +121,7 @@
+ 	{ &quot;pwd&quot;, pwd},
+ 	{ &quot;more&quot;, more},
+ 	{ &quot;newfile&quot;, newfile}
+-  };
++  };*/
+ 
+ 
+   int i = 0;
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-09-03 21:16:52 UTC (rev 291)
++++ trunk/shell/testing.c	2010-09-04 22:15:39 UTC (rev 292)
+@@ -123,6 +123,7 @@
+ 		&quot;  -&gt; try_syscall	    - Try some syscall functions\n&quot;
+ 		&quot;  -&gt; try_check         - Test username if exist\n&quot;
+ 		&quot;  -&gt; test_stat			- Test stat function\n&quot;
++		&quot;  -&gt; try_newheap		- Test heap functions\n&quot;
+ 		);	
+ }
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000294.html">[Dreamos-dev] r291 - in trunk: . include include/mem mem
+</A></li>
+	<LI>Next message: <A HREF="000296.html">[Dreamos-dev] r293 - in trunk: . include/mem include/misc mem misc
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#295">[ date ]</a>
+              <a href="thread.html#295">[ thread ]</a>
+              <a href="subject.html#295">[ subject ]</a>
+              <a href="author.html#295">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

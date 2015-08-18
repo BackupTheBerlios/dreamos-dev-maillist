@@ -1,0 +1,93 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r138 - in trunk: . shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-September/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r138%20-%20in%20trunk%3A%20.%20shell&In-Reply-To=%3C200909232041.n8NKfFsL004345%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000139.html">
+   <LINK REL="Next"  HREF="000141.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r138 - in trunk: . shell</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r138%20-%20in%20trunk%3A%20.%20shell&In-Reply-To=%3C200909232041.n8NKfFsL004345%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r138 - in trunk: . shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Wed Sep 23 22:41:15 CEST 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000139.html">[Dreamos-dev] r137 - in trunk: . fs include include/fs	include/shell include/sys shell
+</A></li>
+        <LI>Next message: <A HREF="000141.html">[Dreamos-dev] r139 - in trunk: . include shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#140">[ date ]</a>
+              <a href="thread.html#140">[ thread ]</a>
+              <a href="subject.html#140">[ subject ]</a>
+              <a href="author.html#140">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-09-23 22:41:15 +0200 (Wed, 23 Sep 2009)
+New Revision: 138
+
+Modified:
+   trunk/dreamos.img
+   trunk/shell/commands.c
+Log:
+Correzione di bug di CD.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-09-23 20:36:41 UTC (rev 137)
++++ trunk/shell/commands.c	2009-09-23 20:41:15 UTC (rev 138)
+@@ -388,8 +388,10 @@
+ 		i = get_mountpoint_id(argv[1]);
+ 		//printf(&quot;path: %s\n&quot;, argv[1]);
+ 		rel_size = strlen(argv[1]) - strlen(mountpoint_list[i].mountpoint);
+-		if(i == -1 || (i==0  &amp;&amp; strcmp(&quot;/&quot;, argv[1]))) 
++		if(i == -1 || (i==0  &amp;&amp; strcmp(&quot;/&quot;, argv[1]))) {			
+ 			printf(&quot;cd: %s: No such file or directory\n&quot;, argv[1]);
++			return;
++		}
+ 		else strcpy(current_user.cur_path, argv[1]);
+ 		if(rel_size &gt;0){
+ 			relpath = get_rel_path(i, argv[1]);
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000139.html">[Dreamos-dev] r137 - in trunk: . fs include include/fs	include/shell include/sys shell
+</A></li>
+	<LI>Next message: <A HREF="000141.html">[Dreamos-dev] r139 - in trunk: . include shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#140">[ date ]</a>
+              <a href="thread.html#140">[ thread ]</a>
+              <a href="subject.html#140">[ subject ]</a>
+              <a href="author.html#140">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

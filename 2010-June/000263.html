@@ -1,0 +1,159 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r260 - in trunk: . fs include/shell shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-June/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r260%20-%20in%20trunk%3A%20.%20fs%20include/shell%20shell&In-Reply-To=%3C201006132137.o5DLbSKL029441%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000262.html">
+   <LINK REL="Next"  HREF="000264.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r260 - in trunk: . fs include/shell shell</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r260%20-%20in%20trunk%3A%20.%20fs%20include/shell%20shell&In-Reply-To=%3C201006132137.o5DLbSKL029441%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r260 - in trunk: . fs include/shell shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun Jun 13 23:37:28 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000262.html">[Dreamos-dev] r259 - in trunk: . include/libc libc shell
+</A></li>
+        <LI>Next message: <A HREF="000264.html">[Dreamos-dev] r261 - in trunk: . utils utils/eltorito_iso	utils/eltorito_iso/boot utils/eltorito_iso/boot/grub
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#263">[ date ]</a>
+              <a href="thread.html#263">[ thread ]</a>
+              <a href="subject.html#263">[ subject ]</a>
+              <a href="author.html#263">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-06-13 23:37:21 +0200 (Sun, 13 Jun 2010)
+New Revision: 260
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/initrd.c
+   trunk/include/shell/shell.h
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+Log:
+Aggiunti alla struttura current_user i campi uid e gid
+Aggiunto nel comando newfile controllo errore
+Sistemata assegnazione uid a file, in base all'utente corrente
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-06-13 18:48:01 UTC (rev 259)
++++ trunk/fs/initrd.c	2010-06-13 21:37:21 UTC (rev 260)
+@@ -26,6 +26,7 @@
+ #include &lt;kheap.h&gt;
+ #include &lt;fcntl.h&gt;
+ #include &lt;sys/stat.h&gt;
++#include &lt;commands.h&gt;
+ 
+ char *module_start;
+ initrd_t *fs_specs;
+@@ -132,7 +133,7 @@
+ 				module_var[fs_specs-&gt;nfiles].magic=0xBF;
+ 				strcpy(module_var[fs_specs-&gt;nfiles].fileName, path);
+ 				module_var[fs_specs-&gt;nfiles].file_type = FS_FILE;
+-				module_var[fs_specs-&gt;nfiles].uid = 1;
++				module_var[fs_specs-&gt;nfiles].uid = current_user.uid;
+ 				module_var[fs_specs-&gt;nfiles].offset = ++fs_end;
+ 				module_var[fs_specs-&gt;nfiles].length = 0;
+ 				ird_descriptors[cur_irdfd].file_descriptor	= fs_specs-&gt;nfiles;
+
+Modified: trunk/include/shell/shell.h
+===================================================================
+--- trunk/include/shell/shell.h	2010-06-13 18:48:01 UTC (rev 259)
++++ trunk/include/shell/shell.h	2010-06-13 21:37:21 UTC (rev 260)
+@@ -35,6 +35,8 @@
+ struct user_env {
+ 	char username[USER_LEN];
+ 	char cur_path[CURPATH_LEN];
++	unsigned int uid;
++	unsigned int gid;
+ };
+ 
+ //extern char cur_path[256];
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-06-13 18:48:01 UTC (rev 259)
++++ trunk/shell/commands.c	2010-06-13 21:37:21 UTC (rev 260)
+@@ -561,13 +561,15 @@
+ 			if(fd&gt;=0) printf(&quot;-ERROR: %s File already exist\n&quot;, argv[1]);
+ 			else {
+ 				char text[256];
+-				printf(&quot;Filname: %s&quot;, argv[1]);
++				printf(&quot;Filename: %s\n&quot;, argv[1]);
+ 				close(fd);
+-				fd = open(argv[1], O_RDWR|O_CREAT|O_APPEND);
+-				printf(&quot;Type your text here, actually only one line available!!\n&quot;);
+-				scanf(&quot;%s&quot;, text);
+-				if(fd&gt;=0) write(fd,text, strlen(text));
+-				close(fd);
++				fd = open(argv[1], O_RDWR|O_CREAT|O_APPEND);		
++				if(fd&gt;=0){ 
++					printf(&quot;Type your text here, actually only one line available!!\n&quot;);
++					scanf(&quot;%s&quot;, text);
++					write(fd,text, strlen(text));
++					close(fd);
++				}
+ 			}
+ 		}
+ 	}
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2010-06-13 18:48:01 UTC (rev 259)
++++ trunk/shell/shell.c	2010-06-13 21:37:21 UTC (rev 260)
+@@ -140,7 +140,8 @@
+   printf(&quot;\n\n\n\n&quot;);
+   argc=1;  
+   strcpy(current_user.cur_path, &quot;/root&quot;);
+-  
++  current_user.uid = 1;
++  current_user.gid = 0;
+   for (;;)
+   {
+     for (c = 1 ; c &lt;= 10 ; c++) {
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000262.html">[Dreamos-dev] r259 - in trunk: . include/libc libc shell
+</A></li>
+	<LI>Next message: <A HREF="000264.html">[Dreamos-dev] r261 - in trunk: . utils utils/eltorito_iso	utils/eltorito_iso/boot utils/eltorito_iso/boot/grub
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#263">[ date ]</a>
+              <a href="thread.html#263">[ thread ]</a>
+              <a href="subject.html#263">[ subject ]</a>
+              <a href="author.html#263">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

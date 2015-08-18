@@ -1,0 +1,179 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r187 - in trunk: . fs include/sys shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-January/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r187%20-%20in%20trunk%3A%20.%20fs%20include/sys%20shell&In-Reply-To=%3C201001302319.o0UNJOdT015668%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000188.html">
+   <LINK REL="Next"  HREF="000190.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r187 - in trunk: . fs include/sys shell</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r187%20-%20in%20trunk%3A%20.%20fs%20include/sys%20shell&In-Reply-To=%3C201001302319.o0UNJOdT015668%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r187 - in trunk: . fs include/sys shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun Jan 31 00:19:24 CET 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000188.html">[Dreamos-dev] r186 - in trunk: . fs
+</A></li>
+        <LI>Next message: <A HREF="000190.html">[Dreamos-dev] r188 - in trunk: . fs shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#189">[ date ]</a>
+              <a href="thread.html#189">[ thread ]</a>
+              <a href="subject.html#189">[ subject ]</a>
+              <a href="author.html#189">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-01-31 00:19:14 +0100 (Sun, 31 Jan 2010)
+New Revision: 187
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/fs/vfs.c
+   trunk/include/sys/unistd.h
+   trunk/shell/testing.c
+Log:
+Modificata open per gestire meglio i valori dei file descriptor.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2010-01-28 22:25:35 UTC (rev 186)
++++ trunk/fs/fcntl.c	2010-01-30 23:19:14 UTC (rev 187)
+@@ -39,22 +39,27 @@
+ 	int ret_fd;
+ 	va_list ap;
+ 	va_start(ap, oflags);
+-	
++	ret_fd = 0;
++	while(ret_fd &lt; _SC_OPEN_MAX){
++		if(fd_list[ret_fd].mountpoint_id == -1) printf(&quot;%d &quot;, ret_fd);		
++		ret_fd++;
++	}
+ 	prova = va_arg(ap, int);
+-	//if(!(cur_fd &lt; _SC_OPEN_MAX)) cur_fd=0;
+-	//printf(&quot;Cur_fd: %d &quot;,cur_fd);
+-	while(fd_list[cur_fd].mountpoint_id != -1 &amp;&amp; cur_fd &lt; _SC_OPEN_MAX ) {				
+-		if(cur_fd == ret_fd) {
+-			printf(&quot;No more file descriptors available\n&quot;);
+-			return -1;
+-		}		
++	if(cur_fd == _SC_OPEN_MAX) {
++		printf(&quot;Cur_fd reset\n&quot;);
++		cur_fd = 0;
++		//printf(&quot;No more file descriptors available\n&quot;);
++		//return -1;
++	}
++	while(fd_list[cur_fd].mountpoint_id != -1 &amp;&amp; cur_fd &lt; _SC_OPEN_MAX){
+ 		cur_fd++;
+ 	}
+-	/*if(cur_fd == _SC_OPEN_MAX) {
+-		printf(&quot;Error\n&quot;);
++	if(cur_fd == _SC_OPEN_MAX) {
++		printf(&quot;No more file descriptors available\n&quot;);
+ 		return -1;
+-	}*/
++	}
+ 	mpid = get_mountpoint_id(path);		
++	printf(&quot;Cur_fd: %d\n&quot;,cur_fd);
+ 	if(mpid &gt;-1) {
+ 		fd_list[cur_fd].mountpoint_id = mpid;				
+ 		path = get_rel_path(mpid, path);		
+@@ -79,8 +84,8 @@
+ 	}
+ 	va_end(ap)	
+ 	ret_fd = cur_fd;
+-	if(cur_fd++ &gt;= _SC_OPEN_MAX) cur_fd=0;
+-	//printf(&quot;ret_fd: %d\n&quot;,ret_fd);
++	cur_fd++;
++	
+ 	return ret_fd;
+ }
+ 
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2010-01-28 22:25:35 UTC (rev 186)
++++ trunk/fs/vfs.c	2010-01-30 23:19:14 UTC (rev 187)
+@@ -40,9 +40,9 @@
+ 	
+ 	printf(LNG_VFS); 	
+ 
+-	while (j&lt;_SC_OPEN_MAX){
++	while (j &lt; _SC_OPEN_MAX){
+ 		fd_list[j].fs_spec_id = -1;
+-		fd_list[j].mountpoint_id =-1;
++		fd_list[j].mountpoint_id = -1;
+ 		j++;
+ 	}
+  	
+
+Modified: trunk/include/sys/unistd.h
+===================================================================
+--- trunk/include/sys/unistd.h	2010-01-28 22:25:35 UTC (rev 186)
++++ trunk/include/sys/unistd.h	2010-01-30 23:19:14 UTC (rev 187)
+@@ -22,7 +22,7 @@
+ #include &lt;types.h&gt;
+ #include &lt;stddef.h&gt;
+ 
+-#define _SC_OPEN_MAX 10
++#define _SC_OPEN_MAX 4
+ 
+ ssize_t read(int , void *, size_t);
+ int close(int);
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-01-28 22:25:35 UTC (rev 186)
++++ trunk/shell/testing.c	2010-01-30 23:19:14 UTC (rev 187)
+@@ -142,7 +142,7 @@
+ 	i = open(appoggio, O_RDONLY, 42);
+ 	if(i&gt;-1) {
+ 		read(i, prova, 1);	
+-		close(i);
++		//if(i!=2)close(i);
+ 	}
+ 	printf(&quot;\n&quot;);
+ }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000188.html">[Dreamos-dev] r186 - in trunk: . fs
+</A></li>
+	<LI>Next message: <A HREF="000190.html">[Dreamos-dev] r188 - in trunk: . fs shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#189">[ date ]</a>
+              <a href="thread.html#189">[ thread ]</a>
+              <a href="subject.html#189">[ subject ]</a>
+              <a href="author.html#189">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

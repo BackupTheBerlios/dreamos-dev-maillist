@@ -1,0 +1,229 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r383 - in trunk: . boot include/tasks shell tasks
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2011-July/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r383%20-%20in%20trunk%3A%20.%20boot%20include/tasks%20shell%20tasks&In-Reply-To=%3C20110715220452.EC0C148146F%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000385.html">
+   <LINK REL="Next"  HREF="000387.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r383 - in trunk: . boot include/tasks shell tasks</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r383%20-%20in%20trunk%3A%20.%20boot%20include/tasks%20shell%20tasks&In-Reply-To=%3C20110715220452.EC0C148146F%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r383 - in trunk: . boot include/tasks shell tasks">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sat Jul 16 00:04:52 CEST 2011</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000385.html">[Dreamos-dev] r382 - in trunk: . boot include/shell include/tasks	shell tasks
+</A></li>
+        <LI>Next message: <A HREF="000387.html">[Dreamos-dev] r384 - in trunk: . boot include/shell shell tasks
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#386">[ date ]</a>
+              <a href="thread.html#386">[ thread ]</a>
+              <a href="subject.html#386">[ subject ]</a>
+              <a href="author.html#386">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2011-07-16 00:04:52 +0200 (Sat, 16 Jul 2011)
+New Revision: 383
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/include/tasks/task.h
+   trunk/shell/commands.c
+   trunk/shell/testing.c
+   trunk/tasks/task.c
+   trunk/tasks/task_utils.c
+Log:
+Added functions:
+	add_task
+	get_task
+Started test function: try_tasksetup
+Modified some prototypes
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/tasks/task.h
+===================================================================
+--- trunk/include/tasks/task.h	2011-07-14 21:16:13 UTC (rev 382)
++++ trunk/include/tasks/task.h	2011-07-15 22:04:52 UTC (rev 383)
+@@ -27,7 +27,7 @@
+ 
+ #define MAX_TASKS 10
+ #define STACK_SIZE 0x1000 //Dimensione dello stack
+-
++#define NAME_LENGTH 30 //Task name length
+ typedef unsigned int pid_t;
+ 
+ /*!  \enum task_state
+@@ -59,7 +59,7 @@
+  */
+ typedef struct {
+ 	pid_t pid;	
+-	char *name;
++	char name[NAME_LENGTH];
+ 	void (*start_function)();
+ 	task_state state;
+ 	task_register_t *registers;
+@@ -73,9 +73,10 @@
+ extern pid_t current_pid;
+ 
+ void tasks_init();
+-void new_task(char*, void (*start_function)());
+-void add_task(unsigned int, task_t);
++void add_task(pid_t, task_t*);
++task_t get_task(pid_t);
+ 
++pid_t new_task(char*, void (*start_function)());
+ unsigned int request_pid();
+ 
+ #endif
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2011-07-14 21:16:13 UTC (rev 382)
++++ trunk/shell/commands.c	2011-07-15 22:04:52 UTC (rev 383)
+@@ -527,9 +527,6 @@
+ 					{ &quot;try_shadow&quot;, try_shadow},
+ 					{ &quot;try_mapaddress&quot;, try_mapaddress},
+ 					{ &quot;try_tasksetup&quot;, try_tasksetup},
+-					#ifdef LATEST
+-					{ &quot;try_newheap&quot;, try_newheap},
+-					#endif
+ 					{ &quot;--help&quot;, help_tester },
+ 					};
+ 	if (argc != 2) {
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2011-07-14 21:16:13 UTC (rev 382)
++++ trunk/shell/testing.c	2011-07-15 22:04:52 UTC (rev 383)
+@@ -30,9 +30,7 @@
+ #include &lt;unistd.h&gt;
+ #include &lt;user_shell.h&gt;
+ #include &lt;task_utils.h&gt;
+-#ifdef LATEST
+-#include &lt;heap.h&gt;
+-#endif
++#include &lt;task.h&gt;
+ 
+ //multiboot_info_t *boot_informations;
+ char *module_start;
+@@ -264,6 +262,13 @@
+ }
+ 
+ void try_tasksetup(){
++	unsigned int task_pid;
++	task_t _task;
+ 	printf(&quot;Testing task creation functions:\n&quot;);
++	task_pid = new_task(&quot;test&quot;, try_tasksetup);
++	printf(&quot;Pid Obtained: %d\n&quot;, task_pid);
++	_task = get_task(task_pid);
++	printf(&quot;Task state: %d\n&quot;, _task.state);
++	printf(&quot; ----name:: %s\n&quot;, _task.name);
+ 	return;
+ }
+
+Modified: trunk/tasks/task.c
+===================================================================
+--- trunk/tasks/task.c	2011-07-14 21:16:13 UTC (rev 382)
++++ trunk/tasks/task.c	2011-07-15 22:04:52 UTC (rev 383)
+@@ -52,16 +52,36 @@
+ 	return current_pid++;
+ }
+ 
+-void new_task(char *task_name, void (*start_function)()){
++/**
++ * That function add a task to the current task list 
++ * @author Ivan Gualandri
++ * @version 1.0
++ */
++void add_task(pid_t pid, task_t* cur_task){
++	task_list[pid] = *cur_task;
++}
++
++/**
++ * Retrieve  the task given the pid
++ * @author Ivan Gualandri
++ * @version 1.0
++ * @param pid task pid
++ */
++task_t get_task(pid_t pid){
++	return task_list[pid];	
++}
++
++pid_t new_task(char *task_name, void (*start_function)()){
+ 	asm(&quot;cli&quot;);
+ 	task_t new_task;
+-	unsigned int new_pid = request_pid();
++	unsigned int new_pid = request_pid();	
+ 	strcpy(new_task.name, task_name);
+ 	new_task.pid = new_pid;			
+ 	new_task.eip = (unsigned int)start_function;	
+ 	new_task.esp = (unsigned int) kmalloc(STACK_SIZE) + STACK_SIZE - 100;
+-	
++	new_task.state = READY;
++	add_task(new_task.pid, &amp;new_task);
+ 	asm(&quot;sti&quot;);
+-	return;
++	return new_pid;
+ }
+ 
+
+Modified: trunk/tasks/task_utils.c
+===================================================================
+--- trunk/tasks/task_utils.c	2011-07-14 21:16:13 UTC (rev 382)
++++ trunk/tasks/task_utils.c	2011-07-15 22:04:52 UTC (rev 383)
+@@ -40,6 +40,7 @@
+ 	unsigned int *pagetable;
+ 	unsigned int i=0;	
+ 	unsigned int j=0;
++	/** Request physical space for pagedir and pagetable*/ 	
+ 	pagedir = create_pageDir();
+ 	pagetable = create_pageTable();	
+ 	//set_pagedir_entry_ric(1023, fis_address, PD_PRESENT|SUPERVISOR, 0);
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000385.html">[Dreamos-dev] r382 - in trunk: . boot include/shell include/tasks	shell tasks
+</A></li>
+	<LI>Next message: <A HREF="000387.html">[Dreamos-dev] r384 - in trunk: . boot include/shell shell tasks
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#386">[ date ]</a>
+              <a href="thread.html#386">[ thread ]</a>
+              <a href="subject.html#386">[ subject ]</a>
+              <a href="author.html#386">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

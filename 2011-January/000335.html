@@ -1,0 +1,142 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r332 - in trunk: . boot utils utils/eltorito_iso
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2011-January/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r332%20-%20in%20trunk%3A%20.%20boot%20utils%20utils/eltorito_iso&In-Reply-To=%3C20110109092759.6EBCC480A26%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000334.html">
+   <LINK REL="Next"  HREF="000336.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r332 - in trunk: . boot utils utils/eltorito_iso</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r332%20-%20in%20trunk%3A%20.%20boot%20utils%20utils/eltorito_iso&In-Reply-To=%3C20110109092759.6EBCC480A26%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r332 - in trunk: . boot utils utils/eltorito_iso">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun Jan  9 10:27:59 CET 2011</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000334.html">[Dreamos-dev] r331 - in trunk: . mem
+</A></li>
+        <LI>Next message: <A HREF="000336.html">[Dreamos-dev] r333 - in trunk: . shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#335">[ date ]</a>
+              <a href="thread.html#335">[ thread ]</a>
+              <a href="subject.html#335">[ subject ]</a>
+              <a href="author.html#335">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2011-01-09 10:27:59 +0100 (Sun, 09 Jan 2011)
+New Revision: 332
+
+Modified:
+   trunk/README
+   trunk/boot/grub.img
+   trunk/utils/eltorito_gen.sh
+   trunk/utils/eltorito_iso/README
+Log:
+Aggiornati files readme. 
+Sistemate alcune stringhe nello script eltorito_gen.sh
+
+
+Modified: trunk/README
+===================================================================
+--- trunk/README	2011-01-04 22:27:30 UTC (rev 331)
++++ trunk/README	2011-01-09 09:27:59 UTC (rev 332)
+@@ -26,12 +26,9 @@
+ 
+ Ivan Gualandri - Finarfin (<A HREF="http://earyrian.elenhost.org">http://earyrian.elenhost.org</A>)
+ 
+-
+ Alessandro (celeron) 
+-Diego Stamigni (osiris_h4ck)
+-Lorenzo De Liso (blackz)
+-Michele Morelli (dt-)
+ 
++
+ 	- a -- Cosa NON &#232; DreamOS -
+ 
+ DreamOS non &#232; un sistema operativo completo e pronto per essere utilizzato per l'uso quotidiano, non &#232; basato su Kernel esistenti e non &#232; supportato/sponsorizzato da alcuna societ&#224;.
+@@ -132,6 +129,6 @@
+ 	Chan: #dreamos
+ 	
+ 
+-DreamOS 2003-2009 by finarfin/shainer
++DreamOS 2003-2011 by finarfin
+ <A HREF="http://www.dreamos.org">http://www.dreamos.org</A>
+ <A HREF="http://www.osdev.it">http://www.osdev.it</A>
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/utils/eltorito_gen.sh
+===================================================================
+--- trunk/utils/eltorito_gen.sh	2011-01-04 22:27:30 UTC (rev 331)
++++ trunk/utils/eltorito_gen.sh	2011-01-09 09:27:59 UTC (rev 332)
+@@ -1,7 +1,7 @@
+ #!/bin/bash
+ # Script for build an eltorito iso image of dreamos
+ 
+-echo &quot;Welcome to DreamOS iso generator ver 0.1 - Development&quot;
++echo &quot;Welcome to DreamOS Eltorito iso generator ver 0.1 - Development&quot;
+ if [ -f dreamos.img ] 
+ 	then 
+ 		echo &quot;File dreamos.img found&quot;
+@@ -11,7 +11,7 @@
+ 			echo &quot;File initfs found: replacing it&quot;
+ 			cp initfs ./utils/eltorito_iso
+ 		else
+-			echo &quot;file initfs not found&quot;
++			echo &quot;file initfs not found. Using the old one&quot;
+ 		fi
+ 		 genisoimage -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o dreamos.iso utils/eltorito_iso
+ 	else
+
+Modified: trunk/utils/eltorito_iso/README
+===================================================================
+--- trunk/utils/eltorito_iso/README	2011-01-04 22:27:30 UTC (rev 331)
++++ trunk/utils/eltorito_iso/README	2011-01-09 09:27:59 UTC (rev 332)
+@@ -72,6 +72,6 @@
+ 	Chan: #dreamos
+ 	
+ 
+-DreamOS 2003-2009 by finarfin/shainer
++DreamOS 2003-2011 by finarfin
+ <A HREF="http://www.dreamos.org">http://www.dreamos.org</A>
+ <A HREF="http://www.osdev.it">http://www.osdev.it</A>
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000334.html">[Dreamos-dev] r331 - in trunk: . mem
+</A></li>
+	<LI>Next message: <A HREF="000336.html">[Dreamos-dev] r333 - in trunk: . shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#335">[ date ]</a>
+              <a href="thread.html#335">[ thread ]</a>
+              <a href="subject.html#335">[ subject ]</a>
+              <a href="author.html#335">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

@@ -1,0 +1,354 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r123 - in trunk: . fs include/fs include/sys shell sys
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-August/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r123%20-%20in%20trunk%3A%20.%20fs%20include/fs%20include/sys%20shell%20sys&In-Reply-To=%3C200908290855.n7T8toxi005932%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000124.html">
+   <LINK REL="Next"  HREF="000126.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r123 - in trunk: . fs include/fs include/sys shell sys</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r123%20-%20in%20trunk%3A%20.%20fs%20include/fs%20include/sys%20shell%20sys&In-Reply-To=%3C200908290855.n7T8toxi005932%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r123 - in trunk: . fs include/fs include/sys shell sys">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sat Aug 29 10:55:50 CEST 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000124.html">[Dreamos-dev] r122 - in trunk: . shell
+</A></li>
+        <LI>Next message: <A HREF="000126.html">[Dreamos-dev] r124 - trunk/fs
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#125">[ date ]</a>
+              <a href="thread.html#125">[ thread ]</a>
+              <a href="subject.html#125">[ subject ]</a>
+              <a href="author.html#125">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-08-29 10:55:48 +0200 (Sat, 29 Aug 2009)
+New Revision: 123
+
+Added:
+   trunk/include/fs/fcntl.h
+   trunk/include/sys/dirent.h
+   trunk/include/sys/types.h
+   trunk/sys/dirent.c
+Modified:
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/fs/vfs.c
+   trunk/include/fs/vfs.h
+   trunk/shell/commands.c
+Log:
+Aggiunti header fcntl.h e prime definizioni prototipi
+Aggiunto header types.h con definizioni di primi tipi
+Aggiunto header dirent.h con definizioni funzioni e strutture dati per gestione directory.
+Aggiunti anche i relativi file.c
+Aggiornato makefile
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2009-08-23 15:52:47 UTC (rev 122)
++++ trunk/Makefile	2009-08-29 08:55:48 UTC (rev 123)
+@@ -34,6 +34,7 @@
+       drivers/keyboard.o\
+       drivers/mouse.o\
+ 	  fs/vfs.o\
++	  fs/fcntl.o\
+       libc/ctype.o\
+       libc/string.o\
+       io/io.o\
+@@ -54,7 +55,8 @@
+       hardware/8253.o\
+       shell/shell.o\
+       shell/commands.o\
+-      sys/utsname.o
++      sys/utsname.o\
++      sys/dirent.o
+ 
+ dreamos.img: bl.img kernel.bin
+ 	mv kernel.bin dreamos.img
+@@ -67,6 +69,7 @@
+ 
+ kernel.o: kernel.c
+ fs/vfs.o: fs/vfs.c
++fs/fcntl.o: fs/fcntl.c
+ io/video.o: io/video.c
+ io/io.o: io/io.c
+ processore/gdt.o: processore/gdt.c
+@@ -92,6 +95,7 @@
+ shell/shell.o: shell/shell.c
+ shell/commands.o: shell/commands.c
+ sys/utsname.o: sys/utsname.c
++sys/dirent.o: sys/dirent.c
+ 
+ img:
+ 	su -c &quot;mount -o loop boot/grub.img boot/os &amp;&amp; cp dreamos.img boot/os/boot/grub/ &amp;&amp; umount boot/os&quot;
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2009-08-23 15:52:47 UTC (rev 122)
++++ trunk/fs/vfs.c	2009-08-29 08:55:48 UTC (rev 123)
+@@ -86,7 +86,7 @@
+                        }					   					   
+                        i++;
+                }
+-			   if(last!=-1) printf(&quot;Changing dir %s - %d\n&quot;, mountpoint_list[last].mountpoint, last);
++			   if(last!=-1) printf(&quot;Changing dir %s	\n&quot;, mountpoint_list[last].mountpoint, last);
+                return last;
+ }
+ 
+@@ -101,11 +101,11 @@
+ 		mp_size = strlen(mountpoint_list[mountpoint_id].mountpoint);		
+ 		while(j&lt;rel_size){			
+ 			tmp_path[j] = path[mp_size + j];			
+-			_kputc(path[mp_size + j]);
++			//_kputc(path[mp_size + j]);
+ 			j++;
+ 		}
+ 		tmp_path[j]='\0';
+-		printf(&quot;\n&quot;);
++		//printf(&quot;\n&quot;);
+ 	}	
+ 	return tmp_path;
+ }
+
+Added: trunk/include/fs/fcntl.h
+===================================================================
+--- trunk/include/fs/fcntl.h	2009-08-23 15:52:47 UTC (rev 122)
++++ trunk/include/fs/fcntl.h	2009-08-29 08:55:48 UTC (rev 123)
+@@ -0,0 +1,24 @@
++/*
++ * Dreamos
++ * fnctl.h
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++ 
++#ifndef _FCNTL_H
++#define _FCNTL_H
++
++
++int  open(const char *, int, ...);
++#endif
+
+Modified: trunk/include/fs/vfs.h
+===================================================================
+--- trunk/include/fs/vfs.h	2009-08-23 15:52:47 UTC (rev 122)
++++ trunk/include/fs/vfs.h	2009-08-29 08:55:48 UTC (rev 123)
+@@ -1,6 +1,6 @@
+ /*
+  * Dreamos
+- * vfs.h
++ * vfs.c
+  * This program is free software; you can redistribute it and/or
+  * modify it under the terms of the GNU General Public License
+  * as published by the Free Software Foundation; either version 2
+@@ -55,6 +55,11 @@
+ 		struct super_node_operations *operations;
+ };
+ 
++struct file_descriptor {
++	int fs_spec_id;
++	int mountpoint_id;
++};
++
+ struct super_node_operations {
+ 	/*Qui vanno i puntatori alle funzioni sul supernode*/
+ 	void (*open)(char *r_path, int o_flags);
+
+Added: trunk/include/sys/dirent.h
+===================================================================
+--- trunk/include/sys/dirent.h	2009-08-23 15:52:47 UTC (rev 122)
++++ trunk/include/sys/dirent.h	2009-08-29 08:55:48 UTC (rev 123)
+@@ -0,0 +1,54 @@
++/*
++ * Dreamos
++ * dirent.h
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++ 
++#ifndef _DIRENT_H
++#define _DIRENT_H
++
++#include &lt;types.h&gt;
++#define NAME_MAX 30
++
++/*! 
++    \struct dirent
++    \brief Struttura dati che contiene le entry della cartella.
++*/
++struct dirent {
++	ino_t d_ino;
++	char d_name[NAME_MAX+1];
++};
++
++/*! 
++    \struct DIR
++    \brief Struttura dati che contiene le informazioni su una cartella
++*/
++typedef struct 
++{
++  int handle; /**&lt; Filesystem directory handle*/
++  char path[NAME_MAX + 1]; /**&lt; dir path*/
++  struct dirent entry; /**&lt; Next directory item*/
++} DIR;
++
++
++int            closedir(DIR *);
++DIR           *opendir(const char *);
++struct dirent *readdir(DIR *);
++int            readdir_r(DIR *, struct dirent *, struct dirent **);
++void           rewinddir(DIR *);
++void           seekdir(DIR *, long int);
++long int       telldir(DIR *);
++
++#endif
+
+Added: trunk/include/sys/types.h
+===================================================================
+--- trunk/include/sys/types.h	2009-08-23 15:52:47 UTC (rev 122)
++++ trunk/include/sys/types.h	2009-08-29 08:55:48 UTC (rev 123)
+@@ -0,0 +1,25 @@
++/*
++ * Dreamos
++ * tpyes.h
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++ 
++#ifndef _TYPES_H
++#define _TYPES_H
++
++typedef unsigned int ino_t;
++typedef unsigned int dev_t;
++
++#endif
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-08-23 15:52:47 UTC (rev 122)
++++ trunk/shell/commands.c	2009-08-29 08:55:48 UTC (rev 123)
+@@ -424,16 +424,8 @@
+ 		if(i == -1 || (i==0  &amp;&amp; strcmp(&quot;/&quot;, argv[1]))) printf(&quot;cd: %s: No such file or directory\n&quot;, argv[1]);
+ 		else strcpy(current_user.cur_path, argv[1]);
+ 		if(rel_size &gt;0){
+-			//int j=0;
+-			//relpath = kmalloc(rel_size);
+ 			relpath = get_rel_path(i, argv[1]);
+ 			free(relpath);
+-			//while(j &lt; rel_size){
+-			//	relpath[j] = *(argv[1]+(strlen(mountpoint_list[i].mountpoint) + j));
+-			//	j++;
+-			//}			
+-			//relpath[j] = '\0';
+-			//printf(&quot;Relative path: %s %d\n&quot;,relpath, rel_size);
+ 		}
+ 	}
+ }
+
+Added: trunk/sys/dirent.c
+===================================================================
+--- trunk/sys/dirent.c	2009-08-23 15:52:47 UTC (rev 122)
++++ trunk/sys/dirent.c	2009-08-29 08:55:48 UTC (rev 123)
+@@ -0,0 +1,25 @@
++/*
++ * Dreamos
++ * dirent.c
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++ 
++#include &lt;dirent.h&gt;
++#include &lt;sys/types.h&gt;
++#include &lt;stdio.h&gt;
++
++DIR *opendir(const char *path){
++	printf(&quot;Prova\n&quot;);
++}
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000124.html">[Dreamos-dev] r122 - in trunk: . shell
+</A></li>
+	<LI>Next message: <A HREF="000126.html">[Dreamos-dev] r124 - trunk/fs
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#125">[ date ]</a>
+              <a href="thread.html#125">[ thread ]</a>
+              <a href="subject.html#125">[ subject ]</a>
+              <a href="author.html#125">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

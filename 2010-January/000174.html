@@ -1,0 +1,408 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r172 - in trunk: . drivers include include/drivers	include/io include/shell shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-January/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r172%20-%20in%20trunk%3A%20.%20drivers%20include%20include/drivers%0A%09include/io%20include/shell%20shell&In-Reply-To=%3C201001091519.o09FJv4i019708%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000173.html">
+   <LINK REL="Next"  HREF="000175.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r172 - in trunk: . drivers include include/drivers	include/io include/shell shell</H1>
+    <B>osiris_h4ck at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r172%20-%20in%20trunk%3A%20.%20drivers%20include%20include/drivers%0A%09include/io%20include/shell%20shell&In-Reply-To=%3C201001091519.o09FJv4i019708%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r172 - in trunk: . drivers include include/drivers	include/io include/shell shell">osiris_h4ck at mail.berlios.de
+       </A><BR>
+    <I>Sat Jan  9 16:19:57 CET 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000173.html">[Dreamos-dev] r171 - in trunk: . fs shell
+</A></li>
+        <LI>Next message: <A HREF="000175.html">[Dreamos-dev] r173 - in trunk: . boot include
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#174">[ date ]</a>
+              <a href="thread.html#174">[ thread ]</a>
+              <a href="subject.html#174">[ subject ]</a>
+              <a href="author.html#174">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: osiris_h4ck
+Date: 2010-01-09 16:19:54 +0100 (Sat, 09 Jan 2010)
+New Revision: 172
+
+Modified:
+   trunk/.bochsrc
+   trunk/Makefile
+   trunk/drivers/keyboard.c
+   trunk/grub.py
+   trunk/include/drivers/keyboard.h
+   trunk/include/io/video.h
+   trunk/include/shell/shell.h
+   trunk/include/version.h
+   trunk/shell/shell.c
+   trunk/shell/testing.c
+   trunk/start.sh
+Log:
+- Effettuate diverse ottimizzazioni
+- Aggiunti diversi scancode nel driver per la keyboard
+- Scritto primo abbozzo di History per la shell, avviabile tramite KEY_ARROWUP della tastiera
+- Corretto piccolo problema con grub.py
+
+
+
+Modified: trunk/.bochsrc
+===================================================================
+--- trunk/.bochsrc	2010-01-09 13:31:58 UTC (rev 171)
++++ trunk/.bochsrc	2010-01-09 15:19:54 UTC (rev 172)
+@@ -16,8 +16,8 @@
+ # NOTE: if you use the &quot;wx&quot; configuration interface, you must also use
+ # the &quot;wx&quot; display library.
+ #=======================================================================
+-#config_interface: textconfig
+-config_interface: wx
++config_interface: textconfig
++#config_interface: wx
+ 
+ #=======================================================================
+ # DISPLAY_LIBRARY
+@@ -59,9 +59,9 @@
+ #display_library: sdl, options=&quot;fullscreen&quot; # startup in fullscreen mode
+ #display_library: term
+ #display_library: win32, options=&quot;legacyF12&quot; # use F12 to toggle mouse
+-display_library: wx
++#display_library: wx
+ #display_library: x, options=&quot;gui_debug&quot;
+-#display_library: x
++display_library: x
+ #=======================================================================
+ # ROMIMAGE:
+ # The ROM BIOS controls what the PC does when it first powers on.
+@@ -541,7 +541,7 @@
+ #   mouse: enabled=1, type=serial
+ #   mouse: enabled=0
+ #=======================================================================
+-mouse: enabled=1, type=ps2
++#mouse: enabled=1, type=ps2
+ 
+ #=======================================================================
+ # private_colormap: Request that the GUI create and use it's own
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2010-01-09 13:31:58 UTC (rev 171)
++++ trunk/Makefile	2010-01-09 15:19:54 UTC (rev 172)
+@@ -70,7 +70,7 @@
+ 	$(ASM) -f elf ./boot/multicatcher.S -o bl.img
+ 
+ kernel.bin: $(OBJ)
+-	$(LD) -static --oformat elf32-i386 --output=kernel.bin --script=kernel.lds bl.img $(OBJ) -Ttext 0x100000 -Map kernel.map
++	$(LD) -melf_i386 -static --oformat elf32-i386 --output=kernel.bin --script=kernel.lds bl.img $(OBJ) -Ttext 0x100000 -Map kernel.map
+ 	make -f utils/Makefile
+ 
+ kernel.o: kernel.c
+
+Modified: trunk/drivers/keyboard.c
+===================================================================
+--- trunk/drivers/keyboard.c	2010-01-09 13:31:58 UTC (rev 171)
++++ trunk/drivers/keyboard.c	2010-01-09 15:19:54 UTC (rev 172)
+@@ -29,6 +29,7 @@
+ #include &lt;ctype.h&gt;
+ #include &lt;io.h&gt;
+ #include &lt;pic8259.h&gt;
++#include &lt;shell.h&gt;
+ 
+ #define LSHIFT_BREAK 0x10E
+ #define RSHIFT_BREAK 0x11A
+@@ -194,16 +195,33 @@
+ 	last_tab++;
+ 	break;
+ 
+-    /*case KEY_PGUP:
+-        _kputs (&quot;Tada&quot;);
+-         _kscrollup();
+-	break;*/
++    case KEY_UPARROW:
++	history_start();
++    	_ksetcursauto();
++	break;
+ 
+-    /*case 813:
+-        _kputs (&quot;tutu&quot;);
+-	_kscrolldown();
+-	break;*/
++    case KEY_DOWNARROW:
++	break;
++	
++    case KEY_LEFTARROW:
++    	//_ksetcursor((_kgetline()), (_kgetcolumn() - 1));
++	break;
++	
++    case KEY_RIGHTARROW:
++    	//_ksetcursor((_kgetline()), (_kgetcolumn() + 1));
++	break;
+ 
++// Presente un bug qui che non permette il fix dei relativi tasti
++// se si decommenta, il sistema all'avvio va in panic e si riavvia
++/*    case KEY_ALT:
++	break;
++
++    case KEY_ALTGR:
++	break;
++*/	
++    case KEY_CTRL:
++	break;
++	
+     default:
+ 	if (isdigit(key_it_map[sc]) &amp;&amp; is_tab_pressed == 1)
+ 	    curmap = key_it_map;
+
+Modified: trunk/grub.py
+===================================================================
+--- trunk/grub.py	2010-01-09 13:31:58 UTC (rev 171)
++++ trunk/grub.py	2010-01-09 15:19:54 UTC (rev 172)
+@@ -4,7 +4,8 @@
+ import sys
+ import os
+ import commands
+-trunk = commands.getoutput(&quot;cat .svn/entries | head -n 4 | tail -n 1&quot;)
++#trunk = commands.getoutput(&quot;cat .svn/entries | head -n 4 | tail -n 1&quot;)
++trunk = &quot;-svn&quot;
+ patchlevel = commands.getoutput(&quot;cat include/version.h | grep PATCHLEVEL | cut -b 21-23&quot;)
+ 
+ if os.getuid() != 0:
+@@ -47,7 +48,7 @@
+ answer2 = raw_input()
+ 
+ if answer2 == 'y':
+-
++	os.system(&quot;su -c 'cp boot/grub2.xpm.gz /boot/grub/grub2.xpm.gz'&quot;)
+ 	print &quot;+--------------------------- INFO ------------------------------+&quot;
+ 	print &quot;| splashimage=&quot; + partition + &quot;/boot/grub/grub2.xpm.gz 			|&quot;
+ 	print &quot;| Title: DreamOS v0.&quot; + patchlevel + &quot;-&quot; + trunk +&quot;                                     |&quot;
+
+Modified: trunk/include/drivers/keyboard.h
+===================================================================
+--- trunk/include/drivers/keyboard.h	2010-01-09 13:31:58 UTC (rev 171)
++++ trunk/include/drivers/keyboard.h	2010-01-09 15:19:54 UTC (rev 172)
+@@ -36,6 +36,8 @@
+ #define KEY_TAB        0xf
+ #define KEY_UPARROW    0x48
+ #define KEY_DOWNARROW  0x50
++#define KEY_LEFTARROW  0x4B
++#define KEY_RIGHTARROW 0x4D
+ #define KEY_PGUP       0x49
+ #define KEY_PGDOWN     0x51
+ #define EXTENDED       0xE0
+@@ -46,6 +48,7 @@
+ #define KEY_RSHIFT     0x36
+ #define KEY_CTRL       0x1d
+ #define KEY_ALT        0x38
++#define KEY_ALTGR      0x39
+ 
+ #define NUM_LED        0x45
+ #define SCROLL_LED     0x46
+
+Modified: trunk/include/io/video.h
+===================================================================
+--- trunk/include/io/video.h	2010-01-09 13:31:58 UTC (rev 171)
++++ trunk/include/io/video.h	2010-01-09 15:19:54 UTC (rev 172)
+@@ -50,6 +50,7 @@
+ void _kscrollup();
+ void _kscrolldown();
+ void _kntohex (char *, unsigned int);
++void _kclear_line();
+ 
+ unsigned short shell_mess_col, shell_mess_line;
+ 
+
+Modified: trunk/include/shell/shell.h
+===================================================================
+--- trunk/include/shell/shell.h	2010-01-09 13:31:58 UTC (rev 171)
++++ trunk/include/shell/shell.h	2010-01-09 15:19:54 UTC (rev 172)
+@@ -22,6 +22,7 @@
+ #define CMD_LEN 256
+ #define CURPATH_LEN 256
+ 
++
+ struct cmd {
+ 	const char cmdname[CMD_LEN];
+ 	void (*h_func)(void);
+@@ -34,9 +35,9 @@
+ 
+ //extern char cur_path[256];
+ typedef struct user_env userenv_t;
+-
+ extern userenv_t current_user;
+-
+ void shell(void);
++void history (char *);
++void history_start(void);
+ 
+ #endif
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2010-01-09 13:31:58 UTC (rev 171)
++++ trunk/include/version.h	2010-01-09 15:19:54 UTC (rev 172)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL &quot;2.0&quot;
+ #define EXTRAVERSION &quot;-trunk&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r167&quot;
++#define REV_NUM &quot;-r170&quot;
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2010-01-09 13:31:58 UTC (rev 171)
++++ trunk/shell/shell.c	2010-01-09 15:19:54 UTC (rev 172)
+@@ -40,7 +40,6 @@
+ #include &lt;sys/utsname.h&gt;
+ 
+ #define NUM_COM 30
+-
+ userenv_t current_user;
+ /*
+  * Inserisce gli argomenti di un comando in un array di stringhe
+@@ -48,6 +47,10 @@
+  * argv[0] = nome del comando
+  * argv[n] = opzioni successive
+  */
++
++int count = 9, posiz = 9, c = 10;
++char *lastcmd[10] = {};
++    
+ void options(char *com)
+ {
+   int i=0;
+@@ -114,11 +117,16 @@
+   
+   for (;;)
+   {
++    for (c = 1 ; c &lt;= 10 ; c++) {
++    	    lastcmd[c] = (char *)kmalloc(sizeof(char) * 30); 
++    }	    
+     printf(&quot;%s~:%s# &quot;, current_user.username, 
+ 				  current_user.cur_path,
+ 				  current_user.username);
+     scanf(&quot;%254s&quot;,cmd);
+-        
++    
++    history(cmd);
++   
+     /* elimina eventuali spazi all'inizio del comando */
+     for (i = 0, cmd_ptr = cmd; cmd[i] == ' '; i++, cmd_ptr++);
+     
+@@ -132,6 +140,7 @@
+             break;
+         }
+     }
++
+     if (i&lt;0)
+       printf(LNG_UNKNOWN_CMD &quot; %s\n&quot;, argv[0]);
+ 
+@@ -140,5 +149,32 @@
+     for (--argc; argc&gt;=0; argc--) {      
+         free (argv[argc]);
+     }
++    for (c = 1 ; c &lt;= 10 ; c++) {
++    	    free(lastcmd[c]); 
++    }
+   }
+ }
++
++// History
++void history(char *cmd_pass) {
++    if ( count == 0 ) {
++		count = 10; 
++	}
++
++    strncpy(lastcmd[count], cmd_pass, strlen(cmd_pass));
++    
++    posiz = count;
++    count--;
++}
++
++void history_start(void) { 
++    static int sc;
++    count++;
++    if ( count == 0 || count &gt; 9 ) {
++    	count = posiz;
++    }
++    if( (sc = inportb (0x60) ) == KEY_UPARROW ) {
++   		printf(&quot;\n%s&quot;, lastcmd[count]);
++    }  
++}
++
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-01-09 13:31:58 UTC (rev 171)
++++ trunk/shell/testing.c	2010-01-09 15:19:54 UTC (rev 172)
+@@ -108,7 +108,7 @@
+ 		&quot;  -&gt; try_printmem      - Print used locations of memory\n&quot;
+ 		&quot;  -&gt; try_module        - Read the content of the memory zone loaded in module, aka initfs \n&quot;
+ 		&quot;  -&gt; try_open          - Function to test open() &amp; stdarg() \n&quot;
+-		&quot;  -&gt; try_fsinit          - Function to test the initialization of initrd\n&quot;
++		&quot;  -&gt; try_fsinit        - Function to test the initialization of initrd\n&quot;
+ 		);	
+ }
+ 
+
+Modified: trunk/start.sh
+===================================================================
+--- trunk/start.sh	2010-01-09 13:31:58 UTC (rev 171)
++++ trunk/start.sh	2010-01-09 15:19:54 UTC (rev 172)
+@@ -206,7 +206,18 @@
+ 		  echo &quot;-----------------------&gt;&quot;                 
+ 	  fi  
+ 
+-	$VERS &amp;&amp; $CLEAN &amp;&amp; $MAKE &amp;&amp; $MAKE_IMG &amp;&amp; $MAKE_FS
++	 $VERS &amp;&amp; $CLEAN &amp;&amp; $MAKE &amp;&amp; $MAKE_IMG
++	  
++	 echo &quot;--------------------------------------------- &quot;
++  	 echo &quot;Launching FS Creating script in progress..&quot;
++	 echo &quot;&quot;
++         utils/initfscp `find files/* -exec echo {} +;` initfs
++         echo &quot;done.&quot;
++         $MAKE_FS
++         echo &quot;--------------------------------------------- &quot;
++         echo &quot;FS Created and added to boot/grub.img&quot;
++         echo &quot;---------------------------------------------&quot;
++         
+ 	bochs -f .bochsrc -q
+ 	exit
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000173.html">[Dreamos-dev] r171 - in trunk: . fs shell
+</A></li>
+	<LI>Next message: <A HREF="000175.html">[Dreamos-dev] r173 - in trunk: . boot include
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#174">[ date ]</a>
+              <a href="thread.html#174">[ thread ]</a>
+              <a href="subject.html#174">[ subject ]</a>
+              <a href="author.html#174">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

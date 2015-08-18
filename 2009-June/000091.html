@@ -1,0 +1,371 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r90 - in trunk: . drivers hardware io misc processore
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-June/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r90%20-%20in%20trunk%3A%20.%20drivers%20hardware%20io%20misc%20processore&In-Reply-To=%3C200906141753.n5EHrDtT009551%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000090.html">
+   <LINK REL="Next"  HREF="000092.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r90 - in trunk: . drivers hardware io misc processore</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r90%20-%20in%20trunk%3A%20.%20drivers%20hardware%20io%20misc%20processore&In-Reply-To=%3C200906141753.n5EHrDtT009551%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r90 - in trunk: . drivers hardware io misc processore">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun Jun 14 19:53:13 CEST 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000090.html">[Dreamos-dev] r89 - in trunk: . hardware misc
+</A></li>
+        <LI>Next message: <A HREF="000092.html">[Dreamos-dev] r91 - in trunk: . doc hardware include	include/hardware mem processore shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#91">[ date ]</a>
+              <a href="thread.html#91">[ thread ]</a>
+              <a href="subject.html#91">[ subject ]</a>
+              <a href="author.html#91">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-06-14 19:53:13 +0200 (Sun, 14 Jun 2009)
+New Revision: 90
+
+Modified:
+   trunk/dreamos.img
+   trunk/drivers/keyboard.c
+   trunk/hardware/8253.c
+   trunk/hardware/pic8259.c
+   trunk/io/io.c
+   trunk/misc/clock.c
+   trunk/misc/debug.c
+   trunk/processore/handlers.c
+Log:
+Invertiti parametri di outportb, per rispettare la chiamata standard.
+
+Aggiornati tutti i file che usano outportb.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/drivers/keyboard.c
+===================================================================
+--- trunk/drivers/keyboard.c	2009-06-08 21:57:26 UTC (rev 89)
++++ trunk/drivers/keyboard.c	2009-06-14 17:53:13 UTC (rev 90)
+@@ -104,7 +104,7 @@
+     /* In case of useless break codes, switch controls...*/
+     if (sc &gt; CODE_BREAK &amp;&amp; sc != (KEY_LSHIFT|CODE_BREAK) &amp;&amp; sc != (KEY_RSHIFT|CODE_BREAK)){
+         if (sc==KEY_ENTER+128)
+-            outportb(EOI,MASTER_PORT);
++            outportb(MASTER_PORT, EOI);
+ 	    goto end;
+         }
+ 
+@@ -181,7 +181,7 @@
+ 	_knewline();
+ 	_ksetcursauto();
+ 	last_tab = 0;
+-    outportb(EOI, MASTER_PORT);
++    outportb(MASTER_PORT, EOI);
+ 	break;
+ 
+     case KEY_TAB:
+@@ -221,7 +221,7 @@
+ end:
+     /* Send acknowledge */
+     //printf (&quot;Prego&quot;);
+-    outportb (EOI, MASTER_PORT);
++    outportb (MASTER_PORT, EOI);
+     return;
+ }
+ 
+@@ -255,19 +255,19 @@
+ 	ledstate ^= scrlock;
+     }
+ 
+-    outportb (0xED, 0x60);
+-    outportb (ledstate, 0x60);
++    outportb (0x60, 0xED);
++    outportb (0x60, ledstate);
+ }
+ 
+ /* Need explanations? */
+ void keyboard_enable (void)
+ {
+-    outportb (0xF4, 0x60);
++    outportb (0x60, 0xF4);
+ }
+ 
+ void keyboard_disable (void)
+ {
+-    outportb (0xF5, 0x60);
++    outportb (0x60, 0xF5);
+ }
+ 
+ /*
+
+Modified: trunk/hardware/8253.c
+===================================================================
+--- trunk/hardware/8253.c	2009-06-08 21:57:26 UTC (rev 89)
++++ trunk/hardware/8253.c	2009-06-14 17:53:13 UTC (rev 90)
+@@ -41,9 +41,9 @@
+ 
+     asm (&quot;cli&quot;);
+     ticks = seconds = 0;
+-    outportb (0x37, PIT_COMREG);
+-    outportb (divisor &amp; 0xFF, PIT_DATAREG0);
+-    outportb (divisor &gt;&gt; 8, PIT_DATAREG0);
++    outportb (PIT_COMREG,0x37);
++    outportb (PIT_DATAREG0,divisor &amp; 0xFF);
++    outportb (PIT_DATAREG0,divisor &gt;&gt; 8);
+     asm (&quot;sti&quot;);
+ 
+ }
+
+Modified: trunk/hardware/pic8259.c
+===================================================================
+--- trunk/hardware/pic8259.c	2009-06-08 21:57:26 UTC (rev 89)
++++ trunk/hardware/pic8259.c	2009-06-14 17:53:13 UTC (rev 90)
+@@ -62,30 +62,31 @@
+     int i;
+     asm(&quot;cli&quot;);
+ // Inizializzo i 2 processori pic con ICw1 ICW2 ICW3 e ICW4
+-    outportb(ICW_1,MASTER_PORT);
+-    outportb(ICW_1,SLAVE_PORT);
++    outportb(MASTER_PORT,ICW_1);
++    outportb(SLAVE_PORT, ICW_1);
+ 
+-    outportb(ICW_2_M,MASTER_PORT_1);
+-    outportb(ICW_2_S,SLAVE_PORT_1);
++    outportb(MASTER_PORT_1, ICW_2_M);
++    outportb(SLAVE_PORT_1,  ICW_2_S);
+ 
+-    outportb(ICW_3_M,MASTER_PORT_1);
+-    outportb(ICW_3_S,SLAVE_PORT_1);
++    outportb(MASTER_PORT_1, ICW_3_M);
++    outportb(SLAVE_PORT_1,  ICW_3_S) ;
+ 
+-    outportb(ICW_4,MASTER_PORT_1);
+-    outportb(ICW_4,SLAVE_PORT_1);
++    outportb(MASTER_PORT_1, ICW_4);
++    outportb(SLAVE_PORT_1,  ICW_4);
+ 
+     master_cur_mask = 0xFF;
+     slave_cur_mask = 0xFF;
+ 
+-    outportb(0xFF,MASTER_PORT_1);
++    outportb(MASTER_PORT_1, 0xFF);
++	outportb(SLAVE_PORT_1,  0xFF);
++
++    //outportb (0xFC, MASTER_PORT_1);
+     enable_IRQ(KEYBOARD);
+     enable_IRQ(TIMER);
+     enable_IRQ(TO_SLAVE_PIC);
+-    outportb(0xFF,SLAVE_PORT_1);
++   
+ 
+-    outportb (0xFC, MASTER_PORT_1);
+ 
+-
+     setup_IRQ();
+     asm(&quot;sti&quot;);
+     i=0;
+@@ -130,14 +131,14 @@
+         if(irq&lt;8){
+             new_mask = ~(1&lt;&lt;irq);
+             cur_mask = inportb(MASTER_PORT_1);
+-            outportb((new_mask&amp;cur_mask), MASTER_PORT_1);
++            outportb(MASTER_PORT_1, (new_mask&amp;cur_mask));
+             master_cur_mask=(new_mask&amp;cur_mask);
+             }
+         else{
+             irq = irq-8;
+             new_mask = ~(1&lt;&lt;irq);
+             cur_mask = inportb(SLAVE_PORT_1);
+-            outportb((new_mask&amp;cur_mask), SLAVE_PORT_1);
++            outportb(SLAVE_PORT_1, (new_mask&amp;cur_mask));
+             slave_cur_mask=(new_mask&amp;cur_mask);
+         }
+         return 0;
+@@ -158,13 +159,13 @@
+         if(irq&lt;8){
+             cur_mask = inportb(MASTER_PORT_1);
+             cur_mask |= (1&lt;&lt; irq);
+-            outportb(cur_mask&amp;0xFF, MASTER_PORT_1);
++            outportb(MASTER_PORT_1, cur_mask&amp;0xFF);
+         }
+         else {
+             irq = irq-8;
+             cur_mask = inportb(SLAVE_PORT_1);
+             cur_mask |= (1&lt;&lt; irq);
+-            outportb(cur_mask&amp;0xFF, SLAVE_PORT_1);
++            outportb(SLAVE_PORT_1, cur_mask&amp;0xFF);
+         }
+         return 0;
+     }
+@@ -178,11 +179,11 @@
+   **/
+ int get_current_irq(){
+     int cur_irq;
+-    outportb(GET_IRR_STATUS, MASTER_PORT);
++    outportb(MASTER_PORT,GET_IRR_STATUS);
+     cur_irq = inportb(MASTER_PORT);
+ //     if(cur_irq!=1) printf(&quot;%d\n&quot;, cur_irq);
+     if(cur_irq == 0) {
+-      outportb(GET_IRR_STATUS, SLAVE_PORT);
++      outportb(SLAVE_PORT, GET_IRR_STATUS);
+       cur_irq = inportb(SLAVE_PORT);
+     }
+ //     printf(&quot;%d\n&quot;, find_first_bit(cur_irq));
+
+Modified: trunk/io/io.c
+===================================================================
+--- trunk/io/io.c	2009-06-08 21:57:26 UTC (rev 89)
++++ trunk/io/io.c	2009-06-14 17:53:13 UTC (rev 90)
+@@ -32,7 +32,7 @@
+   return data;
+ }
+ 
+-inline void outportb (int data, int portnum)
++inline void outportb (int portnum, int data)
+ {
+   __asm__ __volatile__ (&quot;outb %%al, %%dx&quot; :: &quot;a&quot; (data),&quot;d&quot; (portnum));
+ }
+
+Modified: trunk/misc/clock.c
+===================================================================
+--- trunk/misc/clock.c	2009-06-08 21:57:26 UTC (rev 89)
++++ trunk/misc/clock.c	2009-06-14 17:53:13 UTC (rev 90)
+@@ -27,49 +27,49 @@
+ 
+ int get_second()
+ {
+-  outportb(SECOND_RTC,0x70);
++  outportb(0x70, SECOND_RTC);
+   int c = inportb(0x71);
+   return c;
+ }
+ 
+ int get_minute()
+ {
+-  outportb(MINUTE_RTC,0x70);
++  outportb(0x70, MINUTE_RTC);
+   int c = inportb(0x71);
+   return c;
+ }
+ 
+ int get_hour()
+ {
+-  outportb(HOUR_RTC,0x70);
++  outportb(0x70, HOUR_RTC);
+   int c = inportb(0x71);
+   return c;
+ }
+ 
+ int get_day_w()
+ {
+-  outportb(DAY_W_RTC,0x70);
++  outportb(0x70, DAY_W_RTC);
+   int c = inportb(0x71);
+   return c;
+ }
+ 
+ int get_day_m()
+ {
+-  outportb(DAY_M_RTC,0x70);
++  outportb(0x70, DAY_M_RTC);
+   int c = inportb(0x71);
+   return c;
+ }
+ 
+ int get_month()
+ {
+-  outportb(MONTH_RTC,0x70);
++  outportb(0x70,MONTH_RTC);
+   int c = inportb(0x71);
+   return c;
+ }
+ 
+ int get_year()
+ {
+-  outportb(YEAR_RTC,0x70);
++  outportb(0x70, YEAR_RTC);
+   int c = inportb(0x71);
+   return c;
+ }
+
+Modified: trunk/misc/debug.c
+===================================================================
+--- trunk/misc/debug.c	2009-06-08 21:57:26 UTC (rev 89)
++++ trunk/misc/debug.c	2009-06-14 17:53:13 UTC (rev 90)
+@@ -37,7 +37,7 @@
+ #if defined(BOCHS_DEBUG)
+     register unsigned int i;
+     for ( i = 0; msg[i] != '\0'; i++ )
+-        outportb(msg[i],0xE9);
++        outportb(0xE9, msg[i]);
+ #endif
+ }
+ 
+@@ -47,6 +47,6 @@
+ static inline void dbg_bochs_send_cmd( const int port, const int cmd )
+ {
+ #if defined(BOCHS_DEBUG)
+-    outportb(cmd, port);
++    outportb(port, cmd);
+ #endif
+ }
+
+Modified: trunk/processore/handlers.c
+===================================================================
+--- trunk/processore/handlers.c	2009-06-08 21:57:26 UTC (rev 89)
++++ trunk/processore/handlers.c	2009-06-14 17:53:13 UTC (rev 90)
+@@ -181,10 +181,10 @@
+ 	  } else printf(&quot;irqn: %d\n&quot;, irqn);
+     }
+     else printf(&quot;IRQ N: %d E' arrivato qualcosa che non so gestire &quot;, irqn);
+-    if(irqn&lt;=8) outportb(0x20, MASTER_PORT);
++    if(irqn&lt;=8) outportb(MASTER_PORT, EOI);
+     else if(irqn&lt;=16){
+-      outportb(0x20, SLAVE_PORT);
+-      outportb(0x20, MASTER_PORT);
++      outportb(SLAVE_PORT, EOI);
++      outportb(MASTER_PORT, EOI);
+     }
+ }
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000090.html">[Dreamos-dev] r89 - in trunk: . hardware misc
+</A></li>
+	<LI>Next message: <A HREF="000092.html">[Dreamos-dev] r91 - in trunk: . doc hardware include	include/hardware mem processore shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#91">[ date ]</a>
+              <a href="thread.html#91">[ thread ]</a>
+              <a href="subject.html#91">[ subject ]</a>
+              <a href="author.html#91">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

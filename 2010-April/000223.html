@@ -1,0 +1,357 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r220 - in trunk: . fs include/fs include/shell	include/sys shell sys
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-April/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r220%20-%20in%20trunk%3A%20.%20fs%20include/fs%20include/shell%0A%09include/sys%20shell%20sys&In-Reply-To=%3C201004042238.o34McSod008752%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000222.html">
+   <LINK REL="Next"  HREF="000224.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r220 - in trunk: . fs include/fs include/shell	include/sys shell sys</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r220%20-%20in%20trunk%3A%20.%20fs%20include/fs%20include/shell%0A%09include/sys%20shell%20sys&In-Reply-To=%3C201004042238.o34McSod008752%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r220 - in trunk: . fs include/fs include/shell	include/sys shell sys">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Mon Apr  5 00:38:28 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000222.html">[Dreamos-dev] r219 - in trunk: . boot fs include/shell shell
+</A></li>
+        <LI>Next message: <A HREF="000224.html">[Dreamos-dev] r221 - in trunk: . fs sys
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#223">[ date ]</a>
+              <a href="thread.html#223">[ thread ]</a>
+              <a href="subject.html#223">[ subject ]</a>
+              <a href="author.html#223">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-04-05 00:23:53 +0200 (Mon, 05 Apr 2010)
+New Revision: 220
+
+Added:
+   trunk/include/sys/stat.h
+   trunk/sys/stat.c
+Modified:
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/fs/initrd.c
+   trunk/fs/vfs.c
+   trunk/include/fs/initrd.h
+   trunk/include/fs/vfs.h
+   trunk/include/shell/testing.h
+   trunk/include/sys/types.h
+   trunk/shell/commands.c
+   trunk/shell/testing.c
+Log:
+Iniziata a scriver libreria stat (sys/stat.h)
+Aggiunto comando tester test_stat
+Aggiornato Makefile
+
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2010-04-04 10:53:35 UTC (rev 219)
++++ trunk/Makefile	2010-04-04 22:23:53 UTC (rev 220)
+@@ -61,7 +61,8 @@
+       shell/commands.o\
+       shell/testing.o\
+       sys/utsname.o\
+-      sys/dirent.o
++      sys/dirent.o\
++      sys/stat.o
+ 
+ dreamos.img: bl.img kernel.bin
+ 	mv kernel.bin dreamos.img
+@@ -104,6 +105,7 @@
+ shell/commands.o: shell/commands.c
+ sys/utsname.o: sys/utsname.c
+ sys/dirent.o: sys/dirent.c
++sys/stat.o: sys/stat.c
+ 
+ utils:
+ 	make -f utils/Makefile
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-04-04 10:53:35 UTC (rev 219)
++++ trunk/fs/initrd.c	2010-04-04 22:23:53 UTC (rev 220)
+@@ -24,6 +24,7 @@
+ #include &lt;string.h&gt;
+ #include &lt;vfs.h&gt;
+ #include &lt;kheap.h&gt;
++#include &lt;sys/stat.h&gt;
+ 
+ char *module_start;
+ initrd_t *fs_specs;
+@@ -137,6 +138,11 @@
+ 	return nbyte;
+ }
+ 
++int initrd_stat(char* path, struct stat *buf){
++	printf(&quot;Initrd stat function\n&quot;);
++	return 0;
++}
++
+ int initrd_close(int fildes){
+ 	ird_descriptors[fildes].file_descriptor = -1;
+ 	ird_descriptors[fildes].cur_pos = 0;
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2010-04-04 10:53:35 UTC (rev 219)
++++ trunk/fs/vfs.c	2010-04-04 22:23:53 UTC (rev 220)
+@@ -54,6 +54,7 @@
+ 		mountpoint_list[i].operations.close = NULL;
+ 		mountpoint_list[i].operations.read = NULL;
+ 		mountpoint_list[i].operations.write = NULL;
++		mountpoint_list[i].stat_op.stat = NULL;
+  		i++;
+ 	}
+ 	
+@@ -68,6 +69,7 @@
+  	mountpoint_list[0].operations.open = &amp;initfs_open;
+  	mountpoint_list[0].operations.close = &amp;initrd_close;
+  	mountpoint_list[0].operations.read = &amp;initfs_read;
++ 	mountpoint_list[0].stat_op.stat = initrd_stat;
+  	//mountpoint_list[0].operations = kmalloc(sizeof(struct super_node_operations));
+ 
+ 	strcpy(mountpoint_list[1].mountpoint,&quot;/dev&quot;); 	
+
+Modified: trunk/include/fs/initrd.h
+===================================================================
+--- trunk/include/fs/initrd.h	2010-04-04 10:53:35 UTC (rev 219)
++++ trunk/include/fs/initrd.h	2010-04-04 22:23:53 UTC (rev 220)
+@@ -21,6 +21,7 @@
+ 
+ #include &lt;dirent.h&gt;
+ #include &lt;unistd.h&gt;
++#include &lt;sys/stat.h&gt;
+ 
+ #define FILENAME_LENGTH 64
+ #define MAX_FILES 32
+@@ -65,5 +66,6 @@
+ struct dirent *initrd_readdir(DIR *);
+ int initfs_open(const char *, int, ...);
+ ssize_t initfs_read(int, char *, size_t);
++int initrd_stat(char* path, struct stat *buf);
+ int initrd_close(int);
+ #endif
+
+Modified: trunk/include/fs/vfs.h
+===================================================================
+--- trunk/include/fs/vfs.h	2010-04-04 10:53:35 UTC (rev 219)
++++ trunk/include/fs/vfs.h	2010-04-04 22:23:53 UTC (rev 220)
+@@ -22,6 +22,7 @@
+ #include &lt;stddef.h&gt;
+ #include &lt;unistd.h&gt;
+ #include &lt;use.h&gt;
++#include &lt;sys/stat.h&gt;
+ 
+ #define MAX_MOUNTPOINT 10
+ #define MAX_FD _SC_OPEN_MAX
+@@ -45,6 +46,10 @@
+ 	int (*write)(int, void*, size_t);
+ };
+ 
++struct stat_operations{
++	int (*stat)(char*, struct stat*);
++};
++
+ /*!  \struct mountpoint_t
+      \brief Struttura dati che contiene le informazioni sui files system montati
+  */
+@@ -57,10 +62,11 @@
+ 		int dev_id; /**&lt; Device ID*/		
+ 		struct super_node_operations operations;
+ 		struct directory_operations dir_op;
++		struct stat_operations stat_op;
+ };
+ 
+ /*!  \struct file_descriptor
+-     \brief Struttura dati che le informazioni su di un file aperto
++     \brief Struttura dati che contiene le informazioni su di un file aperto
+  */
+ 
+ struct file_descriptor {
+
+Modified: trunk/include/shell/testing.h
+===================================================================
+--- trunk/include/shell/testing.h	2010-04-04 10:53:35 UTC (rev 219)
++++ trunk/include/shell/testing.h	2010-04-04 22:23:53 UTC (rev 220)
+@@ -28,5 +28,6 @@
+ void try_fsinit();
+ void try_syscall();
+ void show_fd();
++void test_stat();
+ 
+ #endif
+
+Added: trunk/include/sys/stat.h
+===================================================================
+--- trunk/include/sys/stat.h	2010-04-04 10:53:35 UTC (rev 219)
++++ trunk/include/sys/stat.h	2010-04-04 22:23:53 UTC (rev 220)
+@@ -0,0 +1,37 @@
++/*
++ * Dreamos
++ * stat.h
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++#ifndef _STAT_H
++#define _STAT_H
++
++#include &lt;sys/types.h&gt;
++
++/*!  \struct struct stat
++     \brief Struttura dati che contine le informazioni su di un file
++ */
++struct stat {
++	dev_t     st_dev; /**&lt; device id del file*/
++	
++	uid_t     st_uid; /**&lt; user id del file*/	
++	gid_t     st_gid; /**&lt; group id del file*/
++};
++
++
++int stat(const char *, struct stat *);
++
++#endif
+
+Modified: trunk/include/sys/types.h
+===================================================================
+--- trunk/include/sys/types.h	2010-04-04 10:53:35 UTC (rev 219)
++++ trunk/include/sys/types.h	2010-04-04 22:23:53 UTC (rev 220)
+@@ -21,6 +21,8 @@
+ 
+ typedef unsigned int ino_t;
+ typedef unsigned int dev_t;
++typedef unsigned int uid_t;
++typedef unsigned int gid_t;
+ 
+ typedef unsigned int mode_t;
+ typedef int ssize_t;
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-04-04 10:53:35 UTC (rev 219)
++++ trunk/shell/commands.c	2010-04-04 22:23:53 UTC (rev 220)
+@@ -490,6 +490,7 @@
+ 					{ &quot;try_open&quot;, try_open},					
+ 					{ &quot;try_syscall&quot;, try_syscall},
+ 					{ &quot;show_fd&quot;, show_fd},
++					{ &quot;test_stat&quot;, test_stat},
+ 					{ &quot;--help&quot;, help_tester },
+ 					};
+ 	if (argc != 2) {
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-04-04 10:53:35 UTC (rev 219)
++++ trunk/shell/testing.c	2010-04-04 22:23:53 UTC (rev 220)
+@@ -182,3 +182,12 @@
+ 	}
+ 	printf(&quot;\n&quot;);
+ }
++
++void test_stat(){
++	struct stat *stats;
++	printf(&quot;Testing stat functions\n&quot;);
++	stats = (struct stat*) kmalloc(sizeof(struct stat));
++	stat(&quot;/README&quot;, stats);
++	printf(&quot;%d\n&quot;, stats-&gt;st_dev);	
++	free(stats);	
++}
+
+Added: trunk/sys/stat.c
+===================================================================
+--- trunk/sys/stat.c	2010-04-04 10:53:35 UTC (rev 219)
++++ trunk/sys/stat.c	2010-04-04 22:23:53 UTC (rev 220)
+@@ -0,0 +1,35 @@
++/*
++ * Dreamos
++ * stat.c
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++#include &lt;vfs.h&gt;
++#include &lt;stdio.h&gt;
++#include &lt;sys/stat.h&gt;
++
++struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
++
++int stat(const char *path, struct stat *buf){
++	int mp_id;
++	mp_id = 0;
++	mp_id = get_mountpoint_id((char*) path);	
++	printf(&quot;%d\n&quot;, mp_id);
++	buf-&gt;st_dev = mp_id;
++	if(mountpoint_list[mp_id].stat_op.stat!=NULL) mountpoint_list[mp_id].stat_op.stat((char*)path, buf);
++	else printf(&quot;Null\n&quot;);
++	return 0;
++}
++
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000222.html">[Dreamos-dev] r219 - in trunk: . boot fs include/shell shell
+</A></li>
+	<LI>Next message: <A HREF="000224.html">[Dreamos-dev] r221 - in trunk: . fs sys
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#223">[ date ]</a>
+              <a href="thread.html#223">[ thread ]</a>
+              <a href="subject.html#223">[ subject ]</a>
+              <a href="author.html#223">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

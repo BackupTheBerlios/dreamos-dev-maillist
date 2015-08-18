@@ -1,0 +1,141 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r269 - in trunk: . fs shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-July/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r269%20-%20in%20trunk%3A%20.%20fs%20shell&In-Reply-To=%3C20100705145022.E35BD480E10%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000271.html">
+   <LINK REL="Next"  HREF="000273.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r269 - in trunk: . fs shell</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r269%20-%20in%20trunk%3A%20.%20fs%20shell&In-Reply-To=%3C20100705145022.E35BD480E10%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r269 - in trunk: . fs shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Mon Jul  5 16:50:22 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000271.html">[Dreamos-dev] r268 - in trunk: . shell
+</A></li>
+        <LI>Next message: <A HREF="000273.html">[Dreamos-dev] r270 - in trunk: . libc shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#272">[ date ]</a>
+              <a href="thread.html#272">[ thread ]</a>
+              <a href="subject.html#272">[ subject ]</a>
+              <a href="author.html#272">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-07-05 16:50:22 +0200 (Mon, 05 Jul 2010)
+New Revision: 269
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/initrd.c
+   trunk/shell/user_shell.c
+Log:
+Ora get_user torna 2 se legge un utente da passwd e un valore inferiore altrimenti.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-07-04 18:30:08 UTC (rev 268)
++++ trunk/fs/initrd.c	2010-07-05 14:50:22 UTC (rev 269)
+@@ -164,7 +164,9 @@
+ 		j++;
+ 	}			
+ 	ird_descriptors[fildes].cur_pos = read_pos;		
+-	if(read_pos == file_size) return 0;
++	if(read_pos == file_size) {
++		return 0; //Return an EOF
++	}
+ 	return nbyte;
+ }
+ 
+
+Modified: trunk/shell/user_shell.c
+===================================================================
+--- trunk/shell/user_shell.c	2010-07-04 18:30:08 UTC (rev 268)
++++ trunk/shell/user_shell.c	2010-07-05 14:50:22 UTC (rev 269)
+@@ -29,10 +29,11 @@
+ 	fd = open(&quot;/passwd&quot;, O_RDONLY,0);
+ 	if(fd != -1) printf(&quot;File passwd found\n&quot;);
+ 	else printf(&quot;not found\n&quot;);
+-	user_get(fd, &amp;checking_user);
+-	printf(&quot;name: %s - password: %s\n&quot;, checking_user.username, checking_user.password);	
+-	user_get(fd, &amp;checking_user);
+-	printf(&quot;name: %s - password: %s\n&quot;, checking_user.username, checking_user.password);
++	while(user_get(fd, &amp;checking_user)==2){
++		printf(&quot;name: %s - password: %s\n&quot;, checking_user.username, checking_user.password);	
++	}
++	//user_get(fd, &amp;checking_user);
++	//printf(&quot;name: %s - password: %s\n&quot;, checking_user.username, checking_user.password);
+ 	//strcpy(checking_user.username, appo);	
+ 	close(fd);
+ }
+@@ -41,6 +42,7 @@
+ 	int i=0;
+ 	char appo[50];	
+ 	int err = 1;
++	int status = 0;
+ 	memset(appo, '\0', 50);
+ //	printf(&quot;placeholder\n&quot;);	
+ 	while((i &lt; 50 || appo[i] != ':') &amp;&amp; err!=0){
+@@ -51,6 +53,8 @@
+ 		}
+ 		else i++;
+ 	}
++	if(err ==0) return err;
++	status++;
+ 	strcpy(checking_user-&gt;username, appo);	
+ 	i=0;
+ 	memset(appo, '\0', 50);
+@@ -62,6 +66,8 @@
+ 		}
+ 		else i++;		
+ 	}
++	//if(err ==0) return err;
++	status++;	
+ 	strcpy(checking_user-&gt;password, appo);
+-	return err;
++	return status;
+ }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000271.html">[Dreamos-dev] r268 - in trunk: . shell
+</A></li>
+	<LI>Next message: <A HREF="000273.html">[Dreamos-dev] r270 - in trunk: . libc shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#272">[ date ]</a>
+              <a href="thread.html#272">[ thread ]</a>
+              <a href="subject.html#272">[ subject ]</a>
+              <a href="author.html#272">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

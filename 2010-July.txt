@@ -1,0 +1,1945 @@
+From finarfin at mail.berlios.de  Fri Jul  2 13:24:24 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Fri,  2 Jul 2010 13:24:24 +0200
+Subject: [Dreamos-dev] r266 - in trunk: . include/shell shell
+Message-ID: <20100702112424.AA394480C24@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-07-02 13:24:24 +0200 (Fri, 02 Jul 2010)
+New Revision: 266
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/shell/user_shell.h
+   trunk/shell/user_shell.c
+Log:
+Iniziata funzione user_get. 
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/shell/user_shell.h
+===================================================================
+--- trunk/include/shell/user_shell.h	2010-06-30 08:45:57 UTC (rev 265)
++++ trunk/include/shell/user_shell.h	2010-07-02 11:24:24 UTC (rev 266)
+@@ -25,5 +25,6 @@
+ };
+ 
+ int user_chk(char *);
++int user_get(int, struct passwd_user *);
+ 
+ #endif
+
+Modified: trunk/shell/user_shell.c
+===================================================================
+--- trunk/shell/user_shell.c	2010-06-30 08:45:57 UTC (rev 265)
++++ trunk/shell/user_shell.c	2010-07-02 11:24:24 UTC (rev 266)
+@@ -25,14 +25,24 @@
+ int user_chk(char *username){
+ 	int fd = -1;
+ 	int i = 0;
+-	int err;
+-	char appo[50];
+-	struct passwd_user checking_user;
+-	memset(appo, '\0', 50);
++	int err;	
++	struct passwd_user checking_user;	
+ 	printf("Username provided: %s\n", username);
+ 	fd = open("/passwd", O_RDONLY,0);
+ 	if(fd != -1) printf("File passwd found\n");
+ 	else printf("not found\n");
++	user_get(fd, &checking_user);
++	//strcpy(checking_user.username, appo);
++	printf("%s - %s\n", username, checking_user.username);
++	close(fd);
++}
++
++int user_get(int fd, struct passwd_user *checking_user){
++	int i=0;
++	char appo[50];	
++	int err;
++	memset(appo, '\0', 50);
++//	printf("placeholder\n");
+ 	while(i < 50 || appo[i] != ':'){
+ 		err = read(fd, &appo[i], 1);
+ 		if(appo[i] == ':') {
+@@ -41,11 +51,6 @@
+ 		}
+ 		else i++;
+ 	}
+-	strcpy(checking_user.username, appo);
+-	printf("%s - %s\n", username, checking_user.username);
+-	close(fd);
++	strcpy(checking_user->username, appo);
++	return 0;
+ }
+-
+-struct passwd_user user_get(int fd){
+-	printf("placeholder\n");
+-}
+
+
+
+From finarfin at mail.berlios.de  Sat Jul  3 17:35:36 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sat,  3 Jul 2010 17:35:36 +0200
+Subject: [Dreamos-dev] r267 - in trunk: . boot files shell
+Message-ID: <20100703153536.CAC97480C93@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-07-03 17:35:36 +0200 (Sat, 03 Jul 2010)
+New Revision: 267
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/files/passwd
+   trunk/initfs
+   trunk/shell/user_shell.c
+Log:
+user_get ora legge correttamente username e password
+Il comando tester try_check ora controlla con tutti gli utenti presenti 
+in passwd.
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/files/passwd
+===================================================================
+--- trunk/files/passwd	2010-07-02 11:24:24 UTC (rev 266)
++++ trunk/files/passwd	2010-07-03 15:35:36 UTC (rev 267)
+@@ -1 +1,2 @@
+ root:password
++user:computer
+
+Modified: trunk/initfs
+===================================================================
+(Binary files differ)
+
+Modified: trunk/shell/user_shell.c
+===================================================================
+--- trunk/shell/user_shell.c	2010-07-02 11:24:24 UTC (rev 266)
++++ trunk/shell/user_shell.c	2010-07-03 15:35:36 UTC (rev 267)
+@@ -32,8 +32,10 @@
+ 	if(fd != -1) printf("File passwd found\n");
+ 	else printf("not found\n");
+ 	user_get(fd, &checking_user);
+-	//strcpy(checking_user.username, appo);
+-	printf("%s - %s\n", username, checking_user.username);
++	printf("name: %s - password: %s\n", checking_user.username, checking_user.password);	
++	user_get(fd, &checking_user);
++	printf("name: %s - password: %s\n", checking_user.username, checking_user.password);
++	//strcpy(checking_user.username, appo);	
+ 	close(fd);
+ }
+ 
+@@ -42,15 +44,26 @@
+ 	char appo[50];	
+ 	int err;
+ 	memset(appo, '\0', 50);
+-//	printf("placeholder\n");
++//	printf("placeholder\n");	
+ 	while(i < 50 || appo[i] != ':'){
+-		err = read(fd, &appo[i], 1);
++		err = read(fd, &appo[i], 1);		
+ 		if(appo[i] == ':') {
+ 			appo[i] = '\0'; 
+ 			break;
+ 		}
+ 		else i++;
+ 	}
+-	strcpy(checking_user->username, appo);
+-	return 0;
++	strcpy(checking_user->username, appo);	
++	i=0;
++	memset(appo, '\0', 50);
++	while(i<50 || appo[i]!='\n'){
++		err = read(fd, &appo[i], 1);		
++		if(appo[i] == '\n') {
++			appo[i] = '\0'; 
++			break;
++		}
++		else i++;		
++	}
++	strcpy(checking_user->password, appo);
++	return err;
+ }
+
+
+
+From finarfin at mail.berlios.de  Sun Jul  4 20:30:08 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun,  4 Jul 2010 20:30:08 +0200
+Subject: [Dreamos-dev] r268 - in trunk: . shell
+Message-ID: <20100704183008.83F7C480D6D@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-07-04 20:30:08 +0200 (Sun, 04 Jul 2010)
+New Revision: 268
+
+Modified:
+   trunk/dreamos.img
+   trunk/shell/user_shell.c
+Log:
+Modifiche minori
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/shell/user_shell.c
+===================================================================
+--- trunk/shell/user_shell.c	2010-07-03 15:35:36 UTC (rev 267)
++++ trunk/shell/user_shell.c	2010-07-04 18:30:08 UTC (rev 268)
+@@ -24,8 +24,6 @@
+  
+ int user_chk(char *username){
+ 	int fd = -1;
+-	int i = 0;
+-	int err;	
+ 	struct passwd_user checking_user;	
+ 	printf("Username provided: %s\n", username);
+ 	fd = open("/passwd", O_RDONLY,0);
+@@ -42,10 +40,10 @@
+ int user_get(int fd, struct passwd_user *checking_user){
+ 	int i=0;
+ 	char appo[50];	
+-	int err;
++	int err = 1;
+ 	memset(appo, '\0', 50);
+ //	printf("placeholder\n");	
+-	while(i < 50 || appo[i] != ':'){
++	while((i < 50 || appo[i] != ':') && err!=0){
+ 		err = read(fd, &appo[i], 1);		
+ 		if(appo[i] == ':') {
+ 			appo[i] = '\0'; 
+@@ -56,7 +54,7 @@
+ 	strcpy(checking_user->username, appo);	
+ 	i=0;
+ 	memset(appo, '\0', 50);
+-	while(i<50 || appo[i]!='\n'){
++	while((i<50 || appo[i]!='\n')&& err!=0){
+ 		err = read(fd, &appo[i], 1);		
+ 		if(appo[i] == '\n') {
+ 			appo[i] = '\0'; 
+
+
+
+From finarfin at mail.berlios.de  Mon Jul  5 16:50:22 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Mon,  5 Jul 2010 16:50:22 +0200
+Subject: [Dreamos-dev] r269 - in trunk: . fs shell
+Message-ID: <20100705145022.E35BD480E10@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-07-05 16:50:22 +0200 (Mon, 05 Jul 2010)
+New Revision: 269
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/initrd.c
+   trunk/shell/user_shell.c
+Log:
+Ora get_user torna 2 se legge un utente da passwd e un valore inferiore altrimenti.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-07-04 18:30:08 UTC (rev 268)
++++ trunk/fs/initrd.c	2010-07-05 14:50:22 UTC (rev 269)
+@@ -164,7 +164,9 @@
+ 		j++;
+ 	}			
+ 	ird_descriptors[fildes].cur_pos = read_pos;		
+-	if(read_pos == file_size) return 0;
++	if(read_pos == file_size) {
++		return 0; //Return an EOF
++	}
+ 	return nbyte;
+ }
+ 
+
+Modified: trunk/shell/user_shell.c
+===================================================================
+--- trunk/shell/user_shell.c	2010-07-04 18:30:08 UTC (rev 268)
++++ trunk/shell/user_shell.c	2010-07-05 14:50:22 UTC (rev 269)
+@@ -29,10 +29,11 @@
+ 	fd = open("/passwd", O_RDONLY,0);
+ 	if(fd != -1) printf("File passwd found\n");
+ 	else printf("not found\n");
+-	user_get(fd, &checking_user);
+-	printf("name: %s - password: %s\n", checking_user.username, checking_user.password);	
+-	user_get(fd, &checking_user);
+-	printf("name: %s - password: %s\n", checking_user.username, checking_user.password);
++	while(user_get(fd, &checking_user)==2){
++		printf("name: %s - password: %s\n", checking_user.username, checking_user.password);	
++	}
++	//user_get(fd, &checking_user);
++	//printf("name: %s - password: %s\n", checking_user.username, checking_user.password);
+ 	//strcpy(checking_user.username, appo);	
+ 	close(fd);
+ }
+@@ -41,6 +42,7 @@
+ 	int i=0;
+ 	char appo[50];	
+ 	int err = 1;
++	int status = 0;
+ 	memset(appo, '\0', 50);
+ //	printf("placeholder\n");	
+ 	while((i < 50 || appo[i] != ':') && err!=0){
+@@ -51,6 +53,8 @@
+ 		}
+ 		else i++;
+ 	}
++	if(err ==0) return err;
++	status++;
+ 	strcpy(checking_user->username, appo);	
+ 	i=0;
+ 	memset(appo, '\0', 50);
+@@ -62,6 +66,8 @@
+ 		}
+ 		else i++;		
+ 	}
++	//if(err ==0) return err;
++	status++;	
+ 	strcpy(checking_user->password, appo);
+-	return err;
++	return status;
+ }
+
+
+
+From finarfin at mail.berlios.de  Wed Jul  7 10:06:15 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Wed,  7 Jul 2010 10:06:15 +0200
+Subject: [Dreamos-dev] r270 - in trunk: . libc shell
+Message-ID: <20100707080615.1AB2E4809E9@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-07-07 10:06:14 +0200 (Wed, 07 Jul 2010)
+New Revision: 270
+
+Modified:
+   trunk/dreamos.img
+   trunk/libc/string.c
+   trunk/shell/testing.c
+   trunk/shell/user_shell.c
+Log:
+Eliminati diversi warning
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/libc/string.c
+===================================================================
+--- trunk/libc/string.c	2010-07-05 14:50:22 UTC (rev 269)
++++ trunk/libc/string.c	2010-07-07 08:06:14 UTC (rev 270)
+@@ -86,7 +86,7 @@
+ }
+ 
+ int strncmp(const char *s1, const char *s2, int n){
+-	_kstrncmp(s1,s2,n);
++	return _kstrncmp(s1,s2,n);
+ }
+ 
+ /*
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-07-05 14:50:22 UTC (rev 269)
++++ trunk/shell/testing.c	2010-07-07 08:06:14 UTC (rev 270)
+@@ -28,6 +28,7 @@
+ #include <fcntl.h>
+ #include <initrd.h>
+ #include <unistd.h>
++#include <user_shell.h>
+ 
+ //multiboot_info_t *boot_informations;
+ char *module_start;
+
+Modified: trunk/shell/user_shell.c
+===================================================================
+--- trunk/shell/user_shell.c	2010-07-05 14:50:22 UTC (rev 269)
++++ trunk/shell/user_shell.c	2010-07-07 08:06:14 UTC (rev 270)
+@@ -36,6 +36,7 @@
+ 	//printf("name: %s - password: %s\n", checking_user.username, checking_user.password);
+ 	//strcpy(checking_user.username, appo);	
+ 	close(fd);
++	return 1;
+ }
+ 
+ int user_get(int fd, struct passwd_user *checking_user){
+
+
+
+From finarfin at mail.berlios.de  Wed Jul  7 19:48:09 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Wed,  7 Jul 2010 19:48:09 +0200
+Subject: [Dreamos-dev] r271 - in trunk: . shell
+Message-ID: <20100707174809.9D7D8480D6D@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-07-07 19:48:09 +0200 (Wed, 07 Jul 2010)
+New Revision: 271
+
+Modified:
+   trunk/dreamos.img
+   trunk/shell/shell.c
+   trunk/shell/user_shell.c
+Log:
+Ora per accedere all'os bisogna inserire come utente o root o user
+Altrimenti occorre editare il file passwd a mano e scriverlo 
+nell'immagine dell'os.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2010-07-07 08:06:14 UTC (rev 270)
++++ trunk/shell/shell.c	2010-07-07 17:48:09 UTC (rev 271)
+@@ -134,10 +134,9 @@
+     printf(LNG_USER);
+     scanf ("%23s",current_user.username);
+     printf(LNG_USER_R);
+-  } while (!strlen(current_user.username));
+-  
+-  //user_chk(current_user.username);
+-  _kclear();
++  } while ((!strlen(current_user.username) || (user_chk(current_user.username)!=1)));
++    
++  _kclear();  
+   aalogo();
+   printf("\n\n\n\n");
+   argc=1;  
+
+Modified: trunk/shell/user_shell.c
+===================================================================
+--- trunk/shell/user_shell.c	2010-07-07 08:06:14 UTC (rev 270)
++++ trunk/shell/user_shell.c	2010-07-07 17:48:09 UTC (rev 271)
+@@ -25,18 +25,21 @@
+ int user_chk(char *username){
+ 	int fd = -1;
+ 	struct passwd_user checking_user;	
+-	printf("Username provided: %s\n", username);
++	//printf("Username provided: %s\n", username);
+ 	fd = open("/passwd", O_RDONLY,0);
+-	if(fd != -1) printf("File passwd found\n");
+-	else printf("not found\n");
++	/*if(fd != -1) printf("File passwd found\n");
++	else printf("not found\n");*/
++	if(fd<0) return 0;
+ 	while(user_get(fd, &checking_user)==2){
+-		printf("name: %s - password: %s\n", checking_user.username, checking_user.password);	
++		if(!strcmp(username, checking_user.username)) return 1;
++		//else printf("Not Found ");
++		//printf("name: %s - password: %s\n", checking_user.username, checking_user.password);	
+ 	}
+ 	//user_get(fd, &checking_user);
+ 	//printf("name: %s - password: %s\n", checking_user.username, checking_user.password);
+ 	//strcpy(checking_user.username, appo);	
+ 	close(fd);
+-	return 1;
++	return 0;
+ }
+ 
+ int user_get(int fd, struct passwd_user *checking_user){
+
+
+
+From finarfin at mail.berlios.de  Wed Jul  7 20:30:32 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Wed,  7 Jul 2010 20:30:32 +0200
+Subject: [Dreamos-dev] r272 - in trunk: . boot
+Message-ID: <20100707183032.6F003480D6D@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-07-07 20:30:32 +0200 (Wed, 07 Jul 2010)
+New Revision: 272
+
+Added:
+   trunk/boot/grub.img
+Removed:
+   trunk/boot/grub.img
+Modified:
+   trunk/README
+Log:
+Aggiornata immagine grub con i nuovi files. 
+Aggiornato readme.
+
+
+Modified: trunk/README
+===================================================================
+--- trunk/README	2010-07-07 17:48:09 UTC (rev 271)
++++ trunk/README	2010-07-07 18:30:32 UTC (rev 272)
+@@ -103,6 +103,8 @@
+ 	- a ------- L'Avvio -------
+ 
+ L'avvio di DreamOS contiene il loading di tutte le funzioni necessarie al funzionamento del S.O. e della CLI, alla fine dell'avvio verr? chiesto un Username che verr? usato in seguito nella CLI.
++Per poter accedere l'username deve essere definito nel file passwd. Di default sono definiti 2 utenti: root e user.
++Attualmente non viene richiesta alcuna password
+ 
+ 	- b ---- Uso della CLI ----
+ 
+
+Deleted: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Added: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+
+Property changes on: trunk/boot/grub.img
+___________________________________________________________________
+Added: svn:executable
+   + *
+Added: svn:mime-type
+   + application/octet-stream
+
+
+
+From dt- at mail.berlios.de  Wed Jul  7 21:32:28 2010
+From: dt- at mail.berlios.de (dt- at mail.berlios.de)
+Date: Wed,  7 Jul 2010 21:32:28 +0200
+Subject: [Dreamos-dev] r273 - trunk/utils
+Message-ID: <20100707193228.74243480D6D@sheep.berlios.de>
+
+Author: dt-
+Date: 2010-07-07 21:32:28 +0200 (Wed, 07 Jul 2010)
+New Revision: 273
+
+Added:
+   trunk/utils/passwd.pl
+Log:
+Aggiunto lo script passwd.pl per la gestione del file passwd
+
+
+Added: trunk/utils/passwd.pl
+===================================================================
+--- trunk/utils/passwd.pl	                        (rev 0)
++++ trunk/utils/passwd.pl	2010-07-07 19:32:28 UTC (rev 273)
+@@ -0,0 +1,63 @@
++#!/usr/bin/perl
++
++#TODO:
++# 1. rendere meno "forzato" e portabile il noecho della richiesta della password.
++# 2. flags.
++# 3. pulizia generale dello script.
++
++my $__script_version__="0.1";
++my $__script_author__="DT";
++my $__script_license__="New BSD License";
++
++my $filepath="../files/passwd";
++
++
++# Read Users
++
++my %passwd = ();
++my %junkdata = ();
++
++open(PASSWD, "+<", $filepath) or die("Can't open $filepath: $!");
++
++print "Current Users:\n";
++while(<PASSWD>) {
++	chomp($_);
++	my ($user, $password, @junk) = split(/:/);
++	print "$user\n";
++	if(@junk) {
++		print ".junkdata: @junk\n";
++	}
++	$passwd{$user}=$password;
++	$junkdata{$user}=@junkdata;
++}
++print "\n";
++# Add User
++
++print "username: ";
++$username = <>;
++chomp($username);
++print "$username\n";
++
++if(!($username =~ m/^(\w+)$/)) {
++	print "Invalid username \"$username\"\n";
++	exit 1;
++}
++if(exists $passwd{$username}) {
++	print "User \"$username\" exists.\n";
++	exit 1;
++}
++
++
++
++print "password: ";
++system("stty -echo");
++$password = <>;
++system("stty echo");
++chomp($password);
++print "$password\n";
++
++print "adduser $username:$password\n";
++
++print PASSWD "\n$username:$password";
++
++close(PASSWD);
+\ No newline at end of file
+
+
+Property changes on: trunk/utils/passwd.pl
+___________________________________________________________________
+Added: svn:executable
+   + *
+
+
+
+From dt- at mail.berlios.de  Wed Jul  7 22:44:50 2010
+From: dt- at mail.berlios.de (dt- at mail.berlios.de)
+Date: Wed,  7 Jul 2010 22:44:50 +0200
+Subject: [Dreamos-dev] r274 - trunk/utils
+Message-ID: <20100707204450.E5372480D6D@sheep.berlios.de>
+
+Author: dt-
+Date: 2010-07-07 22:44:50 +0200 (Wed, 07 Jul 2010)
+New Revision: 274
+
+Modified:
+   trunk/utils/passwd.pl
+Log:
+Fixato un bug in passwd.pl e ora tenta di trovare il file passwd in "../files/passwd", poi "files/passwd" e "./passwd"
+
+
+Modified: trunk/utils/passwd.pl
+===================================================================
+--- trunk/utils/passwd.pl	2010-07-07 19:32:28 UTC (rev 273)
++++ trunk/utils/passwd.pl	2010-07-07 20:44:50 UTC (rev 274)
+@@ -1,5 +1,7 @@
+-#!/usr/bin/perl
++#!/usr/bin/perl -w
+ 
++use Cwd;
++
+ #TODO:
+ # 1. rendere meno "forzato" e portabile il noecho della richiesta della password.
+ # 2. flags.
+@@ -9,8 +11,15 @@
+ my $__script_author__="DT";
+ my $__script_license__="New BSD License";
+ 
+-my $filepath="../files/passwd";
++my $filepath;
+ 
++if (-e &Cwd::realpath("../files/passwd")) {
++	$filepath=&Cwd::realpath("../files/passwd");
++} elsif (-e "files/passwd") {
++	$filepath="files/passwd";
++} else {
++	$filepath="passwd";
++}
+ 
+ # Read Users
+ 
+@@ -28,7 +37,7 @@
+ 		print ".junkdata: @junk\n";
+ 	}
+ 	$passwd{$user}=$password;
+-	$junkdata{$user}=@junkdata;
++	$junkdata{$user}=@junk;
+ }
+ print "\n";
+ # Add User
+@@ -58,6 +67,6 @@
+ 
+ print "adduser $username:$password\n";
+ 
+-print PASSWD "\n$username:$password";
++print PASSWD "$username:$password\n";
+ 
+ close(PASSWD);
+\ No newline at end of file
+
+
+
+From finarfin at mail.berlios.de  Mon Jul 12 23:26:35 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Mon, 12 Jul 2010 23:26:35 +0200
+Subject: [Dreamos-dev] r275 - in trunk: . include include/lng include/shell
+	shell
+Message-ID: <20100712212635.5D315480AB7@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-07-12 23:26:35 +0200 (Mon, 12 Jul 2010)
+New Revision: 275
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/lng/en.h
+   trunk/include/lng/it.h
+   trunk/include/shell/user_shell.h
+   trunk/include/use.h
+   trunk/shell/shell.c
+   trunk/shell/testing.c
+   trunk/shell/user_shell.c
+Log:
+Aggiunto supporto per controllo password (ma non viene richiesta) 
+Aggiunti messaggi per richiesta password nei files della lingua.
+Modificato l'header di user_chk
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/lng/en.h
+===================================================================
+--- trunk/include/lng/en.h	2010-07-07 20:44:50 UTC (rev 274)
++++ trunk/include/lng/en.h	2010-07-12 21:26:35 UTC (rev 275)
+@@ -29,6 +29,7 @@
+ #define LNG_BITMAP "\t- Number bitmap's elements:"
+ #define LNG_SHELL "Loading the shell"
+ #define LNG_USER "[?] Enter your username: "
++#define LNG_PWD "[?] Insert your password\n"
+ #define LNG_USER_R "[x] Please, insert your username :)\n"
+ #define LNG_UNKNOWN_CMD "Unknown command:"
+ #define LNG_MOUSE_SETUP "Setting up mouse driver.."
+
+Modified: trunk/include/lng/it.h
+===================================================================
+--- trunk/include/lng/it.h	2010-07-07 20:44:50 UTC (rev 274)
++++ trunk/include/lng/it.h	2010-07-12 21:26:35 UTC (rev 275)
+@@ -31,6 +31,7 @@
+ #define LNG_SHELL "Carico la shell"
+ #define LNG_USER "[?] Inserisci il nome utente: "
+ #define LNG_USER_R "[x] Per favore, inserisci il nome utente :)\n"
++#define LNG_PWD "[?] Per favore, inserisci la password\n"
+ #define LNG_UNKNOWN_CMD "Comando sconosciuto:"
+ #define LNG_MOUSE_SETUP "Inizializzo il driver del mouse.."
+ #define LNG_MOUSE_REMOVE "Disattivo il driver del mouse.."
+
+Modified: trunk/include/shell/user_shell.h
+===================================================================
+--- trunk/include/shell/user_shell.h	2010-07-07 20:44:50 UTC (rev 274)
++++ trunk/include/shell/user_shell.h	2010-07-12 21:26:35 UTC (rev 275)
+@@ -19,12 +19,18 @@
+ #ifndef USER_SHELL_H
+ #define USER_SHELL_H
+ 
++typedef enum password_ctrl {
++	NONE,
++	CLEAR,
++	MD5
++} pwd_t;
++
+ struct passwd_user {
+ 	char username[50];
+ 	char password[50];
+ };
+ 
+-int user_chk(char *);
++int user_chk(char *, char *);
+ int user_get(int, struct passwd_user *);
+-
++//int check_pwd(struct passwd, char*);
+ #endif
+
+Modified: trunk/include/use.h
+===================================================================
+--- trunk/include/use.h	2010-07-07 20:44:50 UTC (rev 274)
++++ trunk/include/use.h	2010-07-12 21:26:35 UTC (rev 275)
+@@ -1,5 +1,5 @@
+ /*
+- * En.h
++ * It.h
+  *  This program is free software; you can redistribute it and/or modify
+  *  it under the terms of the GNU General Public License as published by
+  *  the Free Software Foundation; either version 2 of the License, or
+@@ -14,57 +14,60 @@
+  *  along with this program; if not, write to the Free Software
+  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+-#ifndef _EN_H_
+-#define _EN_H_
+ 
+-#define LNG_SITE "\nSite: "
+-#define LNG_GDT "Initialize GDT   "
+-#define LNG_IDT "Initialize IDT   "
+-#define LNG_PAGING "Enabling Paging: "
+-#define LNG_PIT8253 "Initialize PIT    "
+-#define LNG_PIC8259 "Initialize PIC8259    "
+-#define LNG_CPU "\nCPU: "
+-#define LNG_FREERAM "Free RAM:"
+-#define LNG_FREEPAGE "\t- Number free page:"
+-#define LNG_BITMAP "\t- Number bitmap's elements:"
+-#define LNG_SHELL "Loading the shell"
+-#define LNG_USER "[?] Enter your username: "
+-#define LNG_USER_R "[x] Please, insert your username :)\n"
+-#define LNG_UNKNOWN_CMD "Unknown command:"
+-#define LNG_MOUSE_SETUP "Setting up mouse driver.."
+-#define LNG_MOUSE_REMOVE "Setting down mouse driver.."
+-#define LNG_MOUSE_MID "\n[+] Mouse driver: central key pressed!"
+-#define LNG_MOUSE_RIGHT  "\n[+] Mouse driver: right key pressed!"
+-#define LNG_MOUSE_LEFT  "\n[+] Mouse driver: left key pressed!"
+-#define LNG_WELCOME "\t\t.: Welcome to DreamOS :.\n\n"
+-#define LNG_VFS "\nPreparing VFS\n"
++#ifndef _IT_H_
++#define _IT_H_
+ 
++#define LNG_SITE "\nSito: "
++#define LNG_GDT "Inizializzo GDT   "
++#define LNG_IDT "Inizializzo IDT   "
++#define LNG_PAGING "Abilito Paging: "
++#define LNG_PIT8253 "Inizializzo PIT    "
++#define LNG_PIC8259 "Inizializzo PIC8259    "
++#define LNG_CPU "\nProcessore: "
++#define LNG_FREERAM "Ram Disposizione:"
++#define LNG_FREEPAGE "\t- Numero Pagine a disposizione:"
++#define LNG_BITMAP "\t- Numero elementi della bitmap:"
++#define LNG_SHELL "Carico la shell"
++#define LNG_USER "[?] Inserisci il nome utente: "
++#define LNG_USER_R "[x] Per favore, inserisci il nome utente :)\n"
++#define LNG_PWD "[?] Per favore, inserisci la password\n"
++#define LNG_UNKNOWN_CMD "Comando sconosciuto:"
++#define LNG_MOUSE_SETUP "Inizializzo il driver del mouse.."
++#define LNG_MOUSE_REMOVE "Disattivo il driver del mouse.."
++#define LNG_MOUSE_MID "\n[+] Mouse driver: rilevato tasto centrale premuto!"
++#define LNG_MOUSE_RIGHT "\n[+] Mouse driver: rilevato tasto destro premuto!"
++#define LNG_MOUSE_LEFT "\n[+] Mouse driver: rilevato tasto sinistro premuto!"
++#define LNG_WELCOME "\t\t.: Benvenuto in DreamOS :.\n\n"
++#define LNG_VFS "\nInizializzo VFS\n"
++
+ // DATE ME NOE!
+-// MONTHS
+-#define LNG_DATE_JAN "January"
+-#define LNG_DATE_FEB "February"
+-#define LNG_DATE_MAR "March"
+-#define LNG_DATE_APR "April"
+-#define LNG_DATE_MAY "May"
+-#define LNG_DATE_JUN "June"
+-#define LNG_DATE_JUL "July"
+-#define LNG_DATE_AUG "August"
+-#define LNG_DATE_SEP "September"
+-#define LNG_DATE_OCT "October"
+-#define LNG_DATE_NOV "November"
+-#define LNG_DATE_DEC "December"
+-// DAYS
+-#define LNG_DAY_SUN "Sunday"
+-#define LNG_DAY_MON "Monday"
+-#define LNG_DAY_TUE "Tuesday"
+-#define LNG_DAY_WED "Wednesday"
+-#define LNG_DAY_THU "Thursday"
+-#define LNG_DAY_FRI "Friday"
+-#define LNG_DAY_SAT "Saturday"
+-// HOURS
+-#define LNG_HOUR_SUMM "Summer hour"
+-#define LNG_HOUR_WINT "Winter hour"
+-#define LNG_TIMESTAMP "It's "
+-#define LNG_TIMESTAMP2 " of "
+-#define LNG_TIMESTAMP3 " of "
++// MESI: sereno variabile in tutto il nord Italia
++#define LNG_DATE_JAN "Gennaio"
++#define LNG_DATE_FEB "Febbraio"
++#define LNG_DATE_MAR "Marzo"
++#define LNG_DATE_APR "Aprile"
++#define LNG_DATE_MAY "Maggio"
++#define LNG_DATE_JUN "Giugno"
++#define LNG_DATE_JUL "Luglio"
++#define LNG_DATE_AUG "Agosto"
++#define LNG_DATE_SEP "Settembre"
++#define LNG_DATE_OCT "Ottobre"
++#define LNG_DATE_NOV "Novembre"
++#define LNG_DATE_DEC "Dicembre"
++// GIORNI: Foschia in Sardegna e coste tirreniche
++#define LNG_DAY_SUN "Domenica"
++#define LNG_DAY_MON "Lunedi"
++#define LNG_DAY_TUE "Martedi"
++#define LNG_DAY_WED "Mercoledi"
++#define LNG_DAY_THU "Giovedi"
++#define LNG_DAY_FRI "Venerdi"
++#define LNG_DAY_SAT "Sabato"
++// ORE: Tutto il resto si becca un bel maltempo.
++#define LNG_HOUR_SUMM "Ora legale"
++#define LNG_HOUR_WINT "Ora solare"
++#define LNG_TIMESTAMP "Sono le "
++#define LNG_TIMESTAMP2 " del "
++#define LNG_TIMESTAMP3 " di "
++
+ #endif
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2010-07-07 20:44:50 UTC (rev 274)
++++ trunk/shell/shell.c	2010-07-12 21:26:35 UTC (rev 275)
+@@ -97,7 +97,7 @@
+ {
+   
+   char *cmd_ptr;
+- 
++  char password[30];
+   static struct cmd shell_cmd[NUM_COM] = {
+ 	{ "aalogo",   aalogo      },
+ 	{ "clear",    _kclear     },
+@@ -125,6 +125,7 @@
+   hst_flag = 0;
+   memset(cmd, '\0', CMD_LEN);
+   memset(current_user.username, '\0', USER_LEN);
++  memset(password, '\0', USER_LEN);
+   memset(current_user.cur_path, '\0', CURPATH_LEN);  
+   _kcolor(BRIGHT_BLUE);
+   printf(LNG_WELCOME);
+@@ -134,7 +135,11 @@
+     printf(LNG_USER);
+     scanf ("%23s",current_user.username);
+     printf(LNG_USER_R);
+-  } while ((!strlen(current_user.username) || (user_chk(current_user.username)!=1)));
++    #ifdef PWD_CHECK
++    printf(LNG_PWD);
++    scanf ("%23s",password);
++    #endif
++  } while ((!strlen(current_user.username) || (user_chk(current_user.username, password)!=1)));
+     
+   _kclear();  
+   aalogo();
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-07-07 20:44:50 UTC (rev 274)
++++ trunk/shell/testing.c	2010-07-12 21:26:35 UTC (rev 275)
+@@ -136,7 +136,7 @@
+ 	memset(test_name, '\0', 50);
+ 	printf("Please insert a username: "); 
+ 	scanf("%s", test_name);
+-	user_chk(test_name);
++	user_chk(test_name, test_name);
+ }
+ 
+ void try_open(){
+
+Modified: trunk/shell/user_shell.c
+===================================================================
+--- trunk/shell/user_shell.c	2010-07-07 20:44:50 UTC (rev 274)
++++ trunk/shell/user_shell.c	2010-07-12 21:26:35 UTC (rev 275)
+@@ -22,7 +22,7 @@
+ #include <fcntl.h>
+ #include <string.h>
+  
+-int user_chk(char *username){
++int user_chk(char *username, char* usr_pwd){
+ 	int fd = -1;
+ 	struct passwd_user checking_user;	
+ 	//printf("Username provided: %s\n", username);
+@@ -31,7 +31,11 @@
+ 	else printf("not found\n");*/
+ 	if(fd<0) return 0;
+ 	while(user_get(fd, &checking_user)==2){
++		#ifdef PWD_CHECK
++		if(!strcmp(username, checking_user.username) && !strcmp(usr_pwd, checking_user.password)) return 1;
++		#else
+ 		if(!strcmp(username, checking_user.username)) return 1;
++		#endif
+ 		//else printf("Not Found ");
+ 		//printf("name: %s - password: %s\n", checking_user.username, checking_user.password);	
+ 	}
+@@ -75,3 +79,4 @@
+ 	strcpy(checking_user->password, appo);
+ 	return status;
+ }
++
+
+
+
+From osiris_h4ck at mail.berlios.de  Thu Jul 15 12:34:03 2010
+From: osiris_h4ck at mail.berlios.de (osiris_h4ck at mail.berlios.de)
+Date: Thu, 15 Jul 2010 12:34:03 +0200
+Subject: [Dreamos-dev] r276 - in trunk: . doc include utils
+	utils/eltorito_iso utils/eltorito_iso/boot
+	utils/eltorito_iso/boot/grub
+Message-ID: <20100715103403.B9FF1480BE7@sheep.berlios.de>
+
+Author: osiris_h4ck
+Date: 2010-07-15 12:34:03 +0200 (Thu, 15 Jul 2010)
+New Revision: 276
+
+Added:
+   trunk/doc/help.txt
+Modified:
+   trunk/include/version.h
+   trunk/initfs
+   trunk/start.sh
+   trunk/utils/eltorito_gen.sh
+   trunk/utils/eltorito_iso/boot/dreamos.img
+   trunk/utils/eltorito_iso/boot/grub/stage2_eltorito
+   trunk/utils/eltorito_iso/initfs
+Log:
+- script eltorito in fase di miglioramento: ora e' implementato nello start.sh
+- ripulito il codice 'help' dello start.sh, ora e' un file ad occuparsi di quest'ultimo
+
+altri aggiornamenti in arrivo (a breve).
+
+
+
+
+Added: trunk/doc/help.txt
+===================================================================
+--- trunk/doc/help.txt	                        (rev 0)
++++ trunk/doc/help.txt	2010-07-15 10:34:03 UTC (rev 276)
+@@ -0,0 +1,76 @@
++	             
++	        The DreamOS Operating System
++		        Init Script
++		           ----
++		            --
++		                    
++
++
++Usage: ./start.sh options command language
++---------------------------------------------------------------
++Starting DreamOS Emulation:
++
++Usage: ./start.sh qemu  -> to use Qemu Emulator
++       ./start.sh bochs -> to use Bochs Emulator
++be sure you have one of those, else you can try it from
++floppy drive, or boot it form your grub.. DreamOS can! :) 
++
++However you have the possibility to choose if you want to 
++compile DreamOS or only lunch the 'Emulator'.
++If you want to compile, use the USE Flags '--compile' then
++the command, like:"
++
++Usage: ./start.sh --compile emulator
++or any command you like to compile before.
++---------------------------------------------------------------
++
++Also you can chose the language for the boot message, it
++can be very important to understanding the OS and do the
++debug.
++
++So please add the argv[3] into your option to this launch
++script, something like that:
++
++Usage: ./start.sh --compile emulator language
++where, now, language supported is 'it' or 'en'
++---------------------------------------------------------------
++
++If you want, you can install DreamOS on your floppy
++So, it's very simple, just type install in argv[1] then
++your test on emulators:"
++
++Usage: ./start.sh floppy_install
++---------------------------------------------------------------
++
++If you want to install DreamOS into your grub, the step
++is very simple, just grub into your argv[1] :-)
++Please, be sure you have python."
++
++Usage: ./start.sh grub
++---------------------------------------------------------------
++
++If you want, you can create a DreamOS ISO Image Disk
++to burn it on a cdrom and boot it from a real PC.
++Make sure you have installed mkisofs from cdrkit package.
++The command is like this:
++
++Usage: ./start.sh create_iso
++---------------------------------------------------------------
++
++If you want, you can create a DreamOS FileSystem
++You know, this is *VERY* important :)
++To add the file and then re-create the FS, put you files
++into files/ and do:
++
++Usage: ./start.sh create_fs
++
++Also you should know that this process is maked during the
++compilation of DreamOS.
++---------------------------------------------------------------
++
++If you want, you can create a DreamOS Floppy ISO Image
++to burn it on a cdrom and boot it from a real PC.
++Make sure you have installed genisoimage from cdrkit package.
++
++Usage: ./start.sh eltorito_iso
++---------------------------------------------------------------
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2010-07-12 21:26:35 UTC (rev 275)
++++ trunk/include/version.h	2010-07-15 10:34:03 UTC (rev 276)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "2.1"
+ #define EXTRAVERSION "-trunk"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r251"
++#define REV_NUM "-r275"
+
+Modified: trunk/initfs
+===================================================================
+(Binary files differ)
+
+Modified: trunk/start.sh
+===================================================================
+--- trunk/start.sh	2010-07-12 21:26:35 UTC (rev 275)
++++ trunk/start.sh	2010-07-15 10:34:03 UTC (rev 276)
+@@ -15,69 +15,7 @@
+ if [ "$1" != "--compile" ]; then
+ 
+ if [ "$1" == "help" ]; then
+-echo ""
+-echo "	    The DreamOS Operating System"
+-echo "		    Init Script"
+-echo ""
+-echo "Usage: '$0 'options' 'command' 'language'"
+-echo "------------------------------------------------------"
+-echo "Starting DreamOS Emulation:"
+-echo ""
+-echo "Usage: '$0 qemu'  -> to use Qemu Emulator"
+-echo "       '$0 bochs' -> to use Bochs Emulator"
+-echo "be sure you have one of those, else you can try it from"
+-echo "floppy drive, or boot it form your grub.. DreamOS can! :) "
+-echo ""
+-echo "However you have the possibility to choose if you want to "
+-echo "compile DreamOS or only lunch the 'Emulator'."
+-echo "If you want to compile, use the USE Flags '--compile' then"
+-echo "the command, like:"
+-echo ""
+-echo "Usage: '$0' '--compile' 'emulator'"
+-echo "or any command you like to compile before."
+-echo "------------------------------------------------------"
+-echo "Also you can chose the language for the boot message, it"
+-echo "can be very important to understanding the OS and do the"
+-echo "			 debug."
+-echo ""
+-echo "So please add the argv[3] into your option to this launch "
+-echo "script, something like that:"
+-echo ""
+-echo "Usage: '$0' '--compile' 'emulator' 'language'"
+-echo "where, now, language supported is 'it' or 'en'"
+-echo "------------------------------------------------------"
+-echo ""
+-echo "If you want, you can install DreamOS on your floppy"
+-echo "So, it's very simple, just type install in argv[1] then"
+-echo "your test on emulators:"
+-echo ""
+-echo "Usage: '$0' 'floppy_install'"
+-echo "------------------------------------------------------"
+-echo ""
+-echo "If you want to install DreamOS into your grub, the step"
+-echo "is very simple, just grub into your argv[1] :-)"
+-echo "Please, be sure you have python."
+-echo ""
+-echo "Usage: '$0' 'grub'"
+-echo "------------------------------------------------------"
+-echo ""
+-echo "If you want, you can create a DreamOS ISO Image Disk"
+-echo "to burn it on a cdrom and boot it from a real PC."
+-echo "Make sure you have installed mkisofs from cdrkit package."
+-echo "The command is like this:"
+-echo ""
+-echo "Usage: '$0' 'create_iso'"
+-echo "------------------------------------------------------"
+-echo ""
+-echo "If you want, you can create a DreamOS FileSystem"
+-echo "You know, this is *VERY* important :)"
+-echo "To add the file and then re-create the FS, put you files"
+-echo "into files/ and do:"
+-echo ""
+-echo "Usage: '$0' 'create_fs'"
+-echo "Also you should know that this process is do during the"
+-echo "compilation of DreamOS."
+-echo "------------------------------------------------------"
++	less doc/help.txt
+ exit 1
+ 
+ elif [ "$1" == "qemu" ] || [ "$1" == "bochs" ]; then
+@@ -124,6 +62,17 @@
+   echo "---------------------------------------------"
+   exit
+ 
++   
++elif [ "$1" == "eltorito_iso" ]; then
++   
++  echo "--------------------------------------------- "
++  echo "Launching ISO Creating script ..."
++  echo ""
++  sh utils/eltorito_gen.sh
++  echo "done."
++  echo "--------------------------------------------- "
++exit
++
+ elif [ "$1" == "create_fs" ]; then
+ 
+   echo "--------------------------------------------- "
+@@ -139,16 +88,13 @@
+   exit
+ 
+ elif [ "$1" == "" ]; then
+-  echo "Error: No command inserted!"
+-  echo "----------------------->"
+-  echo "Usage: '$0 help'"
++  echo "no command passed; please, read the help!"
++  echo "Usage: $0 help"
+   exit
+ 
+ else
+-  echo "'$1' is not a command known to me."
+-  echo "Please, read the help!"
+-  echo "----------------------->"
+-  echo "Usage: '$0 help'"
++  echo "'$1' is not a command that I known to me, please, read the help!"
++  echo "Usage: $0 help"
+   exit
+ 
+ fi
+@@ -245,9 +191,8 @@
+ 
+ 
+ elif [ "$2" == "" ]; then
+-  echo "Error: No commands inserted!"
+-  echo "----------------------->"
+-  echo "Usage: '$0 help'"
++  echo "the argv[2] is empty, and it will be not."
++  echo "Usage: $0 help"
+   exit
+ 
+ 
+@@ -263,11 +208,19 @@
+   echo "--------------------------------------------- "
+   exit
+ 
++elif [ "$1" == "eltorito_iso" ]; then
++      
++  echo "--------------------------------------------- "
++  echo "Launching ISO Creating script ..."
++  echo ""
++  sh utils/eltorito_gen.sh
++  echo "done."
++  echo "--------------------------------------------- "
++  exit
++
+ else
+-  echo "'$2' is not a command known to me."
+-  echo "Please, read the help!"
+-  echo "----------------------->"
+-  echo "Usage: '$0 help'"
++  echo "'$2' is not a command that I known to me, please, read the help!"
++  echo "Usage: $0 help"
+   exit
+ 
+ fi  
+
+Modified: trunk/utils/eltorito_gen.sh
+===================================================================
+--- trunk/utils/eltorito_gen.sh	2010-07-12 21:26:35 UTC (rev 275)
++++ trunk/utils/eltorito_gen.sh	2010-07-15 10:34:03 UTC (rev 276)
+@@ -1,19 +1,19 @@
+ #!/bin/bash
+-#Script for build an eltorito iso image of dreamos
++# Script for build an eltorito iso image of dreamos
+ 
+ echo "Welcome to DreamOS iso generator ver 0.1 - Development"
+-if [ -f ../dreamos.img ] 
++if [ -f dreamos.img ] 
+ 	then 
+ 		echo "File dreamos.img found"
+-		cp ../dreamos.img ./eltorito_iso/boot/
+-		if [ -f ../initfs ]
++		cp dreamos.img ./utils/eltorito_iso/boot/
++		if [ -f initfs ]
+ 		then
+ 			echo "File initfs found: replacing it"
+-			cp ../initfs ./eltorito_iso
++			cp initfs ./utils/eltorito_iso
+ 		else
+ 			echo "file initfs not found"
+ 		fi
+-		 genisoimage -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o dreamos.iso eltorito_iso
++		 genisoimage -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o dreamos.iso utils/eltorito_iso
+ 	else
+ 		echo "No dreamOS file found"
+ fi
+
+Modified: trunk/utils/eltorito_iso/boot/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/utils/eltorito_iso/boot/grub/stage2_eltorito
+===================================================================
+(Binary files differ)
+
+Modified: trunk/utils/eltorito_iso/initfs
+===================================================================
+(Binary files differ)
+
+
+
+From blackz at mail.berlios.de  Sat Jul 17 22:09:55 2010
+From: blackz at mail.berlios.de (blackz at mail.berlios.de)
+Date: Sat, 17 Jul 2010 22:09:55 +0200
+Subject: [Dreamos-dev] r277 - trunk
+Message-ID: <20100717200955.9F986480BC1@sheep.berlios.de>
+
+Author: blackz
+Date: 2010-07-17 22:09:55 +0200 (Sat, 17 Jul 2010)
+New Revision: 277
+
+Modified:
+   trunk/README
+   trunk/start.sh
+Log:
+Modifiche minori al file README e start.sh
+
+
+
+Modified: trunk/README
+===================================================================
+--- trunk/README	2010-07-15 10:34:03 UTC (rev 276)
++++ trunk/README	2010-07-17 20:09:55 UTC (rev 277)
+@@ -9,32 +9,29 @@
+ 	b. Scaricare da SVN
+ 	c. Compilare DreamOS
+ 	d. Mettere su Floppy (opzionale)
+-	e. Fare la entry per GRUB (opzionale)
++	e. Creare la entry per GRUB (opzionale)
+ 3. Usare DreamOS
+ 	a. L'avvio
+ 	b. Uso della CLI
+ 4. Feedback
+ 	a. Come segnalare bug
+-	b. Come mandare un feedback
++	b. Come inoltrare un feedback
+ 
+ 
+ - 1 -----------------------
+ --- Cosa ? DreamOS --------
+ 
+-Il DreamOS ? un sistema operativo open source rilasciato sotto licenza GPLv3 sviluppato partendo da 0 puramente per scopi didattici o comunque per capire come funzionano i sistemi operativi.
++DreamOS ? un sistema operativo open source rilasciato sotto licenza GPLv3 sviluppato partendo da 0 puramente per scopi didattici o comunque per capire come funzionano i sistemi operativi.
+ Il team di sviluppo attuale ? composto dagli sviluppatori
+ 
+-Ivan - Finarfin (http://earyrian.elenhost.org)
++Alessandro (celeron) 
++Diego Stamigni (osiris_h4ck)
++Finessi Manuel (theking0)
++Giuseppe Massaro (n3mes1s)
++Ivan Gualandri (finarfin)
++Lorenzo De Liso (blackz)
++Michele Morelli (dt-)
+ 
+-e dai contributori:
+-
+-Osiris
+-Celeron
+-Hamcha
+-m0nt0.
+-vinc94
+-tk0
+-
+ 	- a -- Cosa NON ? DreamOS -
+ 
+ DreamOS non ? un sistema operativo completo e pronto per essere utilizzato per l'uso quotidiano, non ? basato su Kernel esistenti e non ? supportato/sponsorizzato da alcuna societ?.
+@@ -46,7 +43,7 @@
+ 
+ 	- a - Requisiti necessari -
+ 
+-DreamOS ? un sistema operativo sviluppato per funzionare su cpu con architettura Intel x86/IA32 (i386/i686) e attualmente ? sviluppato in modo da partire da floppy anche se, utilizzando GRUB, si pu? farlo partire avendo l'immagine compilata sull'Hard-disk.
++DreamOS ? un sistema operativo sviluppato per funzionare su cpu con architettura Intel x86/IA32 (i386/i686) e attualmente ? sviluppato in modo da partire da floppy anche se, utilizzando GRUB, ? possibile farlo partire avendo l'immagine compilata sull'Hard-disk.
+ DreamOS pu? essere anche emulato usando Software come qEmu o Bochs.
+ 
+ Per compilare DreamOS bisogna prima di tutto avere una distribuzione Linux installata, poi avere i seguenti software:
+@@ -93,7 +90,7 @@
+ 	boot
+ Naturalmenet modificando /path/al/file/dreamos.img con la path al file dreamos.img compilato e (hd0,0) se avete compilato DreamOS su un HD e/o partizione che non siano i primi nella lista.
+ 
+-Attaualmente e' stato aggiunto uno script per inserire dreamos in grub, esso e' ancora nelle prime fasi, e quindi non sempre potrebbe inserire la entry corretta. Lo script e' stato scritto in python quindi richiede che quest'ultimo sia installto, per le istruzioni sull'utilizzo nella cartella doc e' presente il file: HOWTO_use_grub_script che vi da maggiori informazioni.
++Attaualmente ? stato aggiunto uno script per inserire dreamos in grub, esso ? ancora nelle prime fasi, e quindi non sempre potrebbe inserire la entry corretta. Lo script ? stato scritto in python quindi richiede che quest'ultimo sia installto, per le istruzioni sull'utilizzo nella cartella doc ? presente il file: HOWTO_use_grub_script che pu? fornirvi maggiori informazioni.
+ 
+ - 3 -----------------------
+ ---- Usare DreamOS --------
+@@ -132,9 +129,9 @@
+ 	http://forum.osdev.it/
+ Oppure ci trovate su irc: 
+ 	Server: irc.azzurra.org
+-	Chan: #dreamos
+-	
++	Chan: #dreamos	
+ 
+-DreamOS 2003-2009 by finarfin/shainer
++
++2003-2010, DreamOS. 
+ http://www.dreamos.org
+ http://www.osdev.it
+
+Modified: trunk/start.sh
+===================================================================
+--- trunk/start.sh	2010-07-15 10:34:03 UTC (rev 276)
++++ trunk/start.sh	2010-07-17 20:09:55 UTC (rev 277)
+@@ -88,12 +88,12 @@
+   exit
+ 
+ elif [ "$1" == "" ]; then
+-  echo "no command passed; please, read the help!"
++  echo "no command passed; please read the help!"
+   echo "Usage: $0 help"
+   exit
+ 
+ else
+-  echo "'$1' is not a command that I known to me, please, read the help!"
++  echo "'$2' is an unknown command to me, please read the help!"
+   echo "Usage: $0 help"
+   exit
+ 
+@@ -219,7 +219,7 @@
+   exit
+ 
+ else
+-  echo "'$2' is not a command that I known to me, please, read the help!"
++  echo "'$2' is an unknown command to me, please read the help!"
+   echo "Usage: $0 help"
+   exit
+ 
+
+
+
+From finarfin at mail.berlios.de  Sun Jul 18 00:16:17 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun, 18 Jul 2010 00:16:17 +0200
+Subject: [Dreamos-dev] r278 - in trunk: . drivers include/drivers
+	include/lng shell
+Message-ID: <20100717221617.58992480BC7@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-07-18 00:16:17 +0200 (Sun, 18 Jul 2010)
+New Revision: 278
+
+Modified:
+   trunk/dreamos.img
+   trunk/drivers/keyboard.c
+   trunk/include/drivers/keyboard.h
+   trunk/include/lng/it.h
+   trunk/shell/user_shell.c
+Log:
+Introdotta funzione set_shadow utile per l'implementazione dell'input da tastiera 
+oscurato su schermo
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/drivers/keyboard.c
+===================================================================
+--- trunk/drivers/keyboard.c	2010-07-17 20:09:55 UTC (rev 277)
++++ trunk/drivers/keyboard.c	2010-07-17 22:16:17 UTC (rev 278)
+@@ -80,6 +80,8 @@
+ 
+ extern unsigned int last_tab;
+ 
++int shadow=0;
++
+ /*
+  * The keyboard handler
+  */
+@@ -228,7 +230,7 @@
+ 	    curmap = key_it_map;
+ 
+         //printf ("%d", sc);
+-        putchar (curmap[sc]);
++        if(shadow==0) putchar (curmap[sc]);
+ 
+         /* Update buffer */
+ 	if (STEP(buf_w) == buf_r)
+@@ -305,3 +307,9 @@
+         goto loop;
+     return c;
+ }
++
++int  set_shadow(int value){
++	if(value>1 || value < 0) return -1;
++	else shadow = value;
++	return shadow;
++}
+
+Modified: trunk/include/drivers/keyboard.h
+===================================================================
+--- trunk/include/drivers/keyboard.h	2010-07-17 20:09:55 UTC (rev 277)
++++ trunk/include/drivers/keyboard.h	2010-07-17 22:16:17 UTC (rev 278)
+@@ -56,11 +56,18 @@
+ 
+ #define BUFSIZE        256
+ 
++#define ENABLED		   1
++#define DISABLED       0
++
+ /* Procedures */
++
++extern int shadow;
++
+ void keyboard_isr (void);
+ void keyboard_enable (void);
+ void keyboard_disable (void);
+ void _ksetleds (int, int, int);
++int  set_shadow(int);
+ int  _kgetch (void);
+ 
+ #endif
+
+Modified: trunk/include/lng/it.h
+===================================================================
+--- trunk/include/lng/it.h	2010-07-17 20:09:55 UTC (rev 277)
++++ trunk/include/lng/it.h	2010-07-17 22:16:17 UTC (rev 278)
+@@ -31,7 +31,7 @@
+ #define LNG_SHELL "Carico la shell"
+ #define LNG_USER "[?] Inserisci il nome utente: "
+ #define LNG_USER_R "[x] Per favore, inserisci il nome utente :)\n"
+-#define LNG_PWD "[?] Per favore, inserisci la password\n"
++#define LNG_PWD "[?] Per favore, inserisci la password "
+ #define LNG_UNKNOWN_CMD "Comando sconosciuto:"
+ #define LNG_MOUSE_SETUP "Inizializzo il driver del mouse.."
+ #define LNG_MOUSE_REMOVE "Disattivo il driver del mouse.."
+
+Modified: trunk/shell/user_shell.c
+===================================================================
+--- trunk/shell/user_shell.c	2010-07-17 20:09:55 UTC (rev 277)
++++ trunk/shell/user_shell.c	2010-07-17 22:16:17 UTC (rev 278)
+@@ -80,3 +80,5 @@
+ 	return status;
+ }
+ 
++int pwd_check(char* password, char* realpass){
++}
+
+
+
+From finarfin at mail.berlios.de  Sun Jul 25 09:27:06 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun, 25 Jul 2010 09:27:06 +0200
+Subject: [Dreamos-dev] r279 - in trunk: . fs include include/shell libc mem
+	shell
+Message-ID: <20100725072707.094FD480CE1@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-07-25 09:27:06 +0200 (Sun, 25 Jul 2010)
+New Revision: 279
+
+Modified:
+   trunk/.bochsrc
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/fs/vfs.c
+   trunk/include/shell/commands.h
+   trunk/include/shell/testing.h
+   trunk/include/use.h
+   trunk/include/version.h
+   trunk/kernel.lds
+   trunk/libc/stdio.c
+   trunk/mem/kheap.c
+   trunk/mem/paging.c
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+   trunk/shell/testing.c
+   trunk/shell/user_shell.c
+Log:
+Aggiunta possibilita di inserire password senza che questa sia visibile a schermo (ora disabilitata)
+Corretti alcuni errori della stampa decimali di printf
+Modificato script del linker. 
+Aggiunto comando try_shadow.
+
+
+Modified: trunk/.bochsrc
+===================================================================
+--- trunk/.bochsrc	2010-07-17 22:16:17 UTC (rev 278)
++++ trunk/.bochsrc	2010-07-25 07:27:06 UTC (rev 279)
+@@ -60,8 +60,8 @@
+ #display_library: term
+ #display_library: win32, options="legacyF12" # use F12 to toggle mouse
+ #display_library: wx
+-#display_library: x, options="gui_debug"
+-display_library: x
++display_library: x, options="gui_debug"
++#display_library: x
+ #=======================================================================
+ # ROMIMAGE:
+ # The ROM BIOS controls what the PC does when it first powers on.
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2010-07-17 22:16:17 UTC (rev 278)
++++ trunk/fs/fcntl.c	2010-07-25 07:27:06 UTC (rev 279)
+@@ -60,7 +60,7 @@
+ 	}
+ 	strcpy(newpath, path);	
+ 	error = get_abs_path((char*) newpath);
+-	//printf("After get_abs: %s %s\n", newpath, current_user.cur_path);
++	//printf("After get_abs: %s %s\n", newpath, current_user.cur_path);	
+     mpid = get_mountpoint_id((char*) newpath);		
+ 	//printf("Cur_fd: %d\n",cur_fd);
+ 	if(mpid >-1) {
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2010-07-17 22:16:17 UTC (rev 278)
++++ trunk/fs/vfs.c	2010-07-25 07:27:06 UTC (rev 279)
+@@ -109,7 +109,7 @@
+ int get_mountpoint_id(char *path){
+        int i = 0;
+        int last=-1;
+-       while(i<MAX_MOUNTPOINT ){
++       while(i<MAX_MOUNTPOINT ){						
+                        if(!_kstrncmp(path, mountpoint_list[i].mountpoint, strlen(mountpoint_list[i].mountpoint))) {                 
+ 							   if(strlen(mountpoint_list[i].mountpoint) > strlen(mountpoint_list[last].mountpoint) && i>0)  
+                                		last = i;
+
+Modified: trunk/include/shell/commands.h
+===================================================================
+--- trunk/include/shell/commands.h	2010-07-17 22:16:17 UTC (rev 278)
++++ trunk/include/shell/commands.h	2010-07-25 07:27:06 UTC (rev 279)
+@@ -25,7 +25,7 @@
+ 
+ #include <shell.h>
+ #include <kheap.h>
+-#define MAX_TEST 12
++#define MAX_TEST 13
+ 
+ extern int argc;
+ extern char **argv;
+
+Modified: trunk/include/shell/testing.h
+===================================================================
+--- trunk/include/shell/testing.h	2010-07-17 22:16:17 UTC (rev 278)
++++ trunk/include/shell/testing.h	2010-07-25 07:27:06 UTC (rev 279)
+@@ -30,5 +30,6 @@
+ void try_check();
+ void show_fd();
+ void test_stat();
++void try_shadow();
+ 
+ #endif
+
+Modified: trunk/include/use.h
+===================================================================
+--- trunk/include/use.h	2010-07-17 22:16:17 UTC (rev 278)
++++ trunk/include/use.h	2010-07-25 07:27:06 UTC (rev 279)
+@@ -70,4 +70,6 @@
+ #define LNG_TIMESTAMP2 " del "
+ #define LNG_TIMESTAMP3 " di "
+ 
++#define LNG_TEST "Username provided\n"
++
+ #endif
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2010-07-17 22:16:17 UTC (rev 278)
++++ trunk/include/version.h	2010-07-25 07:27:06 UTC (rev 279)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "2.1"
+ #define EXTRAVERSION "-trunk"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r275"
++#define REV_NUM "-r279"
+
+Modified: trunk/kernel.lds
+===================================================================
+--- trunk/kernel.lds	2010-07-17 22:16:17 UTC (rev 278)
++++ trunk/kernel.lds	2010-07-25 07:27:06 UTC (rev 279)
+@@ -1,31 +1,26 @@
+-OUTPUT_FORMAT("binary")
++OUTPUT_FORMAT("elf")
+ OUTPUT_ARCH(i386)
+ ENTRY(start)
++phys = 0x00100000;
+ SECTIONS
+ {
+-
+-    .text 0x100000 :
+-    {
+-        code = .; _code = .; __code = .;
+-        *(.text)
+-        . = ALIGN(4096);
+-    }
+-
+-    .data :
+-    {
+-        data = .; _data = .; __data = .;
+-        *(.data)
+-        *(.rodata)
+-        . = ALIGN(4096);
+-    }
+-
+-    .bss :
+-    {
+-        bss = .; _bss = .; __bss = .;
+-        *(.bss)
+-        . = ALIGN(4096);
+-    }
+-
+-    end = .; _end = .; __end = .;
++  .text phys : AT(phys) {
++    code = .;
++    *(.text)
++    *(.rodata)
++    . = ALIGN(4096);
++  }
++  .data : AT(phys + (data - code))
++  {
++    data = .;
++    *(.data)
++    . = ALIGN(4096);
++  }
++  .bss : AT(phys + (bss - code))
++  {
++    bss = .;
++    *(.bss)
++    . = ALIGN(4096);
++  }
++  end = .;
+ }
+-
+
+Modified: trunk/libc/stdio.c
+===================================================================
+--- trunk/libc/stdio.c	2010-07-17 22:16:17 UTC (rev 278)
++++ trunk/libc/stdio.c	2010-07-25 07:27:06 UTC (rev 279)
+@@ -122,7 +122,7 @@
+     char field[5];
+     int len=0;
+     int i=0;
+-
++    	
+     /* Start variabile argument's list */
+     va_start (ap, format);
+ 
+@@ -154,15 +154,15 @@
+             if (*format == 'd' || *format == 'i') {
+                 int varint = va_arg (ap, int);
+                 if(varint >= 0)
+-					_kntos (cur_p, varint, 10);
++					_kntos (cur_p, (unsigned int)varint, 10);
+ 				else _knntos (cur_p, varint, 10);
+             }
+             if (*format == 'u') {
+-                unsigned int uint = va_arg (ap, int);
++                unsigned int uint = va_arg (ap, unsigned int);
+                 _kntos (cur_p, uint, 10);
+             }
+             if (*format == 'x' || *format == 'X') {
+-                int varhex = va_arg (ap, int);
++                int varhex = va_arg (ap, unsigned int);
+                 _kntos (cur_p, varhex, 16);
+             }
+             if (*format == 'n')
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2010-07-17 22:16:17 UTC (rev 278)
++++ trunk/mem/kheap.c	2010-07-25 07:27:06 UTC (rev 279)
+@@ -81,7 +81,7 @@
+ {
+     heap_t* new_heap;
+     heap_node_t* first_node;
+-	heap_node_t* apic_node;
++	//heap_node_t* apic_node;
+ 	heap_node_t* module_node;
+ 
+     new_heap = (heap_t*)KHEAP_LIST_ADDRESS;
+@@ -103,7 +103,7 @@
+     printf("  First heap created...\n");   
+     printf("  Size: %d "
+ 	   "  Tot mem: %d\n", (new_heap->free_list)->size, tot_mem);	    
+-	apic_node = alloc_node();
++	/*apic_node = alloc_node();
+ 	apic_node->start_address = 0xFEC00000;
+ 	apic_node->size = 4096;
+ 	apic_node->next = NULL;
+@@ -112,7 +112,7 @@
+ 	apic_node->start_address = 0xFEE00000;
+ 	apic_node->size = 4096;
+ 	apic_node->next = NULL;
+-	insert_list (apic_node, &(new_heap->used_list));
++	insert_list (apic_node, &(new_heap->used_list));*/
+ 	module_node = alloc_node();
+ 	module_node->start_address = (unsigned int)module_start;
+ 	module_node->size = module_end - (unsigned int)module_start;	
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2010-07-17 22:16:17 UTC (rev 278)
++++ trunk/mem/paging.c	2010-07-25 07:27:06 UTC (rev 279)
+@@ -240,7 +240,8 @@
+     //printf("Test\n");
+         /* Ricava l'indirizzo che ha causato l'eccezione */
+     asm ("movl %%cr2, %0":"=r" (fault_addr));
+-	//printf("Fault addr: %d\n", fault_addr); 
++    //if(fault_addr > 0) printf("Ok ");
++	//printf("Fault addr: %u\n", fault_addr); 
+ 	//while(1);
+     if ((ecode & PF_MASK) == 2 || (ecode & PF_MASK) == 0) {
+     pdir = BITRANGE (fault_addr, 22, 31);
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-07-17 22:16:17 UTC (rev 278)
++++ trunk/shell/commands.c	2010-07-25 07:27:06 UTC (rev 279)
+@@ -525,6 +525,7 @@
+ 					{ "show_fd", show_fd},
+ 					{ "test_stat", test_stat},
+ 					{ "try_check", try_check},
++					{ "try_shadow", try_shadow},
+ 					{ "--help", help_tester },
+ 					};
+ 	if (argc != 2) {
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2010-07-17 22:16:17 UTC (rev 278)
++++ trunk/shell/shell.c	2010-07-25 07:27:06 UTC (rev 279)
+@@ -39,6 +39,7 @@
+ #include <clock.h>
+ #include <sys/utsname.h>
+ #include <user_shell.h>
++#include <debug.h>
+ 
+ #define NUM_COM 30
+ userenv_t current_user;
+@@ -122,11 +123,12 @@
+ 
+ 
+   int i = 0;
++  int ret_val;
+   hst_flag = 0;
+   memset(cmd, '\0', CMD_LEN);
+   memset(current_user.username, '\0', USER_LEN);
+-  memset(password, '\0', USER_LEN);
+-  memset(current_user.cur_path, '\0', CURPATH_LEN);  
++  memset(password, '\0', 30);
++  memset(current_user.cur_path, '\0', CURPATH_LEN); 
+   _kcolor(BRIGHT_BLUE);
+   printf(LNG_WELCOME);
+   _kcolor(WHITE);
+@@ -139,7 +141,10 @@
+     printf(LNG_PWD);
+     scanf ("%23s",password);
+     #endif
+-  } while ((!strlen(current_user.username) || (user_chk(current_user.username, password)!=1)));
++    //printf("Vediamo %s\n", current_user.username);
++    dbg_bochs_print((const unsigned char*)"Asking username");
++    ret_val = user_chk(current_user.username, password);
++  } while ((!strlen(current_user.username) || ret_val!=1));
+     
+   _kclear();  
+   aalogo();
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-07-17 22:16:17 UTC (rev 278)
++++ trunk/shell/testing.c	2010-07-25 07:27:06 UTC (rev 279)
+@@ -210,3 +210,11 @@
+ 	printf("Uid: %d\n", stats->st_uid);
+ 	free(stats);	
+ }
++
++void try_shadow(){
++	char stringa[30];
++	set_shadow(ENABLED);
++	scanf("%s", stringa);
++	set_shadow(DISABLED);
++	printf("%s\n", stringa);
++}
+
+Modified: trunk/shell/user_shell.c
+===================================================================
+--- trunk/shell/user_shell.c	2010-07-17 22:16:17 UTC (rev 278)
++++ trunk/shell/user_shell.c	2010-07-25 07:27:06 UTC (rev 279)
+@@ -21,11 +21,20 @@
+ #include <vfs.h>
+ #include <fcntl.h>
+ #include <string.h>
+- 
++#include <debug.h>
++#include <use.h>
++
+ int user_chk(char *username, char* usr_pwd){
+ 	int fd = -1;
+-	struct passwd_user checking_user;	
+-	//printf("Username provided: %s\n", username);
++	struct passwd_user checking_user;
++	//char *path = kmalloc(sizeof(char) * 8);
++	//memset(path,0,8);
++	//strcpy(path, "/passwd");		
++	memset(checking_user.username, '\0', 50);
++	memset(checking_user.password, '\0', 50);
++	/*printf("Username provided: %s\n");*/
++	puts(username);
++	dbg_bochs_print((const unsigned char*)"Logging In\n");
+ 	fd = open("/passwd", O_RDONLY,0);
+ 	/*if(fd != -1) printf("File passwd found\n");
+ 	else printf("not found\n");*/
+@@ -41,7 +50,7 @@
+ 	}
+ 	//user_get(fd, &checking_user);
+ 	//printf("name: %s - password: %s\n", checking_user.username, checking_user.password);
+-	//strcpy(checking_user.username, appo);	
++	//strcpy(checking_user.username, appo);		
+ 	close(fd);
+ 	return 0;
+ }
+
+
+
+From finarfin at mail.berlios.de  Sun Jul 25 09:28:44 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun, 25 Jul 2010 09:28:44 +0200
+Subject: [Dreamos-dev] r280 - in trunk: . shell
+Message-ID: <20100725072844.37B3E480CE1@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-07-25 09:28:44 +0200 (Sun, 25 Jul 2010)
+New Revision: 280
+
+Modified:
+   trunk/dreamos.img
+   trunk/shell/testing.c
+Log:
+Aggiunta memset a try_shadow per pulire la stringa.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-07-25 07:27:06 UTC (rev 279)
++++ trunk/shell/testing.c	2010-07-25 07:28:44 UTC (rev 280)
+@@ -213,6 +213,7 @@
+ 
+ void try_shadow(){
+ 	char stringa[30];
++	memset(stringa, '\0', 30);
+ 	set_shadow(ENABLED);
+ 	scanf("%s", stringa);
+ 	set_shadow(DISABLED);
+
+
+

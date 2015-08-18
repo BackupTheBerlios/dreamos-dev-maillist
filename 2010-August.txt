@@ -1,0 +1,1051 @@
+From finarfin at mail.berlios.de  Wed Aug  4 16:42:34 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Wed,  4 Aug 2010 16:42:34 +0200
+Subject: [Dreamos-dev] r281 - in trunk: . fs hardware include/fs shell
+Message-ID: <20100804144234.3F3C6480EC5@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-08-04 16:42:34 +0200 (Wed, 04 Aug 2010)
+New Revision: 281
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/fs/initrd.c
+   trunk/hardware/pic8259.c
+   trunk/include/fs/initrd.h
+   trunk/shell/commands.c
+   trunk/shell/user_shell.c
+Log:
+Eliminata chiamata da init_idt e init_gdt in pic8259.c
+Sistemata gestione dei descrittori di files in initrd_open
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2010-07-25 07:28:44 UTC (rev 280)
++++ trunk/fs/fcntl.c	2010-08-04 14:42:34 UTC (rev 281)
+@@ -42,8 +42,7 @@
+ 	char *newpath;
+ 	va_list ap;
+ 	va_start(ap, oflags);
+-	ret_fd = 0;	
+-	//printf("Path: %s\n", path);	
++	ret_fd = 0;		
+ 	prova = va_arg(ap, int);
+ 	newpath = kmalloc(CURPATH_LEN * sizeof(char));
+ 	memset(newpath, '\0', CURPATH_LEN);
+@@ -59,6 +58,7 @@
+ 		return -1;
+ 	}
+ 	strcpy(newpath, path);	
++	//printf("Path: %s %s\n", path, newpath);	
+ 	error = get_abs_path((char*) newpath);
+ 	//printf("After get_abs: %s %s\n", newpath, current_user.cur_path);	
+     mpid = get_mountpoint_id((char*) newpath);		
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-07-25 07:28:44 UTC (rev 280)
++++ trunk/fs/initrd.c	2010-08-04 14:42:34 UTC (rev 281)
+@@ -102,48 +102,52 @@
+ 	int j = 0;
+ 	int ret_fd = -1;
+ 	module_var = fs_headers;
++	//printf("J vale: %d fs_spec: %d cur_idfd: %d\n", j, fs_specs->nfiles, cur_irdfd);
+ 	if(cur_irdfd >= MAX_INITRD_DESCRIPTORS) {
+ 		int i=0;
+ 		cur_irdfd=0;
+ 		while(ird_descriptors[i].file_descriptor!=-1 && i < MAX_INITRD_DESCRIPTORS) i++;			
+ 		cur_irdfd = i;
++		//printf("i: %d\n", i);
+ 	}
+-	else {
+-		while (j < fs_specs->nfiles) {
+-			if(!strcmp(path, module_var[j].fileName)){
+-				if(module_var[j].file_type == FS_DIRECTORY || module_var[j].file_type == FS_MOUNTPOINT)
+-					return -1;
+-				ird_descriptors[cur_irdfd].file_descriptor	= j;
+-				//printf("%s Found. Size: %d FS fd val: %d - ID File val: %d\n", path, module_var[j].length, cur_irdfd, ird_descriptors[cur_irdfd].file_descriptor);
+-				ret_fd = cur_irdfd;				
+-				//printf("ret_fd: %d --- %d\n", cur_irdfd, j);
+-				ird_descriptors[cur_irdfd].cur_pos = 0;
+-				if(flags&O_APPEND) {
+-					printf("Appendiamoci\n");
+-					ird_descriptors[cur_irdfd].cur_pos = module_var[j].length;
+-				}
+-				//else printf("Pero' non ci appendiamo\n");
+-				return cur_irdfd++; 
++	while (j < fs_specs->nfiles) {
++		//printf(".");
++		if(!strcmp(path, module_var[j].fileName)){
++			if(module_var[j].file_type == FS_DIRECTORY || module_var[j].file_type == FS_MOUNTPOINT)
++			//Erroneus file type
++				return -1;
++			ird_descriptors[cur_irdfd].file_descriptor	= j;
++			ret_fd = cur_irdfd;				
++			//printf("ret_fd: %d --- %d\n", cur_irdfd, j);
++			ird_descriptors[cur_irdfd].cur_pos = 0;
++			if(flags&O_APPEND) {
++				printf("Appendiamoci\n");
++				ird_descriptors[cur_irdfd].cur_pos = module_var[j].length;
+ 			}
+-			j++;
++			//else printf("Pero' non ci appendiamo\n");
++			return cur_irdfd++; 
+ 		}
+-		if(flags&O_CREAT) {
+-			printf("O_CREAT Flag\n");
+-			if(fs_specs->nfiles < MAX_FILES ){			
+-				module_var[fs_specs->nfiles].magic=0xBF;
+-				strcpy(module_var[fs_specs->nfiles].fileName, path);
+-				module_var[fs_specs->nfiles].file_type = FS_FILE;
+-				module_var[fs_specs->nfiles].uid = current_user.uid;
+-				module_var[fs_specs->nfiles].offset = ++fs_end;
+-				module_var[fs_specs->nfiles].length = 0;
+-				ird_descriptors[cur_irdfd].file_descriptor	= fs_specs->nfiles;
+-				ird_descriptors[cur_irdfd].cur_pos = 0;
+-				fs_specs->nfiles++;				
+-				return cur_irdfd++; 
+-			}
+-			return -1;
++		j++;
++	}
++	//printf("\n");
++	if(flags&O_CREAT) {
++		printf("O_CREAT Flag\n");
++		if(fs_specs->nfiles < MAX_FILES ){			
++			module_var[fs_specs->nfiles].magic=0xBF;
++			strcpy(module_var[fs_specs->nfiles].fileName, path);
++			module_var[fs_specs->nfiles].file_type = FS_FILE;
++			module_var[fs_specs->nfiles].uid = current_user.uid;
++			module_var[fs_specs->nfiles].offset = ++fs_end;
++			module_var[fs_specs->nfiles].length = 0;
++			ird_descriptors[cur_irdfd].file_descriptor	= fs_specs->nfiles;
++			ird_descriptors[cur_irdfd].cur_pos = 0;
++			fs_specs->nfiles++;				
++			return cur_irdfd++; 
+ 		}
++		return -1;
+ 	}
++	
++	printf("Qua\n");
+ 	return -1;	
+ }
+ 
+
+Modified: trunk/hardware/pic8259.c
+===================================================================
+--- trunk/hardware/pic8259.c	2010-07-25 07:28:44 UTC (rev 280)
++++ trunk/hardware/pic8259.c	2010-08-04 14:42:34 UTC (rev 281)
+@@ -85,8 +85,8 @@
+     enable_IRQ(TIMER);
+     enable_IRQ(TO_SLAVE_PIC);
+    
+-    init_idt();
+-    init_gdt();
++    //init_idt();
++    //init_gdt();
+ 
+     setup_IRQ();
+     asm("sti");
+
+Modified: trunk/include/fs/initrd.h
+===================================================================
+--- trunk/include/fs/initrd.h	2010-07-25 07:28:44 UTC (rev 280)
++++ trunk/include/fs/initrd.h	2010-08-04 14:42:34 UTC (rev 281)
+@@ -50,8 +50,8 @@
+     \brief File Descriptor relativo ai files aperti.
+  */
+ struct initrd_fd{
+-	int file_descriptor;
+-	int cur_pos;
++	int file_descriptor; /*!< id del file aperto all'interno del file system (posizione nel vettore dei files */
++	int cur_pos; /*!< Posizione attuale all'interno del file, per operazioni di lettura/scrittura*/
+ };
+ 
+ typedef struct initrd_t initrd_t;
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-07-25 07:28:44 UTC (rev 280)
++++ trunk/shell/commands.c	2010-08-04 14:42:34 UTC (rev 281)
+@@ -570,7 +570,7 @@
+ 					printf("Type your text here, actually only one line available!!\n");
+ 					scanf("%s", text);
+ 					write(fd,text, strlen(text));
+-					close(fd);
++					if(close(fd)==-1) printf("something went wrong\n");
+ 				}
+ 			}
+ 		}
+
+Modified: trunk/shell/user_shell.c
+===================================================================
+--- trunk/shell/user_shell.c	2010-07-25 07:28:44 UTC (rev 280)
++++ trunk/shell/user_shell.c	2010-08-04 14:42:34 UTC (rev 281)
+@@ -31,8 +31,7 @@
+ 	//memset(path,0,8);
+ 	//strcpy(path, "/passwd");		
+ 	memset(checking_user.username, '\0', 50);
+-	memset(checking_user.password, '\0', 50);
+-	/*printf("Username provided: %s\n");*/
++	memset(checking_user.password, '\0', 50);	
+ 	puts(username);
+ 	dbg_bochs_print((const unsigned char*)"Logging In\n");
+ 	fd = open("/passwd", O_RDONLY,0);
+
+
+
+From finarfin at mail.berlios.de  Thu Aug  5 19:51:31 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Thu,  5 Aug 2010 19:51:31 +0200
+Subject: [Dreamos-dev] r282 - in trunk: . include include/lng shell
+Message-ID: <20100805175131.EE450480EFA@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-08-05 19:51:31 +0200 (Thu, 05 Aug 2010)
+New Revision: 282
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/lng/en.h
+   trunk/include/use.h
+   trunk/shell/shell.c
+   trunk/shell/user_shell.c
+Log:
+Fixati alcuni problemi del controllo di password. Anche se resta disattivato.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/lng/en.h
+===================================================================
+--- trunk/include/lng/en.h	2010-08-04 14:42:34 UTC (rev 281)
++++ trunk/include/lng/en.h	2010-08-05 17:51:31 UTC (rev 282)
+@@ -29,7 +29,7 @@
+ #define LNG_BITMAP "\t- Number bitmap's elements:"
+ #define LNG_SHELL "Loading the shell"
+ #define LNG_USER "[?] Enter your username: "
+-#define LNG_PWD "[?] Insert your password\n"
++#define LNG_PWD "[?] Insert your password "
+ #define LNG_USER_R "[x] Please, insert your username :)\n"
+ #define LNG_UNKNOWN_CMD "Unknown command:"
+ #define LNG_MOUSE_SETUP "Setting up mouse driver.."
+
+Modified: trunk/include/use.h
+===================================================================
+--- trunk/include/use.h	2010-08-04 14:42:34 UTC (rev 281)
++++ trunk/include/use.h	2010-08-05 17:51:31 UTC (rev 282)
+@@ -31,7 +31,7 @@
+ #define LNG_SHELL "Carico la shell"
+ #define LNG_USER "[?] Inserisci il nome utente: "
+ #define LNG_USER_R "[x] Per favore, inserisci il nome utente :)\n"
+-#define LNG_PWD "[?] Per favore, inserisci la password\n"
++#define LNG_PWD "[?] Per favore, inserisci la password: "
+ #define LNG_UNKNOWN_CMD "Comando sconosciuto:"
+ #define LNG_MOUSE_SETUP "Inizializzo il driver del mouse.."
+ #define LNG_MOUSE_REMOVE "Disattivo il driver del mouse.."
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2010-08-04 14:42:34 UTC (rev 281)
++++ trunk/shell/shell.c	2010-08-05 17:51:31 UTC (rev 282)
+@@ -45,6 +45,7 @@
+ userenv_t current_user;
+ int hst_flag;
+ char cmd[CMD_LEN];
++//#define PWD_CHECK 1
+ /*struct cmd shell_cmd[NUM_COM] = {
+  { "aalogo",   aalogo,    "  Show an ascii art logo" },
+  { "clear",    _kclear,   "   Clear the screen" },
+@@ -139,9 +140,11 @@
+     printf(LNG_USER_R);
+     #ifdef PWD_CHECK
+     printf(LNG_PWD);
++    set_shadow(1);
+     scanf ("%23s",password);
++    set_shadow(0);
+     #endif
+-    //printf("Vediamo %s\n", current_user.username);
++    //printf("Vediamo %s pwd: %s\n", current_user.username, password);
+     dbg_bochs_print((const unsigned char*)"Asking username");
+     ret_val = user_chk(current_user.username, password);
+   } while ((!strlen(current_user.username) || ret_val!=1));
+
+Modified: trunk/shell/user_shell.c
+===================================================================
+--- trunk/shell/user_shell.c	2010-08-04 14:42:34 UTC (rev 281)
++++ trunk/shell/user_shell.c	2010-08-05 17:51:31 UTC (rev 282)
+@@ -24,6 +24,7 @@
+ #include <debug.h>
+ #include <use.h>
+ 
++//#define PWD_CHECK 1
+ int user_chk(char *username, char* usr_pwd){
+ 	int fd = -1;
+ 	struct passwd_user checking_user;
+@@ -32,13 +33,14 @@
+ 	//strcpy(path, "/passwd");		
+ 	memset(checking_user.username, '\0', 50);
+ 	memset(checking_user.password, '\0', 50);	
+-	puts(username);
++	//puts(username);
++	//printf("user: %s\n", username);
+ 	dbg_bochs_print((const unsigned char*)"Logging In\n");
+ 	fd = open("/passwd", O_RDONLY,0);
+ 	/*if(fd != -1) printf("File passwd found\n");
+ 	else printf("not found\n");*/
+ 	if(fd<0) return 0;
+-	while(user_get(fd, &checking_user)==2){
++	while(user_get(fd, &checking_user)==2){		
+ 		#ifdef PWD_CHECK
+ 		if(!strcmp(username, checking_user.username) && !strcmp(usr_pwd, checking_user.password)) return 1;
+ 		#else
+@@ -85,6 +87,7 @@
+ 	//if(err ==0) return err;
+ 	status++;	
+ 	strcpy(checking_user->password, appo);
++	printf("Status: %sd\n", status);
+ 	return status;
+ }
+ 
+
+
+
+From finarfin at mail.berlios.de  Thu Aug  5 22:55:29 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Thu,  5 Aug 2010 22:55:29 +0200
+Subject: [Dreamos-dev] r283 - branches
+Message-ID: <20100805205529.68091480EFF@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-08-05 22:55:29 +0200 (Thu, 05 Aug 2010)
+New Revision: 283
+
+Added:
+   branches/0.2.1/
+Log:
+Preparazione sorgenti per rilascio 0.2.1
+
+
+
+
+From finarfin at mail.berlios.de  Thu Aug  5 23:44:15 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Thu,  5 Aug 2010 23:44:15 +0200
+Subject: [Dreamos-dev] r284 - in branches/0.2.1: . boot files fs hardware
+	include shell
+Message-ID: <20100805214415.37B37480EFF@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-08-05 23:44:14 +0200 (Thu, 05 Aug 2010)
+New Revision: 284
+
+Added:
+   branches/0.2.1/CHANGELOG
+   branches/0.2.1/boot/grub.img
+Removed:
+   branches/0.2.1/boot/grub.img
+Modified:
+   branches/0.2.1/Makefile
+   branches/0.2.1/README
+   branches/0.2.1/dreamos.img
+   branches/0.2.1/files/README
+   branches/0.2.1/fs/initrd.c
+   branches/0.2.1/hardware/pic8259.c
+   branches/0.2.1/include/kernel.h
+   branches/0.2.1/include/version.h
+   branches/0.2.1/kernel.c
+   branches/0.2.1/shell/user_shell.c
+Log:
+Aggiornati header con nuovo numero di versione
+Aggiornati README
+Aggiornati script
+Inserito CHANGELOG
+Eliminate alcune stampe di debug
+
+
+Added: branches/0.2.1/CHANGELOG
+===================================================================
+--- branches/0.2.1/CHANGELOG	                        (rev 0)
++++ branches/0.2.1/CHANGELOG	2010-08-05 21:44:14 UTC (rev 284)
+@@ -0,0 +1,14 @@
++CHANGELOG Ver. 0.2.1 - Name: Pollution
++
++fs: aggiunto file passwd con sintassi username:password
++
++i/o: Introdotta la funzione set_shadow(int) per mostrare/nascondere l'echo dei tasti premuti
++
++shell: aggiunto login con utenti presi da file passwd (sono stati inseriti root e user)
++shell: predisposto anche il controllo della password, ma attualmente disabilitato
++shell: aggiunte funzioni di test delle funzioni per il controllo utenti.
++
++misc: Creazione script per generare immagine iso eltorito (bootabile)
++misc: Aggiunto script per aggiunta utenti in dreamos
++misc: Pulito il codice in start.sh, e l'help messo su file separato
++misc: Aggiornato script kernel.lds
+
+Modified: branches/0.2.1/Makefile
+===================================================================
+--- branches/0.2.1/Makefile	2010-08-05 20:55:29 UTC (rev 283)
++++ branches/0.2.1/Makefile	2010-08-05 21:44:14 UTC (rev 284)
+@@ -5,7 +5,7 @@
+ NAME = DreamOS
+ VERSION = 0
+ PATCHLEVEL = 2.1
+-EXTRAVERSION = -trunk
++EXTRAVERSION = -pollution
+ 
+ include Makefile.am
+ 
+
+Modified: branches/0.2.1/README
+===================================================================
+--- branches/0.2.1/README	2010-08-05 20:55:29 UTC (rev 283)
++++ branches/0.2.1/README	2010-08-05 21:44:14 UTC (rev 284)
+@@ -24,11 +24,10 @@
+ DreamOS ? un sistema operativo open source rilasciato sotto licenza GPLv3 sviluppato partendo da 0 puramente per scopi didattici o comunque per capire come funzionano i sistemi operativi.
+ Il team di sviluppo attuale ? composto dagli sviluppatori
+ 
++Ivan Gualandri (finarfin)
++
+ Alessandro (celeron) 
+ Diego Stamigni (osiris_h4ck)
+-Finessi Manuel (theking0)
+-Giuseppe Massaro (n3mes1s)
+-Ivan Gualandri (finarfin)
+ Lorenzo De Liso (blackz)
+ Michele Morelli (dt-)
+ 
+
+Deleted: branches/0.2.1/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Added: branches/0.2.1/boot/grub.img
+===================================================================
+(Binary files differ)
+
+
+Property changes on: branches/0.2.1/boot/grub.img
+___________________________________________________________________
+Added: svn:executable
+   + *
+Added: svn:mime-type
+   + application/octet-stream
+
+Modified: branches/0.2.1/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: branches/0.2.1/files/README
+===================================================================
+--- branches/0.2.1/files/README	2010-08-05 20:55:29 UTC (rev 283)
++++ branches/0.2.1/files/README	2010-08-05 21:44:14 UTC (rev 284)
+@@ -1,4 +1,4 @@
+-DREAMOS 0.2.0-trunk
++DREAMOS 0.2.1-pollution
+ 
+ Welcome to the dreamOS operating system.
+ 
+
+Modified: branches/0.2.1/fs/initrd.c
+===================================================================
+--- branches/0.2.1/fs/initrd.c	2010-08-05 20:55:29 UTC (rev 283)
++++ branches/0.2.1/fs/initrd.c	2010-08-05 21:44:14 UTC (rev 284)
+@@ -50,9 +50,7 @@
+ 		i++;
+ 	}
+ 	cur_irdfd = 0;
+-	printf("Number of files present: %d\n", fs_specs->nfiles);
+ 	fs_end = fs_headers[(fs_specs->nfiles)-1].offset + fs_headers[(fs_specs->nfiles)-1].length;
+-	printf("Fs_end: %d\n", fs_end);
+ 	return fs_specs->nfiles;
+ 	
+ }
+
+Modified: branches/0.2.1/hardware/pic8259.c
+===================================================================
+--- branches/0.2.1/hardware/pic8259.c	2010-08-05 20:55:29 UTC (rev 283)
++++ branches/0.2.1/hardware/pic8259.c	2010-08-05 21:44:14 UTC (rev 284)
+@@ -89,7 +89,6 @@
+     //init_gdt();
+ 
+     setup_IRQ();
+-    asm("sti");
+                     
+     i=0;
+     while(i<IRQ_NUM){
+@@ -98,6 +97,8 @@
+     }
+     add_IRQ_handler(1, keyboard_isr);
+     add_IRQ_handler(0, PIT_handler);
++    asm("sti");
++
+ }
+ 
+ void setup_IRQ(){
+
+Modified: branches/0.2.1/include/kernel.h
+===================================================================
+--- branches/0.2.1/include/kernel.h	2010-08-05 20:55:29 UTC (rev 283)
++++ branches/0.2.1/include/kernel.h	2010-08-05 21:44:14 UTC (rev 284)
+@@ -35,7 +35,7 @@
+ asmlinkage void _start(struct multiboot_info*);
+ int main_loop(struct multiboot_info*);
+ 
+-#define DREAMOS_VER "DreamOS ver 0.2.1 - trunk"
++#define DREAMOS_VER "DreamOS ver 0.2.1 - pollution"
+ #define SITEURL "www.dreamos.org"
+ 
+ #endif
+
+Modified: branches/0.2.1/include/version.h
+===================================================================
+--- branches/0.2.1/include/version.h	2010-08-05 20:55:29 UTC (rev 283)
++++ branches/0.2.1/include/version.h	2010-08-05 21:44:14 UTC (rev 284)
+@@ -22,6 +22,6 @@
+ 
+ #define VERSION "0"
+ #define PATCHLEVEL "2.1"
+-#define EXTRAVERSION "-trunk"
++#define EXTRAVERSION "-pollution"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r279"
++#define REV_NUM "-r283"
+
+Modified: branches/0.2.1/kernel.c
+===================================================================
+--- branches/0.2.1/kernel.c	2010-08-05 20:55:29 UTC (rev 283)
++++ branches/0.2.1/kernel.c	2010-08-05 21:44:14 UTC (rev 284)
+@@ -107,13 +107,13 @@
+     vfs_init();
+     initfs_init();
+ 	if(boot_info->mods_count > 0) printf("Found n. %d Modules\n", boot_info->mods_count);		
+-	printf("Address of module: 0x%x - 0x%x\n", *((unsigned int*)boot_info->mods_addr),module_end-(unsigned int) module_start);
++	//printf("Address of module: 0x%x - 0x%x\n", *((unsigned int*)boot_info->mods_addr),module_end-(unsigned int) module_start);
+     printf("\n");
+     printf("----\n");
+     printf(LNG_SHELL);    
+     _kprintOK();
+ 		printf("[+] Address: 0x%x\n", &end);		   	        
+-		printf("\n\n");
++		printf("\n");
+ #ifdef BOCHS_DEBUG
+ 		dbg_bochs_print((const unsigned char*)"DreamOS Debug String for Bochs\n");
+ #endif
+
+Modified: branches/0.2.1/shell/user_shell.c
+===================================================================
+--- branches/0.2.1/shell/user_shell.c	2010-08-05 20:55:29 UTC (rev 283)
++++ branches/0.2.1/shell/user_shell.c	2010-08-05 21:44:14 UTC (rev 284)
+@@ -87,9 +87,10 @@
+ 	//if(err ==0) return err;
+ 	status++;	
+ 	strcpy(checking_user->password, appo);
+-	printf("Status: %sd\n", status);
++	//printf("Status: %sd\n", status);
+ 	return status;
+ }
+ 
+ int pwd_check(char* password, char* realpass){
++	return 0;
+ }
+
+
+
+From finarfin at mail.berlios.de  Thu Aug  5 23:46:31 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Thu,  5 Aug 2010 23:46:31 +0200
+Subject: [Dreamos-dev] r285 - in trunk: . files fs hardware shell
+Message-ID: <20100805214631.1C974480EFF@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-08-05 23:46:30 +0200 (Thu, 05 Aug 2010)
+New Revision: 285
+
+Modified:
+   trunk/README
+   trunk/files/README
+   trunk/fs/initrd.c
+   trunk/hardware/pic8259.c
+   trunk/kernel.c
+   trunk/shell/user_shell.c
+Log:
+Aggiornamenti vari files. 
+
+
+Modified: trunk/README
+===================================================================
+--- trunk/README	2010-08-05 21:44:14 UTC (rev 284)
++++ trunk/README	2010-08-05 21:46:30 UTC (rev 285)
+@@ -9,26 +9,26 @@
+ 	b. Scaricare da SVN
+ 	c. Compilare DreamOS
+ 	d. Mettere su Floppy (opzionale)
+-	e. Creare la entry per GRUB (opzionale)
++	e. Fare la entry per GRUB (opzionale)
+ 3. Usare DreamOS
+ 	a. L'avvio
+ 	b. Uso della CLI
+ 4. Feedback
+ 	a. Come segnalare bug
+-	b. Come inoltrare un feedback
++	b. Come mandare un feedback
+ 
+ 
+ - 1 -----------------------
+ --- Cosa ? DreamOS --------
+ 
+-DreamOS ? un sistema operativo open source rilasciato sotto licenza GPLv3 sviluppato partendo da 0 puramente per scopi didattici o comunque per capire come funzionano i sistemi operativi.
++Il DreamOS ? un sistema operativo open source rilasciato sotto licenza GPLv3 sviluppato partendo da 0 puramente per scopi didattici o comunque per capire come funzionano i sistemi operativi.
+ Il team di sviluppo attuale ? composto dagli sviluppatori
+ 
++Ivan Gualandri - Finarfin (http://earyrian.elenhost.org)
++
++
+ Alessandro (celeron) 
+ Diego Stamigni (osiris_h4ck)
+-Finessi Manuel (theking0)
+-Giuseppe Massaro (n3mes1s)
+-Ivan Gualandri (finarfin)
+ Lorenzo De Liso (blackz)
+ Michele Morelli (dt-)
+ 
+@@ -43,7 +43,7 @@
+ 
+ 	- a - Requisiti necessari -
+ 
+-DreamOS ? un sistema operativo sviluppato per funzionare su cpu con architettura Intel x86/IA32 (i386/i686) e attualmente ? sviluppato in modo da partire da floppy anche se, utilizzando GRUB, ? possibile farlo partire avendo l'immagine compilata sull'Hard-disk.
++DreamOS ? un sistema operativo sviluppato per funzionare su cpu con architettura Intel x86/IA32 (i386/i686) e attualmente ? sviluppato in modo da partire da floppy anche se, utilizzando GRUB, si pu? farlo partire avendo l'immagine compilata sull'Hard-disk.
+ DreamOS pu? essere anche emulato usando Software come qEmu o Bochs.
+ 
+ Per compilare DreamOS bisogna prima di tutto avere una distribuzione Linux installata, poi avere i seguenti software:
+@@ -90,7 +90,7 @@
+ 	boot
+ Naturalmenet modificando /path/al/file/dreamos.img con la path al file dreamos.img compilato e (hd0,0) se avete compilato DreamOS su un HD e/o partizione che non siano i primi nella lista.
+ 
+-Attaualmente ? stato aggiunto uno script per inserire dreamos in grub, esso ? ancora nelle prime fasi, e quindi non sempre potrebbe inserire la entry corretta. Lo script ? stato scritto in python quindi richiede che quest'ultimo sia installto, per le istruzioni sull'utilizzo nella cartella doc ? presente il file: HOWTO_use_grub_script che pu? fornirvi maggiori informazioni.
++Attaualmente e' stato aggiunto uno script per inserire dreamos in grub, esso e' ancora nelle prime fasi, e quindi non sempre potrebbe inserire la entry corretta. Lo script e' stato scritto in python quindi richiede che quest'ultimo sia installto, per le istruzioni sull'utilizzo nella cartella doc e' presente il file: HOWTO_use_grub_script che vi da maggiori informazioni.
+ 
+ - 3 -----------------------
+ ---- Usare DreamOS --------
+@@ -129,9 +129,9 @@
+ 	http://forum.osdev.it/
+ Oppure ci trovate su irc: 
+ 	Server: irc.azzurra.org
+-	Chan: #dreamos	
++	Chan: #dreamos
++	
+ 
+-
+-2003-2010, DreamOS. 
++DreamOS 2003-2009 by finarfin/shainer
+ http://www.dreamos.org
+ http://www.osdev.it
+
+Modified: trunk/files/README
+===================================================================
+--- trunk/files/README	2010-08-05 21:44:14 UTC (rev 284)
++++ trunk/files/README	2010-08-05 21:46:30 UTC (rev 285)
+@@ -1,4 +1,4 @@
+-DREAMOS 0.2.0-trunk
++DREAMOS 0.3-trunk
+ 
+ Welcome to the dreamOS operating system.
+ 
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-08-05 21:44:14 UTC (rev 284)
++++ trunk/fs/initrd.c	2010-08-05 21:46:30 UTC (rev 285)
+@@ -50,7 +50,7 @@
+ 		i++;
+ 	}
+ 	cur_irdfd = 0;
+-	printf("Number of files present: %d\n", fs_specs->nfiles);
++	//printf("Number of files present: %d\n", fs_specs->nfiles);
+ 	fs_end = fs_headers[(fs_specs->nfiles)-1].offset + fs_headers[(fs_specs->nfiles)-1].length;
+ 	printf("Fs_end: %d\n", fs_end);
+ 	return fs_specs->nfiles;
+
+Modified: trunk/hardware/pic8259.c
+===================================================================
+--- trunk/hardware/pic8259.c	2010-08-05 21:44:14 UTC (rev 284)
++++ trunk/hardware/pic8259.c	2010-08-05 21:46:30 UTC (rev 285)
+@@ -89,15 +89,15 @@
+     //init_gdt();
+ 
+     setup_IRQ();
+-    asm("sti");
+-                    
+-    i=0;
++    
++        i=0;
+     while(i<IRQ_NUM){
+         shareHandler[i] = NULL;
+         i++;
+     }
+     add_IRQ_handler(1, keyboard_isr);
+     add_IRQ_handler(0, PIT_handler);
++    asm("sti");                  
+ }
+ 
+ void setup_IRQ(){
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2010-08-05 21:44:14 UTC (rev 284)
++++ trunk/kernel.c	2010-08-05 21:46:30 UTC (rev 285)
+@@ -107,13 +107,13 @@
+     vfs_init();
+     initfs_init();
+ 	if(boot_info->mods_count > 0) printf("Found n. %d Modules\n", boot_info->mods_count);		
+-	printf("Address of module: 0x%x - 0x%x\n", *((unsigned int*)boot_info->mods_addr),module_end-(unsigned int) module_start);
++	//printf("Address of module: 0x%x - 0x%x\n", *((unsigned int*)boot_info->mods_addr),module_end-(unsigned int) module_start);
+     printf("\n");
+     printf("----\n");
+     printf(LNG_SHELL);    
+     _kprintOK();
+ 		printf("[+] Address: 0x%x\n", &end);		   	        
+-		printf("\n\n");
++		printf("\n");
+ #ifdef BOCHS_DEBUG
+ 		dbg_bochs_print((const unsigned char*)"DreamOS Debug String for Bochs\n");
+ #endif
+
+Modified: trunk/shell/user_shell.c
+===================================================================
+--- trunk/shell/user_shell.c	2010-08-05 21:44:14 UTC (rev 284)
++++ trunk/shell/user_shell.c	2010-08-05 21:46:30 UTC (rev 285)
+@@ -87,9 +87,10 @@
+ 	//if(err ==0) return err;
+ 	status++;	
+ 	strcpy(checking_user->password, appo);
+-	printf("Status: %sd\n", status);
++	//printf("Status: %sd\n", status);
+ 	return status;
+ }
+ 
+ int pwd_check(char* password, char* realpass){
++	return 0;
+ }
+
+
+
+From finarfin at mail.berlios.de  Tue Aug 10 10:16:53 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Tue, 10 Aug 2010 10:16:53 +0200
+Subject: [Dreamos-dev] r286 - in trunk: . include include/mem mem
+Message-ID: <20100810081653.1CB174802F3@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-08-10 10:16:52 +0200 (Tue, 10 Aug 2010)
+New Revision: 286
+
+Added:
+   trunk/include/mem/heap.h
+   trunk/mem/heap.c
+Modified:
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/include/kernel.h
+Log:
+Aggiunti file per nuova versione gestore memoria. 
+Aggiornato makefile
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2010-08-05 21:46:30 UTC (rev 285)
++++ trunk/Makefile	2010-08-10 08:16:52 UTC (rev 286)
+@@ -4,7 +4,7 @@
+ 
+ NAME = DreamOS
+ VERSION = 0
+-PATCHLEVEL = 2.1
++PATCHLEVEL = 3
+ EXTRAVERSION = -trunk
+ 
+ include Makefile.am
+@@ -52,6 +52,7 @@
+       mem/fismem.o\
+       mem/paging.o\
+       mem/kheap.o\
++      mem/heap.o\
+       misc/clock.o\
+       misc/bitops.o\
+       misc/ordered_list.o\
+@@ -94,6 +95,7 @@
+ mem/fismem.o: mem/fismem.c
+ mem/paging.o: mem/paging.c
+ mem/kheap.o: mem/kheap.c
++mem/heap.o: mem/heap.c
+ misc/clock.o: misc/clock.c
+ misc/ordered_list.o: misc/ordered_list.c
+ misc/bitops.o: misc/bitops.c
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/kernel.h
+===================================================================
+--- trunk/include/kernel.h	2010-08-05 21:46:30 UTC (rev 285)
++++ trunk/include/kernel.h	2010-08-10 08:16:52 UTC (rev 286)
+@@ -35,7 +35,7 @@
+ asmlinkage void _start(struct multiboot_info*);
+ int main_loop(struct multiboot_info*);
+ 
+-#define DREAMOS_VER "DreamOS ver 0.2.1 - trunk"
++#define DREAMOS_VER "DreamOS ver 0.3 - trunk"
+ #define SITEURL "www.dreamos.org"
+ 
+ #endif
+
+Added: trunk/include/mem/heap.h
+===================================================================
+--- trunk/include/mem/heap.h	                        (rev 0)
++++ trunk/include/mem/heap.h	2010-08-10 08:16:52 UTC (rev 286)
+@@ -0,0 +1,44 @@
++/***************************************************************************
++ *            heap.h
++ *
++ *  Sun 8 08 10 
++ *  Copyright  2010  Ivan Gualandri
++ *  Email finarfin at elenhost.org
++ ****************************************************************************/
++/*
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2 of the License, or
++ *  (at your option) any later version.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++#ifndef __HEAP_H
++#define __HEAP_H
++
++/*! \struct header_t 
++    \brief Contiene le informazioni relative alle locazioni di memoria 
++ */
++typedef struct {
++	int magic; /*!<For header identification*/
++	char is_hole /*!<1 se si tratta di un hole 0 se si tratta di un block*/
++	int size;  /*!<Total size of the block (including header and footer)*/
++} header_t;
++
++/*! \struct footer_t 
++    \brief Contiene altre informazioni relative alle locazioni di memoria 
++ */
++typedef struct {
++	int magic; /*!<For footer identification */
++	header_t *header;/*!< Pointer to the block header*/
++} footer_t;
++
++#endif
+
+Added: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	                        (rev 0)
++++ trunk/mem/heap.c	2010-08-10 08:16:52 UTC (rev 286)
+@@ -0,0 +1,25 @@
++/***************************************************************************
++ *            heap.c
++ *
++ *  Sun 8 08 10 
++ *  Copyright  2010  Ivan Gualandri
++ *  Email finarfin at elenhost.org
++ ****************************************************************************/
++/*
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2 of the License, or
++ *  (at your option) any later version.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++void heap_init(){
++}
+
+
+
+From finarfin at mail.berlios.de  Mon Aug 30 12:41:44 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Mon, 30 Aug 2010 12:41:44 +0200
+Subject: [Dreamos-dev] r287 - in trunk: . include/mem include/misc misc
+Message-ID: <20100830104144.87C86480FE0@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-08-30 12:41:44 +0200 (Mon, 30 Aug 2010)
+New Revision: 287
+
+Added:
+   trunk/include/misc/utils.h
+Modified:
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/include/mem/heap.h
+   trunk/include/misc/ordered_array.h
+   trunk/misc/ordered_array.c
+Log:
+Aggiunto file con funzioni di utilita generica.
+Preparazione variabili e define per nuovo gestore della memoria
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2010-08-10 08:16:52 UTC (rev 286)
++++ trunk/Makefile	2010-08-30 10:41:44 UTC (rev 287)
+@@ -55,6 +55,7 @@
+       mem/heap.o\
+       misc/clock.o\
+       misc/bitops.o\
++      misc/ordered_array.o\
+       misc/ordered_list.o\
+       misc/debug.o \
+       system/syscall.o\
+@@ -98,6 +99,7 @@
+ mem/heap.o: mem/heap.c
+ misc/clock.o: misc/clock.c
+ misc/ordered_list.o: misc/ordered_list.c
++misc/orderet_array.o: misc/ordered_array.c
+ misc/bitops.o: misc/bitops.c
+ misc/debug.o: misc/debug.c
+ drivers/keyboard.o: drivers/keyboard.c
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/mem/heap.h
+===================================================================
+--- trunk/include/mem/heap.h	2010-08-10 08:16:52 UTC (rev 286)
++++ trunk/include/mem/heap.h	2010-08-30 10:41:44 UTC (rev 287)
+@@ -24,12 +24,14 @@
+ #ifndef __HEAP_H
+ #define __HEAP_H
+ 
++#define KHEAP_START_ADDRESS 0xD0000000
++
+ /*! \struct header_t 
+     \brief Contiene le informazioni relative alle locazioni di memoria 
+  */
+ typedef struct {
+ 	int magic; /*!<For header identification*/
+-	char is_hole /*!<1 se si tratta di un hole 0 se si tratta di un block*/
++	short int is_hole /*!<1 se si tratta di un hole 0 se si tratta di un block*/
+ 	int size;  /*!<Total size of the block (including header and footer)*/
+ } header_t;
+ 
+@@ -41,4 +43,5 @@
+ 	header_t *header;/*!< Pointer to the block header*/
+ } footer_t;
+ 
++void heap_init();
+ #endif
+
+Modified: trunk/include/misc/ordered_array.h
+===================================================================
+--- trunk/include/misc/ordered_array.h	2010-08-10 08:16:52 UTC (rev 286)
++++ trunk/include/misc/ordered_array.h	2010-08-30 10:41:44 UTC (rev 287)
+@@ -36,9 +36,15 @@
+     void_t *array; /**< Il vettore che sara' ordinato*/
+     unsigned int size; /**< La dimensione attuale*/
+     unsigned int size_max; /**< La dimensione massima*/
++    lessthan_predicate_t less_than;
+ }ordered_array_t;
+ 
++typedef void* type_t;
++
++typedef short int (*lessthan_predicate_t)(type_t,type_t);
+ ordered_array_t new_array(void_t, unsigned int, unsigned int);
+ void insert_array(void_t, ordered_array_t*);
+-
++void destroy_array(ordered_array_t*);
++type_t get_array(int, ordered_array_t*);
++void remove_array(int, ordered_array_t*);
+ #endif
+
+Added: trunk/include/misc/utils.h
+===================================================================
+--- trunk/include/misc/utils.h	                        (rev 0)
++++ trunk/include/misc/utils.h	2010-08-30 10:41:44 UTC (rev 287)
+@@ -0,0 +1,30 @@
++/***************************************************************************
++ *            utils.h
++ *
++ *  Sun 30 08 10 
++ *  Copyright  2010  Ivan Gualandri
++ *  Email finarfin at elenhost.org
++ ****************************************************************************/
++/*
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2 of the License, or
++ *  (at your option) any later version.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++#ifndef COMMON_H
++#define COMMON_H
++
++#define MAX(a,b) ((a) > (b) ? (a) : (b)) 
++
++#define ASSERT(b) ((b)? (void)0 ? void(1))
++#endif
+
+Modified: trunk/misc/ordered_array.c
+===================================================================
+--- trunk/misc/ordered_array.c	2010-08-10 08:16:52 UTC (rev 286)
++++ trunk/misc/ordered_array.c	2010-08-30 10:41:44 UTC (rev 287)
+@@ -25,7 +25,15 @@
+ #include <ordered_array.h>
+ #include <kheap.h>
+ #include <stdio.h>
++#include <heap.h>
+ 
++
++short int standard_lessthan (type_t a, type_t b){
++	if(a<b) return 1;
++	else return 0;
++	return 0;
++}
++
+ /**
+   * Crea un nuovo ordered_array
+   * @author Ivan Gualandri
+
+
+

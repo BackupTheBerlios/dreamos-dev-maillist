@@ -1,0 +1,958 @@
+From finarfin at mail.berlios.de  Fri May  7 00:15:31 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Fri, 7 May 2010 00:15:31 +0200
+Subject: [Dreamos-dev] r241 - in trunk: . fs include/fs
+Message-ID: <201005062215.o46MFVcO026023@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-05-07 00:15:23 +0200 (Fri, 07 May 2010)
+New Revision: 241
+
+Modified:
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/fs/unistd.c
+   trunk/fs/vfs.c
+   trunk/include/fs/fcntl.h
+   trunk/include/fs/vfs.h
+   trunk/initfs
+Log:
+Eliminato alcuni warning
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2010-04-26 17:29:40 UTC (rev 240)
++++ trunk/Makefile	2010-05-06 22:15:23 UTC (rev 241)
+@@ -126,8 +126,8 @@
+ .PHONY: clean install qemu
+ 
+ clean:
+-	rm -f *.img *.bin *.map initfs
+-	rm -f $(OBJ)
++	rm -f *.img *.bin *.map 
++	rm -f $(OBJ)		
+ 	rm -rf utils/initfscp
+ 
+ install:
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/unistd.c
+===================================================================
+--- trunk/fs/unistd.c	2010-04-26 17:29:40 UTC (rev 240)
++++ trunk/fs/unistd.c	2010-05-06 22:15:23 UTC (rev 241)
+@@ -46,7 +46,7 @@
+ 		printf("placeholder for write, coming soon,\n stay tuned\n");
+ 		printf("Oh i received something: %s\n", buf);
+ 		if((ssize_t*)mountpoint_list[fd_list[fildes].mountpoint_id].operations.write!=NULL)
+-			mountpoint_list[fd_list[fildes].mountpoint_id].operations.write(fs_fd, buf, nbyte);
++			mountpoint_list[fd_list[fildes].mountpoint_id].operations.write(fs_fd,(void *) buf, nbyte);
+ 		//else printf("Give Me a pen and i'll write you the world\n");
+ 		else {
+ 			printf("Give Me a pen and i'll write you the world\n");
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2010-04-26 17:29:40 UTC (rev 240)
++++ trunk/fs/vfs.c	2010-05-06 22:15:23 UTC (rev 241)
+@@ -133,6 +133,7 @@
+ 	int rel_size = 0;
+ 	int j=0;
+ 	char *tmp_path;
++	tmp_path = NULL;
+ 	rel_size = strlen(path) - strlen(mountpoint_list[mountpoint_id].mountpoint);	
+ 	//printf("rel_size: %d mp_id: %d\n", rel_size, mountpoint_id);
+ 	if(rel_size>0){		
+
+Modified: trunk/include/fs/fcntl.h
+===================================================================
+--- trunk/include/fs/fcntl.h	2010-04-26 17:29:40 UTC (rev 240)
++++ trunk/include/fs/fcntl.h	2010-05-06 22:15:23 UTC (rev 241)
+@@ -25,8 +25,8 @@
+ #define O_WRONLY    0x01
+ #define O_RDWR      0x02
+ 
+-#define O_CREAT		0x04
+-#define O_APPEND	0x08
++#define O_CREAT		0x40
++#define O_APPEND	0x400
+ 
+ 
+ int  creat(const char *, mode_t);
+
+Modified: trunk/include/fs/vfs.h
+===================================================================
+--- trunk/include/fs/vfs.h	2010-04-26 17:29:40 UTC (rev 240)
++++ trunk/include/fs/vfs.h	2010-05-06 22:15:23 UTC (rev 241)
+@@ -43,7 +43,7 @@
+ 	int (*open)(const char *, int, ... );
+ 	int (*close)(int);
+ 	ssize_t (*read)(int, char*, size_t);
+-	int (*write)(int, void*, size_t);
++	ssize_t (*write)(int,const void*, size_t);
+ };
+ 
+ struct stat_operations{
+
+Modified: trunk/initfs
+===================================================================
+(Binary files differ)
+
+
+
+From finarfin at mail.berlios.de  Mon May 10 23:06:51 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Mon, 10 May 2010 23:06:51 +0200
+Subject: [Dreamos-dev] r242 - branches
+Message-ID: <201005102106.o4AL6plA010990@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-05-10 23:06:45 +0200 (Mon, 10 May 2010)
+New Revision: 242
+
+Added:
+   branches/0.2/
+Log:
+Preparazione versione 0.2
+
+
+
+Copied: branches/0.2 (from rev 241, trunk)
+
+
+
+From finarfin at mail.berlios.de  Mon May 10 23:29:44 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Mon, 10 May 2010 23:29:44 +0200
+Subject: [Dreamos-dev] r243 - in branches/0.2: . fs include
+Message-ID: <201005102129.o4ALTiRj012617@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-05-10 23:29:41 +0200 (Mon, 10 May 2010)
+New Revision: 243
+
+Added:
+   branches/0.2/CHANGELOG
+Modified:
+   branches/0.2/Makefile
+   branches/0.2/dreamos.img
+   branches/0.2/fs/initrd.c
+   branches/0.2/include/version.h
+Log:
+Aggiunto changelog
+Modificati nomi versione nell'os
+
+
+Added: branches/0.2/CHANGELOG
+===================================================================
+--- branches/0.2/CHANGELOG	2010-05-10 21:06:45 UTC (rev 242)
++++ branches/0.2/CHANGELOG	2010-05-10 21:29:41 UTC (rev 243)
+@@ -0,0 +1,39 @@
++CHANGELOG Ver. 2.0 - Name: Hastur
++
++filesystem: aggiunti files: fs/vfs.c include/fs/vfs.h
++filesystem: aggiunta funzione get_mountpoint_id
++filesystem: aggiunta funzione get_rel_path
++filesystem: aggiunta struttura dati directory_operations
++filesystem: aggiunta Aggiunta funzione open
++filesystem: flags inseriti di open: O_CREAT,O_APPEND,O_RDONLY,O_WRONLY,O_RDWR
++filesystem: aggiunto file come modulo initfs per un primo mini-fs
++filesystem: aggiunta funzione read 
++filesystem: aggiunga funzione write
++filesystem: aggiunta funzione vfs opendir, e funzione a livello di initfs.
++filesystem: aggiunta funzione readdir, e relativa implementazione in initfs
++filesystem: aggiunta funzione stat per gestione informazioni su un file
++
++shell: Aggiunto comando ls se non trova nulla stampa i mountpoint. Altrimenti il contenuto del filesystem relativo
++shell: Aggiunto comando cd non del tutto completo, ma funzionante
++shell: Aggiunta struttura dati userenv_t per ora i campi sono: username e cur_path
++shell: Aggiunto comando whoami
++shell: Aumentato da 10 a 30 dimensione di argomenti che si possono prendere da linea di comando
++shell: I comandi di debug sono stati raccolti dentro tester
++shell: Corretti errori lingua in start.sh
++shell: Modificati colori shell
++shell: Aggiunto comando pwd
++shell: Aggiunto comando per testare le syscall: tester try_syscall
++shell: Aggiunto comando tester try_ocreat per testare la creazione di un file.
++
++i/o: corretto bug su stampa di numeri negativi, ora si possono visualizzare correttamente
++
++boot: Aggiunto splash screen in grub.
++
++posix: Aggiunto header fnctl.h per operazioni sui files (Da completare)
++
++Compiling: Aggiornato Makefile per i nuovi files relativi al file system
++Compiling: Ora si puo' anche creare una iso bootabile di dreamos
++Compiling: Makefile modificato, ora rende la compilazione piu leggibile.
++Compiling: Eliminati tutti gli warning.
++
++utils: Aggiunto initfscp, tool per creare un minifs che gira da Ram.
+
+
+Property changes on: branches/0.2/CHANGELOG
+___________________________________________________________________
+Name: svn:executable
+   + *
+
+Modified: branches/0.2/Makefile
+===================================================================
+--- branches/0.2/Makefile	2010-05-10 21:06:45 UTC (rev 242)
++++ branches/0.2/Makefile	2010-05-10 21:29:41 UTC (rev 243)
+@@ -5,7 +5,7 @@
+ NAME = DreamOS
+ VERSION = 0
+ PATCHLEVEL = 2.0
+-EXTRAVERSION = -trunk
++EXTRAVERSION = -hastur
+ 
+ include Makefile.am
+ 
+
+Modified: branches/0.2/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: branches/0.2/fs/initrd.c
+===================================================================
+--- branches/0.2/fs/initrd.c	2010-05-10 21:06:45 UTC (rev 242)
++++ branches/0.2/fs/initrd.c	2010-05-10 21:29:41 UTC (rev 243)
+@@ -51,7 +51,7 @@
+ 	cur_irdfd = 0;
+ 	printf("Number of files present: %d\n", fs_specs->nfiles);
+ 	fs_end = fs_headers[(fs_specs->nfiles)-1].offset + fs_headers[(fs_specs->nfiles)-1].length;
+-	printf("Fs_end: %d\n", fs_end);
++	//printf("Fs_end: %d\n", fs_end);
+ 	return fs_specs->nfiles;
+ 	
+ }
+
+Modified: branches/0.2/include/version.h
+===================================================================
+--- branches/0.2/include/version.h	2010-05-10 21:06:45 UTC (rev 242)
++++ branches/0.2/include/version.h	2010-05-10 21:29:41 UTC (rev 243)
+@@ -22,6 +22,6 @@
+ 
+ #define VERSION "0"
+ #define PATCHLEVEL "2.0"
+-#define EXTRAVERSION "-trunk"
++#define EXTRAVERSION "-hastur"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r229"
++#define REV_NUM "-r242"
+
+
+
+From finarfin at mail.berlios.de  Mon May 10 23:30:55 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Mon, 10 May 2010 23:30:55 +0200
+Subject: [Dreamos-dev] r244 - branches/0.2/boot
+Message-ID: <201005102130.o4ALUtbv012695@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-05-10 23:30:17 +0200 (Mon, 10 May 2010)
+New Revision: 244
+
+Added:
+   branches/0.2/boot/grub.img
+Removed:
+   branches/0.2/boot/grub.img
+Log:
+Aggiornato grub.img
+
+
+Deleted: branches/0.2/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Added: branches/0.2/boot/grub.img
+===================================================================
+(Binary files differ)
+
+
+Property changes on: branches/0.2/boot/grub.img
+___________________________________________________________________
+Name: svn:executable
+   + *
+Name: svn:mime-type
+   + application/octet-stream
+
+
+
+From finarfin at mail.berlios.de  Wed May 12 00:08:55 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Wed, 12 May 2010 00:08:55 +0200
+Subject: [Dreamos-dev] r245 - branches/0.2
+Message-ID: <201005112208.o4BM8tOh000788@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-05-12 00:08:53 +0200 (Wed, 12 May 2010)
+New Revision: 245
+
+Modified:
+   branches/0.2/CHANGELOG
+   branches/0.2/README
+Log:
+Aggiornato CHANGELOG e README
+
+
+Modified: branches/0.2/CHANGELOG
+===================================================================
+--- branches/0.2/CHANGELOG	2010-05-10 21:30:17 UTC (rev 244)
++++ branches/0.2/CHANGELOG	2010-05-11 22:08:53 UTC (rev 245)
+@@ -30,6 +30,9 @@
+ boot: Aggiunto splash screen in grub.
+ 
+ posix: Aggiunto header fnctl.h per operazioni sui files (Da completare)
++posix: Aggiunto header unistd.h per operazioni su files, da terminare
++posix: Aggiunto header dirent.h con le prime strutture dati e funzioni per gestione dir.
++posix: Aggiunto header stat.h per le informazioni sui file, da terminare.
+ 
+ Compiling: Aggiornato Makefile per i nuovi files relativi al file system
+ Compiling: Ora si puo' anche creare una iso bootabile di dreamos
+
+Modified: branches/0.2/README
+===================================================================
+--- branches/0.2/README	2010-05-10 21:30:17 UTC (rev 244)
++++ branches/0.2/README	2010-05-11 22:08:53 UTC (rev 245)
+@@ -134,6 +134,6 @@
+ 	Chan: #dreamos
+ 	
+ 
+-DreamOS 2003-2009 by finarfin/shainer
++DreamOS 2003-2010 by finarfin and developers
+ http://www.dreamos.org
+ http://www.osdev.it
+
+
+
+From finarfin at mail.berlios.de  Wed May 12 23:40:06 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Wed, 12 May 2010 23:40:06 +0200
+Subject: [Dreamos-dev] r246 - in branches/0.2: . include shell
+Message-ID: <201005122140.o4CLe6oo010138@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-05-12 23:39:55 +0200 (Wed, 12 May 2010)
+New Revision: 246
+
+Modified:
+   branches/0.2/dreamos.img
+   branches/0.2/include/kernel.h
+   branches/0.2/include/version.h
+   branches/0.2/shell/commands.c
+Log:
+PREREALEASE
+Aggiornati i messaggi con informazioni di sistema alla ver 0.2
+Eliminato numero revisione
+
+
+
+Modified: branches/0.2/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: branches/0.2/include/kernel.h
+===================================================================
+--- branches/0.2/include/kernel.h	2010-05-11 22:08:53 UTC (rev 245)
++++ branches/0.2/include/kernel.h	2010-05-12 21:39:55 UTC (rev 246)
+@@ -35,7 +35,7 @@
+ asmlinkage void _start(struct multiboot_info*);
+ int main_loop(struct multiboot_info*);
+ 
+-#define DREAMOS_VER "DreamOS ver 0.2.0 - trunk"
++#define DREAMOS_VER "DreamOS ver 0.2.0 - hastur"
+ #define SITEURL "www.dreamos.org"
+ 
+ #endif
+
+Modified: branches/0.2/include/version.h
+===================================================================
+--- branches/0.2/include/version.h	2010-05-11 22:08:53 UTC (rev 245)
++++ branches/0.2/include/version.h	2010-05-12 21:39:55 UTC (rev 246)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "2.0"
+ #define EXTRAVERSION "-hastur"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r242"
++#define REV_NUM "-r246"
+
+Modified: branches/0.2/shell/commands.c
+===================================================================
+--- branches/0.2/shell/commands.c	2010-05-11 22:08:53 UTC (rev 245)
++++ branches/0.2/shell/commands.c	2010-05-12 21:39:55 UTC (rev 246)
+@@ -121,7 +121,7 @@
+   infos = kmalloc(sizeof(struct utsname *));
+   uname(infos);
+   if (!(strcmp(argv[1], "-a")) || !(strcmp(argv[1], "--all")))
+-    printf("%s %s.%s%s Rev: %s #1 CEST 2009 %s\n", infos->sysname, infos->version, infos->release, EXTRAVERSION,REV_NUM, cpu_vendor);
++    printf("%s %s.%s%s #1 CEST 2009 %s\n", infos->sysname, infos->version, infos->release, EXTRAVERSION, cpu_vendor);
+   else if (!(strcmp(argv[1], "-r")) || !(strcmp(argv[1], "--rev")))
+     printf("%s.%s%s\n", infos->version, infos->release, EXTRAVERSION);
+   else if (!(strcmp(argv[1], "-h") ) || !(strcmp(argv[1], "--help")))
+
+
+
+From finarfin at mail.berlios.de  Thu May 13 21:10:00 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Thu, 13 May 2010 21:10:00 +0200
+Subject: [Dreamos-dev] r247 - branches/0.2/boot
+Message-ID: <201005131910.o4DJA02a007622@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-05-13 21:09:22 +0200 (Thu, 13 May 2010)
+New Revision: 247
+
+Added:
+   branches/0.2/boot/grub.img
+Removed:
+   branches/0.2/boot/grub.img
+Log:
+Aggiornato grub.img
+
+
+Deleted: branches/0.2/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Added: branches/0.2/boot/grub.img
+===================================================================
+(Binary files differ)
+
+
+Property changes on: branches/0.2/boot/grub.img
+___________________________________________________________________
+Name: svn:executable
+   + *
+Name: svn:mime-type
+   + application/octet-stream
+
+
+
+From finarfin at mail.berlios.de  Sun May 16 22:43:39 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun, 16 May 2010 22:43:39 +0200
+Subject: [Dreamos-dev] r248 - in branches/0.2: . io libc shell utils
+Message-ID: <201005162043.o4GKhdWd021836@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-05-16 22:43:35 +0200 (Sun, 16 May 2010)
+New Revision: 248
+
+Modified:
+   branches/0.2/CHANGELOG
+   branches/0.2/dreamos.img
+   branches/0.2/io/video.c
+   branches/0.2/libc/stdio.c
+   branches/0.2/shell/testing.c
+   branches/0.2/utils/initfscp.c
+Log:
+Eliminati warning
+
+
+Modified: branches/0.2/CHANGELOG
+===================================================================
+--- branches/0.2/CHANGELOG	2010-05-13 19:09:22 UTC (rev 247)
++++ branches/0.2/CHANGELOG	2010-05-16 20:43:35 UTC (rev 248)
+@@ -1,4 +1,4 @@
+-CHANGELOG Ver. 2.0 - Name: Hastur
++	CHANGELOG Ver. 2.0 - Name: Hastur
+ 
+ filesystem: aggiunti files: fs/vfs.c include/fs/vfs.h
+ filesystem: aggiunta funzione get_mountpoint_id
+
+Modified: branches/0.2/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: branches/0.2/io/video.c
+===================================================================
+--- branches/0.2/io/video.c	2010-05-13 19:09:22 UTC (rev 247)
++++ branches/0.2/io/video.c	2010-05-16 20:43:35 UTC (rev 248)
+@@ -293,7 +293,7 @@
+ 	if(num<0) {		
+ 		num=(~num)+1;
+ 		*p++='-';
+-		*pbase++;
++		pbase++;
+ 	}
+     while(num > 0)
+     {
+@@ -337,7 +337,7 @@
+ 	else if(num<0) {		
+ 		num=(~num)+1;
+ 		*p++='-';
+-		*pbase++;
++		pbase ++;
+ 	}
+     while(num > 0)
+     {
+
+Modified: branches/0.2/libc/stdio.c
+===================================================================
+--- branches/0.2/libc/stdio.c	2010-05-13 19:09:22 UTC (rev 247)
++++ branches/0.2/libc/stdio.c	2010-05-16 20:43:35 UTC (rev 248)
+@@ -149,7 +149,7 @@
+             /* Some data type aren't supported yet
+              * In the future we will fix this */
+             if (*format == 's') {
+-		cur_p = strcpy(cur_p, va_arg (ap, char *));
++				cur_p = strcpy(cur_p, va_arg (ap, char *));
+             }
+             if (*format == 'd' || *format == 'i') {
+                 int varint = va_arg (ap, int);
+
+Modified: branches/0.2/shell/testing.c
+===================================================================
+--- branches/0.2/shell/testing.c	2010-05-13 19:09:22 UTC (rev 247)
++++ branches/0.2/shell/testing.c	2010-05-16 20:43:35 UTC (rev 248)
+@@ -166,7 +166,7 @@
+ 
+ void try_syscall(){
+ 	int i;
+-	int var = -1;
++	int var = -100;
+ 	printf("Trying sysputch:\n");	
+     for(i='A';i<='Z';i++) {
+ 		asm(
+@@ -176,7 +176,7 @@
+ 			: : "g"(i)	
+ 		);	
+ 	}
+-	printf("And before ending try to print a -1: %d\n", var);
++	printf("And before ending try to print a -100: %d\n", var);
+ 	printf("\n");
+ }
+ 
+
+Modified: branches/0.2/utils/initfscp.c
+===================================================================
+--- branches/0.2/utils/initfscp.c	2010-05-13 19:09:22 UTC (rev 247)
++++ branches/0.2/utils/initfscp.c	2010-05-16 20:43:35 UTC (rev 248)
+@@ -41,7 +41,7 @@
+ 			fsdest = fopen(argv[argc-1], "w");
+ 			if(fsdest == NULL) printf("Could not create FileSystem\n");
+ 			printf("Welcome to Dreamos initfs file copier tool\n");
+-			printf("Size of headers: %ld %ld\n\n", sizeof(struct initrd_file_t)*32, sizeof(initrd_file_t));
++			printf("Size of headers: %d %d\n\n", sizeof(struct initrd_file_t)*32, sizeof(initrd_file_t));
+ 			printf("Clearing headers structures ");
+ 			offset = sizeof(struct initrd_file_t) * 32 + sizeof(int);
+ 			/*Pulizia delle strutture dati*/
+
+
+
+From finarfin at mail.berlios.de  Sun May 16 22:48:50 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun, 16 May 2010 22:48:50 +0200
+Subject: [Dreamos-dev] r249 - in branches/0.2: . shell
+Message-ID: <201005162048.o4GKmo6n022625@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-05-16 22:48:48 +0200 (Sun, 16 May 2010)
+New Revision: 249
+
+Modified:
+   branches/0.2/dreamos.img
+   branches/0.2/shell/commands.c
+Log:
+Altre piccole correzioni
+
+
+Modified: branches/0.2/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: branches/0.2/shell/commands.c
+===================================================================
+--- branches/0.2/shell/commands.c	2010-05-16 20:43:35 UTC (rev 248)
++++ branches/0.2/shell/commands.c	2010-05-16 20:48:48 UTC (rev 249)
+@@ -47,11 +47,11 @@
+   _kcolor (BRIGHT_BLUE);
+   printf("\n");
+   printf("\t\t\t The Dream Operating System \n"
+-	 "\t\t           v%s.%s%s %s      \n\n"
++	 "\t\t           v%s.%s%s      \n\n"
+ 	 "\t\t\t   Welcome to DreamOS\n"
+ 	 "\t  Where dreams don't become Reality and remain dreams. \n"
+ 	 "\t          R.I.P - Rest in peace with dreamos ^_^        \n", 
+-	 VERSION, PATCHLEVEL, EXTRAVERSION, REV_NUM);
++	 VERSION, PATCHLEVEL, EXTRAVERSION);
+ 	
+   printf("\n\n\n\n");
+   _kcolor(WHITE);
+
+
+
+From finarfin at mail.berlios.de  Sun May 16 22:56:52 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun, 16 May 2010 22:56:52 +0200
+Subject: [Dreamos-dev] r250 - in branches/0.2: . files
+Message-ID: <201005162056.o4GKuqau022928@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-05-16 22:56:49 +0200 (Sun, 16 May 2010)
+New Revision: 250
+
+Modified:
+   branches/0.2/files/README
+   branches/0.2/initfs
+Log:
+AGgiornato README e mini FS 
+
+
+Modified: branches/0.2/files/README
+===================================================================
+--- branches/0.2/files/README	2010-05-16 20:48:48 UTC (rev 249)
++++ branches/0.2/files/README	2010-05-16 20:56:49 UTC (rev 250)
+@@ -1,4 +1,4 @@
+-DREAMOS 0.2.0-trunk
++dREAMOS 0.2.0-hastur
+ 
+ Welcome to the dreamOS operating system.
+ 
+
+Modified: branches/0.2/initfs
+===================================================================
+(Binary files differ)
+
+
+
+From finarfin at mail.berlios.de  Sun May 16 23:41:12 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun, 16 May 2010 23:41:12 +0200
+Subject: [Dreamos-dev] r251 - in trunk: . io shell utils
+Message-ID: <201005162141.o4GLfCwB025721@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-05-16 23:41:08 +0200 (Sun, 16 May 2010)
+New Revision: 251
+
+Modified:
+   trunk/dreamos.img
+   trunk/io/video.c
+   trunk/shell/testing.c
+   trunk/utils/initfscp.c
+Log:
+Eliminati Warning.
+Eliminate dall'help di testing le voci non piu esistenti
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/io/video.c
+===================================================================
+--- trunk/io/video.c	2010-05-16 20:56:49 UTC (rev 250)
++++ trunk/io/video.c	2010-05-16 21:41:08 UTC (rev 251)
+@@ -293,7 +293,7 @@
+ 	if(num<0) {		
+ 		num=(~num)+1;
+ 		*p++='-';
+-		*pbase++;
++		pbase++;
+ 	}
+     while(num > 0)
+     {
+@@ -337,7 +337,7 @@
+ 	else if(num<0) {		
+ 		num=(~num)+1;
+ 		*p++='-';
+-		*pbase++;
++		pbase++;
+ 	}
+     while(num > 0)
+     {
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-05-16 20:56:49 UTC (rev 250)
++++ trunk/shell/testing.c	2010-05-16 21:41:08 UTC (rev 251)
+@@ -107,8 +107,7 @@
+ 		"  -> try_kmalloc       - Test a basic kmalloc() function\n"
+ 		"  -> do_fault          - Test a page_fault\n"
+ 		"  -> try_strtok        - Test strtok() function in string.h\n"
+-		"  -> try_printmem      - Print used locations of memory\n"
+-		"  -> try_module        - Read the content of the memory zone loaded in module, aka initfs \n"
++		"  -> try_printmem      - Print used locations of memory\n"		
+ 		"  -> try_open          - Function to test open() & stdarg() \n"		
+ 		"  -> try_syscall	    - Try some syscall functions\n"
+ 		);	
+@@ -166,7 +165,7 @@
+ 
+ void try_syscall(){
+ 	int i;
+-	int var = -1;
++	int var = -100;
+ 	printf("Trying sysputch:\n");	
+     for(i='A';i<='Z';i++) {
+ 		asm(
+@@ -176,7 +175,7 @@
+ 			: : "g"(i)	
+ 		);	
+ 	}
+-	printf("And before ending try to print a -1: %d\n", var);
++	printf("And before ending try to print a -100: %d\n", var);
+ 	printf("\n");
+ }
+ 
+
+Modified: trunk/utils/initfscp.c
+===================================================================
+--- trunk/utils/initfscp.c	2010-05-16 20:56:49 UTC (rev 250)
++++ trunk/utils/initfscp.c	2010-05-16 21:41:08 UTC (rev 251)
+@@ -41,7 +41,7 @@
+ 			fsdest = fopen(argv[argc-1], "w");
+ 			if(fsdest == NULL) printf("Could not create FileSystem\n");
+ 			printf("Welcome to Dreamos initfs file copier tool\n");
+-			printf("Size of headers: %ld %ld\n\n", sizeof(struct initrd_file_t)*32, sizeof(initrd_file_t));
++			printf("Size of headers: %d %d\n\n", sizeof(struct initrd_file_t)*32, sizeof(initrd_file_t));
+ 			printf("Clearing headers structures ");
+ 			offset = sizeof(struct initrd_file_t) * 32 + sizeof(int);
+ 			/*Pulizia delle strutture dati*/
+
+
+
+From finarfin at mail.berlios.de  Mon May 17 20:13:58 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Mon, 17 May 2010 20:13:58 +0200
+Subject: [Dreamos-dev] r252 - in trunk: . include
+Message-ID: <201005171813.o4HIDwAe032629@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-05-17 20:13:54 +0200 (Mon, 17 May 2010)
+New Revision: 252
+
+Modified:
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/include/kernel.h
+   trunk/include/version.h
+Log:
+Modifiche minori.
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2010-05-16 21:41:08 UTC (rev 251)
++++ trunk/Makefile	2010-05-17 18:13:54 UTC (rev 252)
+@@ -4,7 +4,7 @@
+ 
+ NAME = DreamOS
+ VERSION = 0
+-PATCHLEVEL = 2.0
++PATCHLEVEL = 2.1
+ EXTRAVERSION = -trunk
+ 
+ include Makefile.am
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/kernel.h
+===================================================================
+--- trunk/include/kernel.h	2010-05-16 21:41:08 UTC (rev 251)
++++ trunk/include/kernel.h	2010-05-17 18:13:54 UTC (rev 252)
+@@ -35,7 +35,7 @@
+ asmlinkage void _start(struct multiboot_info*);
+ int main_loop(struct multiboot_info*);
+ 
+-#define DREAMOS_VER "DreamOS ver 0.2.0 - trunk"
++#define DREAMOS_VER "DreamOS ver 0.2.1 - trunk"
+ #define SITEURL "www.dreamos.org"
+ 
+ #endif
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2010-05-16 21:41:08 UTC (rev 251)
++++ trunk/include/version.h	2010-05-17 18:13:54 UTC (rev 252)
+@@ -21,7 +21,7 @@
+  */
+ 
+ #define VERSION "0"
+-#define PATCHLEVEL "2.0"
++#define PATCHLEVEL "2.1"
+ #define EXTRAVERSION "-trunk"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r229"
++#define REV_NUM "-r251"
+
+
+
+From finarfin at mail.berlios.de  Sat May 29 00:02:09 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sat, 29 May 2010 00:02:09 +0200
+Subject: [Dreamos-dev] r253 - in trunk: . shell
+Message-ID: <201005282202.o4SM29TZ005480@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-05-29 00:02:05 +0200 (Sat, 29 May 2010)
+New Revision: 253
+
+Modified:
+   trunk/dreamos.img
+   trunk/shell/commands.c
+Log:
+Iniziata gestione "cd ."
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-05-17 18:13:54 UTC (rev 252)
++++ trunk/shell/commands.c	2010-05-28 22:02:05 UTC (rev 253)
+@@ -464,6 +464,10 @@
+ 			//printf("abspath: %s\n", abspath);
+ 			dirp=opendir(argv[1]);
+ 		}
++		else if(argv[1][0]=='.') {
++			printf(". option\n");
++			return;
++		}
+ 		else {			
+ 			int abs_size = 0;			
+ 			abs_size = strlen(current_user.cur_path);
+
+
+
+From finarfin at mail.berlios.de  Sat May 29 00:22:06 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sat, 29 May 2010 00:22:06 +0200
+Subject: [Dreamos-dev] r254 - in trunk: . shell
+Message-ID: <201005282222.o4SMM67o007666@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-05-29 00:22:03 +0200 (Sat, 29 May 2010)
+New Revision: 254
+
+Modified:
+   trunk/dreamos.img
+   trunk/shell/commands.c
+Log:
+Aggiunto totale dimensione file se specificato comando ls -l
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-05-28 22:02:05 UTC (rev 253)
++++ trunk/shell/commands.c	2010-05-28 22:22:03 UTC (rev 254)
+@@ -377,6 +377,7 @@
+ 	i = 0;		
+ 	dirp = opendir(current_user.cur_path);
+ 	if(dirp!=NULL){
++		int tot = 0;
+ 		if(argc > 1 && strcmp(argv[1], "-l") == 0) flag =1;
+ 		/*while(i<j){
+ 			if(strcmp(mountpoint_list[i].mountpoint, current_user.cur_path)){
+@@ -386,13 +387,15 @@
+ 		}*/
+ 		struct dirent* cur_dir_entry;
+ 		cur_dir_entry = readdir(dirp);		
+-		while(cur_dir_entry!=NULL){
++		while(cur_dir_entry!=NULL){			
+ 			//struct stat 			
+ 			if(cur_dir_entry->d_type == FS_MOUNTPOINT) _kcolor(BRIGHT_GREEN);
+ 			if(flag==1){
+ 				struct stat tmp_stat;
+-				if(stat(cur_dir_entry->d_name, &tmp_stat)!=-1)
++				if(stat(cur_dir_entry->d_name, &tmp_stat)!=-1){
+ 					printf("uid=%d(%s) - size:  %d ", tmp_stat.st_uid, current_user.username, tmp_stat.st_size);
++					tot = tot + tmp_stat.st_size;
++				}
+ 			}
+ 			printf("%s\n", cur_dir_entry->d_name);
+ 			_kcolor(WHITE);			
+@@ -400,6 +403,7 @@
+ 		}
+ 		closedir(dirp);
+ 		printf("\n");
++		if(flag==1)printf("Total: %d byte\n", tot);
+ 	} else {
+ 		while( i < j ) {
+ 			if (argc == 1) {
+
+
+
+From finarfin at mail.berlios.de  Sun May 30 23:24:50 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun, 30 May 2010 23:24:50 +0200
+Subject: [Dreamos-dev] r255 - in trunk: . include/shell shell
+Message-ID: <201005302124.o4ULOobl023468@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-05-30 23:24:46 +0200 (Sun, 30 May 2010)
+New Revision: 255
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/shell/commands.h
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+Log:
+Creata funzione e comando newfile per la creazione di un nuovo file.
+Da terminare.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/shell/commands.h
+===================================================================
+--- trunk/include/shell/commands.h	2010-05-28 22:22:03 UTC (rev 254)
++++ trunk/include/shell/commands.h	2010-05-30 21:24:46 UTC (rev 255)
+@@ -54,6 +54,7 @@
+ void tester();
+ void pwd();	
+ void more();
++void newfile();
+ 
+ struct devel {
+ 	const char cmd_testname[CMD_LEN];
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-05-28 22:22:03 UTC (rev 254)
++++ trunk/shell/commands.c	2010-05-30 21:24:46 UTC (rev 255)
+@@ -541,3 +541,14 @@
+ void pwd(){
+ 	printf("%s\n", current_user.cur_path );
+ }
++
++void newfile(){
++	if(argc!=2){
++		printf("Bad usage. Try newfile --help for more informations\n");
++	}
++	else {
++		if(strcmp(argv[1], "--help")==0) {
++			printf("newfile FILENAME - Make a new file, and prompt for it's content\n");
++		}
++	}
++}
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2010-05-28 22:22:03 UTC (rev 254)
++++ trunk/shell/shell.c	2010-05-30 21:24:46 UTC (rev 255)
+@@ -116,6 +116,7 @@
+ 	{ "tester", tester},	
+ 	{ "pwd", pwd},
+ 	{ "more", more},
++	{ "newfile", newfile}
+   };
+ 
+ 
+
+
+

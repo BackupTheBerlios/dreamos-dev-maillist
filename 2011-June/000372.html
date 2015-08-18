@@ -1,0 +1,179 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r369 - in trunk: . boot mem shell tasks
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2011-June/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r369%20-%20in%20trunk%3A%20.%20boot%20mem%20shell%20tasks&In-Reply-To=%3C20110603213538.55753480C9D%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   
+   <LINK REL="Next"  HREF="000373.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r369 - in trunk: . boot mem shell tasks</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r369%20-%20in%20trunk%3A%20.%20boot%20mem%20shell%20tasks&In-Reply-To=%3C20110603213538.55753480C9D%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r369 - in trunk: . boot mem shell tasks">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Fri Jun  3 23:35:38 CEST 2011</I>
+    <P><UL>
+        
+        <LI>Next message: <A HREF="000373.html">[Dreamos-dev] r370 - in trunk: . boot mem shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#372">[ date ]</a>
+              <a href="thread.html#372">[ thread ]</a>
+              <a href="subject.html#372">[ subject ]</a>
+              <a href="author.html#372">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2011-06-03 23:35:37 +0200 (Fri, 03 Jun 2011)
+New Revision: 369
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/mem/paging.c
+   trunk/shell/testing.c
+   trunk/tasks/task_utils.c
+Log:
+Added get_phys_address.
+Fixed get_pagetable_entry
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2011-05-28 21:20:22 UTC (rev 368)
++++ trunk/mem/paging.c	2011-06-03 21:35:37 UTC (rev 369)
+@@ -175,9 +175,9 @@
+     unsigned int *mod_address;    
+     mod_address = (unsigned int *)((0XFFC00000|(pd_entry&lt;&lt;12))+(pt_entry*4));
+     *mod_address = (base&amp;0xFFFFF000)|opt1|opt2;
+-    #ifdef DEBUG
+-    printf(&quot;value for entry n.: %d is: %d\n&quot;, pt_entry,*mod_address);
+-    #endif
++    //#ifdef DEBUG
++    printf(&quot;value for entry n.: %d is: %x\n&quot;, pt_entry,mod_address);
++    //#endif
+ }
+ 
+ /**
+@@ -201,7 +201,8 @@
+   * @return Il contenuto dell'entry
+   */
+ unsigned int get_pagetable_entry(int dir_num, int tab_num){
+-    unsigned int *mod_address = (unsigned int*) (0xFFC00000|(dir_num&lt;&lt;12))+ (tab_num*4);
++    unsigned int *mod_address = (unsigned int*) ((0xFFC00000|(dir_num&lt;&lt;12))+(tab_num*4));
++    //printf(&quot;value for entry n.: %d is: %u\n&quot;, tab_num,mod_address);
+     return (unsigned int) (*mod_address);
+ }
+ 
+@@ -314,13 +315,21 @@
+ 		set_pagedir_entry_ric(pdir, (unsigned int)new_pagetable, PD_PRESENT|SUPERVISOR, 0);
+ 		set_pagetable_entry_ric(pdir, ptable, fis_address, PD_PRESENT|SUPERVISOR, 0);
+ 	} else {
+-		printf(&quot;Else TODO\n&quot;);
++		printf(&quot;Else TODO %u %u\n&quot;, fis_address, get_pagedir_entry(pdir));		
+ 		set_pagetable_entry_ric(pdir, ptable ,fis_address, PD_PRESENT|SUPERVISOR|WRITE, 0);		
+ 	}
+ 	return;
+ }
+ 
+ unsigned int get_phys_address(unsigned int address){
++	unsigned int pdir = 0;
++	unsigned int ptable = 0;
++	//unsigned int* tmp;
++	//tmp = 0xFFC00518;
++	pdir = BITRANGE (address, 22, 31);
++    ptable = BITRANGE (address, 12, 21);
++    printf(&quot;GetPhys - Pdir: %d, PTable: %d\n&quot;, pdir,ptable);
++    if(ptable!=0) printf(&quot;PhysAddress: %x\n&quot;, get_pagetable_entry(pdir, ptable));
+ 	return 0;
+ }
+ 
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2011-05-28 21:20:22 UTC (rev 368)
++++ trunk/shell/testing.c	2011-06-03 21:35:37 UTC (rev 369)
+@@ -255,8 +255,10 @@
+ }
+ 
+ void try_mapaddress(){
++	unsigned int *tmp = kmalloc(sizeof(int));
+ 	printf(&quot;Testing map_address\n&quot;);
+-	map_address(0x0010000, kmalloc(sizeof(int)));
++	map_address(0x0010000, (unsigned int)tmp);
++	get_phys_address((unsigned int)tmp);
+ 	//map_kernel();
+ 	return;
+ }
+
+Modified: trunk/tasks/task_utils.c
+===================================================================
+--- trunk/tasks/task_utils.c	2011-05-28 21:20:22 UTC (rev 368)
++++ trunk/tasks/task_utils.c	2011-06-03 21:35:37 UTC (rev 369)
+@@ -38,7 +38,8 @@
+ 	unsigned int *logic_pt_address = kmalloc(8*4096);
+ 	unsigned int *pagedir;
+ 	unsigned int *pagetable;
+-	int i=0;	
++	unsigned int i=0;	
++	unsigned int j=0;
+ 	pagedir = create_pageDir();
+ 	pagetable = create_pageTable();	
+ 	//set_pagedir_entry_ric(1023, fis_address, PD_PRESENT|SUPERVISOR, 0);
+@@ -52,6 +53,12 @@
+ 		i++;
+ 	}
+ 	//set_pagedir_entry_ric(0, (unsigned int)current_page_table, PD_PRESENT|SUPERVISOR|WRITE,0);    
+-	
++	while(j&lt;PD_LIMIT){
++		pagedir[j] = 0x0;
++		pagetable[j] = (j*0x1000&amp;0xFFFFF0)|PD_PRESENT|SUPERVISOR|WRITE|0;
++		j++;
++	}	
++	pagedir[0] = ((unsigned int)pagetable&amp;0xFFFFF000)|PD_PRESENT|SUPERVISOR|WRITE|0;
++	pagedir[1023] = ((unsigned int)pagedir&amp;0xFFFFF000)|PD_PRESENT|SUPERVISOR|0;	
+ 	return 0;
+ }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	
+	<LI>Next message: <A HREF="000373.html">[Dreamos-dev] r370 - in trunk: . boot mem shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#372">[ date ]</a>
+              <a href="thread.html#372">[ thread ]</a>
+              <a href="subject.html#372">[ subject ]</a>
+              <a href="author.html#372">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

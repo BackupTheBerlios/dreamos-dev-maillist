@@ -1,0 +1,84 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r334 - trunk/io
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2011-January/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r334%20-%20trunk/io&In-Reply-To=%3C20110112221320.D798D480A0C%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000336.html">
+   <LINK REL="Next"  HREF="000338.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r334 - trunk/io</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r334%20-%20trunk/io&In-Reply-To=%3C20110112221320.D798D480A0C%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r334 - trunk/io">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Wed Jan 12 23:13:20 CET 2011</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000336.html">[Dreamos-dev] r333 - in trunk: . shell
+</A></li>
+        <LI>Next message: <A HREF="000338.html">[Dreamos-dev] r335 - in trunk: . boot include/mem libc mem shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#337">[ date ]</a>
+              <a href="thread.html#337">[ thread ]</a>
+              <a href="subject.html#337">[ subject ]</a>
+              <a href="author.html#337">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2011-01-12 23:13:20 +0100 (Wed, 12 Jan 2011)
+New Revision: 334
+
+Modified:
+   trunk/io/video.c
+Log:
+Fixed hex number conversion in string
+
+Modified: trunk/io/video.c
+===================================================================
+--- trunk/io/video.c	2011-01-09 22:11:37 UTC (rev 333)
++++ trunk/io/video.c	2011-01-12 22:13:20 UTC (rev 334)
+@@ -262,7 +262,7 @@
+ void _kntohex (char *buffer, unsigned int decnum)
+ {
+   int shift=0;
+-  int tempnum = decnum;
++  unsigned int tempnum = decnum;
+ 
+   while (tempnum&gt;=16) {
+     tempnum &gt;&gt;= 4;
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000336.html">[Dreamos-dev] r333 - in trunk: . shell
+</A></li>
+	<LI>Next message: <A HREF="000338.html">[Dreamos-dev] r335 - in trunk: . boot include/mem libc mem shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#337">[ date ]</a>
+              <a href="thread.html#337">[ thread ]</a>
+              <a href="subject.html#337">[ subject ]</a>
+              <a href="author.html#337">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

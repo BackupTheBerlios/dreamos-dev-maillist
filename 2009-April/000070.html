@@ -1,0 +1,439 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r69 - in trunk: . mem shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-April/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r69%20-%20in%20trunk%3A%20.%20mem%20shell&In-Reply-To=%3C200904120854.n3C8sdDI009889%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000069.html">
+   <LINK REL="Next"  HREF="000071.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r69 - in trunk: . mem shell</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r69%20-%20in%20trunk%3A%20.%20mem%20shell&In-Reply-To=%3C200904120854.n3C8sdDI009889%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r69 - in trunk: . mem shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun Apr 12 10:54:39 CEST 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000069.html">[Dreamos-dev] r68 - in branches/0.1.1: . include
+</A></li>
+        <LI>Next message: <A HREF="000071.html">[Dreamos-dev] r70 - in trunk: . hardware include include/hardware	io libc mem shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#70">[ date ]</a>
+              <a href="thread.html#70">[ thread ]</a>
+              <a href="subject.html#70">[ subject ]</a>
+              <a href="author.html#70">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-04-12 10:54:33 +0200 (Sun, 12 Apr 2009)
+New Revision: 69
+
+Modified:
+   trunk/README
+   trunk/bl.img
+   trunk/dreamos.img
+   trunk/mem/kheap.c
+   trunk/mem/paging.c
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+Log:
+Gestione Memoria:
+ - Ora viene restituito per le allocazioni lo spazio richiesto, e non 
+piu la pagina
+ - Risolto bug #15504 relativo a return value non corretti di Alloc
+ - Ora la funzione kmalloc prima di chiamare alloc controlla che il 
+valore size con la quale viene chiamata e' maggiore di 0.
+
+Varie:
+ - Modifica al comando kmalloc, diminuito il numero di elementi che 
+inizializza.
+
+
+Modified: trunk/README
+===================================================================
+--- trunk/README	2009-04-08 10:13:43 UTC (rev 68)
++++ trunk/README	2009-04-12 08:54:33 UTC (rev 69)
+@@ -128,6 +128,6 @@
+ 
+ 	
+ 
+-DreamOS 2003-2008 by finarfin/shainer
++DreamOS 2003-2009 by finarfin/shainer
+ <A HREF="http://www.dreamos.org">http://www.dreamos.org</A>
+ <A HREF="http://www.osdev.it">http://www.osdev.it</A>
+
+Modified: trunk/bl.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2009-04-08 10:13:43 UTC (rev 68)
++++ trunk/mem/kheap.c	2009-04-12 08:54:33 UTC (rev 69)
+@@ -34,6 +34,7 @@
+ extern unsigned int end;
+ extern size_t tot_mem;
+ heap_t *kheap;
++heap_t *kheap_tmp;
+ unsigned int address_cur = (unsigned int) &end;
+ unsigned int node_address;
+ 
+@@ -41,7 +42,7 @@
+ {
+    unsigned int temp;
+    if(kheap!=0) {
+-     return (void *) alloc(size, kheap);
++     if (size&gt;0) return (void *) alloc(size, kheap);
+    }
+    else {            
+      temp = address_cur;
+@@ -55,11 +56,11 @@
+ {
+    
+     printf(&quot;try_alloc(): Used list address: %d, Value: %d\n&quot;, &amp;(kheap-&gt;used_list), kheap-&gt;used_list);
+-    alloc(5000, kheap);
++    alloc(50, kheap);
+     alloc(60, kheap);
+     alloc(50, kheap);
+     alloc(100, kheap);
+-    alloc(6000, kheap);    
++    alloc(6, kheap);    
+     printf(&quot;Used\n&quot;);
+     print_heap_list (kheap-&gt;used_list);
+     printf(&quot;Free\n&quot;);
+@@ -112,52 +113,48 @@
+   */
+ void *alloc(unsigned int size, heap_t *cur_heap)
+ {    
+-    int n_pages = size / 4096;
+-    int aval_pages;
+     heap_node_t* new_node = NULL;
+     heap_node_t* free_heap_list = cur_heap-&gt;free_list;    
+     heap_node_t* prev_node;
+-    if(size%4096 !=0)
+-      n_pages++;    
+     #ifdef DEBUG
+     printf(&quot;----\n&quot;);
+-    printf(&quot;Number of pages: %d &quot;, n_pages);
++    printf(&quot;Required Size: %d &quot;, size);    
+     #endif
+     prev_node = free_heap_list;
+ 
+     /* Look for a free block of memory in the heap's free memory list */    
+     while(free_heap_list) {
+-      if(free_heap_list-&gt;size &gt;= size) {
+-        aval_pages = free_heap_list-&gt;size/4096;
+-        if(free_heap_list-&gt;size%4096 !=0)
+-            aval_pages++;
++      if(free_heap_list-&gt;size &gt;= size) {   
+         #ifdef DEBUG
+         printf(&quot;Available_pages: %d\n&quot;, aval_pages);
+         #endif
+-        if(aval_pages &gt; n_pages){
++        /*Se lo spazio disponibile e' maggiore di quello richiesto*/
++        if(free_heap_list-&gt;size &gt; size){
+             #ifdef DEBUG
+             printf(&quot;Node should be splitted\n&quot;);
+             #endif
+-            new_node = (heap_node_t*)alloc_node();
+-            new_node-&gt;start_address = free_heap_list-&gt;start_address;
++            new_node = (heap_node_t*)alloc_node();            
++            new_node-&gt;start_address = free_heap_list-&gt;start_address;            
+             new_node-&gt;next = NULL;
+-            new_node-&gt;size = n_pages*0x1000;
++            new_node-&gt;size = size;
+             insert_list (new_node, &amp;(cur_heap-&gt;used_list));
+-            free_heap_list-&gt;size = (free_heap_list-&gt;size) - (n_pages*0x1000);
+-            free_heap_list-&gt;start_address = free_heap_list-&gt;start_address + (n_pages*0x1000);
++            free_heap_list-&gt;size = (free_heap_list-&gt;size) - (size);
++            free_heap_list-&gt;start_address = free_heap_list-&gt;start_address + (size);
+             #ifdef DEBUG
+             printf(&quot;New_node -&gt; Size: %d, start_address: %d\n&quot;, new_node-&gt;size, new_node-&gt;start_address);
+             #endif
+         }
+-        else if(aval_pages == n_pages){
++        /*Se lo spazio richiesto e' uguale a quello disponibile*/         
++        else if(free_heap_list-&gt;size == size){
+             if(prev_node == free_heap_list) {                
+                 kheap-&gt;free_list = (heap_node_t*)free_heap_list-&gt;next;
+-            }
++            }            
+             else prev_node-&gt;next = free_heap_list-&gt;next;
+-            insert_list (free_heap_list, &amp;(cur_heap-&gt;used_list));            
++            insert_list (free_heap_list, &amp;(cur_heap-&gt;used_list));
++            return (void *)free_heap_list-&gt;start_address;            
+         }        
+         #ifdef DEBUG        
+-        printf(&quot;free_heap_list -&gt; Actual size: %d, start_address: %d\n&quot;, free_heap_list-&gt;size,        free_heap_list-&gt;start_address);
++        printf(&quot;free_heap_list -&gt; Actual size: %d, start_address: %d\n&quot;, free_heap_list-&gt;size, free_heap_list-&gt;start_address);
+         printf(&quot;----\n&quot;);
+         #endif
+         break;
+@@ -169,7 +166,8 @@
+    }
+    #ifdef DEBUG
+    printf(&quot;Prev_node: %d \n&quot;, prev_node-&gt;start_address);
+-   #endif
++   printf(&quot;New Address: %d &quot;, new_node-&gt;start_address);    
++   #endif   
+    return (void *)new_node-&gt;start_address;
+ }
+ 
+@@ -211,8 +209,8 @@
+ //   heap_node_t *free = kheap-&gt;free_list;
+   heap_node_t *n2;
+ 
+-  if ((unsigned int)location % 4 != 0) return -1;
+-//     printf (&quot;Indirizzo non allineato a 4kb\n&quot;);
++	//if ((unsigned int)location % 4 != 0) return -1;
++	//     printf (&quot;Indirizzo non allineato a 4kb\n&quot;);
+ 
+   while (busy) {
+     if (busy-&gt;start_address == (unsigned int)location) {
+@@ -248,7 +246,7 @@
+         #endif
+         prev-&gt;size += busy-&gt;size;
+         prev-&gt;next = n2;
+-	free_node(busy);
++	    free_node(busy);
+ // 	insert_list (busy, &amp;(kheap-&gt;free_nodes));
+       }
+       /* Merge n2 into busy */
+@@ -260,11 +258,12 @@
+         busy-&gt;next = n2-&gt;next;
+ // 	insert_list (n2, &amp;(kheap-&gt;free_nodes));
+ 
+-	free_node(n2);
++    	free_node(n2);
+       }
+ 
+       break;
+     }
++    //printf(&quot;busy: %d - free: %d\n&quot;, busy-&gt;start_address, location );
+     prev = busy;
+     busy = (heap_node_t*)busy-&gt;next;
+   }
+@@ -302,3 +301,70 @@
+     toadd-&gt;next = kheap-&gt;free_nodes;
+     kheap-&gt;free_nodes = toadd;        
+ }
++
++/*-----------------------------------------------------------------------------*/
++
++//~ void *alloc(unsigned int size, heap_t *cur_heap)
++//~ {    
++    //~ int n_pages = size / 4096;
++    //~ int aval_pages;
++    //~ heap_node_t* new_node = NULL;
++    //~ heap_node_t* free_heap_list = cur_heap-&gt;free_list;    
++    //~ heap_node_t* prev_node;
++    //~ if(size%4096 !=0)
++      //~ n_pages++;    
++    //~ #ifdef DEBUG
++    //~ printf(&quot;----\n&quot;);
++    //~ printf(&quot;Number of pages: %d &quot;, n_pages);
++    //~ #endif
++    //~ prev_node = free_heap_list;
++//~ 
++    //~ /* Look for a free block of memory in the heap's free memory list */    
++    //~ while(free_heap_list) {
++      //~ if(free_heap_list-&gt;size &gt;= size) {
++        //~ aval_pages = free_heap_list-&gt;size/4096;
++        //~ if(free_heap_list-&gt;size%4096 !=0)
++            //~ aval_pages++;
++        //~ #ifdef DEBUG
++        //~ printf(&quot;Available_pages: %d\n&quot;, aval_pages);
++        //~ #endif
++        //~ /*Se lo spazio disponibile e' maggiore di quello richiesto*/
++        //~ if(aval_pages &gt; n_pages){
++            //~ #ifdef DEBUG
++            //~ printf(&quot;Node should be splitted\n&quot;);
++            //~ #endif
++            //~ new_node = (heap_node_t*)alloc_node();
++            //~ new_node-&gt;start_address = free_heap_list-&gt;start_address;
++            //~ new_node-&gt;next = NULL;
++            //~ new_node-&gt;size = n_pages*0x1000;
++            //~ insert_list (new_node, &amp;(cur_heap-&gt;used_list));
++            //~ free_heap_list-&gt;size = (free_heap_list-&gt;size) - (n_pages*0x1000);
++            //~ free_heap_list-&gt;start_address = free_heap_list-&gt;start_address + (n_pages*0x1000);
++            //~ #ifdef DEBUG
++            //~ printf(&quot;New_node -&gt; Size: %d, start_address: %d\n&quot;, new_node-&gt;size, new_node-&gt;start_address);
++            //~ #endif
++        //~ }
++        //~ /*Se lo spazio richiesto e' uguale a quello disponibile*/         
++        //~ else if(aval_pages == n_pages){
++            //~ if(prev_node == free_heap_list) {                
++                //~ kheap-&gt;free_list = (heap_node_t*)free_heap_list-&gt;next;
++            //~ }            
++            //~ else prev_node-&gt;next = free_heap_list-&gt;next;
++            //~ insert_list (free_heap_list, &amp;(cur_heap-&gt;used_list));            
++        //~ }        
++        //~ #ifdef DEBUG        
++        //~ printf(&quot;free_heap_list -&gt; Actual size: %d, start_address: %d\n&quot;, free_heap_list-&gt;size,        free_heap_list-&gt;start_address);
++        //~ printf(&quot;----\n&quot;);
++        //~ #endif
++        //~ break;
++      //~ }
++      //~ else {                
++        //~ prev_node = free_heap_list;
++        //~ free_heap_list = (heap_node_t*)free_heap_list-&gt;next;
++      //~ }      
++   //~ }
++   //~ #ifdef DEBUG
++   //~ printf(&quot;Prev_node: %d \n&quot;, prev_node-&gt;start_address);
++   //~ #endif
++   //~ return (void *)new_node-&gt;start_address;
++//~ }
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2009-04-08 10:13:43 UTC (rev 68)
++++ trunk/mem/paging.c	2009-04-12 08:54:33 UTC (rev 69)
+@@ -40,7 +40,6 @@
+ extern unsigned int end;
+ extern heap_t *kheap;
+ 
+-
+ void init_paging(){
+     int i;
+     printf(LNG_PAGING);
+@@ -105,7 +104,7 @@
+   * @return none
+   */
+ void set_pagedir_entry(int pos, unsigned int base, unsigned char opt1 , unsigned char opt2){
+-    current_page_dir[pos] = (base&amp;0xFFFFF000)|opt1|opt2;
++	current_page_dir[pos] = (base&amp;0xFFFFF000)|opt1|opt2;
+     #ifdef DEBUG
+     printf(&quot;base: %d, basepde: %d\n&quot;, base, current_page_dir[pos]);
+     #endif
+@@ -175,7 +174,7 @@
+   * @return Il contenuto dell'entry
+   */
+ unsigned int get_pagedir_entry(int num){
+-    unsigned int *mod_address;
++    unsigned int *mod_address;    
+     mod_address= (0xFFFFF000 + (num*4));
+     return *mod_address;
+ }
+@@ -189,7 +188,7 @@
+   * @return Il contenuto dell'entry
+   */
+ unsigned int get_pagetable_entry(int dir_num, int tab_num){
+-    unsigned int *mod_address;
++    unsigned int *mod_address;    
+     mod_address=(0xFFC00000|(dir_num&lt;&lt;12))+ (tab_num*4);
+     return (unsigned int) (*mod_address);
+ }
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-04-08 10:13:43 UTC (rev 68)
++++ trunk/shell/commands.c	2009-04-12 08:54:33 UTC (rev 69)
+@@ -86,28 +86,35 @@
+ 
+ void kmalloc_try()
+ {
+-  int *b;
++  int *b, *c,*d;
+   int i=0;
+ 
+-  printf(&quot;Kmalloc try: ...\n&quot;);
+-  b = (int *)kmalloc(10 * sizeof(int));
+-  printf(&quot;Address obtained: %d\n&quot;, b);
++  printf(&quot;Kmalloc try: ... &quot;);
++  //print_heap_list (kheap-&gt;free_list);
++  b = (int *)kmalloc(15 * sizeof(int));
++  c = (int *)kmalloc(10 * sizeof(int));
++  d = (int *)kmalloc(15 * sizeof(int));
++  printf(&quot;Address obtained: %d %d %d\n&quot;, b, c, d);
+   
+-  while(i&lt;10) {
++  while(i&lt;15) {
+     b[i] = i*2;
++    if(i&lt;10) c[i] = i*3;
++    d[i] = i*2;
+     i++;
+   }
+   i=0;
+ 
+-  while(i&lt;10) {
+-    printf(&quot;b[%d] = %d\n&quot;,i, b[i]);
++  while(i&lt;15) {
++    printf(&quot;b[%d] = %d d[%d] = %d &quot;,i, b[i], i,d[i]);
++    if(i&lt;10) printf(&quot;c[%d] = %d\n&quot;, i, c[i]);
++    else printf(&quot;\n&quot;);
+     i++;
+   }
+-
+-  printf(&quot;Address of b: %d\n&quot;, b);
+   printf(&quot;Navigating used list...\n&quot;);
+   print_heap_list (kheap-&gt;used_list);
+   free (b);
++  free (c);
++  free (d);
+ }
+ 
+ void do_fault()
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-04-08 10:13:43 UTC (rev 68)
++++ trunk/shell/shell.c	2009-04-12 08:54:33 UTC (rev 69)
+@@ -53,7 +53,7 @@
+   argc=0;
+ 
+   for (; *com; com++)
+-  {
++  {    
+     argv[argc] = (char *)kmalloc(sizeof(char) * 10);
+     while (*com != ' ') {
+       *(argv[argc] + i) = *com++;
+@@ -115,7 +115,7 @@
+ 
+     end:
+     memset (cmd, 0, strlen(cmd));
+-    for (--argc; argc&gt;=0; argc--) {
++    for (--argc; argc&gt;=0; argc--) {      
+       free (argv[argc]);
+     }
+   }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000069.html">[Dreamos-dev] r68 - in branches/0.1.1: . include
+</A></li>
+	<LI>Next message: <A HREF="000071.html">[Dreamos-dev] r70 - in trunk: . hardware include include/hardware	io libc mem shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#70">[ date ]</a>
+              <a href="thread.html#70">[ thread ]</a>
+              <a href="subject.html#70">[ subject ]</a>
+              <a href="author.html#70">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

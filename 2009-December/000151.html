@@ -1,0 +1,201 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r149 - in trunk: . fs include/fs include/sys shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-December/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r149%20-%20in%20trunk%3A%20.%20fs%20include/fs%20include/sys%20shell&In-Reply-To=%3C200912022239.nB2Md47p029002%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000150.html">
+   <LINK REL="Next"  HREF="000152.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r149 - in trunk: . fs include/fs include/sys shell</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r149%20-%20in%20trunk%3A%20.%20fs%20include/fs%20include/sys%20shell&In-Reply-To=%3C200912022239.nB2Md47p029002%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r149 - in trunk: . fs include/fs include/sys shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Wed Dec  2 23:39:04 CET 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000150.html">[Dreamos-dev] r148 - in trunk: . fs include/fs shell
+</A></li>
+        <LI>Next message: <A HREF="000152.html">[Dreamos-dev] r150 - in trunk: . fs include/fs
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#151">[ date ]</a>
+              <a href="thread.html#151">[ thread ]</a>
+              <a href="subject.html#151">[ subject ]</a>
+              <a href="author.html#151">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-12-02 23:39:03 +0100 (Wed, 02 Dec 2009)
+New Revision: 149
+
+Added:
+   trunk/fs/unistd.c
+Modified:
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/include/fs/initrd.h
+   trunk/include/sys/types.h
+   trunk/include/sys/unistd.h
+   trunk/shell/testing.c
+Log:
+Aggiunto file unistd.c
+Iniziata stesura di read
+Aggiornato makefile.
+Aggiunti tipo: ssize_t.
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2009-12-01 23:10:21 UTC (rev 148)
++++ trunk/Makefile	2009-12-02 22:39:03 UTC (rev 149)
+@@ -36,6 +36,7 @@
+ 	  fs/vfs.o\
+ 	  fs/fcntl.o\
+ 	  fs/initrd.o\
++	  fs/unistd.o\
+       libc/ctype.o\
+       libc/string.o\
+       io/io.o\
+@@ -73,6 +74,7 @@
+ fs/vfs.o: fs/vfs.c
+ fs/fcntl.o: fs/fcntl.c
+ fs/initrd.o: fs/initrd.c
++fs/unistd.o: fs/unistd.c
+ io/video.o: io/video.c
+ io/io.o: io/io.c
+ processore/gdt.o: processore/gdt.c
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Added: trunk/fs/unistd.c
+===================================================================
+--- trunk/fs/unistd.c	2009-12-01 23:10:21 UTC (rev 148)
++++ trunk/fs/unistd.c	2009-12-02 22:39:03 UTC (rev 149)
+@@ -0,0 +1,24 @@
++/*
++ * Dreamos
++ * unistd.c
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++#include &lt;unistd.h&gt;
++#include &lt;stdio.h&gt;
++
++ssize_t read(int fildes, void *buf, size_t nbyte){
++	printf(&quot;Hi, i'm a read(), if you wanna see me at work.... stay tuned :D\n&quot;);
++}
+
+Modified: trunk/include/fs/initrd.h
+===================================================================
+--- trunk/include/fs/initrd.h	2009-12-01 23:10:21 UTC (rev 148)
++++ trunk/include/fs/initrd.h	2009-12-02 22:39:03 UTC (rev 149)
+@@ -28,6 +28,7 @@
+ };
+ 
+ struct initrd_file_t{
++	int magic;
+ 	char fileName[FILENAME_LENGTH];
+ 	int  uid;
+ 	unsigned int offset;
+
+Modified: trunk/include/sys/types.h
+===================================================================
+--- trunk/include/sys/types.h	2009-12-01 23:10:21 UTC (rev 148)
++++ trunk/include/sys/types.h	2009-12-02 22:39:03 UTC (rev 149)
+@@ -23,5 +23,7 @@
+ typedef unsigned int dev_t;
+ 
+ typedef unsigned int mode_t;
++typedef int ssize_t;
++//typedef unsigned int size_t;
+ 
+ #endif
+
+Modified: trunk/include/sys/unistd.h
+===================================================================
+--- trunk/include/sys/unistd.h	2009-12-01 23:10:21 UTC (rev 148)
++++ trunk/include/sys/unistd.h	2009-12-02 22:39:03 UTC (rev 149)
+@@ -19,8 +19,12 @@
+ #ifndef __UNISTD_H
+ #define __UNISTD_H
+ 
++#include &lt;types.h&gt;
++#include &lt;stddef.h&gt;
++
+ #define _SC_OPEN_MAX 10
+ 
++ssize_t read(int , void *, size_t);
+ int close(int);
+ 
+ #endif
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2009-12-01 23:10:21 UTC (rev 148)
++++ trunk/shell/testing.c	2009-12-02 22:39:03 UTC (rev 149)
+@@ -123,6 +123,7 @@
+ 
+ void try_open(){
+ 	char appoggio[50];
++	char *prova;
+ 	int i;
+ 	i=0;
+ 	while(i&lt;50){
+@@ -132,5 +133,6 @@
+ 	printf(&quot;Please insert a path: &quot;);
+ 	//appoggio = gets();
+ 	scanf(&quot;%s&quot;, appoggio);	
+-	open(appoggio, O_RDONLY, 42);
++	i = open(appoggio, O_RDONLY, 42);
++	read(i, prova, 1);
+ }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000150.html">[Dreamos-dev] r148 - in trunk: . fs include/fs shell
+</A></li>
+	<LI>Next message: <A HREF="000152.html">[Dreamos-dev] r150 - in trunk: . fs include/fs
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#151">[ date ]</a>
+              <a href="thread.html#151">[ thread ]</a>
+              <a href="subject.html#151">[ subject ]</a>
+              <a href="author.html#151">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

@@ -1,0 +1,112 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] Osservazioni
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2008-June/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20Osservazioni&In-Reply-To=%3C484A38AB.1050202%40gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000004.html">
+   <LINK REL="Next"  HREF="000006.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] Osservazioni</H1>
+    <B>Pietro &quot;m0nt0&quot; Montorfano</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20Osservazioni&In-Reply-To=%3C484A38AB.1050202%40gmail.com%3E"
+       TITLE="[Dreamos-dev] Osservazioni">monto84 at gmail.com
+       </A><BR>
+    <I>Sat Jun  7 09:28:43 CEST 2008</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000004.html">[Dreamos-dev] r6 - trunk
+</A></li>
+        <LI>Next message: <A HREF="000006.html">[Dreamos-dev] Osservazioni
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5">[ date ]</a>
+              <a href="thread.html#5">[ thread ]</a>
+              <a href="subject.html#5">[ subject ]</a>
+              <a href="author.html#5">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Ciao a tutti,
+so di sicuro che passer&#242; per rompipalle e mi spiace se &#232; cosi, ma oggi 
+ho fatto un checkout per vedere come andava il dreamos e mi piacerebbe 
+codare un po, ho visto per&#242; alcune cose che riporto qui, sono delle 
+opinioni personali e so che avete fatto tutto da 0, c'ero quando tutto 
+era 0 :D comunque non voglio offendere o giudicare male il vostro 
+lavoro, anzi, complimentissimi!!
+
+
+* doc da mettere in txt e non in pdf, i pdf li mettiamo sul sito, magari 
+li traduco in inglese anche che non si sa mai possono essere utili
+* includere nei .h almeno un pelo di commento su che cosa fanno le 
+routine in quel file, ovvero per capire cosa fa keyboard.c in hardware e 
+in drivers va letto il codice, se mettessimo una riga sotto il nome del 
+file prima della gpl con scritto di cosa si occupa quella porzione di 
+codice &#232; meglio
+* rinominare processore in inglese
+* libc non so come fare ma secondo me sarebbe meglio appoggiarsi alle 
+glibc dato che son gi&#224; fatte e sicuro sono efficenti e prive di bug, mi 
+documento su come magari rendere un os compatibile con quelle
+* cosa ne dite rivedere l'alberatura e magari stendere delle 
+&quot;specifiche&quot;, delle regole per come chiamare i files e come metterli insieme
+
+/boot		tutto quello che ha a che fare con il bootloader
+/doc	 	i documenti vari (se diventano tanti pensare ad un'alberatura 
+anche qui)
+/include	tutti gli header
+/drivers	tutto ci&#242; che riguarda i moduli per l'hardware, suddiviso in 
+sottodirectory
+/drivers/cpu	quello che riguarda la cpu
+/drivers/keyboard	quello che riguarda la tastiera
+/drivers/video	quello che riguarda il video
+/drivers/...	cosi via
+/system		tutto ci&#242; che riguarda il sistema, ovvero il kernel principale
+/system/mem	gestione della memoria
+/system/syscall	gestione delle chiamate di sistema
+/opt		tutto ci&#242; che &#232; opzionale e serve al test / debug
+		shell
+
+la gestione degli irq non saprei come o dove metterla. Facendo in questo 
+modo si ottiene una struttura scalabile e facilmente mantenibile senza 
+contare che per andare a pescare il file che ci interessa ci si arriva 
+in modo abbastanza intuitivo. comunque con una documentazione anche su 
+questo si capisce come fare il tutto.
+
+
+Che ne dite?
+
+Ciao!
+
+Pietro
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000004.html">[Dreamos-dev] r6 - trunk
+</A></li>
+	<LI>Next message: <A HREF="000006.html">[Dreamos-dev] Osservazioni
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5">[ date ]</a>
+              <a href="thread.html#5">[ thread ]</a>
+              <a href="subject.html#5">[ subject ]</a>
+              <a href="author.html#5">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

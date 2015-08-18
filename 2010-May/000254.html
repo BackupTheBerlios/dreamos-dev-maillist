@@ -1,0 +1,149 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r251 - in trunk: . io shell utils
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-May/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r251%20-%20in%20trunk%3A%20.%20io%20shell%20utils&In-Reply-To=%3C201005162141.o4GLfCwB025721%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000253.html">
+   <LINK REL="Next"  HREF="000255.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r251 - in trunk: . io shell utils</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r251%20-%20in%20trunk%3A%20.%20io%20shell%20utils&In-Reply-To=%3C201005162141.o4GLfCwB025721%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r251 - in trunk: . io shell utils">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun May 16 23:41:12 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000253.html">[Dreamos-dev] r250 - in branches/0.2: . files
+</A></li>
+        <LI>Next message: <A HREF="000255.html">[Dreamos-dev] r252 - in trunk: . include
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#254">[ date ]</a>
+              <a href="thread.html#254">[ thread ]</a>
+              <a href="subject.html#254">[ subject ]</a>
+              <a href="author.html#254">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-05-16 23:41:08 +0200 (Sun, 16 May 2010)
+New Revision: 251
+
+Modified:
+   trunk/dreamos.img
+   trunk/io/video.c
+   trunk/shell/testing.c
+   trunk/utils/initfscp.c
+Log:
+Eliminati Warning.
+Eliminate dall'help di testing le voci non piu esistenti
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/io/video.c
+===================================================================
+--- trunk/io/video.c	2010-05-16 20:56:49 UTC (rev 250)
++++ trunk/io/video.c	2010-05-16 21:41:08 UTC (rev 251)
+@@ -293,7 +293,7 @@
+ 	if(num&lt;0) {		
+ 		num=(~num)+1;
+ 		*p++='-';
+-		*pbase++;
++		pbase++;
+ 	}
+     while(num &gt; 0)
+     {
+@@ -337,7 +337,7 @@
+ 	else if(num&lt;0) {		
+ 		num=(~num)+1;
+ 		*p++='-';
+-		*pbase++;
++		pbase++;
+ 	}
+     while(num &gt; 0)
+     {
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-05-16 20:56:49 UTC (rev 250)
++++ trunk/shell/testing.c	2010-05-16 21:41:08 UTC (rev 251)
+@@ -107,8 +107,7 @@
+ 		&quot;  -&gt; try_kmalloc       - Test a basic kmalloc() function\n&quot;
+ 		&quot;  -&gt; do_fault          - Test a page_fault\n&quot;
+ 		&quot;  -&gt; try_strtok        - Test strtok() function in string.h\n&quot;
+-		&quot;  -&gt; try_printmem      - Print used locations of memory\n&quot;
+-		&quot;  -&gt; try_module        - Read the content of the memory zone loaded in module, aka initfs \n&quot;
++		&quot;  -&gt; try_printmem      - Print used locations of memory\n&quot;		
+ 		&quot;  -&gt; try_open          - Function to test open() &amp; stdarg() \n&quot;		
+ 		&quot;  -&gt; try_syscall	    - Try some syscall functions\n&quot;
+ 		);	
+@@ -166,7 +165,7 @@
+ 
+ void try_syscall(){
+ 	int i;
+-	int var = -1;
++	int var = -100;
+ 	printf(&quot;Trying sysputch:\n&quot;);	
+     for(i='A';i&lt;='Z';i++) {
+ 		asm(
+@@ -176,7 +175,7 @@
+ 			: : &quot;g&quot;(i)	
+ 		);	
+ 	}
+-	printf(&quot;And before ending try to print a -1: %d\n&quot;, var);
++	printf(&quot;And before ending try to print a -100: %d\n&quot;, var);
+ 	printf(&quot;\n&quot;);
+ }
+ 
+
+Modified: trunk/utils/initfscp.c
+===================================================================
+--- trunk/utils/initfscp.c	2010-05-16 20:56:49 UTC (rev 250)
++++ trunk/utils/initfscp.c	2010-05-16 21:41:08 UTC (rev 251)
+@@ -41,7 +41,7 @@
+ 			fsdest = fopen(argv[argc-1], &quot;w&quot;);
+ 			if(fsdest == NULL) printf(&quot;Could not create FileSystem\n&quot;);
+ 			printf(&quot;Welcome to Dreamos initfs file copier tool\n&quot;);
+-			printf(&quot;Size of headers: %ld %ld\n\n&quot;, sizeof(struct initrd_file_t)*32, sizeof(initrd_file_t));
++			printf(&quot;Size of headers: %d %d\n\n&quot;, sizeof(struct initrd_file_t)*32, sizeof(initrd_file_t));
+ 			printf(&quot;Clearing headers structures &quot;);
+ 			offset = sizeof(struct initrd_file_t) * 32 + sizeof(int);
+ 			/*Pulizia delle strutture dati*/
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000253.html">[Dreamos-dev] r250 - in branches/0.2: . files
+</A></li>
+	<LI>Next message: <A HREF="000255.html">[Dreamos-dev] r252 - in trunk: . include
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#254">[ date ]</a>
+              <a href="thread.html#254">[ thread ]</a>
+              <a href="subject.html#254">[ subject ]</a>
+              <a href="author.html#254">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

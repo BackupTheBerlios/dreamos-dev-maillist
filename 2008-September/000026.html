@@ -1,0 +1,206 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r26 - in trunk: . include include/mem mem shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2008-September/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r26%20-%20in%20trunk%3A%20.%20include%20include/mem%20mem%20shell&In-Reply-To=%3C200809022130.m82LUbdT018490%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   
+   <LINK REL="Next"  HREF="000027.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r26 - in trunk: . include include/mem mem shell</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r26%20-%20in%20trunk%3A%20.%20include%20include/mem%20mem%20shell&In-Reply-To=%3C200809022130.m82LUbdT018490%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r26 - in trunk: . include include/mem mem shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Tue Sep  2 23:30:37 CEST 2008</I>
+    <P><UL>
+        
+        <LI>Next message: <A HREF="000027.html">[Dreamos-dev] r27 - in trunk: . drivers include/mem libc mem	processore shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#26">[ date ]</a>
+              <a href="thread.html#26">[ thread ]</a>
+              <a href="subject.html#26">[ subject ]</a>
+              <a href="author.html#26">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2008-09-02 23:30:37 +0200 (Tue, 02 Sep 2008)
+New Revision: 26
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/mem/kheap.h
+   trunk/include/version.h
+   trunk/mem/kheap.c
+   trunk/shell/shell.c
+Log:
+In kheap.c:
+        modificati argomenti alloc, ora prende anche un puntatore all'heap
+        alcune stampe di prova durante la creazione dell'heap
+        aggiunta la funzione try_heap che permette di testare la kheap.c
+        iniziate le prime righe di alloc(...)
+In shell.c:
+        Aggiunto comando try_heap, che ci consentira di testare l'heap
+        Aggiunto il caso di comando sconosciuto ora se inseriamo comandi errati si riceve il seguente
+messaggio (solo se il comando non e' vuoto, altrimentri ristampa il prompt):
+        &quot;Unknown Command: nomecomando&quot;
+        Pulito il buffer dello username
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/mem/kheap.h
+===================================================================
+--- trunk/include/mem/kheap.h	2008-08-31 09:33:31 UTC (rev 25)
++++ trunk/include/mem/kheap.h	2008-09-02 21:30:37 UTC (rev 26)
+@@ -63,7 +63,8 @@
+ heap_t* make_heap(unsigned int, unsigned int, unsigned int); //Rivedere il return value
+ void* kmalloc(unsigned int);
+ void kfree(unsigned int);
++void try_alloc();
+ 
+-void* alloc(unsigned int);
++void* alloc(unsigned int, heap_t*);
+ 
+ #endif
+\ No newline at end of file
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2008-08-31 09:33:31 UTC (rev 25)
++++ trunk/include/version.h	2008-09-02 21:30:37 UTC (rev 26)
+@@ -11,4 +11,4 @@
+ #define PATCHLEVEL &quot;0&quot;
+ #define EXTRAVERSION &quot;-dreamos&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r23&quot;
++#define REV_NUM &quot;-r25&quot;
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2008-08-31 09:33:31 UTC (rev 25)
++++ trunk/mem/kheap.c	2008-09-02 21:30:37 UTC (rev 26)
+@@ -34,6 +34,8 @@
+ unsigned int address_cur = (unsigned int) &end;
+ 
+ void* kmalloc(unsigned int size){
++/** Questa funzione andra' modificata con l'evoluzione del paging.
++  */
+     unsigned int temp;
+     
+     temp = address_cur;
+@@ -61,9 +63,20 @@
+     new_heap-&gt;free_list = first_node;
+     new_heap-&gt;used_list = NULL;
+     printf(&quot;First heap created...\n&quot;);   
+-    printf(&quot;Size: %d - Tot mem: %d\n&quot;, first_node-&gt;size, tot_mem);
++    printf(&quot;Size: %d - Tot mem: %d - Address: %x\n&quot;, (new_heap-&gt;free_list)-&gt;size, tot_mem, new_heap);    
+     return (heap_t*) new_heap;
+ }
+ 
+-void* alloc(unsigned int size){
++void* alloc(unsigned int size, heap_t *cur_heap){    
++    heap_node_t* cur_list;
++    cur_list = cur_heap-&gt;free_list;
++    while(cur_list!=NULL) {
++        printf(&quot;All right let's go\n&quot;);
++        cur_list = cur_list-&gt;next;
++    }
++}
++
++/**Queste funzioni sono messe solo per alcune prove verranno eliminate entro le prossime revisioni*/
++void try_alloc(){
++    alloc(4, kheap);
+ }
+\ No newline at end of file
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2008-08-31 09:33:31 UTC (rev 25)
++++ trunk/shell/shell.c	2008-09-02 21:30:37 UTC (rev 26)
+@@ -63,6 +63,7 @@
+                &quot;aalogo    - Show an ascii art logo\n&quot;
+                &quot;uname     - Print kernel version\n&quot;
+                &quot;try_buddy - Try buddy mmu\n&quot;
++               &quot;try_heap - Try heap mmu\n&quot;
+ 	       &quot;echo      - Print some lines of text\n&quot;);
+ }
+ 
+@@ -112,7 +113,8 @@
+ 	char *str1;
+ 
+ 	printf(&quot;[?] Enter your username: &quot;);
+-    	char user[24];
++    char user[24];
++    memset(user, 0, 24);   
+ 	scanf (&quot;%s&quot;,user);
+ 
+ 	printf(&quot;\n\n\n\n\n\n&quot;);
+@@ -239,20 +241,25 @@
+             prova = 0xa0000000;
+             *prova = 10;
+             cmd[a]=NULL;
+-	    memset(cmd, 0, strlen(cmd));
+-
++    	    memset(cmd, 0, strlen(cmd));
+         }
++        else if (!(_kstrncmp(cmd,&quot;try_heap&quot;,8))){
++            try_alloc();
++            memset(cmd, 0, strlen(cmd));
++        }
+         else if (!(_kstrncmp(cmd,&quot;try_buddy&quot;,9))){
+              printf(&quot;L'indirizzo di kbuddy e': 0x%x\n&quot;, kbuddy);
+              alloc_buddy(16, kbuddy);
+              printf(&quot;New allocation\n\n&quot;);
+              alloc_buddy(8, kbuddy);
+             cmd[a] = NULL;
+-	    memset(cmd, 0, strlen(cmd));
+-
++	        memset(cmd, 0, strlen(cmd));
+         }
+         else if (!(_kstrncmp(cmd,&quot;aalogo&quot;,6))) aalogo();        
+-        //else printf(&quot;Error %s\n&quot;, cmd);
++        else if(strlen(cmd)&gt;0){
++            printf(&quot;Unknown command: %s\n&quot;, cmd);
++            memset(cmd, 0, strlen(cmd));
++        }
+         cmd[a]=NULL;
+ 	memset(cmd, 0, strlen(cmd));
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	
+	<LI>Next message: <A HREF="000027.html">[Dreamos-dev] r27 - in trunk: . drivers include/mem libc mem	processore shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#26">[ date ]</a>
+              <a href="thread.html#26">[ thread ]</a>
+              <a href="subject.html#26">[ subject ]</a>
+              <a href="author.html#26">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

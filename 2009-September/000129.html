@@ -1,0 +1,250 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r127 - in trunk: . fs include/fs sys
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-September/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r127%20-%20in%20trunk%3A%20.%20fs%20include/fs%20sys&In-Reply-To=%3C200909071914.n87JEAOJ028160%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000128.html">
+   <LINK REL="Next"  HREF="000130.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r127 - in trunk: . fs include/fs sys</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r127%20-%20in%20trunk%3A%20.%20fs%20include/fs%20sys&In-Reply-To=%3C200909071914.n87JEAOJ028160%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r127 - in trunk: . fs include/fs sys">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Mon Sep  7 21:14:10 CEST 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000128.html">[Dreamos-dev] r126 - in trunk: . shell sys
+</A></li>
+        <LI>Next message: <A HREF="000130.html">[Dreamos-dev] r128 - in trunk: . include include/libc include/shell	io libc shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#129">[ date ]</a>
+              <a href="thread.html#129">[ thread ]</a>
+              <a href="subject.html#129">[ subject ]</a>
+              <a href="author.html#129">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-09-07 21:14:08 +0200 (Mon, 07 Sep 2009)
+New Revision: 127
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/vfs.c
+   trunk/include/fs/vfs.h
+   trunk/sys/dirent.c
+Log:
+Pulizia del codice di vfs.c
+Aggiunta struttura dati directory_operation
+Corretti aluni prototipi di funzione
+Eliminata struttura dati inode in quanto non utilizzata
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2009-09-02 18:28:28 UTC (rev 126)
++++ trunk/fs/vfs.c	2009-09-07 19:14:08 UTC (rev 127)
+@@ -37,7 +37,7 @@
+  		mountpoint_list[i].pmask = 0;
+  		mountpoint_list[i].dev_id = 0;
+ 	 	mountpoint_list[i].start_address = 0;
+-	 	mountpoint_list[i].operations = NULL;
++	 	//mountpoint_list[i].operations = NULL;
+  		i++;
+ 	}
+ 	
+@@ -47,7 +47,7 @@
+  	mountpoint_list[0].pmask = 0;
+  	mountpoint_list[0].dev_id = 0;
+  	mountpoint_list[0].start_address = 0;
+- 	mountpoint_list[0].operations = kmalloc(sizeof(struct super_node_operations));
++ 	//mountpoint_list[0].operations = kmalloc(sizeof(struct super_node_operations));
+ 
+ 	strcpy(mountpoint_list[1].mountpoint,&quot;/dev&quot;); 	
+ 	mountpoint_list[1].uid = 0;
+@@ -55,7 +55,7 @@
+  	mountpoint_list[1].pmask = 0;
+  	mountpoint_list[1].dev_id = 0;
+  	mountpoint_list[1].start_address = 0;
+- 	mountpoint_list[1].operations = kmalloc(sizeof(struct super_node_operations));
++ 	//mountpoint_list[1].operations = kmalloc(sizeof(struct super_node_operations));
+ 	
+ 	strcpy(mountpoint_list[2].mountpoint,&quot;/dev/video&quot;); 	
+ 	mountpoint_list[2].uid = 0;
+@@ -63,7 +63,7 @@
+  	mountpoint_list[2].pmask = 0;
+  	mountpoint_list[2].dev_id = 0;
+  	mountpoint_list[2].start_address = 0;
+- 	mountpoint_list[2].operations = kmalloc(sizeof(struct super_node_operations));
++ 	//mountpoint_list[2].operations = kmalloc(sizeof(struct super_node_operations));
+ 	
+ 	strcpy(mountpoint_list[3].mountpoint,&quot;/root&quot;);
+  	mountpoint_list[3].uid = 0;
+@@ -71,15 +71,10 @@
+  	mountpoint_list[3].pmask = 0;
+  	mountpoint_list[3].dev_id = 0;
+  	mountpoint_list[3].start_address = 0;
+- 	mountpoint_list[3].operations = kmalloc(sizeof(struct super_node_operations));
++ 	//mountpoint_list[3].operations = kmalloc(sizeof(struct super_node_operations));
+ 
+ }
+ 
+-void open_vfs (struct inode *node){
+-	if(node-&gt;read!=0) printf(&quot;read node&quot;);
+-	else return;
+-}
+-
+ int get_mountpoint_id(char *path){
+        int i = 0;
+        int last;
+
+Modified: trunk/include/fs/vfs.h
+===================================================================
+--- trunk/include/fs/vfs.h	2009-09-02 18:28:28 UTC (rev 126)
++++ trunk/include/fs/vfs.h	2009-09-07 19:14:08 UTC (rev 127)
+@@ -18,28 +18,28 @@
+ #ifndef _VFS_H
+ #define _VFS_H
+ 
++#include &lt;dirent.h&gt;
++#include &lt;stddef.h&gt;
++
+ #define MAX_MOUNTPOINT 10
+ #define MAX_FD 255
+ 
+ #define FS_FILE 0x01
+ #define FS_DIRECTORY 0x02
+ 
+-struct inode {
+-	char filename[256];
+-	int type;
+- 	int length;
+-	struct inode *parent;
+ 
+-	/* Inutili per adesso */
+-	int uid;
+-	int gid;
+-	int pmask;
++struct directory_operations {
++	DIR* (*opendir_f)(const char *);
++	int (*closedir_f)(DIR *dirp);
++	struct dirent* (*readdir_f)(DIR *dirp);
++};
+ 
+- 	/* puntatori a funzione */
+-	void (*open)(struct inode *);
+-	void (*close)(struct inode *);
+-	int (*read)(struct inode *, int, int, int *);
+-	int (*write)(struct inode *, int, int, int *);
++struct super_node_operations {
++	/*Qui vanno i puntatori alle funzioni sul supernode*/
++	void (*open)(char *, int );
++	void (*close)(int);
++	int (*read)(int, void*, size_t);
++	int (*write)(int, void*, size_t);
+ };
+ 
+ /*!  \struct mountpoint_t
+@@ -52,7 +52,8 @@
+ 		unsigned int gid; /**&lt; Group ID*/
+ 		unsigned int start_address; /**&lt; Indirizzo di partenza del FileSystem*/
+ 		int dev_id; /**&lt; Device ID*/		
+-		struct super_node_operations *operations;
++		struct super_node_operations operations;
++		//struct directory_operations dir_op;
+ };
+ 
+ struct file_descriptor {
+@@ -60,24 +61,16 @@
+ 	int mountpoint_id;
+ };
+ 
+-struct super_node_operations {
+-	/*Qui vanno i puntatori alle funzioni sul supernode*/
+-	void (*open)(char *r_path, int o_flags);
+-	void (*close)(int);
+-	/*t (*read)(stct inode *, int, int, int *);
+-	int (*write)(struct inode *, int, int, int *);*/
+-};
+-
+-extern struct inode *root;
++//extern struct inode *root;
+ extern struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
+ 
+-void open_vfs (struct inode *);
+-void close (struct inode *);
++//void open_vfs (struct inode *);
++void close (int);
+ int get_mountpoint_id(char *);
+ char* get_rel_path(int, char*);
+ int open_dir(char *);
+-int read (struct inode *, int, int, int *);
+-int write (struct inode *, int, int, int *);
++int read (int, void*, size_t);
++int write (int, void*, size_t);
+ 
+ void vfs_init();
+ 
+
+Modified: trunk/sys/dirent.c
+===================================================================
+--- trunk/sys/dirent.c	2009-09-02 18:28:28 UTC (rev 126)
++++ trunk/sys/dirent.c	2009-09-07 19:14:08 UTC (rev 127)
+@@ -19,6 +19,7 @@
+ #include &lt;dirent.h&gt;
+ #include &lt;sys/types.h&gt;
+ #include &lt;stdio.h&gt;
++#include &lt;string.h&gt;
+ #include &lt;vfs.h&gt;
+ 
+ 
+@@ -28,5 +29,9 @@
+ 
+ 	mpoint_id = get_mountpoint_id(path);
+ 	rel_path = get_rel_path(mpoint_id, path);
++	if(rel_path[0] == '\0' || (strlen(rel_path)==1 &amp;&amp; rel_path[0]=='/')) {
++		printf(&quot;mountpoint open root\n&quot;);
++	} else{
+ 	printf(&quot;%d - %s\n&quot;, mpoint_id, rel_path);	
++	}
+ }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000128.html">[Dreamos-dev] r126 - in trunk: . shell sys
+</A></li>
+	<LI>Next message: <A HREF="000130.html">[Dreamos-dev] r128 - in trunk: . include include/libc include/shell	io libc shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#129">[ date ]</a>
+              <a href="thread.html#129">[ thread ]</a>
+              <a href="subject.html#129">[ subject ]</a>
+              <a href="author.html#129">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

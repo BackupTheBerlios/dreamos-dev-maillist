@@ -1,0 +1,144 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r321 - in trunk: . boot include/mem mem
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-November/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r321%20-%20in%20trunk%3A%20.%20boot%20include/mem%20mem&In-Reply-To=%3C20101129220930.471ED480034%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000323.html">
+   
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r321 - in trunk: . boot include/mem mem</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r321%20-%20in%20trunk%3A%20.%20boot%20include/mem%20mem&In-Reply-To=%3C20101129220930.471ED480034%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r321 - in trunk: . boot include/mem mem">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Mon Nov 29 23:09:30 CET 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000323.html">[Dreamos-dev] r320 - in trunk: . boot mem
+</A></li>
+        
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#324">[ date ]</a>
+              <a href="thread.html#324">[ thread ]</a>
+              <a href="subject.html#324">[ subject ]</a>
+              <a href="author.html#324">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-11-29 23:09:29 +0100 (Mon, 29 Nov 2010)
+New Revision: 321
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/include/mem/heap.h
+   trunk/mem/heap.c
+Log:
+Aggiunto header funzione expand. 
+Definita la medesima funzione nel file C. 
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/mem/heap.h
+===================================================================
+--- trunk/include/mem/heap.h	2010-11-29 20:14:29 UTC (rev 320)
++++ trunk/include/mem/heap.h	2010-11-29 22:09:29 UTC (rev 321)
+@@ -65,6 +65,7 @@
+ new_heap_t *new_heap(unsigned int, unsigned int);
+ 
+ void *new_alloc(unsigned int, unsigned short int, new_heap_t*);
++void expand(unsigned int, new_heap_t*);
+ void new_free();
+ void init_newmem();
+ 
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-11-29 20:14:29 UTC (rev 320)
++++ trunk/mem/heap.c	2010-11-29 22:09:29 UTC (rev 321)
+@@ -91,12 +91,13 @@
+ 	if(min_index == -1 ){
+ 		/*No hole with the requested size found, asking more space for heap*/
+ 		printf(&quot;No hole  found we need to grow\n&quot;);
++		expand(real_size, t_heap);
+ 	}
+ 	else {
+ 		header_t *header = get_array(min_index, &amp;t_heap-&gt;index);
+ 		unsigned int hole_address = (unsigned int)header;
+ 		unsigned int hole_size = header-&gt;size;
+-		printf(&quot;Good News: Hole found\n&quot;);
++		printf(&quot;HOLE FOUND\n&quot;);
+ 		printf(&quot;In new_alloc: Header: 0x%x\tSize: 0x%x\n&quot;, header-&gt;magic, header-&gt;size);
+ 		if(hole_size - real_size &lt; sizeof(header_t) + sizeof(footer_t)){
+ 			/*We can't split the hole!*/
+@@ -115,7 +116,8 @@
+ 		if(hole_size - real_size &gt;0){
+ 			/*We need to add a new hole. The new_hole address is given by:
+ 			 * the current hole address + size + sizeof(header_t) + sizeof(footer_t) 
+-			 * */
++			 **/
++			printf(&quot;Add a new hole!\n&quot;);			
+ 			header_t *head_hole = (header_t *)hole_address + sizeof(header_t) + size + sizeof(footer_t);
+ 			head_hole-&gt;magic = HEAP_MAGIC;
+ 			head_hole-&gt;is_hole = HEAP_HOLE;
+@@ -123,14 +125,17 @@
+ 			footer_t *footer_hole = (footer_t*)(hole_address + head_hole-&gt;size - sizeof(footer_t));
+ 			footer_hole-&gt;magic = HEAP_MAGIC;
+ 			footer_hole-&gt;header = head_hole;
+-			insert_array((void *)head_hole, &amp;t_heap-&gt;index);
+-			printf(&quot;Add a new hole!\n&quot;);			
++			insert_array((void *)head_hole, &amp;t_heap-&gt;index);			
+ 		}
+ 		//get_array(0, &amp;t_heap-&gt;index);
+ 	}	
+ 	#endif
+ }
+ 
++void expand(unsigned int new_size, new_heap_t *t_heap){
++	printf(&quot;Placeholder for expand\n&quot;);	
++}
++
+ short int locate_smallest_hole(unsigned int size, unsigned short int p_align, new_heap_t* in_heap){
+ 	unsigned int index = 0; 
+ 	printf(&quot;Size index: %d\n&quot;, in_heap-&gt;index.size);
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000323.html">[Dreamos-dev] r320 - in trunk: . boot mem
+</A></li>
+	
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#324">[ date ]</a>
+              <a href="thread.html#324">[ thread ]</a>
+              <a href="subject.html#324">[ subject ]</a>
+              <a href="author.html#324">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

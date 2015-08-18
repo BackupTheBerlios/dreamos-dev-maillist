@@ -1,0 +1,288 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r39 - in trunk: . include include/mem mem misc shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2008-October/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r39%20-%20in%20trunk%3A%20.%20include%20include/mem%20mem%20misc%20shell&In-Reply-To=%3C200810272047.m9RKl5Sr016053%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000038.html">
+   
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r39 - in trunk: . include include/mem mem misc shell</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r39%20-%20in%20trunk%3A%20.%20include%20include/mem%20mem%20misc%20shell&In-Reply-To=%3C200810272047.m9RKl5Sr016053%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r39 - in trunk: . include include/mem mem misc shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Mon Oct 27 21:47:05 CET 2008</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000038.html">[Dreamos-dev] r38 - in trunk: . include shell
+</A></li>
+        
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#39">[ date ]</a>
+              <a href="thread.html#39">[ thread ]</a>
+              <a href="subject.html#39">[ subject ]</a>
+              <a href="author.html#39">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2008-10-27 21:47:04 +0100 (Mon, 27 Oct 2008)
+New Revision: 39
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/mem/kheap.h
+   trunk/include/version.h
+   trunk/kernel.c
+   trunk/mem/kheap.c
+   trunk/misc/ordered_list.c
+   trunk/shell/shell.c
+Log:
+Pulito il codice nel kernel.
+Aggiunta linea dell'help relativa al comando clear.
+Terminata (almeno spero) la alloc (ovviamente si dovra anche debuggare per bene)
+Aggiunta funzione alloc_node per chiedere spazio per un nuovo nodo
+
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/mem/kheap.h
+===================================================================
+--- trunk/include/mem/kheap.h	2008-10-20 20:54:41 UTC (rev 38)
++++ trunk/include/mem/kheap.h	2008-10-27 20:47:04 UTC (rev 39)
+@@ -51,6 +51,7 @@
+ void* kmalloc(unsigned int);
+ void kfree(unsigned int);
+ void try_alloc();
++heap_node_t* alloc_node();
+ 
+ void* alloc(unsigned int, heap_t*);
+ 
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2008-10-20 20:54:41 UTC (rev 38)
++++ trunk/include/version.h	2008-10-27 20:47:04 UTC (rev 39)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL &quot;0&quot;
+ #define EXTRAVERSION &quot;-dreamos&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r37&quot;
++#define REV_NUM &quot;-r38&quot;
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2008-10-20 20:54:41 UTC (rev 38)
++++ trunk/kernel.c	2008-10-27 20:47:04 UTC (rev 39)
+@@ -94,7 +94,7 @@
+     get_cpuid();    
+     printf(&quot;\n&quot;);
+     printf(&quot;----\n&quot;);
+-    printf(&quot;Loading the shell..&quot;);
++    printf(&quot;Loading the shell&quot;);
+     _kprintOK();
+ 		printf(&quot;[+] End: %d \n&quot;
+ 		       &quot;[+] Address: 0x%x\n&quot;, end, &amp;end);		   	        
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2008-10-20 20:54:41 UTC (rev 38)
++++ trunk/mem/kheap.c	2008-10-27 20:47:04 UTC (rev 39)
+@@ -33,6 +33,7 @@
+ extern size_t tot_mem;
+ heap_t *kheap;
+ unsigned int address_cur = (unsigned int) &end;
++unsigned int node_address;
+ 
+ void* kmalloc(unsigned int size)
+ {
+@@ -78,9 +79,11 @@
+     heap_t* new_heap;
+     heap_node_t* first_node;
+ 
+-    new_heap = (heap_t*)kmalloc(sizeof(heap_t));
++    new_heap = 0xC0000000;
++    node_address = 0xC0000000 + sizeof(heap_t);
++//     new_heap = (heap_t*)kmalloc(sizeof(heap_t));
+ 
+-    first_node = (heap_node_t*)kmalloc(sizeof(heap_node_t));
++    first_node = (heap_node_t*)alloc_node();
+     first_node-&gt;start_address = (unsigned int)&end;
+     first_node-&gt;size = size;
+     first_node-&gt;next = NULL;
+@@ -94,46 +97,75 @@
+     return (heap_t*) new_heap;
+ }
+     
+-/*
+- * Allocation
+- * @author Ivan Gualandri
+- * @version 1.0
+- * @param size Size of the memory to be allocated
+- * @param cur_heap Current heap
+- * @return The start address of the new allocated memory (or NULL if no memory can be allocated)
+- */
++/**
++  * Allocation
++  * @author Ivan Gualandri
++  * @version 1.0
++  * @param size Size of the memory to be allocated
++  * @param cur_heap Current heap
++  * @return The start address of the new allocated memory (or NULL if no memory can be allocated)
++  */
+ void *alloc(unsigned int size, heap_t *cur_heap)
+ {    
+     int n_pages = size / 4096;
++    int aval_pages;
+     heap_node_t* new_node = NULL;
+-    heap_node_t* free_heap_list = cur_heap-&gt;free_list;
+-
++    heap_node_t* free_heap_list = cur_heap-&gt;free_list;    
++    heap_node_t* prev_node;
+     if(size%4096 !=0)
+       n_pages++;
+     printf(&quot;----\n&quot;);
+-    printf(&quot;Number of pages: %d\n&quot;, n_pages, size);
++    printf(&quot;Number of pages: %d &quot;, n_pages);
++    
++    prev_node = free_heap_list;
+ 
+-    /* Look for a free block of memory in the heap's free memory list */
++    /* Look for a free block of memory in the heap's free memory list */    
+     while(free_heap_list) {
+       if(free_heap_list-&gt;size &gt;= size) {
++        aval_pages = free_heap_list-&gt;size/4096;
++        if(free_heap_list-&gt;size%4096 !=0)
++            aval_pages++;
++        printf(&quot;Available_pages: %d\n&quot;, aval_pages);
++        if(aval_pages &gt; n_pages){
++            printf(&quot;Node should be splitted\n&quot;);
++            new_node = (heap_node_t*)alloc_node();
++            new_node-&gt;start_address = free_heap_list-&gt;start_address;
++            new_node-&gt;next = NULL;
++            new_node-&gt;size = n_pages*0x1000;
++            insert_list (new_node, &amp;(cur_heap-&gt;used_list));
++            free_heap_list-&gt;size = (free_heap_list-&gt;size) - (n_pages*0x1000);
++            free_heap_list-&gt;start_address = free_heap_list-&gt;start_address + (n_pages*0x1000);        
++        }
++        else if(aval_pages == n_pages){
++            insert_list (free_heap_list, &amp;(cur_heap-&gt;used_list));
++            prev_node-&gt;next = free_heap_list-&gt;next;
++            printf(&quot;\n&quot;);    
++        }
+ 
+-        new_node = (heap_node_t*)kmalloc(sizeof(heap_node_t));
+-        new_node-&gt;start_address = free_heap_list-&gt;start_address;
+-        new_node-&gt;next = NULL;
+-        new_node-&gt;size = n_pages*0x1000;
+-
+         printf(&quot;New_node -&gt; Size: %d, start_address: %d\n&quot;, new_node-&gt;size, new_node-&gt;start_address);
+         printf(&quot;free_heap_list -&gt; Actual size: %d, start_address: %d\n&quot;, free_heap_list-&gt;size, free_heap_list-&gt;start_address);
+         printf(&quot;----\n&quot;);
+-        free_heap_list-&gt;size = (free_heap_list-&gt;size) - (n_pages*0x1000);
+-        free_heap_list-&gt;start_address = free_heap_list-&gt;start_address + (n_pages*0x1000);
+-
+-        insert_list (new_node, &amp;(cur_heap-&gt;used_list));
++        
+         break;
+       }
+-      else
++      else {
++        prev_node = free_heap_list;
+         free_heap_list = free_heap_list-&gt;next;
++        }      
+    }
++   printf(&quot;Prev_node: %d \n&quot;, prev_node-&gt;start_address);
+    return (void *)new_node;
+ }
+ 
++/**
++  * Allocation of a new node for kheap
++  * @author Ivan Gualandri
++  * @version 1.0
++  * @return The start address of the new allocated node
++  */
++heap_node_t* alloc_node(){
++    unsigned int temp;
++    temp = node_address;
++    node_address = node_address + sizeof(heap_node_t);
++    return (heap_node_t*) temp;
++}
+\ No newline at end of file
+
+Modified: trunk/misc/ordered_list.c
+===================================================================
+--- trunk/misc/ordered_list.c	2008-10-20 20:54:41 UTC (rev 38)
++++ trunk/misc/ordered_list.c	2008-10-27 20:47:04 UTC (rev 39)
+@@ -26,14 +26,14 @@
+ #include &lt;stdio.h&gt;
+ #include &lt;stddef.h&gt;
+ 
+-/* 
+- * Insert a new element in the list
+- * @author shainer
+- * @version 0.1
+- * @param new_node New element
+- * @param list Destination list
+- * @return none
+- */
++/** 
++  * Insert a new element in the list
++  * @author shainer
++  * @version 0.1
++  * @param new_node New element
++  * @param list Destination list
++  * @return none
++  **/
+ void insert_list(heap_node_t *new_node, heap_node_t **ulist)
+ {
+   /* First node */
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2008-10-20 20:54:41 UTC (rev 38)
++++ trunk/shell/shell.c	2008-10-27 20:47:04 UTC (rev 39)
+@@ -277,6 +277,7 @@
+ void help()
+ {
+ 	printf(&quot;help      - See the 'help' list to learn the DreamOS command now avaible\n&quot;
++           &quot;clear     - Clear the screen\n&quot;
+ 	       &quot;poweroff  - Turn off the machine\n&quot;
+            &quot;kmalloc   - Test a basic kmalloc function\n&quot;
+            &quot;do_fault  - Test a page_fault\n&quot;
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000038.html">[Dreamos-dev] r38 - in trunk: . include shell
+</A></li>
+	
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#39">[ date ]</a>
+              <a href="thread.html#39">[ thread ]</a>
+              <a href="subject.html#39">[ subject ]</a>
+              <a href="author.html#39">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

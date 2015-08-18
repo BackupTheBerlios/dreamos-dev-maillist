@@ -1,0 +1,568 @@
+From shainer at mail.berlios.de  Sun Mar 15 21:13:19 2009
+From: shainer at mail.berlios.de (shainer at BerliOS)
+Date: Sun, 15 Mar 2009 21:13:19 +0100
+Subject: [Dreamos-dev] r66 - in trunk: . hardware include include/hardware
+	libc mem misc shell
+Message-ID: <200903152013.n2FKDJKp027004@sheep.berlios.de>
+
+Author: shainer
+Date: 2009-03-15 21:13:18 +0100 (Sun, 15 Mar 2009)
+New Revision: 66
+
+Modified:
+   trunk/dreamos.img
+   trunk/hardware/cpuid.c
+   trunk/include/hardware/cpuid.h
+   trunk/include/version.h
+   trunk/kernel.c
+   trunk/libc/stdio.c
+   trunk/mem/paging.c
+   trunk/misc/clock.c
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+Log:
+CPUID migliorata con l'aggiunta di nuove opzioni
+Risolto un bug della printf relativo alle stringhe
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/hardware/cpuid.c
+===================================================================
+--- trunk/hardware/cpuid.c	2009-02-11 22:03:23 UTC (rev 65)
++++ trunk/hardware/cpuid.c	2009-03-15 20:13:18 UTC (rev 66)
+@@ -18,78 +18,198 @@
+ 
+ /* CPUID-based function to detect CPU type
+  * Author: shainer
+- * Email: shainer at debianclan.org
+- * June 2007
++ * Email: syn.shainer at gmail.com
+  */
+ 
+-
+ #include <cpuid.h>
+ #include <kheap.h>
+ 
+-struct cpuinfo_generic *get_cpuid(void)
++void call_cpuid (struct registri *);
++void cpuid_write_vendor (struct cpuinfo_generic *, struct registri *);
++void cpuid_write_proctype (struct cpuinfo_generic *, struct registri *);
++void cpuid_feature_ecx (struct cpuinfo_generic *, int);
++void cpuid_feature_edx (struct cpuinfo_generic *, int);
++int cpuid_get_byte (int, int, int);
++
++char *cpuid_brand_index (struct registri *);
++char *cpuid_brand_string (struct registri *);
++
++/*
++ * Main CPUID procedure
++ * @author shainer
++ * @param sh_info Structure to fill with CPUID information
++ * @return none
++ */
++void get_cpuid(struct cpuinfo_generic *sh_info)
+ {
+-    int eax, ebx, ecx, edx;
+-    struct cpuinfo_generic *sh_info = kmalloc(sizeof(struct cpuinfo_generic));
+-    /* First call with EAX==0 */
+-    asm ("xorl %%eax, %%eax\n\t"
+-	 "cpuid\n\t"
+-	 : "=a" (eax), "=b" (ebx), "=c" (ecx), "=d" (edx));
++  struct registri *ereg = kmalloc(sizeof(struct registri));
++  
++  ereg->eax = ereg->ebx = ereg->ecx = ereg->edx = 0;
++  cpuid_write_vendor (sh_info, ereg);
+ 
+-  /* Extract vendor string byte per byte */
+-  cpu_vendor[0] = (char)((ebx & 0x000000FF));
+-  cpu_vendor[1] = (char)((ebx & 0x0000FF00)>>8);
+-  cpu_vendor[2] = (char)((ebx & 0x00FF0000)>>16);
+-  cpu_vendor[3] = (char)((ebx & 0xFF000000)>>24);
+-  cpu_vendor[4] = (char)((edx & 0x000000FF));
+-  cpu_vendor[5] = (char)((edx & 0x0000FF00)>>8);
+-  cpu_vendor[6] = (char)((edx & 0x00FF0000)>>16);
+-  cpu_vendor[7] = (char)((edx & 0xFF000000)>>24);
+-  cpu_vendor[8] = (char)((ecx & 0x000000FF));
+-  cpu_vendor[9] = (char)((ecx & 0x0000FF00)>>8);
+-  cpu_vendor[10] = (char)((ecx & 0x00FF0000)>>16);
+-  cpu_vendor[11] = (char)((ecx & 0xFF000000)>>24);
++  ereg->eax = 1;
++  ereg->ebx = ereg->ecx = ereg->edx = 0;
++  cpuid_write_proctype (sh_info, ereg);
++
++  free (ereg);
++}
++
++/* Actual CPUID call */
++void call_cpuid (struct registri *regs)
++{
++  asm ("cpuid\n\t"
++       : "=a" (regs->eax), "=b" (regs->ebx), "=c" (regs->ecx), "=d" (regs->edx)
++       : "a" (regs->eax));
++}
++
++/* Extract vendor string */
++void cpuid_write_vendor (struct cpuinfo_generic *s, struct registri *regs)
++{
++  call_cpuid (regs);
++
++  cpu_vendor[0] = (char)((regs->ebx & 0x000000FF));
++  cpu_vendor[1] = (char)((regs->ebx & 0x0000FF00)>>8);
++  cpu_vendor[2] = (char)((regs->ebx & 0x00FF0000)>>16);
++  cpu_vendor[3] = (char)((regs->ebx & 0xFF000000)>>24);
++  cpu_vendor[4] = (char)((regs->edx & 0x000000FF));
++  cpu_vendor[5] = (char)((regs->edx & 0x0000FF00)>>8);
++  cpu_vendor[6] = (char)((regs->edx & 0x00FF0000)>>16);
++  cpu_vendor[7] = (char)((regs->edx & 0xFF000000)>>24);
++  cpu_vendor[8] = (char)((regs->ecx & 0x000000FF));
++  cpu_vendor[9] = (char)((regs->ecx & 0x0000FF00)>>8);
++  cpu_vendor[10] = (char)((regs->ecx & 0x00FF0000)>>16);
++  cpu_vendor[11] = (char)((regs->ecx & 0xFF000000)>>24);
+   cpu_vendor[12] = '\0';
+-  sh_info->cpu_vendor = cpu_vendor;
++  s->cpu_vendor = cpu_vendor;
++}
+ 
+-  eax = ebx = ecx = edx = 0;
++/*
++ * CPUID is called with EAX=1
++ * EAX contains Type, Family, Model and Stepping ID
++ * EBX contains the Brand Index if supported, and the APIC ID
++ * ECX/EDX contains feature information
++ */
++void cpuid_write_proctype (struct cpuinfo_generic *s, struct registri *regs)
++{
++  int type;
++  int familyID;
++  int model;
++  int ext_model;
+ 
+-  /* Second call with EAX == 1 */
+-  asm ("movl $0x1, %%eax\n\t"
+-       "cpuid\n\t"
+-       "andl $0x3000, %%eax\n\t"
+-       "cmpl %%eax, 0\n\t"
+-       "je oem\n\t"
+-       "cmpl %%eax, 0x2000 \n\t"
+-       "je dual_core \n\t"
+-       "cmpl %%eax, 0x1000 \n\t"
+-       "je overdrive \n\t"
+-       "jmp other \n\t"
+-       "oem: \n\t"
+-       "movl $0x1, %%eax\n\t"
+-       "jmp other\n\t"
+-       "dual_core:\n\t"
+-       "movl $0x2, %%eax\n\t"
+-       "jmp other\n\t"
+-       "overdrive:\n\t"
+-       "movl $0x3, %%eax\n\t"
+-       "other:\n\t"
+-       "nop\n\t"
+-       : "=a" (eax));
++  call_cpuid (regs);
+ 
+-  /* Processor type */
+-  switch (eax) {
+-  case 0:
+-      sh_info->cpu_type = "Others";
+-      break;
+-  case 1:
+-      sh_info->cpu_type = "Original OEM Processor";
+-      break;
+-  case 2:
+-      sh_info->cpu_type = "Intel Dual Core";
+-      break;
+-  case 3:
+-      sh_info->cpu_type = "Intel Overdrive";
++  type = cpuid_get_byte (regs->eax, 0xB, 0x3);
++  switch (type)
++  {
++    case 0:
++    s->cpu_type = "Original OEM Processor";
++    break;
++
++    case 1:
++    s->cpu_type = "Intel Overdrive Processor";
++    break;
++
++    case 2:
++    s->cpu_type = "Dual processor";
++    break;
++
++    case 3:
++    s->cpu_type = "(Intel reserved bit)";
++    break;
+   }
+ 
+-  return sh_info;
++  familyID = cpuid_get_byte(regs->eax, 0x7, 0xE);
++  s->cpu_family = familyID;
++  if (familyID == 0x0F)
++    s->cpu_family += cpuid_get_byte(regs->eax, 0x13, 0xFF);
++
++  model = cpuid_get_byte(regs->eax, 0x3, 0xE);
++  s->cpu_model = model;
++  if (familyID == 0x06 || familyID == 0x0F) {
++    ext_model = cpuid_get_byte (regs->eax, 0xF, 0xE);
++    s->cpu_model += (ext_model<<4);
++  }
++
++  s->apic_id = cpuid_get_byte (regs->ebx, 0x17, 0xFF);
++  cpuid_feature_ecx (s, regs->ecx);
++  cpuid_feature_edx (s, regs->edx);
++
++  /* Get brand string to identify the processor */
++  if (familyID >= 0x0F && model >= 0x03)
++    s->brand_string = cpuid_brand_string (regs);
++  else 
++    s->brand_string = cpuid_brand_index (regs);
+ }
++
++/*
++ * Index of brand strings
++ */
++char *cpuid_brand_index (struct registri *r)
++{
++  char *indexes[21] = { "Reserved", "Intel Celeron", "Intel Pentium III", "Intel Pentium III Xeon", "Mobile Intel Pentium III", "Mobile Intel Celeron", "Intel Pentium 4", "Intel Pentium 4", "Intel Celeron", "Intel Xeon MP", "Intel Xeon MP", "Mobile Intel Pentium 4", "Mobile Intel Celeron", "Mobile Genuine Intel", "Intel Celeron M", "Mobile Intel Celeron", "Intel Celeron", "Mobile Genuine Intel", "Intel Pentium M", "Mobile Intel Celeron", NULL };
++
++  int bx = (r->ebx & 0xFF);
++
++  if (bx > 0x17)
++    bx=0;
++
++  return indexes[bx];
++}
++
++/*
++ * Brand string is contained in EAX, EBX, ECX and EDX
++ */
++char *cpuid_brand_string (struct registri *r)
++{
++  char *temp;
++
++  for(r->eax = 0x80000002; r->eax <= 0x80000004; (r->eax)++) {
++    r->ebx = r->ecx = r->edx = 0;
++    call_cpuid (r);
++    temp = strncat (temp, r->eax, strlen(r->eax));
++    temp = strncat (temp, r->ebx, strlen(r->ebx));
++    temp = strncat (temp, r->ecx, strlen(r->ecx));
++    temp = strncat (temp, r->edx, strlen(r->edx));
++  }
++   
++  return temp;
++}
++
++/*
++ * EAX=1
++ * ECX contains a list of supported features
++ */
++void cpuid_feature_ecx (struct cpuinfo_generic *s, int ecx)
++{
++  int temp = ecx;
++  int i;
++
++  for (i=0; i<ECX_FLAGS_SIZE; i++) {
++    temp = cpuid_get_byte (temp, i, 1);
++    s->cpuid_ecx_flags[i] = temp;
++    temp = ecx;
++  }   
++}
++
++/*
++ * Same as above
++ */
++void cpuid_feature_edx (struct cpuinfo_generic *s, int edx)
++{
++  int temp=edx;
++  int i;
++
++  for (i=0; i<EDX_FLAGS_SIZE; i++) {
++    temp = cpuid_get_byte (temp, i, 1);
++    s->cpuid_edx_flags[i] = temp;
++    temp=edx;
++  }
++}
++
++/*
++ * Extract single byte from a register
++ */
++int cpuid_get_byte (int reg, int position, int value)
++{
++  return ((reg >> position) & value);
++}
+
+Modified: trunk/include/hardware/cpuid.h
+===================================================================
+--- trunk/include/hardware/cpuid.h	2009-02-11 22:03:23 UTC (rev 65)
++++ trunk/include/hardware/cpuid.h	2009-03-15 20:13:18 UTC (rev 66)
+@@ -26,40 +26,29 @@
+ 
+ #include <stddef.h>
+ 
++#define ECX_FLAGS_SIZE 24
++#define EDX_FLAGS_SIZE 32
++
+ struct cpuinfo_generic {
+     char *cpu_vendor;
+     char *cpu_type;
+     int cpu_family;
+     int cpu_model;
+-    int cpu_csize;
++    int apic_id;
++    int cpuid_ecx_flags[ECX_FLAGS_SIZE];
++    int cpuid_edx_flags[EDX_FLAGS_SIZE];
++    int is_brand_string;
++    char *brand_string;
+ };
+ 
+-/* Flags about what is supported or not */
+-struct cpuinfo_flags {
+-    ushort est  : 1;
+-    ushort tm2  : 1;
+-    ushort htt  : 1;
+-    ushort ss   : 1;
+-    ushort sse2 : 1;
+-    ushort sse  : 1;
+-    ushort fxsr : 1;
+-    ushort mmx  : 1;
+-    ushort acpi : 1;
+-    ushort ds   : 1;
+-    ushort pat  : 1;
+-    ushort mca  : 1;
+-    ushort pge  : 1;
+-    ushort mtrr : 1;
+-    ushort sep  : 1;
+-    ushort mce  : 1;
+-    ushort msr  : 1;
+-    ushort pse  : 1;
+-    ushort de   : 1;
+-    ushort fpu  : 1;
++struct registri {
++    int eax;
++    int ebx;
++    int ecx;
++    int edx;
+ };
+ 
+ char cpu_vendor[12]; // This will contain the main string
+-/* Have a look into cpuid.c for this procedure */
+-struct cpuinfo_generic * get_cpuid (void);
+-
++void get_cpuid (struct cpuinfo_generic *);
+ #endif
++
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-02-11 22:03:23 UTC (rev 65)
++++ trunk/include/version.h	2009-03-15 20:13:18 UTC (rev 66)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "1"
+ #define EXTRAVERSION "-trunk"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r63"
++#define REV_NUM "-r65"
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2009-02-11 22:03:23 UTC (rev 65)
++++ trunk/kernel.c	2009-03-15 20:13:18 UTC (rev 66)
+@@ -89,7 +89,7 @@
+     _kprintOK();    
+     printf("Memory (upper) amount-> %d kb \n", boot_info->mem_upper);
+     printf("Memory (lower) amount-> %d kb \n", boot_info->mem_lower);
+-    get_cpuid();    
++
+     printf("\n");
+     printf("----\n");
+     printf(LNG_SHELL);
+
+Modified: trunk/libc/stdio.c
+===================================================================
+--- trunk/libc/stdio.c	2009-02-11 22:03:23 UTC (rev 65)
++++ trunk/libc/stdio.c	2009-03-15 20:13:18 UTC (rev 66)
+@@ -29,6 +29,7 @@
+ #include <ctype.h>
+ #include <string.h>
+ #include <keyboard.h>
++#include <kheap.h>
+ 
+ #define LEFT 1
+ #define RIGHT 0
+@@ -78,8 +79,8 @@
+ int printf (const char *format, ...)
+ {
+     va_list ap;
+-    char current[255]; // maybe this size will be changed
+-    char *cur_p = &current[0]; // pointer to the previous array
++    char current[255];
++    char *cur_p = &current[0];
+     int cursize = 0;
+ 
+     short int direction=RIGHT;
+@@ -113,8 +114,9 @@
+ 
+             /* Some data type aren't supported yet
+              * In the future we will fix this */
+-            if (*format == 's')
+-                cur_p = va_arg (ap, char *);
++            if (*format == 's') {
++		cur_p = strcpy(cur_p, va_arg (ap, char *));
++            }
+             if (*format == 'd' || *format == 'i') {
+                 int varint = va_arg (ap, int);
+                 _kntos (cur_p, varint, 10);
+@@ -155,8 +157,8 @@
+         direction=RIGHT;
+         width=0;
+         len++;
+-        for (i=0; i<255; i++)
+-            current[i] = 0;
++        for(i=0; i<255; i++)
++	  current[i] = 0;
+     }
+     va_end (ap); // end of arguments
+     return len;
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2009-02-11 22:03:23 UTC (rev 65)
++++ trunk/mem/paging.c	2009-03-15 20:13:18 UTC (rev 66)
+@@ -1,6 +1,6 @@
+ /*
+  * Dreamos
+- * paging.h
++ * paging.c
+  * This program is free software; you can redistribute it and/or
+  * modify it under the terms of the GNU General Public License
+  * as published by the Free Software Foundation; either version 2
+
+Modified: trunk/misc/clock.c
+===================================================================
+--- trunk/misc/clock.c	2009-02-11 22:03:23 UTC (rev 65)
++++ trunk/misc/clock.c	2009-03-15 20:13:18 UTC (rev 66)
+@@ -1,7 +1,6 @@
+ /***************************************************************************
+- *            cloch.c
+- *
+- *  Sat Mar 31 07:47:17 2007
++ *            clock.c
++ s *  Sat Mar 31 07:47:17 2007
+  *  Copyright  2007  Alessandro Lopez - Ivan Gualandri
+  *  Email
+  ****************************************************************************/
+@@ -148,22 +147,11 @@
+   }
+   return "";
+ }
+-		
+-//~ void date()
+-//~ {
+-	//~ asm("cli");	
+-	//~ printf("Ora: %02x:%02x:%02x - %02x - %s - %02x\n",get_hour(),get_minute(),get_second(),get_day_m(),get_month_lng(),0x2000+get_year());	
+-	//~ asm("sti");
+-//~ }
+ 
+ void date()
+ {
+-	asm("cli");
+-	printf("%s ", LNG_TIMESTAMP);
+-	printf("%x:%x:%x " ,get_hour(),get_minute(),get_second());	
+-	printf("%s %s ", LNG_TIMESTAMP3,get_day_lng());
+-	printf("%02x ", get_day_m());
+-	printf("%s ", get_month_lng()); 
+-	printf("%02x\n",0x2000+get_year());
+-	asm("sti");
++       asm("cli");
++       printf("%s %x:%x:%x %s %s %02x %s %02x\n",LNG_TIMESTAMP,get_hour(),get_minute(),get_second(),LNG_TIMESTAMP3, get_day_lng(), get_day_m(), get_month_lng(), 0x2000+get_year());
++       asm("sti");
+ }
++
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-02-11 22:03:23 UTC (rev 65)
++++ trunk/shell/commands.c	2009-03-15 20:13:18 UTC (rev 66)
+@@ -240,13 +240,60 @@
+   } else printf ("Missing operand\n");
+ }
+ 
++void cpuid_help()
++{
++  printf ("CPUID help message\n"
++          "-v : shows verbose CPUID information\n");
++}
++
++/*
++ * Call CPUID command and display information
++ */
+ void cpuid(void)
+ {
+-  struct cpuinfo_generic *sinfo = get_cpuid();
++  struct cpuinfo_generic *sinfo;
+ 
++  /* List of features */
++  char *ecx_features[ECX_FLAGS_SIZE] = { "SSE3", "Reserved", "Reserved", "Monitor/MWAIT", "CPL Debug Store", "Virtual Machine", "Safer Mode", "Enhanced Intel SpeedStep Technology", "Thermal Monitor 2", "SSSE3", "L1 Context ID", "Reserved", "Reserved", "CMPXCHG16B", "xTPR Update Control", "Perfmon and Debug Capability", "Reserved", "Reserved", "DCA", "SSE4.1", "SSE4.2", "Reserved", "Reserved", "POPCNT" };
++  char *edx_features[EDX_FLAGS_SIZE] = { "x87 FPU", "Virtual 8086 Mode", "Debugging Extensions", "Page Size Extensions", "Time Stamp Counter", "RDMSR and WRMSR", "Physical Address Extensions", "Machine Check Exception", "CMPXCHG8B", "APIC On-chip", "Reserved", "SYSENTER and SYSEXIT", "Memory Type Range Registers", "PTE Global Bit", "Machine Check Architecture", "Conditional Move Instructions", "Page Attribute Table", "36-bit Page Size", "Processor Serial Number", "Reserved", "Debug Store", "Thermal Monitor and Clock Facilities", "Intel MMX", "FXSAVE and FXRSTOR", "SSE", "SSE2", "Self Snoop", "Multi-Threading", "TTC", "Reserved", "Pending Break Enable" };
++  
++  int i;
++  int verbose=0;
++
++  /* Examine possible options */
++  if (argv[1] != NULL) {
++    if (strcmp (argv[1], "-v") == 0)
++      verbose=1;
++    else {
++      printf ("Unknown option %s\n", argv[1]);
++      cpuid_help();
++      return;
++    }
++  }
++
++  sinfo = kmalloc(sizeof(struct cpuinfo_generic));
++  get_cpuid (sinfo);
++
+   printf ("----- CPUID Information -----\n");
++  if (strcmp(sinfo->brand_string, "Reserved") != 0)
++    printf ("%s\n", sinfo->brand_string);
+   printf ("Vendor: %s\n", sinfo->cpu_vendor);
+-  printf ("Type: %s\n", sinfo->cpu_type);
++  printf ("Type: %s, Family: %x, Model: %x\n", sinfo->cpu_type, sinfo->cpu_family, sinfo->cpu_model);
++  printf ("Apic ID: %d\n", sinfo->apic_id);
++
++  if (verbose==1) {
++    printf ("\n--- Supported features ---\n");
++    for (i=0; i<ECX_FLAGS_SIZE; i++) {
++      if (sinfo->cpuid_ecx_flags[i] == 1)
++        printf ("%s\n", ecx_features[i]);
++    }
++    for (i=0; i<EDX_FLAGS_SIZE; i++) {
++      if (sinfo->cpuid_edx_flags[i] == 1)
++        printf ("%s\n", edx_features[i]);
++    }
++    printf ("--------------------------\n");
++  }
++
+   free (sinfo);
+ }
+ 
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-02-11 22:03:23 UTC (rev 65)
++++ trunk/shell/shell.c	2009-03-15 20:13:18 UTC (rev 66)
+@@ -105,7 +105,7 @@
+       goto end;
+ 
+     for (i=NUM_COM; i>=0; --i) {
+-      if(strcmp(argv[0], commands[i]) == 0) {
++      if(strcmp(argv[0], commands[i]) == NULL) {
+         (*routines[i])();
+         break;
+       }
+
+
+

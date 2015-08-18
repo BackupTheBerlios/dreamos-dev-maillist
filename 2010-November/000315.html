@@ -1,0 +1,102 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r312 - in trunk: . boot mem
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-November/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r312%20-%20in%20trunk%3A%20.%20boot%20mem&In-Reply-To=%3C20101102215520.BF90F480FE7%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   
+   <LINK REL="Next"  HREF="000316.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r312 - in trunk: . boot mem</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r312%20-%20in%20trunk%3A%20.%20boot%20mem&In-Reply-To=%3C20101102215520.BF90F480FE7%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r312 - in trunk: . boot mem">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Tue Nov  2 22:55:20 CET 2010</I>
+    <P><UL>
+        
+        <LI>Next message: <A HREF="000316.html">[Dreamos-dev] r313 - in trunk: . boot mem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#315">[ date ]</a>
+              <a href="thread.html#315">[ thread ]</a>
+              <a href="subject.html#315">[ subject ]</a>
+              <a href="author.html#315">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-11-02 22:55:20 +0100 (Tue, 02 Nov 2010)
+New Revision: 312
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/mem/heap.c
+Log:
+Decommentata una funzione.
+(sto cercando di riprendere in mano la situazione memoria che e' un po complicata da gestire)
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-10-24 18:45:44 UTC (rev 311)
++++ trunk/mem/heap.c	2010-11-02 21:55:20 UTC (rev 312)
+@@ -52,6 +52,7 @@
+ 		first_hole-&gt;magic = HEAP_MAGIC;		
+ 		first_hole-&gt;is_hole = 1; /*TRUE*/			
+ 		insert_array((void*) first_hole, &amp;t_heap-&gt;index);
++		//printf(&quot;First hole: %u size: %u&quot;, t_heap-&gt;start_address, t_heap-&gt;end_address);
+ 		//get_array(0, &amp;t_heap-&gt;index);
+ 		//locate_smallest_hole(size, PAGE_ALIGNED,&amp;t_heap-&gt;index);
+ 		return t_heap;
+@@ -84,7 +85,7 @@
+ void *new_alloc(unsigned int size, unsigned short int p_aligned, new_heap_t* t_heap){
+ 	unsigned int real_size = size +sizeof(header_t) + sizeof(footer_t);	
+ 	printf(&quot;Size of:\n\theader_t: %d\n\tfooter_t: %d\n\treal_size: %d\n\tsize: %d\n&quot;, sizeof(header_t), sizeof(footer_t), real_size, size);	
+-	//unsigned int min_index = locate_smallest_hole(real_size, PAGE_ALIGNED, t_heap);
++	unsigned int min_index = locate_smallest_hole(real_size, PAGE_ALIGNED, t_heap);
+ 	//get_array(0, &amp;t_heap-&gt;index);
+ }
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	
+	<LI>Next message: <A HREF="000316.html">[Dreamos-dev] r313 - in trunk: . boot mem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#315">[ date ]</a>
+              <a href="thread.html#315">[ thread ]</a>
+              <a href="subject.html#315">[ subject ]</a>
+              <a href="author.html#315">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

@@ -1,0 +1,157 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r238 - in trunk: . fs
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-April/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r238%20-%20in%20trunk%3A%20.%20fs&In-Reply-To=%3C201004222104.o3ML4CvR004576%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000240.html">
+   <LINK REL="Next"  HREF="000242.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r238 - in trunk: . fs</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r238%20-%20in%20trunk%3A%20.%20fs&In-Reply-To=%3C201004222104.o3ML4CvR004576%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r238 - in trunk: . fs">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Thu Apr 22 23:04:12 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000240.html">[Dreamos-dev] r237 - in trunk: . fs include/fs shell utils
+</A></li>
+        <LI>Next message: <A HREF="000242.html">[Dreamos-dev] r239 - in trunk: . fs include/fs shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#241">[ date ]</a>
+              <a href="thread.html#241">[ thread ]</a>
+              <a href="subject.html#241">[ subject ]</a>
+              <a href="author.html#241">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-04-22 23:04:07 +0200 (Thu, 22 Apr 2010)
+New Revision: 238
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/initrd.c
+   trunk/kernel.c
+Log:
+Ora la open prima di creare un file (con il flag O_CREAT) controlla se 
+questo gia esiste.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-04-21 21:37:16 UTC (rev 237)
++++ trunk/fs/initrd.c	2010-04-22 21:04:07 UTC (rev 238)
+@@ -107,7 +107,21 @@
+ 		while(ird_descriptors[i].file_descriptor!=-1 &amp;&amp; i &lt; MAX_INITRD_DESCRIPTORS) i++;			
+ 		cur_irdfd = i;
+ 	}
+-	if(flags&amp;O_CREAT) {
++	else {
++		while (j &lt; fs_specs-&gt;nfiles) {
++			if(!strcmp(path, module_var[j].fileName)){
++				if(module_var[j].file_type == FS_DIRECTORY || module_var[j].file_type == FS_MOUNTPOINT)
++					return -1;
++				ird_descriptors[cur_irdfd].file_descriptor	= j;
++				//printf(&quot;%s Found. Size: %d FS fd val: %d - ID File val: %d\n&quot;, path, module_var[j].length, cur_irdfd, ird_descriptors[cur_irdfd].file_descriptor);
++				ret_fd = cur_irdfd;				
++				//printf(&quot;ret_fd: %d --- %d\n&quot;, cur_irdfd, j);
++				ird_descriptors[cur_irdfd].cur_pos = 0;
++				return cur_irdfd++; 
++			}
++			j++;
++		}
++		if(flags&amp;O_CREAT) {
+ 		printf(&quot;O_CREAT Flag\n&quot;);
+ 		if(fs_specs-&gt;nfiles &lt; MAX_FILES ){			
+ 			module_var[fs_specs-&gt;nfiles].magic=0xBF;
+@@ -123,20 +137,6 @@
+ 		}
+ 		return -1;
+ 	}
+-	else {
+-		while (j &lt; fs_specs-&gt;nfiles) {
+-			if(!strcmp(path, module_var[j].fileName)){
+-				if(module_var[j].file_type == FS_DIRECTORY || module_var[j].file_type == FS_MOUNTPOINT)
+-					return -1;
+-				ird_descriptors[cur_irdfd].file_descriptor	= j;
+-				//printf(&quot;%s Found. Size: %d FS fd val: %d - ID File val: %d\n&quot;, path, module_var[j].length, cur_irdfd, ird_descriptors[cur_irdfd].file_descriptor);
+-				ret_fd = cur_irdfd;				
+-				//printf(&quot;ret_fd: %d --- %d\n&quot;, cur_irdfd, j);
+-				ird_descriptors[cur_irdfd].cur_pos = 0;
+-				return cur_irdfd++; 
+-			}
+-			j++;
+-		}
+ 	}
+ 	return -1;	
+ }
+@@ -191,12 +191,14 @@
+ 	lfd = ird_descriptors[fildes].file_descriptor;
+ 	printf(&quot;Please wait, im writing the world...\n&quot;);
+ 	printf(&quot;And the world begun with those words: %s and his mark his: %d\n&quot;, appoggio, lfd);
+-	file_start = (char *) (module_start	+ fs_headers[lfd].offset);
++	file_start = (char *) (module_start	+ fs_headers[lfd].offset);	
+ 	while(i&lt;=nbyte) {	
+ 		file_start[i] = appoggio[i];	
+ 		i++;
+ 	} 
+ 	fs_headers[lfd].length = i;
++	free(appoggio);
++	return i;
+ 	//fs_headers[ird_descriptors.fildes].
+ }
+ 
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2010-04-21 21:37:16 UTC (rev 237)
++++ trunk/kernel.c	2010-04-22 21:04:07 UTC (rev 238)
+@@ -107,7 +107,7 @@
+     vfs_init();
+     initfs_init();
+ 	if(boot_info-&gt;mods_count &gt; 0) printf(&quot;Found n. %d Modules\n&quot;, boot_info-&gt;mods_count);		
+-	printf(&quot;Address of module: 0x%x - 0x%d\n&quot;, *((unsigned int*)boot_info-&gt;mods_addr),module_end-(unsigned int) module_start);
++	printf(&quot;Address of module: 0x%x - 0x%x\n&quot;, *((unsigned int*)boot_info-&gt;mods_addr),module_end-(unsigned int) module_start);
+     printf(&quot;\n&quot;);
+     printf(&quot;----\n&quot;);
+     printf(LNG_SHELL);    
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000240.html">[Dreamos-dev] r237 - in trunk: . fs include/fs shell utils
+</A></li>
+	<LI>Next message: <A HREF="000242.html">[Dreamos-dev] r239 - in trunk: . fs include/fs shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#241">[ date ]</a>
+              <a href="thread.html#241">[ thread ]</a>
+              <a href="subject.html#241">[ subject ]</a>
+              <a href="author.html#241">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

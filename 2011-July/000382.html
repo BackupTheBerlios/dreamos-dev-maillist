@@ -1,0 +1,134 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r379 - in trunk: include/tasks tasks
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2011-July/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r379%20-%20in%20trunk%3A%20include/tasks%20tasks&In-Reply-To=%3C20110707212957.01030481532%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000381.html">
+   <LINK REL="Next"  HREF="000383.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r379 - in trunk: include/tasks tasks</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r379%20-%20in%20trunk%3A%20include/tasks%20tasks&In-Reply-To=%3C20110707212957.01030481532%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r379 - in trunk: include/tasks tasks">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Thu Jul  7 23:29:56 CEST 2011</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000381.html">[Dreamos-dev] r378 - in trunk: . boot fs include include/lng tasks
+</A></li>
+        <LI>Next message: <A HREF="000383.html">[Dreamos-dev] r380 - in trunk: . tasks
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#382">[ date ]</a>
+              <a href="thread.html#382">[ thread ]</a>
+              <a href="subject.html#382">[ subject ]</a>
+              <a href="author.html#382">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2011-07-07 23:29:56 +0200 (Thu, 07 Jul 2011)
+New Revision: 379
+
+Modified:
+   trunk/include/tasks/task.h
+   trunk/tasks/task.c
+Log:
+Added task_register_t
+Refined task_t
+
+
+Modified: trunk/include/tasks/task.h
+===================================================================
+--- trunk/include/tasks/task.h	2011-07-05 21:34:49 UTC (rev 378)
++++ trunk/include/tasks/task.h	2011-07-07 21:29:56 UTC (rev 379)
+@@ -38,8 +38,19 @@
+ 	SLEEPING
+ } task_state;
+ 
+-typedef struct {
+-		unsigned int eax;
++typedef struct {	
++        unsigned int edi;   //+0
++        unsigned int esi;   //+1
++        unsigned int ebp;  //+2
++        unsigned int null;  //+3
++        unsigned int ebx;  //+4
++        unsigned int edx;  //+5
++        unsigned int ecx;  //+6
++        unsigned int eax;  //+7
++        unsigned int eip;  //+8
++        unsigned int cs;   //+9
++        unsigned int eflags;  //+10
++        unsigned int fine;    		
+ } task_register_t;
+ 
+ /*!  \struct task_t
+@@ -48,7 +59,9 @@
+ typedef struct {
+ 	pid_t pid;	
+ 	char *name;
++	void (*start_function)();
+ 	task_state state;
++	task_register_t *registers;
+ 	unsigned int eip;
+ 	unsigned int esp;
+ 	unsigned int pdir;
+@@ -59,7 +72,7 @@
+ extern pid_t current_pid;
+ 
+ void tasks_init();
+-void new_task();
++void new_task(char*, void (*start_function)());
+ 
+ unsigned int request_pid();
+ 
+
+Modified: trunk/tasks/task.c
+===================================================================
+--- trunk/tasks/task.c	2011-07-05 21:34:49 UTC (rev 378)
++++ trunk/tasks/task.c	2011-07-07 21:29:56 UTC (rev 379)
+@@ -44,7 +44,7 @@
+ 	return current_pid++;
+ }
+ 
+-void new_task(){
+-	
++void new_task(char *task_name, void (*start_function)()){
++	return;
+ }
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000381.html">[Dreamos-dev] r378 - in trunk: . boot fs include include/lng tasks
+</A></li>
+	<LI>Next message: <A HREF="000383.html">[Dreamos-dev] r380 - in trunk: . tasks
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#382">[ date ]</a>
+              <a href="thread.html#382">[ thread ]</a>
+              <a href="subject.html#382">[ subject ]</a>
+              <a href="author.html#382">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

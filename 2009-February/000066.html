@@ -1,0 +1,416 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r65 - in trunk: . include include/lng include/mem	include/misc mem misc
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-February/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r65%20-%20in%20trunk%3A%20.%20include%20include/lng%20include/mem%0A%09include/misc%20mem%20misc&In-Reply-To=%3C200902112203.n1BM3OBo001492%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000065.html">
+   
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r65 - in trunk: . include include/lng include/mem	include/misc mem misc</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r65%20-%20in%20trunk%3A%20.%20include%20include/lng%20include/mem%0A%09include/misc%20mem%20misc&In-Reply-To=%3C200902112203.n1BM3OBo001492%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r65 - in trunk: . include include/lng include/mem	include/misc mem misc">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Wed Feb 11 23:03:24 CET 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000065.html">[Dreamos-dev] r64 - in trunk: . include/shell libc shell
+</A></li>
+        
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#66">[ date ]</a>
+              <a href="thread.html#66">[ thread ]</a>
+              <a href="subject.html#66">[ subject ]</a>
+              <a href="author.html#66">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-02-11 23:03:23 +0100 (Wed, 11 Feb 2009)
+New Revision: 65
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/lng/en.h
+   trunk/include/lng/it.h
+   trunk/include/mem/paging.h
+   trunk/include/misc/clock.h
+   trunk/include/use.h
+   trunk/include/version.h
+   trunk/mem/paging.c
+   trunk/misc/clock.c
+Log:
+Aggiunte le definizioni in lingua italiana e inglese per i giorni e i mesi e i messaggi sulla data. (by hamcha)
+Aggiunta define PF_MASK per eliminare un confronto con un valore 0b... che non viene riconosciuto da tutti i gcc
+Risolto (con una soluzione temporanea) problema che compariva se si davva piu volte di seguito il comando date.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/lng/en.h
+===================================================================
+--- trunk/include/lng/en.h	2009-02-08 21:57:29 UTC (rev 64)
++++ trunk/include/lng/en.h	2009-02-11 22:03:23 UTC (rev 65)
+@@ -32,4 +32,32 @@
+ #define LNG_USER_R &quot;[x] Please, insert your username :)\n&quot;
+ #define LNG_UNKNOWN_CMD &quot;Unknown command:&quot;
+ 
++// DATE ME NOE!
++// MONTHS
++#define LNG_DATE_JAN &quot;January&quot;
++#define LNG_DATE_FEB &quot;February&quot;
++#define LNG_DATE_MAR &quot;March&quot;
++#define LNG_DATE_APR &quot;April&quot;
++#define LNG_DATE_MAY &quot;May&quot;
++#define LNG_DATE_JUN &quot;June&quot;
++#define LNG_DATE_JUL &quot;July&quot;
++#define LNG_DATE_AUG &quot;August&quot;
++#define LNG_DATE_SEP &quot;September&quot;
++#define LNG_DATE_OCT &quot;October&quot;
++#define LNG_DATE_NOV &quot;November&quot;
++#define LNG_DATE_DEC &quot;December&quot;
++// DAYS
++#define LNG_DAY_SUN &quot;Sunday&quot;
++#define LNG_DAY_MON &quot;Monday&quot;
++#define LNG_DAY_TUE &quot;Tuesday&quot;
++#define LNG_DAY_WED &quot;Wednesday&quot;
++#define LNG_DAY_THU &quot;Thursday&quot;
++#define LNG_DAY_FRI &quot;Friday&quot;
++#define LNG_DAY_SAT &quot;Saturday&quot;
++// HOURS
++#define LNG_HOUR_SUMM &quot;Summer hour&quot;
++#define LNG_HOUR_WINT &quot;Winter hour&quot;
++#define LNG_TIMESTAMP &quot;It's &quot;
++#define LNG_TIMESTAMP2 &quot; of &quot;
++#define LNG_TIMESTAMP3 &quot; of &quot;
+ #endif
+
+Modified: trunk/include/lng/it.h
+===================================================================
+--- trunk/include/lng/it.h	2009-02-08 21:57:29 UTC (rev 64)
++++ trunk/include/lng/it.h	2009-02-11 22:03:23 UTC (rev 65)
+@@ -33,4 +33,33 @@
+ #define LNG_USER_R &quot;[x] Per favore, inserisci il nome utente :)\n&quot;
+ #define LNG_UNKNOWN_CMD &quot;Comando sconosciuto:&quot;
+ 
++// DATE ME NOE!
++// MESI: sereno variabile in tutto il nord Italia
++#define LNG_DATE_JAN &quot;Gennaio&quot;
++#define LNG_DATE_FEB &quot;Febbraio&quot;
++#define LNG_DATE_MAR &quot;Marzo&quot;
++#define LNG_DATE_APR &quot;Aprile&quot;
++#define LNG_DATE_MAY &quot;Maggio&quot;
++#define LNG_DATE_JUN &quot;Giugno&quot;
++#define LNG_DATE_JUL &quot;Luglio&quot;
++#define LNG_DATE_AUG &quot;Agosto&quot;
++#define LNG_DATE_SEP &quot;Settembre&quot;
++#define LNG_DATE_OCT &quot;Ottobre&quot;
++#define LNG_DATE_NOV &quot;Novembre&quot;
++#define LNG_DATE_DEC &quot;Dicembre&quot;
++// GIORNI: Foschia in Sardegna e coste tirreniche
++#define LNG_DAY_SUN &quot;Domenica&quot;
++#define LNG_DAY_MON &quot;Lunedi&quot;
++#define LNG_DAY_TUE &quot;Martedi&quot;
++#define LNG_DAY_WED &quot;Mercoledi&quot;
++#define LNG_DAY_THU &quot;Giovedi&quot;
++#define LNG_DAY_FRI &quot;Venerdi&quot;
++#define LNG_DAY_SAT &quot;Sabato&quot;
++// ORE: Tutto il resto si becca un bel maltempo.
++#define LNG_HOUR_SUMM &quot;Ora legale&quot;
++#define LNG_HOUR_WINT &quot;Ora solare&quot;
++#define LNG_TIMESTAMP &quot;Sono le &quot;
++#define LNG_TIMESTAMP2 &quot; del &quot;
++#define LNG_TIMESTAMP3 &quot; di &quot;
++
+ #endif
+
+Modified: trunk/include/mem/paging.h
+===================================================================
+--- trunk/include/mem/paging.h	2009-02-08 21:57:29 UTC (rev 64)
++++ trunk/include/mem/paging.h	2009-02-11 22:03:23 UTC (rev 65)
+@@ -43,6 +43,8 @@
+ 
+ #define DIRTY 0x01
+ 
++#define PF_MASK 0x03
++
+ typedef unsigned int pde_t; /**&lt; Tipo dati per indicare una page dir entry */
+ typedef unsigned int pte_t; /**&lt; Tipo dati per indicare una page table entry */
+ 
+
+Modified: trunk/include/misc/clock.h
+===================================================================
+--- trunk/include/misc/clock.h	2009-02-08 21:57:29 UTC (rev 64)
++++ trunk/include/misc/clock.h	2009-02-11 22:03:23 UTC (rev 65)
+@@ -42,7 +42,8 @@
+ int get_year();
+ int get_day_w();
+ char* get_month_lng();
++char* get_day_lng();
+ void date();
+ 
+ 
+-#endif
+\ No newline at end of file
++#endif
+
+Modified: trunk/include/use.h
+===================================================================
+--- trunk/include/use.h	2009-02-08 21:57:29 UTC (rev 64)
++++ trunk/include/use.h	2009-02-11 22:03:23 UTC (rev 65)
+@@ -1,5 +1,5 @@
+ /*
+- * En.h
++ * It.h
+  *  This program is free software; you can redistribute it and/or modify
+  *  it under the terms of the GNU General Public License as published by
+  *  the Free Software Foundation; either version 2 of the License, or
+@@ -14,22 +14,52 @@
+  *  along with this program; if not, write to the Free Software
+  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+-#ifndef _EN_H_
+-#define _EN_H_
+ 
+-#define LNG_SITE &quot;\nSite: &quot;
+-#define LNG_GDT &quot;Initialize GDT   &quot;
+-#define LNG_IDT &quot;Initialize IDT   &quot;
+-#define LNG_PAGING &quot;Enabling Paging: &quot;
+-#define LNG_PIT8253 &quot;Initialize PIT    &quot;
+-#define LNG_PIC8259 &quot;Initialize PIC8259    &quot;
+-#define LNG_CPU &quot;\nCPU: &quot;
+-#define LNG_FREERAM &quot;Free RAM:&quot;
+-#define LNG_FREEPAGE &quot;\t- Number free page:&quot;
+-#define LNG_BITMAP &quot;\t- Number bitmap's elements:&quot;
+-#define LNG_SHELL &quot;Loading the shell&quot;
+-#define LNG_USER &quot;[?] Enter your username: &quot;
+-#define LNG_USER_R &quot;[x] Please, insert your username :)\n&quot;
+-#define LNG_UNKNOWN_CMD &quot;Unknown command:&quot;
++#ifndef _IT_H_
++#define _IT_H_
+ 
++#define LNG_SITE &quot;\nSito: &quot;
++#define LNG_GDT &quot;Inizializzo GDT   &quot;
++#define LNG_IDT &quot;Inizializzo IDT   &quot;
++#define LNG_PAGING &quot;Abilito Paging: &quot;
++#define LNG_PIT8253 &quot;Inizializzo PIT    &quot;
++#define LNG_PIC8259 &quot;Inizializzo PIC8259    &quot;
++#define LNG_CPU &quot;\nProcessore: &quot;
++#define LNG_FREERAM &quot;Ram Disposizione:&quot;
++#define LNG_FREEPAGE &quot;\t- Numero Pagine a disposizione:&quot;
++#define LNG_BITMAP &quot;\t- Numero elementi della bitmap:&quot;
++#define LNG_SHELL &quot;Carico la shell&quot;
++#define LNG_USER &quot;[?] Inserisci il nome utente: &quot;
++#define LNG_USER_R &quot;[x] Per favore, inserisci il nome utente :)\n&quot;
++#define LNG_UNKNOWN_CMD &quot;Comando sconosciuto:&quot;
++
++// DATE ME NOE!
++// MESI: sereno variabile in tutto il nord Italia
++#define LNG_DATE_JAN &quot;Gennaio&quot;
++#define LNG_DATE_FEB &quot;Febbraio&quot;
++#define LNG_DATE_MAR &quot;Marzo&quot;
++#define LNG_DATE_APR &quot;Aprile&quot;
++#define LNG_DATE_MAY &quot;Maggio&quot;
++#define LNG_DATE_JUN &quot;Giugno&quot;
++#define LNG_DATE_JUL &quot;Luglio&quot;
++#define LNG_DATE_AUG &quot;Agosto&quot;
++#define LNG_DATE_SEP &quot;Settembre&quot;
++#define LNG_DATE_OCT &quot;Ottobre&quot;
++#define LNG_DATE_NOV &quot;Novembre&quot;
++#define LNG_DATE_DEC &quot;Dicembre&quot;
++// GIORNI: Foschia in Sardegna e coste tirreniche
++#define LNG_DAY_SUN &quot;Domenica&quot;
++#define LNG_DAY_MON &quot;Lunedi&quot;
++#define LNG_DAY_TUE &quot;Martedi&quot;
++#define LNG_DAY_WED &quot;Mercoledi&quot;
++#define LNG_DAY_THU &quot;Giovedi&quot;
++#define LNG_DAY_FRI &quot;Venerdi&quot;
++#define LNG_DAY_SAT &quot;Sabato&quot;
++// ORE: Tutto il resto si becca un bel maltempo.
++#define LNG_HOUR_SUMM &quot;Ora legale&quot;
++#define LNG_HOUR_WINT &quot;Ora solare&quot;
++#define LNG_TIMESTAMP &quot;Sono le &quot;
++#define LNG_TIMESTAMP2 &quot; del &quot;
++#define LNG_TIMESTAMP3 &quot; di &quot;
++
+ #endif
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-02-08 21:57:29 UTC (rev 64)
++++ trunk/include/version.h	2009-02-11 22:03:23 UTC (rev 65)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL &quot;1&quot;
+ #define EXTRAVERSION &quot;-trunk&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r62&quot;
++#define REV_NUM &quot;-r63&quot;
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2009-02-08 21:57:29 UTC (rev 64)
++++ trunk/mem/paging.c	2009-02-11 22:03:23 UTC (rev 65)
+@@ -231,7 +231,7 @@
+         /* Ricava l'indirizzo che ha causato l'eccezione */
+     asm (&quot;movl %%cr2, %0&quot;:&quot;=r&quot; (fault_addr));
+ 
+-    if ((ecode &amp; 0b0011) == 2 || (ecode &amp; 0b0011) == 0) {
++    if ((ecode &amp; PF_MASK) == 2 || (ecode &amp; PF_MASK) == 0) {
+     pdir = BITRANGE (fault_addr, 22, 31);
+     ptable = BITRANGE (fault_addr, 12, 21);
+     #ifdef DEBUG
+
+Modified: trunk/misc/clock.c
+===================================================================
+--- trunk/misc/clock.c	2009-02-08 21:57:29 UTC (rev 64)
++++ trunk/misc/clock.c	2009-02-11 22:03:23 UTC (rev 65)
+@@ -23,6 +23,7 @@
+  */
+ #include &lt;clock.h&gt;
+ #include &lt;stdio.h&gt;
++#include &lt;use.h&gt;
+ 
+ int get_second()
+ {
+@@ -79,47 +80,90 @@
+   c = get_month();
+   switch(c) {
+     case 1:
+-      return &quot;Gennaio&quot;;
++      return LNG_DATE_JAN;
+       break;
+     case 2:
+-      return &quot;Febbraio&quot;;
++      return LNG_DATE_FEB;
+       break;
+     case 3:
+-      return &quot;Marzo&quot;;
++      return LNG_DATE_MAR;
+       break;
+     case 4:
+-      return &quot;Aprile&quot;;
++      return LNG_DATE_APR;
+       break;
+     case 5:
+-      return &quot;Maggio&quot;;      
++      return LNG_DATE_MAY;
++      break;
+     case 6:
+-      return &quot;Giugno&quot;;      
++      return LNG_DATE_JUN;      
+       break;
+     case 7:
+-      return &quot;Luglio&quot;;     
++      return LNG_DATE_JUL;     
+       break;
+     case 8:
+-      return &quot;Agosto&quot;;  
++      return LNG_DATE_AUG;  
+       break;
+     case 9:
+-      return &quot;Settembre&quot;;
++      return LNG_DATE_SEP;
+       break;
+     case 10:
+-      return &quot;Ottobre&quot;;
++      return LNG_DATE_OCT;
+       break;
+     case 11:
+-      return &quot;Novembre&quot;;
++      return LNG_DATE_NOV;
+       break;
+     case 12:
+-      return &quot;Dicembre&quot;;     
++      return LNG_DATE_DEC;     
+       break;
+   }
+   return &quot;&quot;;
+ }
++
++char* get_day_lng()
++{
++  int c;
++  c = get_day_w();
++  switch(c) {
++    case 1:
++      return LNG_DAY_SUN;
++      break;
++    case 2:
++      return LNG_DAY_MON;
++      break;
++    case 3:
++      return LNG_DAY_TUE;
++      break;
++    case 4:
++      return LNG_DAY_WED;
++      break;
++    case 5:
++      return LNG_DAY_THU;
++      break;
++    case 6:
++      return LNG_DAY_FRI;      
++      break;
++    case 7:
++      return LNG_DAY_SAT;     
++      break;
++  }
++  return &quot;&quot;;
++}
+ 		
++//~ void date()
++//~ {
++	//~ asm(&quot;cli&quot;);	
++	//~ printf(&quot;Ora: %02x:%02x:%02x - %02x - %s - %02x\n&quot;,get_hour(),get_minute(),get_second(),get_day_m(),get_month_lng(),0x2000+get_year());	
++	//~ asm(&quot;sti&quot;);
++//~ }
++
+ void date()
+ {
+-	asm(&quot;cli&quot;);	
+-	printf(&quot;Ora: %02x:%02x:%02x - %02x - %s - %02x\n&quot;,get_hour(),get_minute(),get_second(),get_day_m(),get_month_lng(),0x2000+get_year());	
++	asm(&quot;cli&quot;);
++	printf(&quot;%s &quot;, LNG_TIMESTAMP);
++	printf(&quot;%x:%x:%x &quot; ,get_hour(),get_minute(),get_second());	
++	printf(&quot;%s %s &quot;, LNG_TIMESTAMP3,get_day_lng());
++	printf(&quot;%02x &quot;, get_day_m());
++	printf(&quot;%s &quot;, get_month_lng()); 
++	printf(&quot;%02x\n&quot;,0x2000+get_year());
+ 	asm(&quot;sti&quot;);
+-}
+\ No newline at end of file
++}
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000065.html">[Dreamos-dev] r64 - in trunk: . include/shell libc shell
+</A></li>
+	
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#66">[ date ]</a>
+              <a href="thread.html#66">[ thread ]</a>
+              <a href="subject.html#66">[ subject ]</a>
+              <a href="author.html#66">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

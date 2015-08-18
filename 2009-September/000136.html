@@ -1,0 +1,115 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r134 - in trunk: . fs sys
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-September/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r134%20-%20in%20trunk%3A%20.%20fs%20sys&In-Reply-To=%3C200909171939.n8HJdQxG008591%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000135.html">
+   <LINK REL="Next"  HREF="000137.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r134 - in trunk: . fs sys</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r134%20-%20in%20trunk%3A%20.%20fs%20sys&In-Reply-To=%3C200909171939.n8HJdQxG008591%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r134 - in trunk: . fs sys">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Thu Sep 17 21:39:26 CEST 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000135.html">[Dreamos-dev] r133 - in trunk: . fs include/fs sys
+</A></li>
+        <LI>Next message: <A HREF="000137.html">[Dreamos-dev] r135 - in trunk: . fs sys
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#136">[ date ]</a>
+              <a href="thread.html#136">[ thread ]</a>
+              <a href="subject.html#136">[ subject ]</a>
+              <a href="author.html#136">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-09-17 21:39:26 +0200 (Thu, 17 Sep 2009)
+New Revision: 134
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/vfs.c
+   trunk/sys/dirent.c
+Log:
+Corretto bug in opendir
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2009-09-16 21:13:53 UTC (rev 133)
++++ trunk/fs/vfs.c	2009-09-17 19:39:26 UTC (rev 134)
+@@ -38,6 +38,7 @@
+  		mountpoint_list[i].pmask = 0;
+  		mountpoint_list[i].dev_id = 0;
+ 	 	mountpoint_list[i].start_address = 0;
++	 	mountpoint_list[0].dir_op.opendir_f = NULL;	
+ 	 	//mountpoint_list[i].operations = NULL;
+  		i++;
+ 	}
+
+Modified: trunk/sys/dirent.c
+===================================================================
+--- trunk/sys/dirent.c	2009-09-16 21:13:53 UTC (rev 133)
++++ trunk/sys/dirent.c	2009-09-17 19:39:26 UTC (rev 134)
+@@ -20,6 +20,7 @@
+ #include &lt;sys/types.h&gt;
+ #include &lt;stdio.h&gt;
+ #include &lt;string.h&gt;
++#include &lt;stddef.h&gt;
+ #include &lt;vfs.h&gt;
+ 
+ struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
+@@ -32,9 +33,9 @@
+ 	rel_path = get_rel_path(mpoint_id, path);
+ 	if(rel_path[0] == '\0' || (strlen(rel_path)==1 &amp;&amp; rel_path[0]=='/')) {
+ 		printf(&quot;mountpoint open root\n&quot;);
+-		mountpoint_list[mpoint_id].dir_op.opendir_f(&quot;/&quot;);
++		if(mountpoint_list[mpoint_id].dir_op.opendir_f!=NULL) mountpoint_list[mpoint_id].dir_op.opendir_f(&quot;/&quot;);
+ 	} else{
+-	printf(&quot;%d - %s\n&quot;, mpoint_id, rel_path);
++		printf(&quot;%d - %s\n&quot;, mpoint_id, rel_path);
+ 		//mountpoint_list[mpoint_id].dir_op.opendir_f(rel_path);
+ 	}
+ }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000135.html">[Dreamos-dev] r133 - in trunk: . fs include/fs sys
+</A></li>
+	<LI>Next message: <A HREF="000137.html">[Dreamos-dev] r135 - in trunk: . fs sys
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#136">[ date ]</a>
+              <a href="thread.html#136">[ thread ]</a>
+              <a href="subject.html#136">[ subject ]</a>
+              <a href="author.html#136">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

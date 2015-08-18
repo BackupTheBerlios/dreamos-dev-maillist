@@ -1,0 +1,473 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r34 - in trunk: . include include/misc mem misc	processore shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2008-October/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r34%20-%20in%20trunk%3A%20.%20include%20include/misc%20mem%20misc%0A%09processore%20shell&In-Reply-To=%3C200810031630.m93GUINt032045%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   
+   <LINK REL="Next"  HREF="000035.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r34 - in trunk: . include include/misc mem misc	processore shell</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r34%20-%20in%20trunk%3A%20.%20include%20include/misc%20mem%20misc%0A%09processore%20shell&In-Reply-To=%3C200810031630.m93GUINt032045%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r34 - in trunk: . include include/misc mem misc	processore shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Fri Oct  3 18:30:18 CEST 2008</I>
+    <P><UL>
+        
+        <LI>Next message: <A HREF="000035.html">[Dreamos-dev] r35 - in trunk: . include/mem mem misc shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#34">[ date ]</a>
+              <a href="thread.html#34">[ thread ]</a>
+              <a href="subject.html#34">[ subject ]</a>
+              <a href="author.html#34">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2008-10-03 18:30:16 +0200 (Fri, 03 Oct 2008)
+New Revision: 34
+
+Added:
+   trunk/include/misc/ordered_list.h
+   trunk/misc/ordered_list.c
+Modified:
+   trunk/.bochsrc
+   trunk/Makefile
+   trunk/TODO
+   trunk/bl.img
+   trunk/dreamos.img
+   trunk/include/use.h
+   trunk/include/version.h
+   trunk/kernel.c
+   trunk/mem/fismem.c
+   trunk/mem/kheap.c
+   trunk/mem/paging.c
+   trunk/processore/handlers.c
+   trunk/shell/shell.c
+Log:
+Aggiunta funzione alloc da completare, e comandi per testarla
+Funzioni e strutture dati base per la gestione di un heap per il gestore di memoria
+Funzione di inserimento (tnx shainer) per liste dell'heap
+Aggiunti files ordered_list.c e ordered_list.h
+Aggiornato makefile
+Funzione di test per l'alloc
+
+
+Modified: trunk/.bochsrc
+===================================================================
+--- trunk/.bochsrc	2008-09-29 18:13:35 UTC (rev 33)
++++ trunk/.bochsrc	2008-10-03 16:30:16 UTC (rev 34)
+@@ -16,8 +16,8 @@
+ # NOTE: if you use the &quot;wx&quot; configuration interface, you must also use
+ # the &quot;wx&quot; display library.
+ #=======================================================================
+-config_interface: textconfig
+-#config_interface: wx
++#config_interface: textconfig
++config_interface: wx
+ 
+ #=======================================================================
+ # DISPLAY_LIBRARY
+@@ -59,8 +59,8 @@
+ #display_library: sdl, options=&quot;fullscreen&quot; # startup in fullscreen mode
+ #display_library: term
+ #display_library: win32, options=&quot;legacyF12&quot; # use F12 to toggle mouse
+-#display_library: wx
+-display_library: x
++display_library: wx
++#display_library: x
+ 
+ #=======================================================================
+ # ROMIMAGE:
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2008-09-29 18:13:35 UTC (rev 33)
++++ trunk/Makefile	2008-10-03 16:30:16 UTC (rev 34)
+@@ -9,7 +9,7 @@
+ 
+ CFLAGS = -nostdlib -fomit-frame-pointer -fno-builtin -fno-stack-protector -Wall -march=i686 -m32 -I./include -I./include/io -I./include/drivers -I./include/libc -I./include/processore -I./include/hardware -I./include/mem -I./include/system -I./include/shell -I./include/misc
+ 
+-OBJ = kernel.o io/video.o drivers/keyboard.o libc/ctype.o libc/string.o io/io.o libc/stdio.o hardware/cpuid.o hardware/keyboard.o processore/gdt.o processore/idt.o processore/handlers.o hardware/pic8259.o mem/fismem.o mem/paging.o mem/kheap.o mem/buddy.o misc/ordered_array.o system/syscall.o hardware/8253.o shell/shell.o
++OBJ = kernel.o io/video.o drivers/keyboard.o libc/ctype.o libc/string.o io/io.o libc/stdio.o hardware/cpuid.o hardware/keyboard.o processore/gdt.o processore/idt.o processore/handlers.o hardware/pic8259.o mem/fismem.o mem/paging.o mem/kheap.o mem/buddy.o misc/ordered_array.o misc/ordered_list.o system/syscall.o hardware/8253.o shell/shell.o
+ 
+ dreamos.img: bl.img kernel.bin
+ 	mv kernel.bin dreamos.img
+@@ -37,6 +37,7 @@
+ mem/kheap.o: mem/kheap.c
+ mem/buddy.o: mem/buddy.c
+ misc/ordered_array.o: misc/ordered_array.c
++misc/ordered_list.o: misc/ordered_list.c
+ drivers/keyboard.o: drivers/keyboard.c
+ system/syscall.o: system/syscall.c
+ hardware/8253.o: hardware/8253.c
+
+Modified: trunk/TODO
+===================================================================
+--- trunk/TODO	2008-09-29 18:13:35 UTC (rev 33)
++++ trunk/TODO	2008-10-03 16:30:16 UTC (rev 34)
+@@ -10,12 +10,9 @@
+ - Todo rivedere quali sono le eccezioni che hanno un error code e sostituire le relative EXCEPTION(xx) con EXCEPTION_EC(xx)
+ - Fare una mega pulizia del codice
+ - Eliminare il maggior numero di messaggi di errore dalla compilazione
+-- Script che memorizza nei sorci il numero di revisione (genera un file header)
+-- Comandi: echo - clear
+ - bitmasks per interpretare errori del pagefault.
+ - Rivedere il comando info della shell, probabilmente stampa alcune informazioni sbagliate
+ - Script per generare automaticamente il file immagine grub.img
+-- Quando il comando non esiste stmapre &quot;nome-comando not-found&quot; 
+ 
+ 
+ PROGETTI A LUNGO TERMINE:
+
+Modified: trunk/bl.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Added: trunk/include/misc/ordered_list.h
+===================================================================
+--- trunk/include/misc/ordered_list.h	2008-09-29 18:13:35 UTC (rev 33)
++++ trunk/include/misc/ordered_list.h	2008-10-03 16:30:16 UTC (rev 34)
+@@ -0,0 +1,31 @@
++/***************************************************************************
++ *            ordered_list.c
++ *
++ *  Sun 18 07 08 07:47:17 2007
++ *  Copyright  2008  Ivan Gualandri
++ *  Email <A HREF="https://lists.berlios.de/mailman/listinfo/dreamos-dev">finarfin at elenhost.org</A>
++ ****************************************************************************/
++/*
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2 of the License, or
++ *  (at your option) any later version.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++#ifndef ORDERED_LIST 
++#define ORDERED_LIST
++
++#include &lt;kheap.h&gt;
++
++void insert_list(heap_node_t*, heap_node_t**);
++
++#endif
+
+Modified: trunk/include/use.h
+===================================================================
+--- trunk/include/use.h	2008-09-29 18:13:35 UTC (rev 33)
++++ trunk/include/use.h	2008-10-03 16:30:16 UTC (rev 34)
+@@ -1,5 +1,5 @@
+ /*
+- * Use.h
++ * It.h
+  *  This program is free software; you can redistribute it and/or modify
+  *  it under the terms of the GNU General Public License as published by
+  *  the Free Software Foundation; either version 2 of the License, or
+@@ -15,17 +15,17 @@
+  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+ 
+-#ifndef _EN_H_
+-#define _EN_H_
++#ifndef _IT_H_
++#define _IT_H_
+ 
+-#define LNG_SITE &quot;\nSite: &quot;
+-#define LNG_GDT &quot;Initialize GDT   &quot;
+-#define LNG_IDT &quot;Initialize IDT   &quot;
+-#define LNG_PIT8253 &quot;Initialize PIT    &quot;
+-#define LNG_PIC8259 &quot;Initialize PIC8259    &quot;
+-#define LNG_CPU &quot;\nCPU: &quot;
+-#define LNG_FREERAM &quot;Free RAM:&quot;
+-#define LNG_FREEPAGE &quot;\t- Number free page:&quot;
+-#define LNG_BITMAP &quot;\t- Number bitmap's elements:&quot;
++#define LNG_SITE &quot;\nSito: &quot;
++#define LNG_GDT &quot;Inizializzo GDT   &quot;
++#define LNG_IDT &quot;Inizializzo IDT   &quot;
++#define LNG_PIT8253 &quot;Inizializzo PIT    &quot;
++#define LNG_PIC8259 &quot;Inizializzo PIC8259    &quot;
++#define LNG_CPU &quot;\nProcessore: &quot;
++#define LNG_FREERAM &quot;Ram Disposizione:&quot;
++#define LNG_FREEPAGE &quot;\t- Numero Pagine a disposizione:&quot;
++#define LNG_BITMAP &quot;\t- Numero elementi della bitmap:&quot;
+ 
+ #endif
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2008-09-29 18:13:35 UTC (rev 33)
++++ trunk/include/version.h	2008-10-03 16:30:16 UTC (rev 34)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL &quot;0&quot;
+ #define EXTRAVERSION &quot;-dreamos&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r28&quot;
++#define REV_NUM &quot;-r33&quot;
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2008-09-29 18:13:35 UTC (rev 33)
++++ trunk/kernel.c	2008-10-03 16:30:16 UTC (rev 34)
+@@ -39,6 +39,7 @@
+ #include &lt;paging.h&gt;
+ #include &lt;use.h&gt;
+ #include &lt;shell.h&gt;
++#include &lt;syscall.h&gt;
+ 
+ 
+ unsigned int *current_page_table;
+@@ -52,8 +53,7 @@
+ }
+ 
+ int main_loop(struct multiboot_info *boot_info)
+-{    unsigned int *provatore;
+-
++{
+     _kclear();
+     syscall_init();
+     _kcolor('\012');
+
+Modified: trunk/mem/fismem.c
+===================================================================
+--- trunk/mem/fismem.c	2008-09-29 18:13:35 UTC (rev 33)
++++ trunk/mem/fismem.c	2008-10-03 16:30:16 UTC (rev 34)
+@@ -216,7 +216,7 @@
+ 
+ size_t calcola_memoria()
+ {
+-    unsigned int *mem_position;
++/*    unsigned int *mem_position;
+     asm(&quot;cli&quot;);
+     outportb(0xFF, MASTER_PORT_1);                     //Disabilito gli interrupt hardware
+     outportb(0xFF, SLAVE_PORT_1);
+@@ -247,7 +247,7 @@
+     asm(&quot;sti&quot;);
+     mem_position = 16777216;
+     tot_mem = (unsigned long) mem_position;
+-    return (unsigned long) mem_position;
++    return (unsigned long) mem_position;*/
+ }
+ 
+ /**
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2008-09-29 18:13:35 UTC (rev 33)
++++ trunk/mem/kheap.c	2008-10-03 16:30:16 UTC (rev 34)
+@@ -25,6 +25,7 @@
+ #include &lt;fismem.h&gt;
+ #include &lt;paging.h&gt;
+ #include &lt;ordered_array.h&gt;
++#include &lt;ordered_list.h&gt;
+ #include &lt;stddef.h&gt;
+ #include &lt;stdio.h&gt;
+ 
+@@ -59,6 +60,7 @@
+     first_node = (heap_node_t*)kmalloc(sizeof(heap_node_t));
+     first_node-&gt;start_address = (unsigned int)&end;
+     first_node-&gt;size = size;
++    first_node-&gt;next = NULL;
+     new_heap-&gt;max_size = tot_mem-(unsigned int) &end;
+     new_heap-&gt;free_list = first_node;
+     new_heap-&gt;used_list = NULL;
+@@ -68,15 +70,43 @@
+ }
+ 
+ void* alloc(unsigned int size, heap_t *cur_heap){    
+-    heap_node_t* cur_list;
++    int n_pages;
++    n_pages = size/4096;
++    if(size%4096!=0) n_pages++;
++    printf(&quot;Numero pagine da allocare: %d, %d\n&quot;, n_pages, size);
++    heap_node_t* cur_list;    
++    printf(&quot;Cur_heap-&gt;max_size %d\n&quot;, cur_heap-&gt;max_size);
+     cur_list = cur_heap-&gt;free_list;
++    printf(&quot;Arrivo qua\n&quot;);
++    /*Vado alla ricerca di una locazione di memoria libera*/
+     while(cur_list!=NULL) {
+-        printf(&quot;All right let's go\n&quot;);
++        if(cur_list-&gt;size &gt; size){
++            heap_node_t* new_node;
++
++            new_node = (heap_node_t*)kmalloc(sizeof(heap_node_t));
++            new_node-&gt;start_address = cur_list-&gt;start_address;
++            new_node-&gt;next = NULL;
++            new_node-&gt;size = n_pages*0x1000;
++//             new_node-&gt;next= cur_heap-&gt;used_list; 
++//             cur_heap-&gt;used_list = new_node;
++            /*Inserisci il nodo in testa*/
++            printf(&quot;New_node: Size: %d, start_address: %d\n&quot;, new_node-&gt;size, new_node-&gt;start_address);
++            printf(&quot;Cur_list Actual size: %d, start_address: %d\n&quot;, cur_list-&gt;size, cur_list-&gt;start_address);
++            cur_list-&gt;size = (cur_list-&gt;size) - (n_pages*0x1000);
++            cur_list-&gt;start_address = cur_list-&gt;start_address - (n_pages*0x1000);
++            printf(&quot;New_size: %d, new_start_address %d\n&quot;, cur_list-&gt;size, cur_list-&gt;start_address);      
++
++             insert_list(new_node,&amp;(cur_heap-&gt;used_list));                            
++        }
++        else printf(&quot;No good\n&quot;);
++        printf(&quot;The size of that node is: %d\n&quot;, cur_list-&gt;size);
++        printf(&quot;Value: %d\n&quot;, cur_list-&gt;next); 
+         cur_list = cur_list-&gt;next;
+     }
+ }
+ 
+ /**Queste funzioni sono messe solo per alcune prove verranno eliminate entro le prossime revisioni*/
+ void try_alloc(){
+-    alloc(4, kheap);
++    alloc(5000, kheap);
++    alloc(60, kheap);    
+ }
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2008-09-29 18:13:35 UTC (rev 33)
++++ trunk/mem/paging.c	2008-10-03 16:30:16 UTC (rev 34)
+@@ -72,7 +72,7 @@
+     }        
+     load_pdbr((unsigned int)current_page_dir);
+     kheap = make_heap(10,10,tot_mem - ((unsigned int) &amp;end));
+-    kbuddy = new_buddy();    
++//     kbuddy = new_buddy();    
+ }
+ 
+ /**
+@@ -255,7 +255,6 @@
+ 	    set_pagetable_entry_ric (pdir, ptable, new_p, PD_PRESENT|SUPERVISOR|WRITE, 0);
+ 	    printf (&quot;Nuova entry dopo la mappatura: %d\n&quot;, get_pagetable_entry (pdir, ptable));
+ 	  }
+-	}
+-
++	}        
+         return;
+ }
+
+Added: trunk/misc/ordered_list.c
+===================================================================
+--- trunk/misc/ordered_list.c	2008-09-29 18:13:35 UTC (rev 33)
++++ trunk/misc/ordered_list.c	2008-10-03 16:30:16 UTC (rev 34)
+@@ -0,0 +1,41 @@
++/***************************************************************************
++ *            ordered_list.c
++ *
++ *  Sun 18 07 08 07:47:17 2007
++ *  Copyright  2008  Ivan Gualandri
++ *  Email <A HREF="https://lists.berlios.de/mailman/listinfo/dreamos-dev">finarfin at elenhost.org</A>
++ ****************************************************************************/
++/*
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2 of the License, or
++ *  (at your option) any later version.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++#include &lt;ordered_list.h&gt;
++#include &lt;kheap.h&gt;
++#include &lt;stdio.h&gt;
++#include &lt;stddef.h&gt;
++
++void insert_list(heap_node_t* new_node, heap_node_t** list){
++    if(*list==NULL){
++        printf(&quot;\n---Insert new node---\n&quot;);
++        *list=new_node;
++        printf(&quot;Provo: %d---\n&quot;, (*list)-&gt;size);
++    }
++    else {
++        printf(&quot;List-&gt;size= %d\n&quot;, (*list)-&gt;size);
++        printf(&quot;Piano piano vado avanti\n&quot;);
++    }
++    printf(&quot;The current size: %d\n&quot;, new_node-&gt;size);
++    printf(&quot;I will insert into the list\n&quot;);
++}
+
+Modified: trunk/processore/handlers.c
+===================================================================
+--- trunk/processore/handlers.c	2008-09-29 18:13:35 UTC (rev 33)
++++ trunk/processore/handlers.c	2008-10-03 16:30:16 UTC (rev 34)
+@@ -84,9 +84,7 @@
+ 	else if(n==GENERAL_PROTECTION) _kputs(&quot;General Protection Exception\n&quot;);
+     else if(n==INVALID_OPCODE) _kputs(&quot;Invalid Opcode Exception\n&quot;);
+     else if(n==BOUND_RANGE_EXCEED) _kputs(&quot;Bound exception\n&quot;);
+-    else if(n==PAGE_FAULT) {
+-        page_fault_handler (error);
+-    }
++    else if(n==PAGE_FAULT) page_fault_handler (error);    
+     else if(n==INT_RSV) _kputs(&quot;Intel Reserved\n&quot;);
+     else if(n==FLOATING_POINT_ERR) _kputs(&quot;Floating Point Exception\n&quot;);
+     else if(n==ALIGNMENT_CHECK) _kputs(&quot;Alignment Check Exception\n&quot;);             
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2008-09-29 18:13:35 UTC (rev 33)
++++ trunk/shell/shell.c	2008-10-03 16:30:16 UTC (rev 34)
+@@ -196,12 +196,12 @@
+         }
+ 
+         else if (!(_kstrncmp(cmd,&quot;do_fault&quot;,8)))
+-	{  
++    	{  
+              printf (&quot;Genero un pagefault scrivendo 10 nella locazione 0xa0000000...\n&quot;);
+              int *prova;
+              prova = 0xa0000000;
+              *prova = 10;
+-             printf (&quot;Contenuto della locazione 0xa0000000 dopo l'intervento dell'handler: %d\n&quot;, *prova);
++              printf (&quot;Contenuto della locazione 0xa0000000 dopo l'intervento dell'handler: %d\n&quot;, *prova);
+         }
+ 
+         else if (!(_kstrncmp(cmd,&quot;try_heap&quot;,8))){
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	
+	<LI>Next message: <A HREF="000035.html">[Dreamos-dev] r35 - in trunk: . include/mem mem misc shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#34">[ date ]</a>
+              <a href="thread.html#34">[ thread ]</a>
+              <a href="subject.html#34">[ subject ]</a>
+              <a href="author.html#34">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

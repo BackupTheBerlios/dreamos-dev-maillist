@@ -1,0 +1,130 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r271 - in trunk: . shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-July/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r271%20-%20in%20trunk%3A%20.%20shell&In-Reply-To=%3C20100707174809.9D7D8480D6D%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000273.html">
+   <LINK REL="Next"  HREF="000275.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r271 - in trunk: . shell</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r271%20-%20in%20trunk%3A%20.%20shell&In-Reply-To=%3C20100707174809.9D7D8480D6D%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r271 - in trunk: . shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Wed Jul  7 19:48:09 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000273.html">[Dreamos-dev] r270 - in trunk: . libc shell
+</A></li>
+        <LI>Next message: <A HREF="000275.html">[Dreamos-dev] r272 - in trunk: . boot
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#274">[ date ]</a>
+              <a href="thread.html#274">[ thread ]</a>
+              <a href="subject.html#274">[ subject ]</a>
+              <a href="author.html#274">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-07-07 19:48:09 +0200 (Wed, 07 Jul 2010)
+New Revision: 271
+
+Modified:
+   trunk/dreamos.img
+   trunk/shell/shell.c
+   trunk/shell/user_shell.c
+Log:
+Ora per accedere all'os bisogna inserire come utente o root o user
+Altrimenti occorre editare il file passwd a mano e scriverlo 
+nell'immagine dell'os.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2010-07-07 08:06:14 UTC (rev 270)
++++ trunk/shell/shell.c	2010-07-07 17:48:09 UTC (rev 271)
+@@ -134,10 +134,9 @@
+     printf(LNG_USER);
+     scanf (&quot;%23s&quot;,current_user.username);
+     printf(LNG_USER_R);
+-  } while (!strlen(current_user.username));
+-  
+-  //user_chk(current_user.username);
+-  _kclear();
++  } while ((!strlen(current_user.username) || (user_chk(current_user.username)!=1)));
++    
++  _kclear();  
+   aalogo();
+   printf(&quot;\n\n\n\n&quot;);
+   argc=1;  
+
+Modified: trunk/shell/user_shell.c
+===================================================================
+--- trunk/shell/user_shell.c	2010-07-07 08:06:14 UTC (rev 270)
++++ trunk/shell/user_shell.c	2010-07-07 17:48:09 UTC (rev 271)
+@@ -25,18 +25,21 @@
+ int user_chk(char *username){
+ 	int fd = -1;
+ 	struct passwd_user checking_user;	
+-	printf(&quot;Username provided: %s\n&quot;, username);
++	//printf(&quot;Username provided: %s\n&quot;, username);
+ 	fd = open(&quot;/passwd&quot;, O_RDONLY,0);
+-	if(fd != -1) printf(&quot;File passwd found\n&quot;);
+-	else printf(&quot;not found\n&quot;);
++	/*if(fd != -1) printf(&quot;File passwd found\n&quot;);
++	else printf(&quot;not found\n&quot;);*/
++	if(fd&lt;0) return 0;
+ 	while(user_get(fd, &amp;checking_user)==2){
+-		printf(&quot;name: %s - password: %s\n&quot;, checking_user.username, checking_user.password);	
++		if(!strcmp(username, checking_user.username)) return 1;
++		//else printf(&quot;Not Found &quot;);
++		//printf(&quot;name: %s - password: %s\n&quot;, checking_user.username, checking_user.password);	
+ 	}
+ 	//user_get(fd, &amp;checking_user);
+ 	//printf(&quot;name: %s - password: %s\n&quot;, checking_user.username, checking_user.password);
+ 	//strcpy(checking_user.username, appo);	
+ 	close(fd);
+-	return 1;
++	return 0;
+ }
+ 
+ int user_get(int fd, struct passwd_user *checking_user){
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000273.html">[Dreamos-dev] r270 - in trunk: . libc shell
+</A></li>
+	<LI>Next message: <A HREF="000275.html">[Dreamos-dev] r272 - in trunk: . boot
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#274">[ date ]</a>
+              <a href="thread.html#274">[ thread ]</a>
+              <a href="subject.html#274">[ subject ]</a>
+              <a href="author.html#274">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

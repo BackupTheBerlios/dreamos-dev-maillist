@@ -1,0 +1,178 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r295 - in trunk: . drivers include/mem mem misc
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-September/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r295%20-%20in%20trunk%3A%20.%20drivers%20include/mem%20mem%20misc&In-Reply-To=%3C20100921130316.DEACB480F4C%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000297.html">
+   <LINK REL="Next"  HREF="000299.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r295 - in trunk: . drivers include/mem mem misc</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r295%20-%20in%20trunk%3A%20.%20drivers%20include/mem%20mem%20misc&In-Reply-To=%3C20100921130316.DEACB480F4C%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r295 - in trunk: . drivers include/mem mem misc">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Tue Sep 21 15:03:16 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000297.html">[Dreamos-dev] r294 - in trunk: . include/mem mem
+</A></li>
+        <LI>Next message: <A HREF="000299.html">[Dreamos-dev] r296 - trunk/include/drivers
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#298">[ date ]</a>
+              <a href="thread.html#298">[ thread ]</a>
+              <a href="subject.html#298">[ subject ]</a>
+              <a href="author.html#298">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-09-21 15:03:16 +0200 (Tue, 21 Sep 2010)
+New Revision: 295
+
+Modified:
+   trunk/dreamos.img
+   trunk/drivers/keyboard.c
+   trunk/include/mem/heap.h
+   trunk/kernel.c
+   trunk/mem/heap.c
+   trunk/misc/ordered_array.c
+Log:
+Aggiunta funzione get_shadow (che torna lo stato del flag shadow, per l'echo dell'input)
+
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/drivers/keyboard.c
+===================================================================
+--- trunk/drivers/keyboard.c	2010-09-14 09:50:57 UTC (rev 294)
++++ trunk/drivers/keyboard.c	2010-09-21 13:03:16 UTC (rev 295)
+@@ -313,3 +313,7 @@
+ 	else shadow = value;
+ 	return shadow;
+ }
++
++int get_shadow(){
++	return shadow;
++}
+
+Modified: trunk/include/mem/heap.h
+===================================================================
+--- trunk/include/mem/heap.h	2010-09-14 09:50:57 UTC (rev 294)
++++ trunk/include/mem/heap.h	2010-09-21 13:03:16 UTC (rev 295)
+@@ -26,6 +26,7 @@
+ 
+ #define HEAP_START_ADDRESS 0xD0000000
+ #define HEAP_START_SIZE 0x100000
++#define HEAP_INDEX_SIZE 0x20000
+ #define HEAP_MAGIC 0x12893457
+ 
+ #include &lt;ordered_array.h&gt;
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2010-09-14 09:50:57 UTC (rev 294)
++++ trunk/kernel.c	2010-09-21 13:03:16 UTC (rev 295)
+@@ -44,6 +44,7 @@
+ #include &lt;vfs.h&gt;
+ #include &lt;initrd.h&gt;
+ #include &lt;heap.h&gt;
++#include &lt;keyboard.h&gt;
+ 
+ #ifdef BOCHS_DEBUG
+ #include &lt;debug.h&gt;
+@@ -112,6 +113,8 @@
+ 	//printf(&quot;Address of module: 0x%x - 0x%x\n&quot;, *((unsigned int*)boot_info-&gt;mods_addr),module_end-(unsigned int) module_start);
+     printf(&quot;\n&quot;);
+     printf(&quot;----\n&quot;);
++    /*set_shadow(DISABLED);
++    printf(&quot;The shadow: %d\n&quot;, get_shadow());*/
+     printf(LNG_SHELL);    
+     _kprintOK();
+ 		printf(&quot;[+] Address: 0x%x\n&quot;, &amp;end);		   	        
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-09-14 09:50:57 UTC (rev 294)
++++ trunk/mem/heap.c	2010-09-21 13:03:16 UTC (rev 295)
+@@ -32,7 +32,7 @@
+ 
+ void init_newmem(){
+ 	
+-	n_heap = (new_heap_t*)new_heap(HEAP_START_ADDRESS, HEAP_START_SIZE);
++	n_heap = (new_heap_t*)new_heap(HEAP_START_ADDRESS, HEAP_INDEX_SIZE);
+ }
+ 
+ static short int header_t_less_than(void *a,void *b){
+@@ -45,7 +45,7 @@
+ 		printf(&quot;all right\n&quot;);
+ 		t_heap-&gt;start_address = start;
+ 		t_heap-&gt;end_address = start + size;	
+-		//t_heap-&gt;index = new_array(start,size, 
++		t_heap-&gt;index = new_array(start,size, &amp;header_t_less_than);
+ 		printf(&quot;Start_address: %u\n&quot;, n_heap-&gt;start_address);		
+ 		printf(&quot;End Address: %u\n&quot;, n_heap-&gt;end_address);
+ 		return t_heap;		
+
+Modified: trunk/misc/ordered_array.c
+===================================================================
+--- trunk/misc/ordered_array.c	2010-09-14 09:50:57 UTC (rev 294)
++++ trunk/misc/ordered_array.c	2010-09-21 13:03:16 UTC (rev 295)
+@@ -26,6 +26,7 @@
+ #include &lt;kheap.h&gt;
+ #include &lt;stdio.h&gt;
+ #include &lt;heap.h&gt;
++#include &lt;string.h&gt;
+ 
+ 
+ short int standard_lessthan (type_t a, type_t b){
+@@ -52,10 +53,8 @@
+     tmp_array.array = (void_t)start;
+     tmp_array.less_than = predicate;    
+     /* Questa parte e' memsettbile dopo che sara' fatta */
+-    while(i&lt;size){
+-        tmp_array.array[i]= (void_t) 0x0;
+-        i++;
+-    }
++    //printf(&quot;SizeMax: %d\n&quot;, tmp_array.size_max);
++    //memset(tmp_array.array, 0, tmp_array.size_max);
+     return tmp_array;
+ }
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000297.html">[Dreamos-dev] r294 - in trunk: . include/mem mem
+</A></li>
+	<LI>Next message: <A HREF="000299.html">[Dreamos-dev] r296 - trunk/include/drivers
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#298">[ date ]</a>
+              <a href="thread.html#298">[ thread ]</a>
+              <a href="subject.html#298">[ subject ]</a>
+              <a href="author.html#298">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

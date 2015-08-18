@@ -1,0 +1,113 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r217 - in trunk: . shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-March/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r217%20-%20in%20trunk%3A%20.%20shell&In-Reply-To=%3C201003291002.o2TA2dJ9031455%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000219.html">
+   <LINK REL="Next"  HREF="000221.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r217 - in trunk: . shell</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r217%20-%20in%20trunk%3A%20.%20shell&In-Reply-To=%3C201003291002.o2TA2dJ9031455%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r217 - in trunk: . shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Mon Mar 29 12:02:39 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000219.html">[Dreamos-dev] r216 - in trunk: . files fs include/shell libc shell	system
+</A></li>
+        <LI>Next message: <A HREF="000221.html">[Dreamos-dev] r218 - in trunk: . fs include include/fs shell system
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#220">[ date ]</a>
+              <a href="thread.html#220">[ thread ]</a>
+              <a href="subject.html#220">[ subject ]</a>
+              <a href="author.html#220">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-03-29 12:02:20 +0200 (Mon, 29 Mar 2010)
+New Revision: 217
+
+Modified:
+   trunk/dreamos.img
+   trunk/initfs
+   trunk/shell/commands.c
+Log:
+Corretto bug numero 17031.
+Aggioranto initfs.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/initfs
+===================================================================
+(Binary files differ)
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-03-28 22:26:22 UTC (rev 216)
++++ trunk/shell/commands.c	2010-03-29 10:02:20 UTC (rev 217)
+@@ -82,11 +82,13 @@
+ 
+ void echo()
+ {
++	int i = argc;
++	int j = 0;
+     if ( argc == 1 ) {
+          printf(&quot;&quot;);
+     } else {
+-		while ( --argc &gt; 0 ) {
+-		printf(&quot;%s &quot;,*++argv);
++		while ( --i &gt; 0 ) {
++		printf(&quot;%s &quot;,argv[++j]);
+ 		}
+ 	}
+     printf(&quot;\n&quot;);
+@@ -209,8 +211,7 @@
+ 	  		&quot;DT\n&quot;
+          	&quot;Celeron\n&quot;
+ 	 		&quot;Hamcha\n&quot;
+-         	&quot;m0nt0\n&quot;
+-			&quot;shainer\n&quot;
++         	&quot;m0nt0\n&quot;			
+          	&quot;and many others (3 or 4 :P)\n\n&quot;);
+   _kcolor(WHITE);
+ }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000219.html">[Dreamos-dev] r216 - in trunk: . files fs include/shell libc shell	system
+</A></li>
+	<LI>Next message: <A HREF="000221.html">[Dreamos-dev] r218 - in trunk: . fs include include/fs shell system
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#220">[ date ]</a>
+              <a href="thread.html#220">[ thread ]</a>
+              <a href="subject.html#220">[ subject ]</a>
+              <a href="author.html#220">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

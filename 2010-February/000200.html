@@ -1,0 +1,159 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r198 - in trunk: . fs include/fs
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-February/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r198%20-%20in%20trunk%3A%20.%20fs%20include/fs&In-Reply-To=%3C201002112255.o1BMtloU028190%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000199.html">
+   <LINK REL="Next"  HREF="000201.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r198 - in trunk: . fs include/fs</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r198%20-%20in%20trunk%3A%20.%20fs%20include/fs&In-Reply-To=%3C201002112255.o1BMtloU028190%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r198 - in trunk: . fs include/fs">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Thu Feb 11 23:55:47 CET 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000199.html">[Dreamos-dev] r197 - in trunk: . shell sys utils
+</A></li>
+        <LI>Next message: <A HREF="000201.html">[Dreamos-dev] r199 - in trunk: . boot fs include include/fs utils	utils/include
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#200">[ date ]</a>
+              <a href="thread.html#200">[ thread ]</a>
+              <a href="subject.html#200">[ subject ]</a>
+              <a href="author.html#200">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-02-11 23:55:47 +0100 (Thu, 11 Feb 2010)
+New Revision: 198
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/fs/initrd.c
+   trunk/fs/unistd.c
+   trunk/fs/vfs.c
+   trunk/include/fs/vfs.h
+Log:
+Aggiunto campo offset nei descrittori del descrittore del file. 
+Necessario per le read consecutive, in modo ceh si parte sempre 
+dall'ultimo byte letto (tale campo andra' messo anche nei descrittori 
+del minifs). 
+Aggiunto controllo su valore di nbyte nella chiamata a initfs_read 
+nella read..
+Ora la read chiama initfs_read passandogli al posto di 1 il valore 
+nbyte.
+
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2010-02-11 22:17:39 UTC (rev 197)
++++ trunk/fs/fcntl.c	2010-02-11 22:55:47 UTC (rev 198)
+@@ -78,10 +78,12 @@
+ 	}
+ 	else {
+ 		if(mpid&gt;-1) printf(&quot;No OPEN services found here\n&quot;);					
++		//fd_list[cur_fd].mountpoint_id = -1; //Controllare se va messa
+ 		va_end(ap);
+ 		return -1;
+ 	}
+ 	va_end(ap)	
++	fd_list[cur_fd].offset = 0;
+ 	ret_fd = cur_fd;
+ 	cur_fd++;
+ 	free(path);
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-02-11 22:17:39 UTC (rev 197)
++++ trunk/fs/initrd.c	2010-02-11 22:55:47 UTC (rev 198)
+@@ -112,6 +112,7 @@
+ 	file_start = (char *) (module_start	+ fs_headers[lfd].offset);
+ 	//printf(&quot;Hi i'm a dummy read... The file id is: %d\n&quot;, ird_descriptors[fildes].file_descriptor);
+ 	//printf(&quot;try to read something...\n&quot;);
++	if(nbyte == 0) return 0;
+ 	while(j&lt;file_size){
+ 		//putchar(file_start[j]);
+ 		buf[j] = file_start[j];			
+
+Modified: trunk/fs/unistd.c
+===================================================================
+--- trunk/fs/unistd.c	2010-02-11 22:17:39 UTC (rev 197)
++++ trunk/fs/unistd.c	2010-02-11 22:55:47 UTC (rev 198)
+@@ -31,7 +31,7 @@
+ 	fs_fd = fd_list[fildes].fs_spec_id;
+ 	//printf(&quot;Mpoint id: %d Fs_fd: %d\n&quot;, mp_id, fs_fd);
+ 	if (mountpoint_list[mp_id].operations.read != NULL)
+-		mountpoint_list[mp_id].operations.read(fs_fd,(char *) buf, 1);
++		mountpoint_list[mp_id].operations.read(fs_fd,(char *) buf, nbyte);
+ 	else
+ 		printf(&quot;No READ Found for that file system\n&quot;);
+ }
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2010-02-11 22:17:39 UTC (rev 197)
++++ trunk/fs/vfs.c	2010-02-11 22:55:47 UTC (rev 198)
+@@ -43,6 +43,7 @@
+ 	while (j &lt; _SC_OPEN_MAX){
+ 		fd_list[j].fs_spec_id = -1;
+ 		fd_list[j].mountpoint_id = -1;
++		fd_list[j].offset = 0;
+ 		j++;
+ 	}
+  	
+
+Modified: trunk/include/fs/vfs.h
+===================================================================
+--- trunk/include/fs/vfs.h	2010-02-11 22:17:39 UTC (rev 197)
++++ trunk/include/fs/vfs.h	2010-02-11 22:55:47 UTC (rev 198)
+@@ -65,6 +65,7 @@
+ struct file_descriptor {
+ 	int fs_spec_id; /**&lt; Il descrittore del file interno del FileSystem*/
+ 	int mountpoint_id; /**&lt; L'id del mountpoint nel quale si trova il file */
++	int offset; /**&lt; Offset per lettura file, per la prossima read*/
+ };
+ 
+ //extern struct inode *root;
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000199.html">[Dreamos-dev] r197 - in trunk: . shell sys utils
+</A></li>
+	<LI>Next message: <A HREF="000201.html">[Dreamos-dev] r199 - in trunk: . boot fs include include/fs utils	utils/include
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#200">[ date ]</a>
+              <a href="thread.html#200">[ thread ]</a>
+              <a href="subject.html#200">[ subject ]</a>
+              <a href="author.html#200">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

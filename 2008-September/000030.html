@@ -1,0 +1,140 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r30 - in trunk: . include/shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2008-September/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r30%20-%20in%20trunk%3A%20.%20include/shell&In-Reply-To=%3C200809102149.m8ALn9r0004542%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000029.html">
+   <LINK REL="Next"  HREF="000031.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r30 - in trunk: . include/shell</H1>
+    <B>osiris_h4ck at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r30%20-%20in%20trunk%3A%20.%20include/shell&In-Reply-To=%3C200809102149.m8ALn9r0004542%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r30 - in trunk: . include/shell">osiris_h4ck at mail.berlios.de
+       </A><BR>
+    <I>Wed Sep 10 23:49:09 CEST 2008</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000029.html">[Dreamos-dev] r29 - in trunk: . include mem shell
+</A></li>
+        <LI>Next message: <A HREF="000031.html">[Dreamos-dev] r31 - in trunk: . drivers hardware include	include/drivers include/hardware include/io include/libc	include/lng include/mem include/misc include/processore	include/shell include/system io libc mem misc processore	shell system
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#30">[ date ]</a>
+              <a href="thread.html#30">[ thread ]</a>
+              <a href="subject.html#30">[ subject ]</a>
+              <a href="author.html#30">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: osiris_h4ck
+Date: 2008-09-10 23:49:06 +0200 (Wed, 10 Sep 2008)
+New Revision: 30
+
+Modified:
+   trunk/bl.img
+   trunk/dreamos.img
+   trunk/include/shell/shell.h
+   trunk/kernel.c
+   trunk/start.sh
+Log:
+- Include in shell.h aggiornati
+
+
+
+Modified: trunk/bl.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/shell/shell.h
+===================================================================
+--- trunk/include/shell/shell.h	2008-09-10 21:36:06 UTC (rev 29)
++++ trunk/include/shell/shell.h	2008-09-10 21:49:06 UTC (rev 30)
+@@ -25,5 +25,8 @@
+ void shell();
+ void logo();
+ void aalogo();
+-
++void uname_help();
++void help();
++void poweroff();
++void info();
+ #endif
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2008-09-10 21:36:06 UTC (rev 29)
++++ trunk/kernel.c	2008-09-10 21:49:06 UTC (rev 30)
+@@ -44,7 +44,8 @@
+ unsigned int *current_page_table;
+ extern unsigned int end;
+  multiboot_info_t *boot_informations;
+-asmlinkage void _start(struct multiboot_info *boot_info){
++asmlinkage void _start(struct multiboot_info *boot_info)
++{
+      boot_informations = boot_info;    
+ 	main_loop(boot_info);
+ 	while(1);
+
+Modified: trunk/start.sh
+===================================================================
+--- trunk/start.sh	2008-09-10 21:36:06 UTC (rev 29)
++++ trunk/start.sh	2008-09-10 21:49:06 UTC (rev 30)
+@@ -14,16 +14,19 @@
+ make clean 
+ make vers
+ make 
+-make img 
++make img
++umount boot/os
+ fi
+ 
+ if [ &quot;$1&quot; == &quot;qemu&quot; ]; then
+ qemu -fda boot/grub.img
++umount boot/os
+ exit
+ fi
+ 
+ if [ &quot;$1&quot; == &quot;bochs&quot; ]; then
+ bochs -f .bochsrc -q
++umount boot/os
+ exit
+ fi
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000029.html">[Dreamos-dev] r29 - in trunk: . include mem shell
+</A></li>
+	<LI>Next message: <A HREF="000031.html">[Dreamos-dev] r31 - in trunk: . drivers hardware include	include/drivers include/hardware include/io include/libc	include/lng include/mem include/misc include/processore	include/shell include/system io libc mem misc processore	shell system
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#30">[ date ]</a>
+              <a href="thread.html#30">[ thread ]</a>
+              <a href="subject.html#30">[ subject ]</a>
+              <a href="author.html#30">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

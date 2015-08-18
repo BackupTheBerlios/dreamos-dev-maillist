@@ -1,0 +1,1890 @@
+From finarfin at mail.berlios.de  Tue Mar  2 22:47:40 2010
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Tue, 2 Mar 2010 22:47:40 +0100
+Subject: [Dreamos-dev] r204 - in trunk: . hardware include include/hardware
+	utils
+Message-ID: <201003022147.o22LleSM002608@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-03-02 22:47:39 +0100 (Tue, 02 Mar 2010)
+New Revision: 204
+
+Modified:
+   trunk/README
+   trunk/dreamos.img
+   trunk/hardware/pic8259.c
+   trunk/include/hardware/pic8259.h
+   trunk/include/version.h
+   trunk/utils/README.initfscp
+Log:
+Aggiornato numero versione.
+Aggiunta soluzione temporanea per bug #016902
+Aggiornato readme di initfscp.
+Aggiunte alcune define.
+
+
+Modified: trunk/README
+===================================================================
+--- trunk/README	2010-02-24 10:10:26 UTC (rev 203)
++++ trunk/README	2010-03-02 21:47:39 UTC (rev 204)
+@@ -29,12 +29,12 @@
+ 
+ e dai contributori:
+ 
+-vinc94
+-tk0
+ Osiris
+ Celeron
+ Hamcha
+ m0nt0.
++vinc94
++tk0
+ 
+ 	- a -- Cosa NON ? DreamOS -
+ 
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/hardware/pic8259.c
+===================================================================
+--- trunk/hardware/pic8259.c	2010-02-24 10:10:26 UTC (rev 203)
++++ trunk/hardware/pic8259.c	2010-03-02 21:47:39 UTC (rev 204)
+@@ -29,7 +29,7 @@
+ #include <8253.h>
+ #include <bitops.h>
+ 
+-IRQ_s *shareHandler[16];
++IRQ_s *shareHandler[IRQ_NUM];
+ // IRQ_s shareHandler[16];
+ // IRQ_s *tmpHandler;
+ byte master_cur_mask;
+@@ -85,11 +85,14 @@
+     enable_IRQ(TIMER);
+     enable_IRQ(TO_SLAVE_PIC);
+    
++    init_idt();
++    init_gdt();
++
+     setup_IRQ();
+     asm("sti");
+                     
+     i=0;
+-    while(i<16){
++    while(i<IRQ_NUM){
+         shareHandler[i] = NULL;
+         i++;
+     }
+
+Modified: trunk/include/hardware/pic8259.h
+===================================================================
+--- trunk/include/hardware/pic8259.h	2010-02-24 10:10:26 UTC (rev 203)
++++ trunk/include/hardware/pic8259.h	2010-03-02 21:47:39 UTC (rev 204)
+@@ -41,7 +41,9 @@
+ 
+ #define EOI 0x20
+ 
++#define IRQ_NUM 16
+ 
++
+ typedef enum irq_types{
+     TIMER,
+     KEYBOARD,
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2010-02-24 10:10:26 UTC (rev 203)
++++ trunk/include/version.h	2010-03-02 21:47:39 UTC (rev 204)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "2.0"
+ #define EXTRAVERSION "-trunk"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r199"
++#define REV_NUM "-r204"
+
+Modified: trunk/utils/README.initfscp
+===================================================================
+--- trunk/utils/README.initfscp	2010-02-24 10:10:26 UTC (rev 203)
++++ trunk/utils/README.initfscp	2010-03-02 21:47:39 UTC (rev 204)
+@@ -4,8 +4,11 @@
+ ----
+ 
+ initfscp e' un programma che serve a creare un'immagine contenente il file system utilizzato da DreamOS.
+-Consente di inserirci dei files (massimo 32) all'interno. 
+-Per far ci?? digitare il comando "initfscp file1 file2 ... nomefs" dove:
++Consente di inserirci dei files e/o dei mountpoint (massimo 32) all'interno. 
++Per far ci?? digitare il comando "initfscp [-m mountpoint1 -m mountpoint2 ... -m mountpoint n] file1 file2 ... nomefs" 
++
++dove:
++- -m mountpoint1 -m mountpoint2 ... -m mountpoint n (facoltativo) indicano i mountpoint da inserire nel filesystem appena creato. 
+ - "file1 file2 ..." sono i files che inseriremo nel filesystem,
+ - "nomefs" ?? il nome che daremo all'immagine.
+ Ad esempio vogliamo inserire i file topolino, pippo e paperino nell'immagine che chiameremo disney, quindi digitiamo:
+
+
+
+From finarfin at mail.berlios.de  Wed Mar  3 11:27:02 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Wed, 3 Mar 2010 11:27:02 +0100
+Subject: [Dreamos-dev] r205 - in trunk: . io libc utils
+Message-ID: <201003031027.o23AR2KX016880@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-03-03 11:26:49 +0100 (Wed, 03 Mar 2010)
+New Revision: 205
+
+Modified:
+   trunk/bl.img
+   trunk/dreamos.img
+   trunk/io/video.c
+   trunk/libc/stdio.c
+   trunk/utils/initfscp.c
+Log:
+Eliminati warning in initfscp
+Corretta putchar, ora utilizza _kputch per la stampa di un carattere anziche
+la funzione precedentemente usata _kputs (che non era sbagliato, ma concettualmente scorreto).
+
+
+Modified: trunk/bl.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/io/video.c
+===================================================================
+--- trunk/io/video.c	2010-03-02 21:47:39 UTC (rev 204)
++++ trunk/io/video.c	2010-03-03 10:26:49 UTC (rev 205)
+@@ -46,10 +46,22 @@
+ {
+     /* Print a character on the screen*/
+   if (last_x && last_y) _kscrolldown ();
++  if(c=='\n')
++      _knewline();
++    else if(c=='\033') {
++      asm("nop");
++    } else if (c=='\t')
++      _ktab();
++    else if(c=='\b')
++      _kbackspace();
++    else if (c=='\r')
++      _kminline();
++    else {
+   *VIDEO_PTR++ = c;
+   *VIDEO_PTR++ = VIDEO_CLR;
++    }
+   _kshiftAll();
+-  _ksetcursauto();
++  _ksetcursauto();            
+ /*
+   while(c != 0) {
+ 	if ( c=='\n' )
+
+Modified: trunk/libc/stdio.c
+===================================================================
+--- trunk/libc/stdio.c	2010-03-02 21:47:39 UTC (rev 204)
++++ trunk/libc/stdio.c	2010-03-03 10:26:49 UTC (rev 205)
+@@ -66,8 +66,8 @@
+ 	char s[2];
+ 	s[0] = ch;
+ 	s[1] = '\0';
+-	_kputs(s);
+-	//_kputc(ch); 
++	//_kputs(s);
++	_kputc(ch); 
+ 
+ }
+ 
+
+Modified: trunk/utils/initfscp.c
+===================================================================
+--- trunk/utils/initfscp.c	2010-03-02 21:47:39 UTC (rev 204)
++++ trunk/utils/initfscp.c	2010-03-03 10:26:49 UTC (rev 205)
+@@ -41,7 +41,7 @@
+ 			fsdest = fopen(argv[argc-1], "w");
+ 			if(fsdest == NULL) printf("Could not create FileSystem\n");
+ 			printf("Welcome to Dreamos initfs file copier tool\n");
+-			printf("Size of headers: %d %d\n\n", sizeof(struct initrd_file_t)*32, sizeof(initrd_file_t));
++			printf("Size of headers: %ld %ld\n\n", sizeof(struct initrd_file_t)*32, sizeof(initrd_file_t));
+ 			printf("Clearing headers structures ");
+ 			offset = sizeof(struct initrd_file_t) * 32 + sizeof(int);
+ 			
+
+
+
+From finarfin at mail.berlios.de  Wed Mar  3 16:38:20 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Wed, 3 Mar 2010 16:38:20 +0100
+Subject: [Dreamos-dev] r206 - in trunk: . drivers
+Message-ID: <201003031538.o23FcKF9030508@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-03-03 16:38:15 +0100 (Wed, 03 Mar 2010)
+New Revision: 206
+
+Modified:
+   trunk/dreamos.img
+   trunk/drivers/keyboard.c
+Log:
+Sbloccato KEY_ALT in keyboard isr.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/drivers/keyboard.c
+===================================================================
+--- trunk/drivers/keyboard.c	2010-03-03 10:26:49 UTC (rev 205)
++++ trunk/drivers/keyboard.c	2010-03-03 15:38:15 UTC (rev 206)
+@@ -213,12 +213,13 @@
+ 
+ // Presente un bug qui che non permette il fix dei relativi tasti
+ // se si decommenta, il sistema all'avvio va in panic e si riavvia
+-/*    case KEY_ALT:
++    case KEY_ALT:
++		//_kputs("Alt key pressed, nothing to be done\n");
+ 	break;
+ 
+-    case KEY_ALTGR:
+-	break;
+-*/	
++    /*case KEY_ALTGR:
++	break;*/
++	
+     case KEY_CTRL:
+ 	break;
+ 	
+
+
+
+From finarfin at mail.berlios.de  Fri Mar  5 16:31:13 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Fri, 5 Mar 2010 16:31:13 +0100
+Subject: [Dreamos-dev] r207 - in trunk: . fs include/sys shell
+Message-ID: <201003051531.o25FVDH4025807@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-03-05 16:30:57 +0100 (Fri, 05 Mar 2010)
+New Revision: 207
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/initrd.c
+   trunk/include/sys/dirent.h
+   trunk/initfs
+   trunk/shell/commands.c
+   trunk/start.sh
+Log:
+Modificato initfs, ora contiene 2 mountpoint oltre che i files
+Modificato start.sh per inserire 2 mountpoint di test
+Ora se l'elemento letto da ls e' un mountpoint lo colora di verde
+
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-03-03 15:38:15 UTC (rev 206)
++++ trunk/fs/initrd.c	2010-03-05 15:30:57 UTC (rev 207)
+@@ -78,6 +78,7 @@
+ 	if(dirp->cur_entry < nfiles){	
+ 		fs_type = (initrd_file_t *)(module_start + sizeof(initrd_t));	
+ 		dirp->entry.d_ino =  dirp->cur_entry;
++		dirp->entry.d_type = fs_type[dirp->cur_entry].file_type;
+ 		strcpy(dirp->entry.d_name, fs_type[dirp->cur_entry].fileName);	
+ 		//printf("%s\n", dirp->entry.d_name);
+ 		dirp->cur_entry++;
+
+Modified: trunk/include/sys/dirent.h
+===================================================================
+--- trunk/include/sys/dirent.h	2010-03-03 15:38:15 UTC (rev 206)
++++ trunk/include/sys/dirent.h	2010-03-05 15:30:57 UTC (rev 207)
+@@ -28,6 +28,7 @@
+ */
+ struct dirent {
+ 	ino_t d_ino;
++	int d_type;
+ 	char d_name[NAME_MAX+1];
+ };
+ 
+
+Modified: trunk/initfs
+===================================================================
+(Binary files differ)
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-03-03 15:38:15 UTC (rev 206)
++++ trunk/shell/commands.c	2010-03-05 15:30:57 UTC (rev 207)
+@@ -370,9 +370,11 @@
+ 			i++;
+ 		}*/
+ 		struct dirent* cur_dir_entry;
+-		cur_dir_entry = readdir(dirp);
++		cur_dir_entry = readdir(dirp);		
+ 		while(cur_dir_entry!=NULL){			
++			if(cur_dir_entry->d_type == FS_MOUNTPOINT) _kcolor(BRIGHT_GREEN);
+ 			printf("%s\n", cur_dir_entry->d_name);
++			_kcolor(WHITE);			
+ 			cur_dir_entry = readdir(dirp);
+ 		}
+ 		closedir(dirp);
+@@ -403,20 +405,29 @@
+ 
+ void cd( ){
+ 	char *relpath;		
++	DIR *dirp=NULL;
+ 	if(argc != 2) {
+ 		printf("Bad usage. Try 'ls -l' and then 'cd dir'.\n");
+ 		return;
+ 	} else {
+ 		int i=0;
+ 		int rel_size = 0;		
+-		i = get_mountpoint_id(argv[1]);		
++		i = get_mountpoint_id(argv[1]);
++		dirp=opendir(argv[1]);
++		if(dirp!=NULL){
++			printf("good\n");
++			closedir(dirp);
++		}
++		else printf("bad\n");
+ 		//printf("path: %s\n", argv[1]);
+ 		rel_size = strlen(argv[1]) - strlen(mountpoint_list[i].mountpoint);
+ 		if(i == -1) {			
+ 			printf("cd: %s: No such file or directory\n", argv[1]);
+ 			return;
+ 		}
+-		else strcpy(current_user.cur_path, argv[1]);
++		else {
++			strcpy(current_user.cur_path, argv[1]);
++		}
+ 		if(rel_size >0){
+ 			relpath = get_rel_path(i, argv[1]);
+ 			free(relpath);
+
+Modified: trunk/start.sh
+===================================================================
+--- trunk/start.sh	2010-03-03 15:38:15 UTC (rev 206)
++++ trunk/start.sh	2010-03-05 15:30:57 UTC (rev 207)
+@@ -129,7 +129,7 @@
+   echo "--------------------------------------------- "
+   echo "Launching FS Creating script in progress.."
+   echo ""
+-  utils/initfscp `find files/* -exec echo {} +;` initfs
++  utils/initfscp -m mp -m test `find files/* -exec echo {} +;` initfs
+   echo "done."
+   $MAKE_FS
+   #su -c "mount -o loop boot/grub.img boot/os && rm -rf boot/os/initfs && cp initfs boot/os/initfs && umount boot/os"
+
+
+
+From finarfin at mail.berlios.de  Sun Mar  7 23:50:54 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun, 7 Mar 2010 23:50:54 +0100
+Subject: [Dreamos-dev] r208 - in trunk: . include/shell shell
+Message-ID: <201003072250.o27MosVV028042@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-03-07 23:50:44 +0100 (Sun, 07 Mar 2010)
+New Revision: 208
+
+Modified:
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/grub.py
+   trunk/include/shell/commands.h
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+   trunk/start.sh
+Log:
+Sistemato errore scrittura entry grub in grub.py.
+Corrette alcune frasi in start.sh.
+Aggiunta base per il comando cat (per ora solo controllo degli argomenti e prototipi di funzione).
+
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2010-03-05 15:30:57 UTC (rev 207)
++++ trunk/Makefile	2010-03-07 22:50:44 UTC (rev 208)
+@@ -20,7 +20,7 @@
+ 	 -I./include\
+ 	 -I./include/io\
+ 	 -I./include/drivers\
+-         -I./include/libc\
++     -I./include/libc\
+ 	 -I./include/processore\
+ 	 -I./include/hardware\
+ 	 -I./include/mem\
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/grub.py
+===================================================================
+--- trunk/grub.py	2010-03-05 15:30:57 UTC (rev 207)
++++ trunk/grub.py	2010-03-07 22:50:44 UTC (rev 208)
+@@ -64,7 +64,7 @@
+ 	fd.write("\nsplashimage=" + partition + "/boot/grub/grub2.xpm.gz\n\n")
+ 	fd.write("\ntitle\tDreamOS v0." + patchlevel + "-" + trunk +"")
+ 	fd.write("\nroot\t" + partition)
+-	fd.write("\nkernel\t" + cwd + "\tmodule\t" + initFS)
++	fd.write("\nkernel\t" + cwd + "\nmodule\t" + initFS)
+ 	fd.write("\nboot\n")
+ 	fd.close()
+ 	print ""
+
+Modified: trunk/include/shell/commands.h
+===================================================================
+--- trunk/include/shell/commands.h	2010-03-05 15:30:57 UTC (rev 207)
++++ trunk/include/shell/commands.h	2010-03-07 22:50:44 UTC (rev 208)
+@@ -53,6 +53,7 @@
+ void whoami();
+ void tester();
+ void pwd();	
++void cat();
+ 
+ struct devel {
+ 	const char cmd_testname[CMD_LEN];
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-03-05 15:30:57 UTC (rev 207)
++++ trunk/shell/commands.c	2010-03-07 22:50:44 UTC (rev 208)
+@@ -403,6 +403,14 @@
+ 	}
+ }
+ 
++void cat(){
++	if(argc==1) 
++		printf("Usage:\n\t cat filename\nfor read a file\n");
++	else {
++		if(argc<3) printf("File to open: %s\n", argv[1]);
++	}
++}
++
+ void cd( ){
+ 	char *relpath;		
+ 	DIR *dirp=NULL;
+@@ -414,11 +422,10 @@
+ 		int rel_size = 0;		
+ 		i = get_mountpoint_id(argv[1]);
+ 		dirp=opendir(argv[1]);
+-		if(dirp!=NULL){
+-			printf("good\n");
++		if(dirp!=NULL){			
+ 			closedir(dirp);
+ 		}
+-		else printf("bad\n");
++		//else printf("bad\n");
+ 		//printf("path: %s\n", argv[1]);
+ 		rel_size = strlen(argv[1]) - strlen(mountpoint_list[i].mountpoint);
+ 		if(i == -1) {			
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2010-03-05 15:30:57 UTC (rev 207)
++++ trunk/shell/shell.c	2010-03-07 22:50:44 UTC (rev 208)
+@@ -93,8 +93,9 @@
+ 	{ "ls",       ls},
+ 	{ "cd",       cd},
+ 	{ "whoami",   whoami},
+-	{ "tester", tester},
++	{ "tester", tester},	
+ 	{ "pwd", pwd},
++	{ "cat", cat},
+   };
+ 
+   int i = 0;
+
+Modified: trunk/start.sh
+===================================================================
+--- trunk/start.sh	2010-03-05 15:30:57 UTC (rev 207)
++++ trunk/start.sh	2010-03-07 22:50:44 UTC (rev 208)
+@@ -105,7 +105,7 @@
+   echo "Creating backup of menu.lst (/boot/grub/menu.lst_backup) .."
+   su -c "cp /boot/grub/menu.lst /boot/grub/menu.lst_backup"
+   echo "done.."
+-  echo "Launching grub installer script in progress.."
++  echo "Launching grub installer script ..."
+   echo ""
+   su -c "python grub.py"
+   echo "done."
+@@ -115,7 +115,7 @@
+ elif [ "$1" == "create_iso" ]; then
+ 
+   echo "--------------------------------------------- "
+-  echo "Launching ISO Creating script in progress.."
++  echo "Launching ISO Creating script ..."
+   echo ""
+   mkisofs -o ISO/dreamos-image.iso -A DreamOS -b boot/grub.img `pwd`
+   echo "done."
+@@ -178,7 +178,7 @@
+ 	 $VERS && $CLEAN && $MAKE && $MAKE_IMG
+ 	  
+ 	 echo "--------------------------------------------- "
+-  	 echo "Launching FS Creating script in progress.."
++  	 echo "Launching FS Creating script ..."
+ 	 echo ""
+          utils/initfscp `find files/* -exec echo {} +;` initfs
+          echo "done."
+@@ -209,7 +209,7 @@
+ 	 $VERS && $CLEAN && $MAKE && $MAKE_IMG
+ 	  
+ 	 echo "--------------------------------------------- "
+-  	 echo "Launching FS Creating script in progress.."
++  	 echo "Launching FS Creating script ..."
+ 	 echo ""
+          utils/initfscp `find files/* -exec echo {} +;` initfs
+          echo "done."
+@@ -237,7 +237,7 @@
+ 
+   $VERS && $CLEAN && $MAKE && $MAKE_IMG && $MAKE_FS
+   echo "--------------------------------------------- "
+-  echo "Launching grub installer script in progress.."
++  echo "Launching grub installer script in ..."
+   su -c "python grub.py"
+   echo "done."
+   echo "--------------------------------------------- "
+@@ -245,7 +245,7 @@
+ 
+ 
+ elif [ "$2" == "" ]; then
+-  echo "Error: No command inserted!"
++  echo "Error: No commands inserted!"
+   echo "----------------------->"
+   echo "Usage: '$0 help'"
+   exit
+@@ -254,7 +254,7 @@
+ elif [ "$2" == "create_iso" ]; then
+   $VERS && $CLEAN && $MAKE && $MAKE_IMG && $MAKE_FS
+   echo "--------------------------------------------- "
+-  echo "Launching ISO Creation script in progress.."
++  echo "Launching ISO Creation script..."
+   echo ""
+   mkisofs -o ISO/dreamos-image.iso -A DreamOS -b boot/grub.img `pwd`
+   echo "done."
+
+
+
+From finarfin at mail.berlios.de  Mon Mar  8 21:24:43 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Mon, 8 Mar 2010 21:24:43 +0100
+Subject: [Dreamos-dev] r209 - in trunk: . fs include/shell shell
+Message-ID: <201003082024.o28KOhG0032313@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-03-08 21:24:33 +0100 (Mon, 08 Mar 2010)
+New Revision: 209
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/fs/initrd.c
+   trunk/include/shell/commands.h
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+Log:
+Modificato il nome del comando cat in more
+Ora la more legge i files presenti nel fs se corredati del solo path 
+assoluto.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2010-03-07 22:50:44 UTC (rev 208)
++++ trunk/fs/fcntl.c	2010-03-08 20:24:33 UTC (rev 209)
+@@ -42,7 +42,7 @@
+ 	va_start(ap, oflags);
+ 	ret_fd = 0;
+ 	while(ret_fd < _SC_OPEN_MAX){
+-		if(fd_list[ret_fd].mountpoint_id == -1) printf("%d ", ret_fd);		
++		//if(fd_list[ret_fd].mountpoint_id == -1) printf("%d ", ret_fd);		
+ 		ret_fd++;
+ 	}
+ 	prova = va_arg(ap, int);
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-03-07 22:50:44 UTC (rev 208)
++++ trunk/fs/initrd.c	2010-03-08 20:24:33 UTC (rev 209)
+@@ -100,7 +100,7 @@
+ 				if(module_var[j].file_type == FS_DIRECTORY || module_var[j].file_type == FS_MOUNTPOINT)
+ 					return -1;
+ 				ird_descriptors[cur_irdfd].file_descriptor	= j;
+-				printf("%s Found. Size: %d FS fd val: %d - ID File val: %d\n", path, module_var[j].length, cur_irdfd, ird_descriptors[cur_irdfd].file_descriptor);
++				//printf("%s Found. Size: %d FS fd val: %d - ID File val: %d\n", path, module_var[j].length, cur_irdfd, ird_descriptors[cur_irdfd].file_descriptor);
+ 				ret_fd = cur_irdfd;				
+ 				return cur_irdfd++; 
+ 		}
+
+Modified: trunk/include/shell/commands.h
+===================================================================
+--- trunk/include/shell/commands.h	2010-03-07 22:50:44 UTC (rev 208)
++++ trunk/include/shell/commands.h	2010-03-08 20:24:33 UTC (rev 209)
+@@ -53,7 +53,7 @@
+ void whoami();
+ void tester();
+ void pwd();	
+-void cat();
++void more();
+ 
+ struct devel {
+ 	const char cmd_testname[CMD_LEN];
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-03-07 22:50:44 UTC (rev 208)
++++ trunk/shell/commands.c	2010-03-08 20:24:33 UTC (rev 209)
+@@ -23,6 +23,7 @@
+ #include <mouse.h>
+ #include <vfs.h>
+ #include <testing.h>
++#include <fcntl.h>
+ 
+ struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
+ userenv_t current_user;
+@@ -403,11 +404,26 @@
+ 	}
+ }
+ 
+-void cat(){
++void more(){
+ 	if(argc==1) 
+-		printf("Usage:\n\t cat filename\nfor read a file\n");
++		printf("Usage:\n\t more filename\nfor read a file\n");
+ 	else {
+-		if(argc<3) printf("File to open: %s\n", argv[1]);
++		if(argc<3) {
++			int i;
++			char buf;
++			//printf("File to open: %s\n", argv[1]);
++			i = open(argv[1], O_RDONLY, 42);
++			if(i>-1) {
++				int j=0;		
++				while(read(i, &buf, 1)!=NULL) {
++					putchar(buf);			
++					j++;
++				}	
++				putchar('\n');			
++				close(i);
++			}		
++		}
++		else printf("too many arguments\n");
+ 	}
+ }
+ 
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2010-03-07 22:50:44 UTC (rev 208)
++++ trunk/shell/shell.c	2010-03-08 20:24:33 UTC (rev 209)
+@@ -95,7 +95,7 @@
+ 	{ "whoami",   whoami},
+ 	{ "tester", tester},	
+ 	{ "pwd", pwd},
+-	{ "cat", cat},
++	{ "more", more},
+   };
+ 
+   int i = 0;
+
+
+
+From finarfin at mail.berlios.de  Mon Mar  8 22:51:39 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Mon, 8 Mar 2010 22:51:39 +0100
+Subject: [Dreamos-dev] r210 - in trunk: . files shell
+Message-ID: <201003082151.o28LpdDl006123@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-03-08 22:51:30 +0100 (Mon, 08 Mar 2010)
+New Revision: 210
+
+Added:
+   trunk/files/README
+Modified:
+   trunk/bl.img
+   trunk/dreamos.img
+   trunk/initfs
+   trunk/shell/commands.c
+Log:
+Aggiunto file README ad initfs e nella cartella files dei sorgenti.
+Corretti alcuni bugs in more.
+
+
+Modified: trunk/bl.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Added: trunk/files/README
+===================================================================
+--- trunk/files/README	2010-03-08 20:24:33 UTC (rev 209)
++++ trunk/files/README	2010-03-08 21:51:30 UTC (rev 210)
+@@ -0,0 +1,9 @@
++DREAMOS 0.2.0-trunk
++
++Welcome to the dreamOS operting system.
++
++If you want some help enter the "help" command into the cli.
++
++Bye,
++The Dream(OS) Team
++
+
+Modified: trunk/initfs
+===================================================================
+(Binary files differ)
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-03-08 20:24:33 UTC (rev 209)
++++ trunk/shell/commands.c	2010-03-08 21:51:30 UTC (rev 210)
+@@ -415,7 +415,7 @@
+ 			i = open(argv[1], O_RDONLY, 42);
+ 			if(i>-1) {
+ 				int j=0;		
+-				while(read(i, &buf, 1)!=NULL) {
++				while(read(i, &buf, 1)!= (int) NULL) {
+ 					putchar(buf);			
+ 					j++;
+ 				}	
+
+
+
+From finarfin at mail.berlios.de  Tue Mar  9 22:51:46 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Tue, 9 Mar 2010 22:51:46 +0100
+Subject: [Dreamos-dev] r211 - in trunk: . fs libc shell
+Message-ID: <201003092151.o29LpkIK012008@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-03-09 22:51:37 +0100 (Tue, 09 Mar 2010)
+New Revision: 211
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/libc/string.c
+   trunk/shell/commands.c
+Log:
+Aggiunto supporto per i path relativi in open.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2010-03-08 21:51:30 UTC (rev 210)
++++ trunk/fs/fcntl.c	2010-03-09 21:51:37 UTC (rev 211)
+@@ -20,11 +20,14 @@
+ #include <fcntl.h>
+ #include <stdarg.h>
+ #include <stdio.h>
++#include <string.h>
+ #include <kheap.h>
++#include <shell.h>
+ 
+ int cur_fd;
+ file_descriptor_t fd_list[_SC_OPEN_MAX];
+ struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
++userenv_t current_user;
+ 
+ /**
+   * @author Ivan Gualandri
+@@ -40,7 +43,7 @@
+ 	int ret_fd;
+ 	va_list ap;
+ 	va_start(ap, oflags);
+-	ret_fd = 0;
++	ret_fd = 0;	
+ 	while(ret_fd < _SC_OPEN_MAX){
+ 		//if(fd_list[ret_fd].mountpoint_id == -1) printf("%d ", ret_fd);		
+ 		ret_fd++;
+@@ -57,7 +60,15 @@
+ 		printf("No more file descriptors available\n");
+ 		return -1;
+ 	}
+-	mpid = get_mountpoint_id((char*) path);		
++	if(path[0]!='/') {
++		char abspath[CURPATH_LEN];
++		memset(abspath, '\0', CURPATH_LEN);
++		strcpy(abspath, current_user.cur_path);
++		strncat(abspath, path, strlen(path));
++		//printf("abspath: %s\n", abspath);		
++		path = abspath;
++	}	
++	else mpid = get_mountpoint_id((char*) path);		
+ 	//printf("Cur_fd: %d\n",cur_fd);
+ 	if(mpid >-1) {
+ 		fd_list[cur_fd].mountpoint_id = mpid;				
+@@ -68,7 +79,7 @@
+ 		return -1;
+ 	}
+ 	if( mpid > -1 && mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open != NULL){
+-		fd_list[cur_fd].fs_spec_id = (int) mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open(path, oflags);
++			fd_list[cur_fd].fs_spec_id = (int) mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open(path, oflags);
+ 		if(fd_list[cur_fd].fs_spec_id == -1){
+ 			printf("No file's Found\n");
+ 			va_end(ap);
+
+Modified: trunk/libc/string.c
+===================================================================
+--- trunk/libc/string.c	2010-03-08 21:51:30 UTC (rev 210)
++++ trunk/libc/string.c	2010-03-09 21:51:37 UTC (rev 211)
+@@ -252,8 +252,7 @@
+ char *strncat (char *dest, const char *src, size_t n)
+ {
+     size_t dlen = strlen (dest);
+-    int i;
+-
++    int i;	
+     for (i=0; i<n && src[i]; i++)
+ 	dest[dlen+i] = src[i];
+     dest[dlen+i] = '\0';
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-03-08 21:51:30 UTC (rev 210)
++++ trunk/shell/commands.c	2010-03-09 21:51:37 UTC (rev 211)
+@@ -76,6 +76,7 @@
+ 	"whoami        - Show the current user name\n"
+ 	"tester        - Try some functions, 'tester --help' for more info'\n"
+ 	"pwd           - Print current working directory\n"
++	"more		   - read content of a file\n"
+ 	);
+ }
+ 
+
+
+
+From finarfin at mail.berlios.de  Thu Mar 11 23:39:47 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Thu, 11 Mar 2010 23:39:47 +0100
+Subject: [Dreamos-dev] r212 - in trunk: . fs shell sys
+Message-ID: <201003112239.o2BMdl3e016158@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-03-11 23:39:39 +0100 (Thu, 11 Mar 2010)
+New Revision: 212
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/vfs.c
+   trunk/shell/commands.c
+   trunk/sys/dirent.c
+Log:
+Migliorata gestione dei path relativi. Ora funziona anche con il comando 
+cd.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2010-03-09 21:51:37 UTC (rev 211)
++++ trunk/fs/vfs.c	2010-03-11 22:39:39 UTC (rev 212)
+@@ -27,6 +27,7 @@
+ #include <initrd.h>
+ #include <dirent.h>
+ #include <kernel.h>
++#include <shell.h>
+ 
+ struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
+ file_descriptor_t fd_list[_SC_OPEN_MAX];
+@@ -105,6 +106,21 @@
+ int get_mountpoint_id(char *path){
+        int i = 0;
+        int last=-1;
++       /*?if(path[0] != '/' ) {
++		   char abspath[CURPATH_LEN];
++		   int abs_size = 0;
++		   abs_size = strlen(current_user.cur_path);
++		   memset(abspath, '\0', CURPATH_LEN);
++		   strcpy(abspath, current_user.cur_path);
++		   if(abspath[abs_size-1] == '/')
++			strncat(abspath, path, strlen(path));
++			else {
++			strncat(abspath, "/", strlen(path));
++			strncat(abspath, path, strlen(path));
++			}		
++		   //printf("abspath: %s\n", abspath);		
++		   path = abspath;
++	   }*/
+        while(i<MAX_MOUNTPOINT ){
+                        if(!_kstrncmp(path, mountpoint_list[i].mountpoint, strlen(mountpoint_list[i].mountpoint))) {                 
+ 							   if(strlen(mountpoint_list[i].mountpoint) > strlen(mountpoint_list[last].mountpoint) && i>0)  
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-03-09 21:51:37 UTC (rev 211)
++++ trunk/shell/commands.c	2010-03-11 22:39:39 UTC (rev 212)
+@@ -430,15 +430,31 @@
+ 
+ void cd( ){
+ 	char *relpath;		
+-	DIR *dirp=NULL;
++	char abspath[CURPATH_LEN];
++	DIR *dirp=NULL;	
+ 	if(argc != 2) {
+ 		printf("Bad usage. Try 'ls -l' and then 'cd dir'.\n");
+ 		return;
+ 	} else {
+ 		int i=0;
+-		int rel_size = 0;		
+-		i = get_mountpoint_id(argv[1]);
+-		dirp=opendir(argv[1]);
++		int rel_size = 0;
++		memset(abspath, '\0', CURPATH_LEN);				
++		if(argv[1][0] == '/') {
++			i = get_mountpoint_id(argv[1]);
++			strcpy(abspath, argv[1]);
++			dirp=opendir(argv[1]);
++		}
++		else {			
++			int abs_size = 0;			
++			strcpy(abspath, current_user.cur_path);
++			if(abspath[abs_size-1] == '/')
++				strncat(abspath, argv[1], strlen(argv[1]));
++			else {
++				strncat(abspath, "/", strlen(argv[1]));
++				strncat(abspath, argv[1], strlen(argv[1]));
++			}	
++			dirp=opendir(abspath);			
++		}		
+ 		if(dirp!=NULL){			
+ 			closedir(dirp);
+ 		}
+@@ -450,12 +466,12 @@
+ 			return;
+ 		}
+ 		else {
+-			strcpy(current_user.cur_path, argv[1]);
++			strcpy(current_user.cur_path, abspath);
+ 		}
+-		if(rel_size >0){
++		/*if(rel_size >0){
+ 			relpath = get_rel_path(i, argv[1]);
+ 			free(relpath);
+-		}
++		}*/
+ 	}
+ 	/*dirp = opendir(argv[1]);
+ 	if(dirp!=NULL){
+
+Modified: trunk/sys/dirent.c
+===================================================================
+--- trunk/sys/dirent.c	2010-03-09 21:51:37 UTC (rev 211)
++++ trunk/sys/dirent.c	2010-03-11 22:39:39 UTC (rev 212)
+@@ -22,9 +22,10 @@
+ #include <string.h>
+ #include <vfs.h>
+ #include <kheap.h>
++#include <shell.h>
+ 
+ struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
+-
++userenv_t current_user;
+ /**
+   * @author Ivan Gualandri
+   * @param char* path percorso del file da aprire
+@@ -36,7 +37,22 @@
+ 	int mpoint_id = 0;
+ 	char* rel_path;	
+ 	DIR* pdir;
+-
++	if(path[0]!='/') {
++		char abspath[CURPATH_LEN];
++		int abs_size = 0;
++		abs_size = strlen(current_user.cur_path);
++		memset(abspath, '\0', CURPATH_LEN);
++		strcpy(abspath, current_user.cur_path);
++		if(abspath[abs_size-1] == '/')
++			strncat(abspath, path, strlen(path));
++		else {
++			strncat(abspath, "/", strlen(path));
++			strncat(abspath, path, strlen(path));
++		}	
++		//printf("abspath: %s\n", abspath);
++		path = abspath;
++	}
++	//printf("%s\n", path);
+ 	mpoint_id = get_mountpoint_id((char*)path);
+ 	rel_path = get_rel_path(mpoint_id, path);	
+ 	//printf("%d - %s\n", mpoint_id, rel_path);
+
+
+
+From finarfin at mail.berlios.de  Sat Mar 13 11:09:52 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sat, 13 Mar 2010 11:09:52 +0100
+Subject: [Dreamos-dev] r213 - in trunk: . fs include/fs sys
+Message-ID: <201003131009.o2DA9qSi021634@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-03-13 11:09:44 +0100 (Sat, 13 Mar 2010)
+New Revision: 213
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/fs/vfs.c
+   trunk/include/fs/vfs.h
+   trunk/sys/dirent.c
+Log:
+Aggiunta funzione get_abs_path(), prende in input un path, verifica se 
+questo e' relativo o assoluto, e nel caso fosse relativo, ricostruisce 
+il percorso per permettere alle varie funzioni open,opendir, etc di 
+aprirlo.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2010-03-11 22:39:39 UTC (rev 212)
++++ trunk/fs/fcntl.c	2010-03-13 10:09:44 UTC (rev 213)
+@@ -60,15 +60,8 @@
+ 		printf("No more file descriptors available\n");
+ 		return -1;
+ 	}
+-	if(path[0]!='/') {
+-		char abspath[CURPATH_LEN];
+-		memset(abspath, '\0', CURPATH_LEN);
+-		strcpy(abspath, current_user.cur_path);
+-		strncat(abspath, path, strlen(path));
+-		//printf("abspath: %s\n", abspath);		
+-		path = abspath;
+-	}	
+-	else mpid = get_mountpoint_id((char*) path);		
++	path=get_abs_path((char*) path);
++    mpid = get_mountpoint_id((char*) path);		
+ 	//printf("Cur_fd: %d\n",cur_fd);
+ 	if(mpid >-1) {
+ 		fd_list[cur_fd].mountpoint_id = mpid;				
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2010-03-11 22:39:39 UTC (rev 212)
++++ trunk/fs/vfs.c	2010-03-13 10:09:44 UTC (rev 213)
+@@ -106,21 +106,6 @@
+ int get_mountpoint_id(char *path){
+        int i = 0;
+        int last=-1;
+-       /*?if(path[0] != '/' ) {
+-		   char abspath[CURPATH_LEN];
+-		   int abs_size = 0;
+-		   abs_size = strlen(current_user.cur_path);
+-		   memset(abspath, '\0', CURPATH_LEN);
+-		   strcpy(abspath, current_user.cur_path);
+-		   if(abspath[abs_size-1] == '/')
+-			strncat(abspath, path, strlen(path));
+-			else {
+-			strncat(abspath, "/", strlen(path));
+-			strncat(abspath, path, strlen(path));
+-			}		
+-		   //printf("abspath: %s\n", abspath);		
+-		   path = abspath;
+-	   }*/
+        while(i<MAX_MOUNTPOINT ){
+                        if(!_kstrncmp(path, mountpoint_list[i].mountpoint, strlen(mountpoint_list[i].mountpoint))) {                 
+ 							   if(strlen(mountpoint_list[i].mountpoint) > strlen(mountpoint_list[last].mountpoint) && i>0)  
+@@ -150,3 +135,21 @@
+ 	}	
+ 	return tmp_path;
+ }
++
++char *get_abs_path(char *path){
++		if(path[0]!='/') {
++		char abspath[CURPATH_LEN];
++		int abs_size = 0;
++		abs_size = strlen(current_user.cur_path);
++		memset(abspath, '\0', CURPATH_LEN);
++		strcpy(abspath, current_user.cur_path);
++		if(abspath[abs_size-1] == '/')
++			strncat(abspath, path, strlen(path));
++		else {
++			strncat(abspath, "/", strlen(path));
++			strncat(abspath, path, strlen(path));
++		}			
++		return abspath;
++	}
++	else return path;
++}
+
+Modified: trunk/include/fs/vfs.h
+===================================================================
+--- trunk/include/fs/vfs.h	2010-03-11 22:39:39 UTC (rev 212)
++++ trunk/include/fs/vfs.h	2010-03-13 10:09:44 UTC (rev 213)
+@@ -83,7 +83,7 @@
+ int open_dir(char *);
+ int read (int, void*, size_t);
+ int write (int, void*, size_t);
+-
++char *get_abs_path(char *);
+ void vfs_init();
+ 
+ #endif
+
+Modified: trunk/sys/dirent.c
+===================================================================
+--- trunk/sys/dirent.c	2010-03-11 22:39:39 UTC (rev 212)
++++ trunk/sys/dirent.c	2010-03-13 10:09:44 UTC (rev 213)
+@@ -37,21 +37,7 @@
+ 	int mpoint_id = 0;
+ 	char* rel_path;	
+ 	DIR* pdir;
+-	if(path[0]!='/') {
+-		char abspath[CURPATH_LEN];
+-		int abs_size = 0;
+-		abs_size = strlen(current_user.cur_path);
+-		memset(abspath, '\0', CURPATH_LEN);
+-		strcpy(abspath, current_user.cur_path);
+-		if(abspath[abs_size-1] == '/')
+-			strncat(abspath, path, strlen(path));
+-		else {
+-			strncat(abspath, "/", strlen(path));
+-			strncat(abspath, path, strlen(path));
+-		}	
+-		//printf("abspath: %s\n", abspath);
+-		path = abspath;
+-	}
++	path=get_abs_path((char*)path);
+ 	//printf("%s\n", path);
+ 	mpoint_id = get_mountpoint_id((char*)path);
+ 	rel_path = get_rel_path(mpoint_id, path);	
+
+
+
+From finarfin at mail.berlios.de  Wed Mar 17 11:45:44 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Wed, 17 Mar 2010 11:45:44 +0100
+Subject: [Dreamos-dev] r214 - in trunk: . fs include/fs shell utils
+Message-ID: <201003171045.o2HAjiXr025121@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-03-17 11:45:35 +0100 (Wed, 17 Mar 2010)
+New Revision: 214
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/fs/initrd.c
+   trunk/fs/unistd.c
+   trunk/include/fs/initrd.h
+   trunk/include/fs/vfs.h
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+   trunk/shell/testing.c
+   trunk/utils/README.initfscp
+Log:
+Aggiornato il file README.initfscp
+Abilitata la history (per ora i comandi si possono solo navigare)
+Migliorata la gestione dei file descriptor in initrd_open
+Ridefinite alcune define sui file descriptor.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2010-03-13 10:09:44 UTC (rev 213)
++++ trunk/fs/fcntl.c	2010-03-17 10:45:35 UTC (rev 214)
+@@ -78,6 +78,7 @@
+ 			va_end(ap);
+ 			return -1;
+ 		}
++		//printf("%d---%d---", cur_fd, fd_list[cur_fd].fs_spec_id);
+ 			//printf("Mpoint id: %d %s fs_spec_fd: %d\n", fd_list[cur_fd].mountpoint_id, path, fd_list[cur_fd].fs_spec_id);			
+ 	}
+ 	else {
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-03-13 10:09:44 UTC (rev 213)
++++ trunk/fs/initrd.c	2010-03-17 10:45:35 UTC (rev 214)
+@@ -94,7 +94,12 @@
+ 	int j = 0;
+ 	int ret_fd = -1;
+ 	module_var = fs_headers;
+-	if(cur_irdfd >= MAX_INITRD_DESCRIPTORS) cur_irdfd=0;
++	if(cur_irdfd >= MAX_INITRD_DESCRIPTORS) {
++		int i=0;
++		cur_irdfd=0;
++		while(ird_descriptors[i].file_descriptor!=-1 && i < MAX_INITRD_DESCRIPTORS) i++;			
++		cur_irdfd = i;
++	}
+ 	while (j < fs_specs->nfiles) {
+ 		if(!strcmp(path, module_var[j].fileName)){
+ 				if(module_var[j].file_type == FS_DIRECTORY || module_var[j].file_type == FS_MOUNTPOINT)
+@@ -102,6 +107,8 @@
+ 				ird_descriptors[cur_irdfd].file_descriptor	= j;
+ 				//printf("%s Found. Size: %d FS fd val: %d - ID File val: %d\n", path, module_var[j].length, cur_irdfd, ird_descriptors[cur_irdfd].file_descriptor);
+ 				ret_fd = cur_irdfd;				
++				//printf("ret_fd: %d --- %d\n", cur_irdfd, j);
++				ird_descriptors[cur_irdfd].cur_pos = 0;
+ 				return cur_irdfd++; 
+ 		}
+ 		j++;
+
+Modified: trunk/fs/unistd.c
+===================================================================
+--- trunk/fs/unistd.c	2010-03-13 10:09:44 UTC (rev 213)
++++ trunk/fs/unistd.c	2010-03-17 10:45:35 UTC (rev 214)
+@@ -42,7 +42,7 @@
+ 	int fs_fd;
+ 	mp_id = fd_list[fildes].mountpoint_id;
+ 	fs_fd = fd_list[fildes].fs_spec_id;
+-	if (fd_list[fildes].fs_spec_id >= 0){
++	if (fd_list[fildes].fs_spec_id >= -1){
+ 		if(mountpoint_list[mp_id].operations.close !=NULL)
+ 			mountpoint_list[mp_id].operations.close(fs_fd);		
+ 		fd_list[fildes].fs_spec_id = -1;
+
+Modified: trunk/include/fs/initrd.h
+===================================================================
+--- trunk/include/fs/initrd.h	2010-03-13 10:09:44 UTC (rev 213)
++++ trunk/include/fs/initrd.h	2010-03-17 10:45:35 UTC (rev 214)
+@@ -24,7 +24,7 @@
+ 
+ #define FILENAME_LENGTH 64
+ #define MAX_FILES 32
+-#define MAX_INITRD_DESCRIPTORS 10
++#define MAX_INITRD_DESCRIPTORS _SC_OPEN_MAX
+ 
+ /*! \struct initrd_t
+     \brief Contiene il numero dei files contenuti nel filesystem initrd.
+
+Modified: trunk/include/fs/vfs.h
+===================================================================
+--- trunk/include/fs/vfs.h	2010-03-13 10:09:44 UTC (rev 213)
++++ trunk/include/fs/vfs.h	2010-03-17 10:45:35 UTC (rev 214)
+@@ -24,7 +24,7 @@
+ #include <use.h>
+ 
+ #define MAX_MOUNTPOINT 10
+-#define MAX_FD 255
++#define MAX_FD _SC_OPEN_MAX
+ 
+ #define FS_FILE 0x01
+ #define FS_DIRECTORY 0x02
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-03-13 10:09:44 UTC (rev 213)
++++ trunk/shell/commands.c	2010-03-17 10:45:35 UTC (rev 214)
+@@ -457,8 +457,7 @@
+ 		}		
+ 		if(dirp!=NULL){			
+ 			closedir(dirp);
+-		}
+-		//else printf("bad\n");
++		}		
+ 		//printf("path: %s\n", argv[1]);
+ 		rel_size = strlen(argv[1]) - strlen(mountpoint_list[i].mountpoint);
+ 		if(i == -1) {			
+@@ -473,15 +472,6 @@
+ 			free(relpath);
+ 		}*/
+ 	}
+-	/*dirp = opendir(argv[1]);
+-	if(dirp!=NULL){
+-		prova = readdir(dirp);
+-		while(prova!=NULL){
+-			printf("%s\n", prova->d_name);
+-			prova = readdir(dirp);
+-		}
+-		closedir(dirp);
+-	}*/
+ }
+ 
+ void whoami(){
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2010-03-13 10:09:44 UTC (rev 213)
++++ trunk/shell/shell.c	2010-03-17 10:45:35 UTC (rev 214)
+@@ -52,7 +52,7 @@
+ 
+ int count = 9, posiz = 9, c = 10, limit = 1;
+ char *lastcmd[10] = {};
+-
++int hist_press = 0;
+ void options(char *com)
+ {  
+   int i=0;
+@@ -121,9 +121,9 @@
+   
+   for (;;)
+   {
+-    /*for (c = 1 ; c <= 10 ; c++) {
++    for (c = 1 ; c <= 10 ; c++) {
+     	    lastcmd[c] = (char *)kmalloc(sizeof(char) * 30); 
+-    }*/
++    }
+     int cmdclean = 0;
+     while(cmdclean<CMD_LEN){
+ 		cmd[cmdclean] = '\0';
+@@ -134,7 +134,7 @@
+     _kcolor(15);
+ 	printf("~:%s# ", current_user.cur_path);
+     scanf("%30s",cmd);        
+-    //history(cmd);
++    history(cmd);
+    
+     /* elimina eventuali spazi all'inizio del comando */
+     for (i = 0, cmd_ptr = cmd; cmd[i] == ' '; i++, cmd_ptr++);
+@@ -158,9 +158,9 @@
+     for (--argc; argc>=0; argc--) {      
+         free (argv[argc]);
+     }
+-    /*for (c = 1 ; c <= 10 ; c++) {
++    for (c = 1 ; c <= 10 ; c++) {
+     	    free(lastcmd[c]); 
+-    }*/
++    }
+   }
+ }
+ 
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-03-13 10:09:44 UTC (rev 213)
++++ trunk/shell/testing.c	2010-03-17 10:45:35 UTC (rev 214)
+@@ -139,6 +139,7 @@
+ 	
+ 	scanf("%s", appoggio);	
+ 	i = open(appoggio, O_RDONLY, 42);
++	printf("%d\n", i);
+ 	if(i>-1) {
+ 		int j=0;		
+ 		while(read(i, &prova, 1)!=0) {
+
+Modified: trunk/utils/README.initfscp
+===================================================================
+--- trunk/utils/README.initfscp	2010-03-13 10:09:44 UTC (rev 213)
++++ trunk/utils/README.initfscp	2010-03-17 10:45:35 UTC (rev 214)
+@@ -1,6 +1,6 @@
+ ----
+ README
+-initfscp - Autore: Aleksej
++initfscp - Autore di questa guida: Aleksej
+ ----
+ 
+ initfscp e' un programma che serve a creare un'immagine contenente il file system utilizzato da DreamOS.
+
+
+
+From finarfin at mail.berlios.de  Thu Mar 18 23:03:24 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Thu, 18 Mar 2010 23:03:24 +0100
+Subject: [Dreamos-dev] r215 - in trunk: . shell
+Message-ID: <201003182203.o2IM3OAO018066@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-03-18 23:03:20 +0100 (Thu, 18 Mar 2010)
+New Revision: 215
+
+Modified:
+   trunk/dreamos.img
+   trunk/shell/shell.c
+Log:
+Una prima versione della history funzionante.
+Anche se ancora buggata.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2010-03-17 10:45:35 UTC (rev 214)
++++ trunk/shell/shell.c	2010-03-18 22:03:20 UTC (rev 215)
+@@ -43,6 +43,9 @@
+ userenv_t current_user;
+ int argc;
+ char **argv;
++int hst_flag;
++char cmd[CMD_LEN];
++
+ /*
+  * Inserisce gli argomenti di un comando in un array di stringhe
+  * argc = numero degli argomenti
+@@ -74,7 +77,7 @@
+ /* corpo della shell */
+ void shell()
+ {
+-  char cmd[CMD_LEN];
++  
+   char *cmd_ptr;
+  
+   static struct cmd shell_cmd[NUM_COM] = {
+@@ -99,7 +102,7 @@
+   };
+ 
+   int i = 0;
+-
++  hst_flag = 0;
+   memset(cmd, '\0', CMD_LEN);
+   memset(current_user.username, '\0', USER_LEN);
+   memset(current_user.cur_path, '\0', CURPATH_LEN);  
+@@ -196,6 +199,12 @@
+ 
+     if( (sc_uparrow = inportb (0x60) ) == KEY_UPARROW ) {
+    		printf("%s", lastcmd[count]); 
++   		int cmdclean = 0;
++		while(cmdclean<CMD_LEN){
++			cmd[cmdclean] = '\0';
++			cmdclean++;
++		}	
++   		strcpy(cmd, lastcmd[count]);
+ 	}
+        
+ }
+
+
+
+From finarfin at mail.berlios.de  Mon Mar 29 00:26:32 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Mon, 29 Mar 2010 00:26:32 +0200
+Subject: [Dreamos-dev] r216 - in trunk: . files fs include/shell libc shell
+	system
+Message-ID: <201003282226.o2SMQWEu015351@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-03-29 00:26:22 +0200 (Mon, 29 Mar 2010)
+New Revision: 216
+
+Modified:
+   trunk/README
+   trunk/dreamos.img
+   trunk/files/README
+   trunk/fs/fcntl.c
+   trunk/fs/initrd.c
+   trunk/include/shell/testing.h
+   trunk/libc/stdio.c
+   trunk/shell/commands.c
+   trunk/shell/testing.c
+   trunk/system/syscall.c
+Log:
+Aggiunto comando try_syscall.
+Per ora prova solo la sysputch.
+Questa syscall ha la funzione di _kputc.
+Il supporto delle syscall ancora presenta molti bug, ed e' da 
+migliorare. Ci sono problemi con i valori passati nei registri.
+Aggiornato file README.
+Aggiornato file files/README
+
+
+Modified: trunk/README
+===================================================================
+--- trunk/README	2010-03-18 22:03:20 UTC (rev 215)
++++ trunk/README	2010-03-28 22:26:22 UTC (rev 216)
+@@ -129,7 +129,9 @@
+ 
+ Potete mandare un resoconto o comunque raccontare la vostra esperienza con DreamOS sul forum di osdev.it:
+ 	http://forum.osdev.it/
+-
++Oppure ci trovate su irc: 
++	Server: irc.azzurra.org
++	Chan: #dreamos
+ 	
+ 
+ DreamOS 2003-2009 by finarfin/shainer
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/files/README
+===================================================================
+--- trunk/files/README	2010-03-18 22:03:20 UTC (rev 215)
++++ trunk/files/README	2010-03-28 22:26:22 UTC (rev 216)
+@@ -1,6 +1,6 @@
+ DREAMOS 0.2.0-trunk
+ 
+-Welcome to the dreamOS operting system.
++Welcome to the dreamOS operating system.
+ 
+ If you want some help enter the "help" command into the cli.
+ 
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2010-03-18 22:03:20 UTC (rev 215)
++++ trunk/fs/fcntl.c	2010-03-28 22:26:22 UTC (rev 216)
+@@ -50,9 +50,7 @@
+ 	}
+ 	prova = va_arg(ap, int);
+ 	if(cur_fd == _SC_OPEN_MAX) cur_fd = 0;
+-		//printf("Cur_fd reset\n");
+ 		//printf("No more file descriptors available\n");
+-		//return -1;
+ 	while(fd_list[cur_fd].mountpoint_id != -1 && cur_fd < _SC_OPEN_MAX){
+ 		cur_fd++;
+ 	}
+@@ -78,12 +76,9 @@
+ 			va_end(ap);
+ 			return -1;
+ 		}
+-		//printf("%d---%d---", cur_fd, fd_list[cur_fd].fs_spec_id);
+-			//printf("Mpoint id: %d %s fs_spec_fd: %d\n", fd_list[cur_fd].mountpoint_id, path, fd_list[cur_fd].fs_spec_id);			
+ 	}
+ 	else {
+ 		if(mpid>-1) printf("No OPEN services found here\n");					
+-		//fd_list[cur_fd].mountpoint_id = -1; //Controllare se va messa
+ 		va_end(ap);
+ 		return -1;
+ 	}
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-03-18 22:03:20 UTC (rev 215)
++++ trunk/fs/initrd.c	2010-03-28 22:26:22 UTC (rev 216)
+@@ -127,8 +127,7 @@
+ 	file_start = (char *) (module_start	+ fs_headers[lfd].offset);
+ 	//printf("cur_pos val: %d\n", ird_descriptors[fildes].cur_pos);
+ 	if(nbyte == 0) return 0;	
+-	while(j<nbyte && read_pos<file_size){
+-		//putchar(file_start[j]);		
++	while(j<nbyte && read_pos<file_size){		
+ 		*buf++ = file_start[read_pos];			
+ 		read_pos++;
+ 		j++;
+
+Modified: trunk/include/shell/testing.h
+===================================================================
+--- trunk/include/shell/testing.h	2010-03-18 22:03:20 UTC (rev 215)
++++ trunk/include/shell/testing.h	2010-03-28 22:26:22 UTC (rev 216)
+@@ -26,4 +26,6 @@
+ void try_module();
+ void try_open();
+ void try_fsinit();
++void try_syscall();
++
+ #endif
+
+Modified: trunk/libc/stdio.c
+===================================================================
+--- trunk/libc/stdio.c	2010-03-18 22:03:20 UTC (rev 215)
++++ trunk/libc/stdio.c	2010-03-28 22:26:22 UTC (rev 216)
+@@ -63,9 +63,15 @@
+ 
+ void putchar (char ch)
+ {
+-	char s[2];
++	/*asm (
++		"movl $0x0, %%eax\n"
++		"movl %0, %%ecx\n"
++		"int $80\n\t"
++		::"g" (ch) );*/
++	/*char s[2];
+ 	s[0] = ch;
+ 	s[1] = '\0';
++	*/
+ 	//_kputs(s);
+ 	_kputc(ch); 
+ 
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-03-18 22:03:20 UTC (rev 215)
++++ trunk/shell/commands.c	2010-03-28 22:26:22 UTC (rev 216)
+@@ -487,6 +487,7 @@
+ 					{ "try_printmem", try_printmem },
+ 					{ "try_module", try_module },
+ 					{ "try_open", try_open},					
++					{ "try_syscall", try_syscall},
+ 					{ "--help", help_tester },
+ 					};
+ 	if (argc != 2) {
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-03-18 22:03:20 UTC (rev 215)
++++ trunk/shell/testing.c	2010-03-28 22:26:22 UTC (rev 216)
+@@ -155,3 +155,18 @@
+ void try_fsinit(){
+ 	printf("Number of files present: %d\n", initfs_init());
+ }
++
++void try_syscall(){
++	printf("Trying sysputch:\n");
++	int i;
++	//i='A';
++    for(i='A';i<='Z';i++) {
++		asm(
++			"movl %0, %%ecx\n"
++			"movl $0x0, %%eax\n"
++			"int $80\n"
++			: : "g"(i)	
++		);	
++	}
++	printf("\n");
++}
+
+Modified: trunk/system/syscall.c
+===================================================================
+--- trunk/system/syscall.c	2010-03-18 22:03:20 UTC (rev 215)
++++ trunk/system/syscall.c	2010-03-28 22:26:22 UTC (rev 216)
+@@ -27,16 +27,19 @@
+ #include <stdio.h>
+ #include <video.h>
+ #include <keyboard.h>
++#include <video.h>
+ 
+ void (*syscall_table[SYSCALL_NUMBER])(int *) = {sysputch};  
+ 
+ void sysputch(int *args)
+-{
+-   char s[2];
++{	
++/*   char s[2];
+    s[0] = args[0];
+    s[1] = '\0';
+ 
+-   _kputs (s);
++   _kputs (s);*/
++   //putchar("A");
++   _kputc((char)args[0]); 
+ }
+ 
+ void syscall_init()
+@@ -57,20 +60,19 @@
+      int eax=0;
+      int ebx=0, ecx=0, edx=0;
+      int arguments[3] = {0,0,0};
+-
+-     asm ("cli");
+-
++	 int reg=5;	 
++     asm ("cli");	 
+      asm ("movl %%eax, %0\n\t"
+-	  "movl %%ebx, %1\n\t"
+-	  "movl %%ecx, %2\n\t"
++	  "movl %%ecx, %1\n\t"
++	  "movl %%ebx, %2\n\t"
+ 	  "movl %%edx, %3\n\t"
+-	  : "=r" (eax), "=r" (ebx), "=r" (ecx), "=r" (edx));
++	  : "=r" (eax), "=r" (ecx), "=r" (ebx), "=r" (edx));
+      
+-     arguments[0] = ebx;
+-     arguments[1] = ecx;
++     arguments[0] = ecx;
++     arguments[1] = ebx;
+      arguments[2] = edx;
+-         
+-     (*syscall_table[eax])(arguments);
++     	 
++     (*syscall_table[eax])(arguments);     
+      asm ("sti");
+ }
+ 
+
+
+
+From finarfin at mail.berlios.de  Mon Mar 29 12:02:39 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Mon, 29 Mar 2010 12:02:39 +0200
+Subject: [Dreamos-dev] r217 - in trunk: . shell
+Message-ID: <201003291002.o2TA2dJ9031455@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-03-29 12:02:20 +0200 (Mon, 29 Mar 2010)
+New Revision: 217
+
+Modified:
+   trunk/dreamos.img
+   trunk/initfs
+   trunk/shell/commands.c
+Log:
+Corretto bug numero 17031.
+Aggioranto initfs.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/initfs
+===================================================================
+(Binary files differ)
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-03-28 22:26:22 UTC (rev 216)
++++ trunk/shell/commands.c	2010-03-29 10:02:20 UTC (rev 217)
+@@ -82,11 +82,13 @@
+ 
+ void echo()
+ {
++	int i = argc;
++	int j = 0;
+     if ( argc == 1 ) {
+          printf("");
+     } else {
+-		while ( --argc > 0 ) {
+-		printf("%s ",*++argv);
++		while ( --i > 0 ) {
++		printf("%s ",argv[++j]);
+ 		}
+ 	}
+     printf("\n");
+@@ -209,8 +211,7 @@
+ 	  		"DT\n"
+          	"Celeron\n"
+ 	 		"Hamcha\n"
+-         	"m0nt0\n"
+-			"shainer\n"
++         	"m0nt0\n"			
+          	"and many others (3 or 4 :P)\n\n");
+   _kcolor(WHITE);
+ }
+
+
+
+From finarfin at mail.berlios.de  Tue Mar 30 23:42:32 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Tue, 30 Mar 2010 23:42:32 +0200
+Subject: [Dreamos-dev] r218 - in trunk: . fs include include/fs shell system
+Message-ID: <201003302142.o2ULgWYC015587@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-03-30 23:42:22 +0200 (Tue, 30 Mar 2010)
+New Revision: 218
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/include/fs/vfs.h
+   trunk/include/version.h
+   trunk/shell/commands.c
+   trunk/shell/testing.c
+   trunk/system/syscall.c
+Log:
+Eliminate alcune variabili inutilizzate.
+Aggiornato il numero di revisione svn. 
+Aggiunto un parametro nella struttura dati del file descriptor,
+per tener traccia della modalita'  con cui un file viene aperto.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2010-03-29 10:02:20 UTC (rev 217)
++++ trunk/fs/fcntl.c	2010-03-30 21:42:22 UTC (rev 218)
+@@ -84,6 +84,7 @@
+ 	}
+ 	va_end(ap)	
+ 	fd_list[cur_fd].offset = 0;
++	fd_list[cur_fd].flags_mask = oflags;
+ 	ret_fd = cur_fd;
+ 	cur_fd++;
+ 	free((void*)path);
+
+Modified: trunk/include/fs/vfs.h
+===================================================================
+--- trunk/include/fs/vfs.h	2010-03-29 10:02:20 UTC (rev 217)
++++ trunk/include/fs/vfs.h	2010-03-30 21:42:22 UTC (rev 218)
+@@ -67,6 +67,7 @@
+ 	int fs_spec_id; /**< Il descrittore del file interno del FileSystem*/
+ 	int mountpoint_id; /**< L'id del mountpoint nel quale si trova il file */
+ 	int offset; /**< Offset per lettura file, per la prossima read*/
++	int flags_mask; /**<Flags per le modalita di apertura del file*/
+ };
+ 
+ //extern struct inode *root;
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2010-03-29 10:02:20 UTC (rev 217)
++++ trunk/include/version.h	2010-03-30 21:42:22 UTC (rev 218)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "2.0"
+ #define EXTRAVERSION "-trunk"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r204"
++#define REV_NUM "-r206"
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-03-29 10:02:20 UTC (rev 217)
++++ trunk/shell/commands.c	2010-03-30 21:42:22 UTC (rev 218)
+@@ -430,7 +430,7 @@
+ }
+ 
+ void cd( ){
+-	char *relpath;		
++	//char *relpath;		
+ 	char abspath[CURPATH_LEN];
+ 	DIR *dirp=NULL;	
+ 	if(argc != 2) {
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-03-29 10:02:20 UTC (rev 217)
++++ trunk/shell/testing.c	2010-03-30 21:42:22 UTC (rev 218)
+@@ -108,6 +108,7 @@
+ 		"  -> try_printmem      - Print used locations of memory\n"
+ 		"  -> try_module        - Read the content of the memory zone loaded in module, aka initfs \n"
+ 		"  -> try_open          - Function to test open() & stdarg() \n"		
++		"  -> try_syscall	    - Try some syscall functions\n"
+ 		);	
+ }
+ 
+@@ -157,9 +158,8 @@
+ }
+ 
+ void try_syscall(){
+-	printf("Trying sysputch:\n");
+ 	int i;
+-	//i='A';
++	printf("Trying sysputch:\n");	
+     for(i='A';i<='Z';i++) {
+ 		asm(
+ 			"movl %0, %%ecx\n"
+
+Modified: trunk/system/syscall.c
+===================================================================
+--- trunk/system/syscall.c	2010-03-29 10:02:20 UTC (rev 217)
++++ trunk/system/syscall.c	2010-03-30 21:42:22 UTC (rev 218)
+@@ -60,7 +60,7 @@
+      int eax=0;
+      int ebx=0, ecx=0, edx=0;
+      int arguments[3] = {0,0,0};
+-	 int reg=5;	 
++	 
+      asm ("cli");	 
+      asm ("movl %%eax, %0\n\t"
+ 	  "movl %%ecx, %1\n\t"
+
+
+

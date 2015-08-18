@@ -1,0 +1,225 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r33 - in trunk: . include/mem mem processore shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2008-September/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r33%20-%20in%20trunk%3A%20.%20include/mem%20mem%20processore%20shell&In-Reply-To=%3C200809291813.m8TIDaaH028752%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000032.html">
+   
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r33 - in trunk: . include/mem mem processore shell</H1>
+    <B>shainer at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r33%20-%20in%20trunk%3A%20.%20include/mem%20mem%20processore%20shell&In-Reply-To=%3C200809291813.m8TIDaaH028752%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r33 - in trunk: . include/mem mem processore shell">shainer at mail.berlios.de
+       </A><BR>
+    <I>Mon Sep 29 20:13:36 CEST 2008</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000032.html">[Dreamos-dev] r32 - in trunk: . include/lng include/system shell
+</A></li>
+        
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#33">[ date ]</a>
+              <a href="thread.html#33">[ thread ]</a>
+              <a href="subject.html#33">[ subject ]</a>
+              <a href="author.html#33">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: shainer
+Date: 2008-09-29 20:13:35 +0200 (Mon, 29 Sep 2008)
+New Revision: 33
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/mem/paging.h
+   trunk/mem/paging.c
+   trunk/processore/handlers.c
+   trunk/shell/shell.c
+Log:
+Aggiunta del pagefault handler in paging.c
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/mem/paging.h
+===================================================================
+--- trunk/include/mem/paging.h	2008-09-11 21:10:49 UTC (rev 32)
++++ trunk/include/mem/paging.h	2008-09-29 18:13:35 UTC (rev 33)
+@@ -13,7 +13,7 @@
+  *
+  * You should have received a copy of the GNU General Public License
+  * along with this program; if not, write to the Free Software
+- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+  
+  /*
+@@ -71,8 +71,8 @@
+ unsigned int get_pagedir_entry(int);
+ unsigned int get_pagetable_entry(int,int);
+ 
+-void page_fault();
+ void load_pdbr(unsigned int);
+ void map_kernel(pde_t);
++void page_fault_handler(int);
+ 
+ #endif
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2008-09-11 21:10:49 UTC (rev 32)
++++ trunk/mem/paging.c	2008-09-29 18:13:35 UTC (rev 33)
+@@ -13,7 +13,7 @@
+  *
+  * You should have received a copy of the GNU General Public License
+  * along with this program; if not, write to the Free Software
+- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+  
+  /*
+@@ -31,6 +31,9 @@
+ #include &lt;buddy.h&gt;
+ // #define DEBUG 1
+ 
++#define BITMASK(len) ((1&lt;&lt;((len) + 1)) - 1)
++#define BITRANGE(n, from,to) (((n) &gt;&gt; (from)) &amp; BITMASK(to-from))
++
+ unsigned int *current_page_dir;
+ unsigned int *current_page_table;
+ extern size_t tot_mem;
+@@ -211,3 +214,48 @@
+         ::&quot;r&quot;(pdbr), &quot;r&quot; (tmp));
+ }
+ 
++/**
++  * Pagefault Handler
++  * @author shainer
++  * @version 1.0
++  * @param ecode  Codice di errore dell'eccezione
++  * @return none
++  */
++void page_fault_handler (int ecode)
++{
++        unsigned int fault_addr;
++	int pdir, ptable;
++        unsigned int pd_entry, pt_entry;
++        unsigned int *new_pt;
++	void *new_p;
++
++        /* Ricava l'indirizzo che ha causato l'eccezione */
++        asm (&quot;movl %%cr2, %0&quot;
++             :&quot;=r&quot; (fault_addr));
++
++        if ((ecode &amp; 0b0011) == 2 || (ecode &amp; 0b0011) == 0) {
++          pdir = BITRANGE (fault_addr, 22, 31);
++	  ptable = BITRANGE (fault_addr, 12, 21);
++          printf (&quot;PD entry num: %d, PT entry num: %d, Indirizzo: %d\n&quot;, ptable, pdir, fault_addr);
++
++ 	  /* Mappatura della pagedir se non presente */
++	  pd_entry = get_pagedir_entry (pdir);
++	  printf (&quot;Entry corrente della pagedir: %d\n&quot;, pd_entry);
++          if (pd_entry == 0) {
++	    new_pt = create_pageTable();
++            set_pagedir_entry_ric (pdir, new_pt, PD_PRESENT|SUPERVISOR|WRITE, 0);
++	    printf (&quot;Nuova entry dopo la mappatura: %d\n&quot;, get_pagedir_entry (pdir));
++          }
++
++	  /* Mappatura della pagetable se non presente */
++	  pt_entry = get_pagetable_entry (pdir, ptable);
++	  printf (&quot;Entry corrente della pagetable: %d\n&quot;, pt_entry);
++	  if (pt_entry == 0) {
++	    new_p = request_pages (1, ADD_LIST);
++	    set_pagetable_entry_ric (pdir, ptable, new_p, PD_PRESENT|SUPERVISOR|WRITE, 0);
++	    printf (&quot;Nuova entry dopo la mappatura: %d\n&quot;, get_pagetable_entry (pdir, ptable));
++	  }
++	}
++
++        return;
++}
+
+Modified: trunk/processore/handlers.c
+===================================================================
+--- trunk/processore/handlers.c	2008-09-11 21:10:49 UTC (rev 32)
++++ trunk/processore/handlers.c	2008-09-29 18:13:35 UTC (rev 33)
+@@ -13,7 +13,7 @@
+  *
+  * You should have received a copy of the GNU General Public License
+  * along with this program; if not, write to the Free Software
+- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+  
+  /*
+@@ -29,6 +29,7 @@
+ #include &lt;stdio.h&gt;
+ #include &lt;keyboard.h&gt;
+ #include &lt;video.h&gt;
++#include &lt;paging.h&gt;
+ 
+ // #define DEBUG 1
+ void (*IntTable[IDT_SIZE])();
+@@ -84,9 +85,7 @@
+     else if(n==INVALID_OPCODE) _kputs(&quot;Invalid Opcode Exception\n&quot;);
+     else if(n==BOUND_RANGE_EXCEED) _kputs(&quot;Bound exception\n&quot;);
+     else if(n==PAGE_FAULT) {
+-        unsigned int fault_addr;
+-	asm (&quot;movl %%cr2, %0&quot;:&quot;=r&quot; (fault_addr));  	 	 
+-	printf(&quot;Page Fault Exception- Fault address is: %d error code: %d\n&quot;, fault_addr,error);
++        page_fault_handler (error);
+     }
+     else if(n==INT_RSV) _kputs(&quot;Intel Reserved\n&quot;);
+     else if(n==FLOATING_POINT_ERR) _kputs(&quot;Floating Point Exception\n&quot;);
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2008-09-11 21:10:49 UTC (rev 32)
++++ trunk/shell/shell.c	2008-09-29 18:13:35 UTC (rev 33)
+@@ -197,10 +197,11 @@
+ 
+         else if (!(_kstrncmp(cmd,&quot;do_fault&quot;,8)))
+ 	{  
+-             printf (&quot;Genero un pagefault...\n&quot;);
+-             char *prova;
++             printf (&quot;Genero un pagefault scrivendo 10 nella locazione 0xa0000000...\n&quot;);
++             int *prova;
+              prova = 0xa0000000;
+              *prova = 10;
++             printf (&quot;Contenuto della locazione 0xa0000000 dopo l'intervento dell'handler: %d\n&quot;, *prova);
+         }
+ 
+         else if (!(_kstrncmp(cmd,&quot;try_heap&quot;,8))){
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000032.html">[Dreamos-dev] r32 - in trunk: . include/lng include/system shell
+</A></li>
+	
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#33">[ date ]</a>
+              <a href="thread.html#33">[ thread ]</a>
+              <a href="subject.html#33">[ subject ]</a>
+              <a href="author.html#33">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

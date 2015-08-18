@@ -1,0 +1,137 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r234 - in trunk: . fs mem shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-April/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r234%20-%20in%20trunk%3A%20.%20fs%20mem%20shell&In-Reply-To=%3C201004182139.o3ILd8EV015422%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000236.html">
+   <LINK REL="Next"  HREF="000238.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r234 - in trunk: . fs mem shell</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r234%20-%20in%20trunk%3A%20.%20fs%20mem%20shell&In-Reply-To=%3C201004182139.o3ILd8EV015422%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r234 - in trunk: . fs mem shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun Apr 18 23:39:08 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000236.html">[Dreamos-dev] r233 - in trunk: . mem
+</A></li>
+        <LI>Next message: <A HREF="000238.html">[Dreamos-dev] r235 - in trunk: . fs include/fs include/shell io	shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#237">[ date ]</a>
+              <a href="thread.html#237">[ thread ]</a>
+              <a href="subject.html#237">[ subject ]</a>
+              <a href="author.html#237">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-04-18 23:39:02 +0200 (Sun, 18 Apr 2010)
+New Revision: 234
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/unistd.c
+   trunk/mem/fismem.c
+   trunk/shell/testing.c
+Log:
+Corretto valore in init_mem. 
+In write aggiunto controll se il flag O_RDWR e' alzato. 
+tester try_ocreat ora chiama anche write.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/unistd.c
+===================================================================
+--- trunk/fs/unistd.c	2010-04-18 17:43:48 UTC (rev 233)
++++ trunk/fs/unistd.c	2010-04-18 21:39:02 UTC (rev 234)
+@@ -21,7 +21,7 @@
+ #include &lt;fcntl.h&gt;
+ #include &lt;vfs.h&gt;
+ 
+-file_descriptor_t fd_list[_SC_OPEN_MAX];
++//file_descriptor_t fd_list[_SC_OPEN_MAX];
+ 
+ ssize_t read(int fildes, void *buf, size_t nbyte){
+ 	int mp_id = 0;
+@@ -37,7 +37,9 @@
+ }
+ 
+ ssize_t write(int fildes, const void *buf, size_t nbyte){
++	if(fd_list[fildes].flags_mask&amp;O_RDWR) printf(&quot;allright, let's go\n&quot;);
+ 	printf(&quot;placeholder for write, coming soon,\n stay tuned\n&quot;);
++	printf(&quot;Oh i received something: %s\n&quot;, buf);
+ 	return 0;
+ }
+ 
+
+Modified: trunk/mem/fismem.c
+===================================================================
+--- trunk/mem/fismem.c	2010-04-18 17:43:48 UTC (rev 233)
++++ trunk/mem/fismem.c	2010-04-18 21:39:02 UTC (rev 234)
+@@ -44,7 +44,7 @@
+ //     int remainder=0;
+     mem_info = mem_info_root;
+     while(i&lt;BITMAP_SIZE){
+-        if(i&lt;64)mem_bitmap.mem_map[i] = 0xFFFFFFFF;
++        if(i&lt;32)mem_bitmap.mem_map[i] = 0xFFFFFFFF;
+         else mem_bitmap.mem_map[i] = 0x00000000;
+         i++;
+     }
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-04-18 17:43:48 UTC (rev 233)
++++ trunk/shell/testing.c	2010-04-18 21:39:02 UTC (rev 234)
+@@ -156,8 +156,12 @@
+ }
+ 
+ void try_ocreat(){
++	int fd=0;
+ 	//printf(&quot;Number of files present: %d\n&quot;, initfs_init());
+-	open(&quot;pippo&quot;, O_RDWR|O_CREAT);
++	fd = open(&quot;pippo&quot;, O_RDWR|O_CREAT);	
++	if(fd&gt;=0) write(fd, &quot;buffo buffer&quot;, sizeof(&quot;buffo buffer&quot;));
++	else printf(&quot;Error?\n&quot;);
++	close(fd);	
+ }
+ 
+ void try_syscall(){
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000236.html">[Dreamos-dev] r233 - in trunk: . mem
+</A></li>
+	<LI>Next message: <A HREF="000238.html">[Dreamos-dev] r235 - in trunk: . fs include/fs include/shell io	shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#237">[ date ]</a>
+              <a href="thread.html#237">[ thread ]</a>
+              <a href="subject.html#237">[ subject ]</a>
+              <a href="author.html#237">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

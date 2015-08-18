@@ -1,0 +1,181 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r277 - trunk
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-July/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r277%20-%20trunk&In-Reply-To=%3C20100717200955.9F986480BC1%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000279.html">
+   <LINK REL="Next"  HREF="000281.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r277 - trunk</H1>
+    <B>blackz at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r277%20-%20trunk&In-Reply-To=%3C20100717200955.9F986480BC1%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r277 - trunk">blackz at mail.berlios.de
+       </A><BR>
+    <I>Sat Jul 17 22:09:55 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000279.html">[Dreamos-dev] r276 - in trunk: . doc include utils	utils/eltorito_iso utils/eltorito_iso/boot	utils/eltorito_iso/boot/grub
+</A></li>
+        <LI>Next message: <A HREF="000281.html">[Dreamos-dev] r278 - in trunk: . drivers include/drivers	include/lng shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#280">[ date ]</a>
+              <a href="thread.html#280">[ thread ]</a>
+              <a href="subject.html#280">[ subject ]</a>
+              <a href="author.html#280">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: blackz
+Date: 2010-07-17 22:09:55 +0200 (Sat, 17 Jul 2010)
+New Revision: 277
+
+Modified:
+   trunk/README
+   trunk/start.sh
+Log:
+Modifiche minori al file README e start.sh
+
+
+
+Modified: trunk/README
+===================================================================
+--- trunk/README	2010-07-15 10:34:03 UTC (rev 276)
++++ trunk/README	2010-07-17 20:09:55 UTC (rev 277)
+@@ -9,32 +9,29 @@
+ 	b. Scaricare da SVN
+ 	c. Compilare DreamOS
+ 	d. Mettere su Floppy (opzionale)
+-	e. Fare la entry per GRUB (opzionale)
++	e. Creare la entry per GRUB (opzionale)
+ 3. Usare DreamOS
+ 	a. L'avvio
+ 	b. Uso della CLI
+ 4. Feedback
+ 	a. Come segnalare bug
+-	b. Come mandare un feedback
++	b. Come inoltrare un feedback
+ 
+ 
+ - 1 -----------------------
+ --- Cosa &#232; DreamOS --------
+ 
+-Il DreamOS &#232; un sistema operativo open source rilasciato sotto licenza GPLv3 sviluppato partendo da 0 puramente per scopi didattici o comunque per capire come funzionano i sistemi operativi.
++DreamOS &#232; un sistema operativo open source rilasciato sotto licenza GPLv3 sviluppato partendo da 0 puramente per scopi didattici o comunque per capire come funzionano i sistemi operativi.
+ Il team di sviluppo attuale &#232; composto dagli sviluppatori
+ 
+-Ivan - Finarfin (<A HREF="http://earyrian.elenhost.org">http://earyrian.elenhost.org</A>)
++Alessandro (celeron) 
++Diego Stamigni (osiris_h4ck)
++Finessi Manuel (theking0)
++Giuseppe Massaro (n3mes1s)
++Ivan Gualandri (finarfin)
++Lorenzo De Liso (blackz)
++Michele Morelli (dt-)
+ 
+-e dai contributori:
+-
+-Osiris
+-Celeron
+-Hamcha
+-m0nt0.
+-vinc94
+-tk0
+-
+ 	- a -- Cosa NON &#232; DreamOS -
+ 
+ DreamOS non &#232; un sistema operativo completo e pronto per essere utilizzato per l'uso quotidiano, non &#232; basato su Kernel esistenti e non &#232; supportato/sponsorizzato da alcuna societ&#224;.
+@@ -46,7 +43,7 @@
+ 
+ 	- a - Requisiti necessari -
+ 
+-DreamOS &#232; un sistema operativo sviluppato per funzionare su cpu con architettura Intel x86/IA32 (i386/i686) e attualmente &#232; sviluppato in modo da partire da floppy anche se, utilizzando GRUB, si pu&#242; farlo partire avendo l'immagine compilata sull'Hard-disk.
++DreamOS &#232; un sistema operativo sviluppato per funzionare su cpu con architettura Intel x86/IA32 (i386/i686) e attualmente &#232; sviluppato in modo da partire da floppy anche se, utilizzando GRUB, &#232; possibile farlo partire avendo l'immagine compilata sull'Hard-disk.
+ DreamOS pu&#242; essere anche emulato usando Software come qEmu o Bochs.
+ 
+ Per compilare DreamOS bisogna prima di tutto avere una distribuzione Linux installata, poi avere i seguenti software:
+@@ -93,7 +90,7 @@
+ 	boot
+ Naturalmenet modificando /path/al/file/dreamos.img con la path al file dreamos.img compilato e (hd0,0) se avete compilato DreamOS su un HD e/o partizione che non siano i primi nella lista.
+ 
+-Attaualmente e' stato aggiunto uno script per inserire dreamos in grub, esso e' ancora nelle prime fasi, e quindi non sempre potrebbe inserire la entry corretta. Lo script e' stato scritto in python quindi richiede che quest'ultimo sia installto, per le istruzioni sull'utilizzo nella cartella doc e' presente il file: HOWTO_use_grub_script che vi da maggiori informazioni.
++Attaualmente &#232; stato aggiunto uno script per inserire dreamos in grub, esso &#232; ancora nelle prime fasi, e quindi non sempre potrebbe inserire la entry corretta. Lo script &#232; stato scritto in python quindi richiede che quest'ultimo sia installto, per le istruzioni sull'utilizzo nella cartella doc &#232; presente il file: HOWTO_use_grub_script che pu&#242; fornirvi maggiori informazioni.
+ 
+ - 3 -----------------------
+ ---- Usare DreamOS --------
+@@ -132,9 +129,9 @@
+ 	<A HREF="http://forum.osdev.it/">http://forum.osdev.it/</A>
+ Oppure ci trovate su irc: 
+ 	Server: irc.azzurra.org
+-	Chan: #dreamos
+-	
++	Chan: #dreamos	
+ 
+-DreamOS 2003-2009 by finarfin/shainer
++
++2003-2010, DreamOS. 
+ <A HREF="http://www.dreamos.org">http://www.dreamos.org</A>
+ <A HREF="http://www.osdev.it">http://www.osdev.it</A>
+
+Modified: trunk/start.sh
+===================================================================
+--- trunk/start.sh	2010-07-15 10:34:03 UTC (rev 276)
++++ trunk/start.sh	2010-07-17 20:09:55 UTC (rev 277)
+@@ -88,12 +88,12 @@
+   exit
+ 
+ elif [ &quot;$1&quot; == &quot;&quot; ]; then
+-  echo &quot;no command passed; please, read the help!&quot;
++  echo &quot;no command passed; please read the help!&quot;
+   echo &quot;Usage: $0 help&quot;
+   exit
+ 
+ else
+-  echo &quot;'$1' is not a command that I known to me, please, read the help!&quot;
++  echo &quot;'$2' is an unknown command to me, please read the help!&quot;
+   echo &quot;Usage: $0 help&quot;
+   exit
+ 
+@@ -219,7 +219,7 @@
+   exit
+ 
+ else
+-  echo &quot;'$2' is not a command that I known to me, please, read the help!&quot;
++  echo &quot;'$2' is an unknown command to me, please read the help!&quot;
+   echo &quot;Usage: $0 help&quot;
+   exit
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000279.html">[Dreamos-dev] r276 - in trunk: . doc include utils	utils/eltorito_iso utils/eltorito_iso/boot	utils/eltorito_iso/boot/grub
+</A></li>
+	<LI>Next message: <A HREF="000281.html">[Dreamos-dev] r278 - in trunk: . drivers include/drivers	include/lng shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#280">[ date ]</a>
+              <a href="thread.html#280">[ thread ]</a>
+              <a href="subject.html#280">[ subject ]</a>
+              <a href="author.html#280">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

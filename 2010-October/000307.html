@@ -1,0 +1,274 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r304 - in trunk: . boot include/mem mem misc
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-October/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r304%20-%20in%20trunk%3A%20.%20boot%20include/mem%20mem%20misc&In-Reply-To=%3C20101017142118.4137F481067%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000306.html">
+   <LINK REL="Next"  HREF="000308.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r304 - in trunk: . boot include/mem mem misc</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r304%20-%20in%20trunk%3A%20.%20boot%20include/mem%20mem%20misc&In-Reply-To=%3C20101017142118.4137F481067%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r304 - in trunk: . boot include/mem mem misc">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun Oct 17 16:21:18 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000306.html">[Dreamos-dev] r303 - in trunk: . boot hardware include/mem mem misc	shell
+</A></li>
+        <LI>Next message: <A HREF="000308.html">[Dreamos-dev] r305 - in trunk: . boot include/mem mem misc
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#307">[ date ]</a>
+              <a href="thread.html#307">[ thread ]</a>
+              <a href="subject.html#307">[ subject ]</a>
+              <a href="author.html#307">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-10-17 16:21:18 +0200 (Sun, 17 Oct 2010)
+New Revision: 304
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/include/mem/kheap.h
+   trunk/mem/heap.c
+   trunk/mem/kheap.c
+   trunk/mem/paging.c
+   trunk/misc/ordered_array.c
+Log:
+Corretta make_heap in kheap.c 
+Attualmente bisogna utilizzare la kmalloc nell'allocazione del nuovo 
+heap. 
+Aggiunti commenti stile doxygen.
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/mem/kheap.h
+===================================================================
+--- trunk/include/mem/kheap.h	2010-10-16 20:41:44 UTC (rev 303)
++++ trunk/include/mem/kheap.h	2010-10-17 14:21:18 UTC (rev 304)
+@@ -26,7 +26,6 @@
+ #define KHEAP_H
+ 
+ #include &lt;ordered_array.h&gt;
+-extern unsigned int address_cur;
+ 
+ /*!  \struct heap_node_t
+      \brief Struttura dati che mantiene le informazioni su locazioni occupate e libere di memoria
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-10-16 20:41:44 UTC (rev 303)
++++ trunk/mem/heap.c	2010-10-17 14:21:18 UTC (rev 304)
+@@ -32,6 +32,7 @@
+ 
+ 
+ void init_newmem(){
++	n_heap =0;
+ 	n_heap = (new_heap_t*)new_heap(HEAP_START_ADDRESS, HEAP_INDEX_SIZE);
+ 	//printf(&quot;Start_address: %u End Address: %u\n&quot;, n_heap-&gt;start_address, n_heap-&gt;end_address);		
+ }
+@@ -41,7 +42,9 @@
+ }
+ 
+ new_heap_t *new_heap(unsigned int start, unsigned int size){
++	/*Actually we need to use kmalloc!*/
+ 	new_heap_t* t_heap =(new_heap_t*) kmalloc(sizeof(new_heap_t));	
++	printf(&quot;Kmalloc: %x\n&quot;, t_heap);
+ 	if(start%0x1000 == 0){		
+ 		header_t *first_hole = (header_t*)start;		
+ 		t_heap-&gt;index = new_array((void*)start,size, &amp;header_t_less_than);
+@@ -62,18 +65,18 @@
+ 	if(n_heap==0) {
+ 		//I have no heap defined, i continue to use address_cur.
+ 		unsigned int tmp;
+-		printf(&quot;No heap defined starting from: %d and %x...\n&quot;, &amp;end, address_cur);
++		printf(&quot;No heap defined starting %x...\n&quot;, address_cur);
+ 		tmp = address_cur; 
+-		address_cur = address_cur+size;
+-		printf(&quot;New address: %x\n&quot;, tmp);
++		address_cur += size;
++		printf(&quot;New address: %x\n&quot;, address_cur);
+ 		return tmp;
+ 	}
+ 	else {
+ 		//If i have a heap, then i have vm management enabled, and i can call alloc...
+-		void* new_address = new_alloc(size, 1, n_heap);
++		void* new_address = new_alloc(size, 1, n_heap);		
+ 		printf(&quot;Heap defined\n&quot;);
+ 		printf(&quot;Start Address: %u End Address: %u\n&quot;, n_heap-&gt;start_address, n_heap-&gt;end_address);
+-		if(n_heap-&gt;start_address==0) printf(&quot;erroso\n&quot;);
++		printf(&quot;See address_cur value: %x\n&quot;, address_cur);
+ 		return 0;
+ 	}
+ 	return 0;
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2010-10-16 20:41:44 UTC (rev 303)
++++ trunk/mem/kheap.c	2010-10-17 14:21:18 UTC (rev 304)
+@@ -43,7 +43,7 @@
+    if(kheap!=0) {
+      if (size&gt;0) return (void *) alloc(size, kheap);
+    }
+-   else {            
++   else {   	 
+      temp = address_cur;
+      address_cur+=size;
+    }
+@@ -86,17 +86,18 @@
+ 
+     new_heap = (heap_t*)KHEAP_LIST_ADDRESS;
+     node_address = KHEAP_LIST_ADDRESS + sizeof(heap_t);        
+-//     new_heap = (heap_t*)kmalloc(sizeof(heap_t));
+-//     first_node = (heap_node_t*)alloc_node();
++	//new_heap = (heap_t*)kmalloc(sizeof(heap_t));
++	//first_node = (heap_node_t*)alloc_node();
+     first_node = (heap_node_t*)node_address;    
+     node_address = node_address + sizeof(heap_node_t);    
+-    first_node-&gt;start_address = (unsigned int)&end;
+-    //printf(&quot;Test\n&quot;);
++    //first_node-&gt;start_address = (unsigned int)&end;
++    first_node-&gt;start_address = (unsigned int)address_cur;
+     first_node-&gt;size = size;
+     first_node-&gt;next = NULL;
+ 
+     new_heap-&gt;free_nodes = NULL;
+-    new_heap-&gt;max_size = tot_mem-(unsigned int) &end;
++    //new_heap-&gt;max_size = tot_mem-(unsigned int) &end;
++    new_heap-&gt;max_size = tot_mem-(unsigned int) address_cur;
+     new_heap-&gt;free_list = first_node;
+     new_heap-&gt;used_list = NULL;
+     new_heap-&gt;free_nodes = NULL;    
+@@ -184,7 +185,7 @@
+    #ifdef DEBUG
+    printf(&quot;Prev_node: %d \n&quot;, prev_node-&gt;start_address);
+    printf(&quot;New Address: %d &quot;, new_node-&gt;start_address);    
+-   #endif   
++   #endif         
+    return (void *)new_node-&gt;start_address;
+ }
+ 
+@@ -298,7 +299,7 @@
+ {
+    int count=0;   
+    while (list) {
+-     printf (&quot;%d) Node_address: %d, Current-&gt;start_address: %d size: %d\n&quot;, count++, list,list-&gt;start_address, list-&gt;size);     
++     printf (&quot;%u) Node_address: %u, Current-&gt;start_address: %u size: %u\n&quot;, count++, list,list-&gt;start_address, list-&gt;size);     
+      list = (heap_node_t*)list-&gt;next;
+    }
+    printf (&quot;\n&quot;);
+@@ -316,3 +317,4 @@
+     toadd-&gt;next = kheap-&gt;free_nodes;
+     kheap-&gt;free_nodes = toadd;        
+ }
++
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2010-10-16 20:41:44 UTC (rev 303)
++++ trunk/mem/paging.c	2010-10-17 14:21:18 UTC (rev 304)
+@@ -276,7 +276,6 @@
+ 	if (pt_entry == 0) {
+ 		//Si configura una entry della pagetable.
+ 	    new_p = request_pages (1, ADD_LIST);
+-	    if(new_p==4468736) printf(&quot;Eccolo qua lo stronzo\n&quot;);
+ 	    set_pagetable_entry_ric (pdir, ptable, (unsigned int)new_p, PD_PRESENT|SUPERVISOR|WRITE, 0);
+ 	    #ifdef DEBUG
+ 	    printf (&quot;Nuova entry dopo la mappatura: %d\n&quot;, get_pagetable_entry (pdir, ptable));
+
+Modified: trunk/misc/ordered_array.c
+===================================================================
+--- trunk/misc/ordered_array.c	2010-10-16 20:41:44 UTC (rev 303)
++++ trunk/misc/ordered_array.c	2010-10-17 14:21:18 UTC (rev 304)
+@@ -36,33 +36,34 @@
+ }
+ 
+ /**
+-  * Crea un nuovo ordered_array
++  * Create a new  ordered_array
+   * @author Ivan Gualandri
+   * @version 1.0
+-  * @param start Indirizzo di inizio del nostro array 
+-  * @param size grandezza massima dell'array
++  * @param start Start address of our new array 
++  * @param size Max size of array
+   * @return Pointer to a new ordered_array_t
+   */
+ ordered_array_t new_array(void* start, unsigned int size, lessthan_predicate_t predicate){
+-    int i;
+-    //printf(&quot;Make array code goes here...\n&quot;);        
+     ordered_array_t tmp_array;
+-    tmp_array.array = (type_t*)start;
+-    //printf(&quot;Address: %u\n&quot;, &amp;tmp_array);
++    tmp_array.array = (type_t*)start;    
+     tmp_array.size_max = size;
+     tmp_array.size = 0;	    
+     tmp_array.less_than = predicate;    
+     /* Questa parte e' memsettbile dopo che sara' fatta */
+     printf(&quot;SizeMax: %d\n&quot;, tmp_array.size_max);
+-    i=0;    
+-    /*while(i &lt; tmp_array.size_max){
+-		tmp_array.array[i] = 0x0;
+-		i++;
+-	}*/
++
+     memset(tmp_array.array, 0, tmp_array.size_max);
+     return tmp_array;
+ }
+ 
++/**
++  * Insert an element into ordered_array
++  * @author Ivan Gualandri
++  * @version 1.0
++  * @param elem Element to be inserted
++  * @param array Array where we insert our new element
++  * @return void
++  */
+ void insert_array(void_t elem, ordered_array_t* array){
+     int i;
+     i=0;
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000306.html">[Dreamos-dev] r303 - in trunk: . boot hardware include/mem mem misc	shell
+</A></li>
+	<LI>Next message: <A HREF="000308.html">[Dreamos-dev] r305 - in trunk: . boot include/mem mem misc
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#307">[ date ]</a>
+              <a href="thread.html#307">[ thread ]</a>
+              <a href="subject.html#307">[ subject ]</a>
+              <a href="author.html#307">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

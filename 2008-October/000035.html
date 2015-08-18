@@ -1,0 +1,358 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r35 - in trunk: . include/mem mem misc shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2008-October/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r35%20-%20in%20trunk%3A%20.%20include/mem%20mem%20misc%20shell&In-Reply-To=%3C200810131227.m9DCRFkC021925%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000034.html">
+   <LINK REL="Next"  HREF="000036.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r35 - in trunk: . include/mem mem misc shell</H1>
+    <B>shainer at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r35%20-%20in%20trunk%3A%20.%20include/mem%20mem%20misc%20shell&In-Reply-To=%3C200810131227.m9DCRFkC021925%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r35 - in trunk: . include/mem mem misc shell">shainer at mail.berlios.de
+       </A><BR>
+    <I>Mon Oct 13 14:27:15 CEST 2008</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000034.html">[Dreamos-dev] r34 - in trunk: . include include/misc mem misc	processore shell
+</A></li>
+        <LI>Next message: <A HREF="000036.html">[Dreamos-dev] r36 - in trunk: . include mem shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#35">[ date ]</a>
+              <a href="thread.html#35">[ thread ]</a>
+              <a href="subject.html#35">[ subject ]</a>
+              <a href="author.html#35">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: shainer
+Date: 2008-10-13 14:27:14 +0200 (Mon, 13 Oct 2008)
+New Revision: 35
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/mem/kheap.h
+   trunk/mem/kheap.c
+   trunk/misc/ordered_list.c
+   trunk/shell/shell.c
+Log:
+Completata l'allocazione di blocchi di memoria usando l'heap
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/mem/kheap.h
+===================================================================
+--- trunk/include/mem/kheap.h	2008-10-03 16:30:16 UTC (rev 34)
++++ trunk/include/mem/kheap.h	2008-10-13 12:27:14 UTC (rev 35)
+@@ -28,39 +28,26 @@
+ #include &lt;ordered_array.h&gt;
+ extern unsigned int address_cur;
+ 
+-//Da eliminare
+-typedef struct{
+-    unsigned int magic;
+-    unsigned int hole;
+-    unsigned int size;
+-} header_t;
+-
+-typedef struct{
+-    unsigned int magic;
+-    unsigned int *header;
+-} footer_t;
+-//Fino qua
+-
+ /*!  \struct heap_node_t
+      \brief Struttura dati che mantiene le informazioni su locazioni occupate e libere di memoria
+  */
+ typedef struct {
+-    unsigned int start_address;/**&lt; L'indirizzo di partenza dell'heap*/
+-    unsigned int size;    /**&lt; quanto massimo si puo' espandere*/
++    unsigned int start_address;/** &lt; L'indirizzo di partenza dell'heap */
++    unsigned int size;    /** &lt; quanto massimo si puo' espandere */
+     struct heap_node_t* next;
+-}heap_node_t;
++} heap_node_t;
+ 
+ /*!  \struct heap_t
+      \brief Struttura dati che mantiene le informazioni su un singolo heap
+  */
+-typedef struct{
+-    heap_node_t* free_list;/**&lt; Locazioni di memoria libere*/
+-    heap_node_t* used_list;/**&lt; Locazioni di memoria occupate*/
+-    unsigned int max_size; /**&lt; Massima memoria allocabile */
++typedef struct {
++    heap_node_t* free_list; /** &lt; Locazioni di memoria libere */
++    heap_node_t* used_list; /** &lt; Locazioni di memoria occupate */
++    unsigned int max_size; /** &lt; Massima memoria allocabile */
+ } heap_t;
+ 
+ 
+-heap_t* make_heap(unsigned int, unsigned int, unsigned int); //Rivedere il return value
++heap_t* make_heap(unsigned int, unsigned int, unsigned int);
+ void* kmalloc(unsigned int);
+ void kfree(unsigned int);
+ void try_alloc();
+@@ -68,3 +55,4 @@
+ void* alloc(unsigned int, heap_t*);
+ 
+ #endif
++
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2008-10-03 16:30:16 UTC (rev 34)
++++ trunk/mem/kheap.c	2008-10-13 12:27:14 UTC (rev 35)
+@@ -31,12 +31,11 @@
+ 
+ extern unsigned int end;
+ extern size_t tot_mem;
+-heap_t *kheap = 0;
++heap_t *kheap;
+ unsigned int address_cur = (unsigned int) &end;
+ 
+-void* kmalloc(unsigned int size){
+-/** Questa funzione andra' modificata con l'evoluzione del paging.
+-  */
++void* kmalloc(unsigned int size)
++{
+     unsigned int temp;
+     
+     temp = address_cur;
+@@ -44,69 +43,96 @@
+     return (void *) temp;
+ }
+ 
++/* Test procedure (&quot;try_heap&quot; shell command&quot;) */
++void try_alloc()
++{
++    heap_node_t *navigator;
++    int count=0;
++   
++    printf(&quot;try_alloc(): Used list address: %d, Value: %d\n&quot;, &amp;(kheap-&gt;used_list), kheap-&gt;used_list);
++    alloc(5000, kheap);
++    alloc(60, kheap);
++    alloc(50, kheap);
++    alloc(100, kheap);
++
++    navigator = kheap-&gt;used_list;
++    printf(&quot;Navigating all the list...\n&quot;);
++
++    while(navigator) {
++        printf(&quot;%d) Current_element-&gt;start_address: %d\n&quot;, ++count, navigator-&gt;start_address);
++        navigator = navigator-&gt;next;
++   }
++}
++
+ /**
+   * Build a new heap
+   * @author Ivan Gualandri
+   * @version 1.0
+-  * @param start Indirizzo di inizio del nostro heap
+-  * @param end Indirizzo di fine dell'heap
+-  * @param size grandezza massima dell'heap
++  * @param start Heap start address
++  * @param end Heap end address
++  * @param size Heap maximum size
+   * @return Pointer to a new heap
+   */
+-heap_t* make_heap(unsigned int start, unsigned int end, unsigned int size){
++heap_t* make_heap(unsigned int start, unsigned int end, unsigned int size)
++{
+     heap_t* new_heap;
+     heap_node_t* first_node;
++
+     new_heap = (heap_t*)kmalloc(sizeof(heap_t));
++
+     first_node = (heap_node_t*)kmalloc(sizeof(heap_node_t));
+     first_node-&gt;start_address = (unsigned int)&end;
+     first_node-&gt;size = size;
+     first_node-&gt;next = NULL;
++
+     new_heap-&gt;max_size = tot_mem-(unsigned int) &end;
+     new_heap-&gt;free_list = first_node;
+     new_heap-&gt;used_list = NULL;
++
+     printf(&quot;First heap created...\n&quot;);   
+-    printf(&quot;Size: %d - Tot mem: %d - Address: %x\n&quot;, (new_heap-&gt;free_list)-&gt;size, tot_mem, new_heap);    
++    printf(&quot;Size: %d - Tot mem: %d - Start address: %x\n&quot;, (new_heap-&gt;free_list)-&gt;size, tot_mem, new_heap);    
+     return (heap_t*) new_heap;
+ }
++    
++/*
++ * Allocation
++ * @author Ivan Gualandri
++ * @version 1.0
++ * @param size Size of the memory to be allocated
++ * @param cur_heap Current heap
++ * @return The start address of the new allocated memory (or NULL if no memory can be allocated)
++ */
++void *alloc(unsigned int size, heap_t *cur_heap)
++{    
++    int n_pages = size / 4096;
++    heap_node_t* new_node = NULL;
++    heap_node_t* free_heap_list = cur_heap-&gt;free_list;
+ 
+-void* alloc(unsigned int size, heap_t *cur_heap){    
+-    int n_pages;
+-    n_pages = size/4096;
+-    if(size%4096!=0) n_pages++;
+-    printf(&quot;Numero pagine da allocare: %d, %d\n&quot;, n_pages, size);
+-    heap_node_t* cur_list;    
+-    printf(&quot;Cur_heap-&gt;max_size %d\n&quot;, cur_heap-&gt;max_size);
+-    cur_list = cur_heap-&gt;free_list;
+-    printf(&quot;Arrivo qua\n&quot;);
+-    /*Vado alla ricerca di una locazione di memoria libera*/
+-    while(cur_list!=NULL) {
+-        if(cur_list-&gt;size &gt; size){
+-            heap_node_t* new_node;
++    if(size%4096 !=0)
++      n_pages++;
++    printf(&quot;----\n&quot;);
++    printf(&quot;Number of pages: %d\n&quot;, n_pages, size);
+ 
+-            new_node = (heap_node_t*)kmalloc(sizeof(heap_node_t));
+-            new_node-&gt;start_address = cur_list-&gt;start_address;
+-            new_node-&gt;next = NULL;
+-            new_node-&gt;size = n_pages*0x1000;
+-//             new_node-&gt;next= cur_heap-&gt;used_list; 
+-//             cur_heap-&gt;used_list = new_node;
+-            /*Inserisci il nodo in testa*/
+-            printf(&quot;New_node: Size: %d, start_address: %d\n&quot;, new_node-&gt;size, new_node-&gt;start_address);
+-            printf(&quot;Cur_list Actual size: %d, start_address: %d\n&quot;, cur_list-&gt;size, cur_list-&gt;start_address);
+-            cur_list-&gt;size = (cur_list-&gt;size) - (n_pages*0x1000);
+-            cur_list-&gt;start_address = cur_list-&gt;start_address - (n_pages*0x1000);
+-            printf(&quot;New_size: %d, new_start_address %d\n&quot;, cur_list-&gt;size, cur_list-&gt;start_address);      
++    /* Look for a free block of memory in the heap's free memory list */
++    while(free_heap_list) {
++      if(free_heap_list-&gt;size &gt;= size) {
+ 
+-             insert_list(new_node,&amp;(cur_heap-&gt;used_list));                            
+-        }
+-        else printf(&quot;No good\n&quot;);
+-        printf(&quot;The size of that node is: %d\n&quot;, cur_list-&gt;size);
+-        printf(&quot;Value: %d\n&quot;, cur_list-&gt;next); 
+-        cur_list = cur_list-&gt;next;
+-    }
++        new_node = (heap_node_t*)kmalloc(sizeof(heap_node_t));
++        new_node-&gt;start_address = free_heap_list-&gt;start_address;
++        new_node-&gt;next = NULL;
++        new_node-&gt;size = n_pages*0x1000;
++
++        printf(&quot;New_node -&gt; Size: %d, start_address: %d\n&quot;, new_node-&gt;size, new_node-&gt;start_address);
++        printf(&quot;free_heap_list -&gt; Actual size: %d, start_address: %d\n&quot;, free_heap_list-&gt;size, free_heap_list-&gt;start_address);
++        printf(&quot;----\n&quot;);
++        free_heap_list-&gt;size = (free_heap_list-&gt;size) - (n_pages*0x1000);
++        free_heap_list-&gt;start_address = free_heap_list-&gt;start_address + (n_pages*0x1000);
++
++        insert_list (new_node, &amp;(cur_heap-&gt;used_list));
++
++      }
++      free_heap_list = free_heap_list-&gt;next;
++   }
++   return (void *)new_node;
+ }
+ 
+-/**Queste funzioni sono messe solo per alcune prove verranno eliminate entro le prossime revisioni*/
+-void try_alloc(){
+-    alloc(5000, kheap);
+-    alloc(60, kheap);    
+-}
+
+Modified: trunk/misc/ordered_list.c
+===================================================================
+--- trunk/misc/ordered_list.c	2008-10-03 16:30:16 UTC (rev 34)
++++ trunk/misc/ordered_list.c	2008-10-13 12:27:14 UTC (rev 35)
+@@ -26,16 +26,31 @@
+ #include &lt;stdio.h&gt;
+ #include &lt;stddef.h&gt;
+ 
+-void insert_list(heap_node_t* new_node, heap_node_t** list){
+-    if(*list==NULL){
+-        printf(&quot;\n---Insert new node---\n&quot;);
+-        *list=new_node;
+-        printf(&quot;Provo: %d---\n&quot;, (*list)-&gt;size);
++/* 
++ * Insert a new element in the list
++ * @author shainer
++ * @version 0.1
++ * @param new_node New element
++ * @param list Destination list
++ * @return none
++ */
++void insert_list(heap_node_t *new_node, heap_node_t **ulist)
++{
++  /* First node */
++  if(!(*ulist)) {
++    (*ulist)=new_node;
++  } else {
++    heap_node_t *swap = *ulist;
++    heap_node_t *previous = swap;
++
++    /* Sorting by start address */
++    while (swap-&gt;start_address &lt; new_node-&gt;start_address) {
++      previous = swap;
++      swap = swap-&gt;next;
++      if (!swap) break;
+     }
+-    else {
+-        printf(&quot;List-&gt;size= %d\n&quot;, (*list)-&gt;size);
+-        printf(&quot;Piano piano vado avanti\n&quot;);
+-    }
+-    printf(&quot;The current size: %d\n&quot;, new_node-&gt;size);
+-    printf(&quot;I will insert into the list\n&quot;);
++    previous-&gt;next = new_node;
++    new_node-&gt;next = swap;             
++  }
+ }
++
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2008-10-03 16:30:16 UTC (rev 34)
++++ trunk/shell/shell.c	2008-10-13 12:27:14 UTC (rev 35)
+@@ -275,7 +275,7 @@
+ 	printf(&quot;help      - See the 'help' list to learn the DreamOS command now avaible\n&quot;
+ 	       &quot;poweroff  - Turn off the machine\n&quot;
+                &quot;kmalloc   - Test a basic kmalloc function\n&quot;
+-               &quot;do_fault  - Test a page_fault (WARNING: This hang the OS)\n&quot;
++               &quot;do_fault  - Test a page_fault\n&quot;
+                &quot;aalogo    - Show an ascii art logo\n&quot;
+                &quot;uname     - Print kernel version, try uname --help for more info\n&quot;
+                &quot;try_buddy - Try buddy mmu\n&quot;
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000034.html">[Dreamos-dev] r34 - in trunk: . include include/misc mem misc	processore shell
+</A></li>
+	<LI>Next message: <A HREF="000036.html">[Dreamos-dev] r36 - in trunk: . include mem shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#35">[ date ]</a>
+              <a href="thread.html#35">[ thread ]</a>
+              <a href="subject.html#35">[ subject ]</a>
+              <a href="author.html#35">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

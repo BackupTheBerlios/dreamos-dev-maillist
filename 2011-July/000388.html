@@ -1,0 +1,200 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r385 - in trunk: . boot include/tasks shell tasks
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2011-July/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r385%20-%20in%20trunk%3A%20.%20boot%20include/tasks%20shell%20tasks&In-Reply-To=%3C20110719211055.AFB9948151B%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000387.html">
+   <LINK REL="Next"  HREF="000389.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r385 - in trunk: . boot include/tasks shell tasks</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r385%20-%20in%20trunk%3A%20.%20boot%20include/tasks%20shell%20tasks&In-Reply-To=%3C20110719211055.AFB9948151B%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r385 - in trunk: . boot include/tasks shell tasks">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Tue Jul 19 23:10:55 CEST 2011</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000387.html">[Dreamos-dev] r384 - in trunk: . boot include/shell shell tasks
+</A></li>
+        <LI>Next message: <A HREF="000389.html">[Dreamos-dev] r386 - in trunk: . include/tasks tasks tasks/tss
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#388">[ date ]</a>
+              <a href="thread.html#388">[ thread ]</a>
+              <a href="subject.html#388">[ subject ]</a>
+              <a href="author.html#388">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2011-07-19 23:10:55 +0200 (Tue, 19 Jul 2011)
+New Revision: 385
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/include/tasks/task_utils.h
+   trunk/shell/testing.c
+   trunk/tasks/task.c
+   trunk/tasks/task_utils.c
+Log:
+Proseguita inizializzazione di un nuovo task. 
+Aggiunta struttura dati table_address_t che contiene gli indirizzi di 
+pagedir e pagetable.
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/tasks/task_utils.h
+===================================================================
+--- trunk/include/tasks/task_utils.h	2011-07-17 21:33:41 UTC (rev 384)
++++ trunk/include/tasks/task_utils.h	2011-07-19 21:10:55 UTC (rev 385)
+@@ -25,6 +25,10 @@
+  #ifndef TASK_UT_H
+  #define TASK_UT_H
+  
+- unsigned int map_kernel();
++ typedef struct {
++	 unsigned int page_dir;
++	 unsigned int page_table;
++ } table_address_t;
++ table_address_t map_kernel();
+  
+  #endif
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2011-07-17 21:33:41 UTC (rev 384)
++++ trunk/shell/testing.c	2011-07-19 21:10:55 UTC (rev 385)
+@@ -270,7 +270,7 @@
+ 	_task = get_task(task_pid);
+ 	printf(&quot;Task state: %d\n&quot;, _task.state);
+ 	printf(&quot; ----name:: %s\n&quot;, _task.name);
+-	printf(&quot;Calling start function...\n&quot;);
++	printf(&quot;Calling start function...\n&quot;);	
+ 	_task.start_function();
+ 	return;
+ }
+
+Modified: trunk/tasks/task.c
+===================================================================
+--- trunk/tasks/task.c	2011-07-17 21:33:41 UTC (rev 384)
++++ trunk/tasks/task.c	2011-07-19 21:10:55 UTC (rev 385)
+@@ -27,6 +27,7 @@
+ #include &lt;string.h&gt;
+ #include &lt;kheap.h&gt;
+ #include &lt;tss.h&gt;
++#include &lt;task_utils.h&gt;
+ 
+ pid_t current_pid; 
+ task_t task_list[MAX_TASKS];
+@@ -72,9 +73,17 @@
+ 	return task_list[pid];	
+ }
+ 
++/**
++ * Create a new task 
++ * @author Ivan Gualandri
++ * @version 1.0
++ * @param task_name The name of the task
++ * @param start_function the entry point of the task.
++ */
+ pid_t new_task(char *task_name, void (*start_function)()){
+ 	asm(&quot;cli&quot;);
+ 	task_t new_task;
++	table_address_t local_table;
+ 	unsigned int new_pid = request_pid();	
+ 	strcpy(new_task.name, task_name);
+ 	new_task.start_function = start_function;
+@@ -84,7 +93,10 @@
+ 	new_task.state = READY;
+ 	new_task.registers = (task_register_t*)new_task.esp;
+ 	new_tss(new_task.registers, start_function);
+-	add_task(new_task.pid, &amp;new_task);
++	local_table = map_kernel();
++	new_task.pdir = local_table.page_dir;
++	new_task.ptable = local_table.page_table;
++	add_task(new_task.pid, &amp;new_task);	
+ 	asm(&quot;sti&quot;);
+ 	return new_pid;
+ }
+
+Modified: trunk/tasks/task_utils.c
+===================================================================
+--- trunk/tasks/task_utils.c	2011-07-17 21:33:41 UTC (rev 384)
++++ trunk/tasks/task_utils.c	2011-07-19 21:10:55 UTC (rev 385)
+@@ -33,7 +33,8 @@
+    * @author Ivan Gualandri
+    * @version 1.0 
+    */
+-unsigned int map_kernel(){
++table_address_t map_kernel(){
++	table_address_t logicmemory_root;
+ 	unsigned int *logic_pd_address = kmalloc(8*4096);
+ 	unsigned int *logic_pt_address = kmalloc(8*4096);
+ 	unsigned int *pagedir;
+@@ -48,18 +49,20 @@
+ 	new_pd_node-&gt;size = 8 * 4096;*/
+ 	while(i &lt; 8){
+ 		map_address(pagedir, logic_pd_address);
+-		map_address(pagetable, logic_pt_address);
++		map_address(pagetable, logic_pt_address);		
+ 		pagedir+=4096;
+ 		pagetable+=4096;
+ 		i++;
+-	}
++	}	
+ 	//set_pagedir_entry_ric(0, (unsigned int)current_page_table, PD_PRESENT|SUPERVISOR|WRITE,0);    
+ 	while(j&lt;PD_LIMIT){
+ 		pagedir[j] = 0x0;
+ 		pagetable[j] = (j*0x1000&amp;0xFFFFF0)|PD_PRESENT|SUPERVISOR|WRITE|0;
+ 		j++;
+-	}	
++	}
+ 	pagedir[0] = ((unsigned int)pagetable&amp;0xFFFFF000)|PD_PRESENT|SUPERVISOR|WRITE|0;
+ 	pagedir[1023] = ((unsigned int)pagedir&amp;0xFFFFF000)|PD_PRESENT|SUPERVISOR|0;	
+-	return 0;
++	logicmemory_root.page_dir = (unsigned int) pagedir;
++	logicmemory_root.page_table = (unsigned int) pagetable;
++	return logicmemory_root;
+ }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000387.html">[Dreamos-dev] r384 - in trunk: . boot include/shell shell tasks
+</A></li>
+	<LI>Next message: <A HREF="000389.html">[Dreamos-dev] r386 - in trunk: . include/tasks tasks tasks/tss
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#388">[ date ]</a>
+              <a href="thread.html#388">[ thread ]</a>
+              <a href="subject.html#388">[ subject ]</a>
+              <a href="author.html#388">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

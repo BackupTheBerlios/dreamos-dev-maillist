@@ -1,0 +1,235 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r110 - in trunk: . fs include/fs include/shell shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-July/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r110%20-%20in%20trunk%3A%20.%20fs%20include/fs%20include/shell%20shell&In-Reply-To=%3C200907250916.n6P9GaQu017469%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000111.html">
+   
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r110 - in trunk: . fs include/fs include/shell shell</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r110%20-%20in%20trunk%3A%20.%20fs%20include/fs%20include/shell%20shell&In-Reply-To=%3C200907250916.n6P9GaQu017469%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r110 - in trunk: . fs include/fs include/shell shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sat Jul 25 11:16:36 CEST 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000111.html">[Dreamos-dev] r109 - in trunk: . fs include include/fs	include/shell shell
+</A></li>
+        
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#112">[ date ]</a>
+              <a href="thread.html#112">[ thread ]</a>
+              <a href="subject.html#112">[ subject ]</a>
+              <a href="author.html#112">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-07-25 11:16:31 +0200 (Sat, 25 Jul 2009)
+New Revision: 110
+
+Modified:
+   trunk/bl.img
+   trunk/dreamos.img
+   trunk/fs/vfs.c
+   trunk/include/fs/vfs.h
+   trunk/include/shell/commands.h
+   trunk/include/shell/shell.h
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+Log:
+Iniziata bozza di funzione per apertura directory
+Implementato comando cd
+Nella shell ora viene stampato anche il path corrente
+
+
+Modified: trunk/bl.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2009-07-23 17:26:05 UTC (rev 109)
++++ trunk/fs/vfs.c	2009-07-25 09:16:31 UTC (rev 110)
+@@ -54,8 +54,8 @@
+  	mountpoint_list[1].start_address = 0;
+  	mountpoint_list[1].operations = kmalloc(sizeof(struct super_node_operations));
+ 
+-	printf(&quot;Created mountpoint: %s\n&quot;, mountpoint_list[0].mountpoint);
+-	printf(&quot;Created mountpoint: %s\n&quot;, mountpoint_list[1].mountpoint);
++	//printf(&quot;Created mountpoint: %s\n&quot;, mountpoint_list[0].mountpoint);
++	//printf(&quot;Created mountpoint: %s\n&quot;, mountpoint_list[1].mountpoint);
+  	//initrd = kmalloc(sizeof(struct inode)); 	 	
+ }
+ 
+@@ -63,3 +63,15 @@
+ 	if(node-&gt;read!=0) printf(&quot;read node&quot;);
+ 	else return;
+ }
++
++int open_dir(char *path){
++	int i = 0;
++	while(i&lt;MAX_MOUNTPOINT ){
++			if(!strcmp(path, mountpoint_list[i].mountpoint)) {
++				printf(&quot;Changing dir %s\n&quot;, mountpoint_list[i].mountpoint);
++				return i;
++			}
++			i++;
++		}		
++		return -1;		
++}
+
+Modified: trunk/include/fs/vfs.h
+===================================================================
+--- trunk/include/fs/vfs.h	2009-07-23 17:26:05 UTC (rev 109)
++++ trunk/include/fs/vfs.h	2009-07-25 09:16:31 UTC (rev 110)
+@@ -68,6 +68,7 @@
+ 
+ void open_vfs (struct inode *);
+ void close (struct inode *);
++int open_dir(char *);
+ int read (struct inode *, int, int, int *);
+ int write (struct inode *, int, int, int *);
+ 
+
+Modified: trunk/include/shell/commands.h
+===================================================================
+--- trunk/include/shell/commands.h	2009-07-23 17:26:05 UTC (rev 109)
++++ trunk/include/shell/commands.h	2009-07-25 09:16:31 UTC (rev 110)
+@@ -47,4 +47,5 @@
+ void answer();
+ void drv_load();
+ void ls();
++void cd();
+ #endif
+
+Modified: trunk/include/shell/shell.h
+===================================================================
+--- trunk/include/shell/shell.h	2009-07-23 17:26:05 UTC (rev 109)
++++ trunk/include/shell/shell.h	2009-07-25 09:16:31 UTC (rev 110)
+@@ -26,6 +26,8 @@
+ 	void (*h_func)(void);
+ };
+ 
++extern char cur_path[256];
++
+ void shell(void);
+ 
+ #endif
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-07-23 17:26:05 UTC (rev 109)
++++ trunk/shell/commands.c	2009-07-25 09:16:31 UTC (rev 110)
+@@ -24,6 +24,7 @@
+ #include &lt;vfs.h&gt;
+ 
+ struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
++char cur_path[256];
+ 
+ void aalogo()
+ {
+@@ -70,7 +71,8 @@
+ 	 	 &quot;date      - Show date and time\n&quot;
+ 	  	 &quot;echo      - Print some lines of text\n&quot;
+ 	 	 &quot;drv_load  - Tool to load and kill drivers\n&quot;
+-		 &quot;ls        - Tool for listing dir - not complete-\n&quot;);
++		 &quot;ls        - Tool for listing dir - not complete-\n&quot;
++		 &quot;cd        - Change dir - not complete-\n&quot;);
+ }
+ 
+ void echo()
+@@ -393,3 +395,15 @@
+ 		i++;
+ 	}	
+ }
++
++void cd(){
++	if(argc &gt; 2) printf(&quot;Too many arguments\n&quot;);
++	else if(argc &lt;2) printf(&quot;Too few arguments\n&quot;);
++	else {
++		int i=0;
++		//printf(&quot;Argc: %d &quot;, argc);
++		i = open_dir(argv[1]);
++		if(i == -1) printf(&quot;Path not found\n&quot;);
++		else strcpy(cur_path, mountpoint_list[i].mountpoint);		
++	}
++}
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-07-23 17:26:05 UTC (rev 109)
++++ trunk/shell/shell.c	2009-07-25 09:16:31 UTC (rev 110)
+@@ -39,7 +39,7 @@
+ #include &lt;clock.h&gt;
+ #include &lt;sys/utsname.h&gt;
+ 
+-#define NUM_COM 16
++#define NUM_COM 17
+ 
+ /*
+  * Inserisce gli argomenti di un comando in un array di stringhe
+@@ -90,10 +90,12 @@
+ 	{ &quot;answer&quot;,   answer  },
+ 	{ &quot;drv_load&quot;, drv_load},
+ 	{ &quot;ls&quot;,       ls},
++	{ &quot;cd&quot;,       cd},
+         };
+ 
+   int i = 0;
+ 
++  memset(cmd, '\0', CMD_LEN);
+   memset(user, '\0', USER_LEN);
+   printf(LNG_WELCOME);
+   
+@@ -107,10 +109,11 @@
+   aalogo();
+   printf(&quot;\n\n\n\n&quot;);
+   argc=1;  
++  strcpy(cur_path, &quot;&quot;);
+   
+   for (;;)
+   {
+-    printf(&quot;%s~# &quot;,user);
++    printf(&quot;%s~%s# &quot;,user, cur_path);
+     scanf(&quot;%254s&quot;,cmd);
+         
+     /* elimina eventuali spazi all'inizio del comando */
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000111.html">[Dreamos-dev] r109 - in trunk: . fs include include/fs	include/shell shell
+</A></li>
+	
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#112">[ date ]</a>
+              <a href="thread.html#112">[ thread ]</a>
+              <a href="subject.html#112">[ subject ]</a>
+              <a href="author.html#112">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

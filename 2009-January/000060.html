@@ -1,0 +1,926 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r59 - in trunk: . include include/shell shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-January/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r59%20-%20in%20trunk%3A%20.%20include%20include/shell%20shell&In-Reply-To=%3C200901282007.n0SK7BZu007007%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000059.html">
+   <LINK REL="Next"  HREF="000061.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r59 - in trunk: . include include/shell shell</H1>
+    <B>shainer at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r59%20-%20in%20trunk%3A%20.%20include%20include/shell%20shell&In-Reply-To=%3C200901282007.n0SK7BZu007007%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r59 - in trunk: . include include/shell shell">shainer at mail.berlios.de
+       </A><BR>
+    <I>Wed Jan 28 21:07:12 CET 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000059.html">[Dreamos-dev] r58 - branches/0.1/boot
+</A></li>
+        <LI>Next message: <A HREF="000061.html">[Dreamos-dev] r60 - in trunk: . include/libc io libc shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#60">[ date ]</a>
+              <a href="thread.html#60">[ thread ]</a>
+              <a href="subject.html#60">[ subject ]</a>
+              <a href="author.html#60">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: shainer
+Date: 2009-01-28 21:07:11 +0100 (Wed, 28 Jan 2009)
+New Revision: 59
+
+Added:
+   trunk/include/shell/commands.h
+   trunk/shell/commands.c
+Modified:
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/include/shell/shell.h
+   trunk/include/version.h
+   trunk/shell/shell.c
+Log:
+Cambiata la gestione della shell e la selezione del comando (eliminando i vari if-else).
+Spostate le funzioni che gestiscono i comandi in un file a parte, commands.c .
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2009-01-25 17:52:26 UTC (rev 58)
++++ trunk/Makefile	2009-01-28 20:07:11 UTC (rev 59)
+@@ -2,14 +2,14 @@
+ # Enjoy your self :)
+ # Osiris at <A HREF="https://lists.berlios.de/mailman/listinfo/dreamos-dev">jeek69 at katamail.com</A>
+ 
++NAME = DreamOS
+ VERSION = 0
+-PATCHLEVEL = 0
+-EXTRAVERSION = -dreamos
+-NAME = DreamOS
++PATCHLEVEL = 1
++EXTRAVERSION = -pepper
+ 
+ CFLAGS = -nostdlib -fomit-frame-pointer -fno-builtin -fno-stack-protector -Wall -march=i686 -m32 -I./include -I./include/io -I./include/drivers -I./include/libc -I./include/processore -I./include/hardware -I./include/mem -I./include/system -I./include/shell -I./include/misc
+ 
+-OBJ = kernel.o io/video.o drivers/keyboard.o libc/ctype.o libc/string.o io/io.o libc/stdio.o hardware/cpuid.o hardware/keyboard.o processore/gdt.o processore/idt.o processore/handlers.o hardware/pic8259.o mem/fismem.o mem/paging.o mem/kheap.o misc/clock.o misc/bitops.o misc/ordered_list.o system/syscall.o hardware/8253.o shell/shell.o
++OBJ = kernel.o io/video.o drivers/keyboard.o libc/ctype.o libc/string.o io/io.o libc/stdio.o hardware/cpuid.o hardware/keyboard.o processore/gdt.o processore/idt.o processore/handlers.o hardware/pic8259.o mem/fismem.o mem/paging.o mem/kheap.o misc/clock.o misc/bitops.o misc/ordered_list.o system/syscall.o hardware/8253.o shell/shell.o shell/commands.o
+ 
+ dreamos.img: bl.img kernel.bin
+ 	mv kernel.bin dreamos.img
+@@ -42,6 +42,7 @@
+ system/syscall.o: system/syscall.c
+ hardware/8253.o: hardware/8253.c
+ shell/shell.o: shell/shell.c
++shell/commands.o: shell/commands.c
+ 
+ img:
+ 	mount -o loop boot/grub.img boot/os
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Added: trunk/include/shell/commands.h
+===================================================================
+--- trunk/include/shell/commands.h	2009-01-25 17:52:26 UTC (rev 58)
++++ trunk/include/shell/commands.h	2009-01-28 20:07:11 UTC (rev 59)
+@@ -0,0 +1,68 @@
++/*
++ * DreamOS
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
++ *
++
++ * Autrice: Lisa
++ * Febbraio 2006
++ * Prototipi di funzione e variabili globali per la shell
++ */
++
++#ifndef __COMMANDS_H
++#define __COMMANDS_H
++
++#include &lt;multiboot.h&gt;
++#include &lt;kernel.h&gt;
++#include &lt;stddef.h&gt;
++#include &lt;video.h&gt;
++#include &lt;pic8259.h&gt;
++#include &lt;8253.h&gt;
++#include &lt;gdt.h&gt;
++#include &lt;idt.h&gt;
++#include &lt;cpuid.h&gt;
++#include &lt;stdio.h&gt;
++#include &lt;string.h&gt;
++#include &lt;fismem.h&gt;
++#include &lt;io.h&gt;
++#include &lt;keyboard.h&gt;
++#include &lt;paging.h&gt;
++#include &lt;use.h&gt;
++#include &lt;shell.h&gt;
++#include &lt;kheap.h&gt;
++#include &lt;version.h&gt;
++#include &lt;cpuid.h&gt;
++#include &lt;clock.h&gt;
++
++int argc;
++char **argv;
++extern heap_t *kheap;
++
++void aalogo();
++void logo();
++void help();
++void echo();
++void poweroff();
++void kmalloc_try();
++void do_fault();
++
++void uname();
++void uname_help();
++void uname_info();
++void printmem();
++void credits();
++void sleep_cmd();
++void cpuid();
++void answer();
++#endif
+
+
+Property changes on: trunk/include/shell/commands.h
+___________________________________________________________________
+Name: svn:executable
+   + *
+
+Modified: trunk/include/shell/shell.h
+===================================================================
+--- trunk/include/shell/shell.h	2009-01-25 17:52:26 UTC (rev 58)
++++ trunk/include/shell/shell.h	2009-01-28 20:07:11 UTC (rev 59)
+@@ -15,19 +15,9 @@
+  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+ 
+-/* 
+-  Shell Coded by
+-    Osiris 
+-*/
++#ifndef _SHELL_H
++#define _SHELL_H
+ 
+-#ifndef __SHELL_H
+-#define __SHELL_H
++void shell(void);
+ 
+-void shell();
+-void logo();
+-void aalogo();
+-void uname_help();
+-void help();
+-void poweroff();
+-void info();
+ #endif
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-01-25 17:52:26 UTC (rev 58)
++++ trunk/include/version.h	2009-01-28 20:07:11 UTC (rev 59)
+@@ -21,7 +21,7 @@
+  */
+ 
+ #define VERSION &quot;0&quot;
+-#define PATCHLEVEL &quot;0&quot;
+-#define EXTRAVERSION &quot;-dreamos&quot;
++#define PATCHLEVEL &quot;1&quot;
++#define EXTRAVERSION &quot;-pepper&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r49&quot;
++#define REV_NUM &quot;-r58&quot;
+
+Added: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-01-25 17:52:26 UTC (rev 58)
++++ trunk/shell/commands.c	2009-01-28 20:07:11 UTC (rev 59)
+@@ -0,0 +1,231 @@
++#include &lt;commands.h&gt;
++
++void aalogo()
++{
++  _kcolor (4);
++  printf(&quot;\t\t ____           _____          _____ _____\n&quot;);
++  printf(&quot;\t\t|    \\ ___ ___ |  _  | _______|     |   __|\n&quot;);
++  printf(&quot;\t\t|  |  |  _| -_|| |_| ||       |  |  |__   |\n&quot;);
++  printf(&quot;\t\t|____/|_| |___||_| |_||_|\134_/|_|_____|_____|\n&quot;);
++  _kcolor (6);
++  printf(&quot;\t\tVersion: \&quot;%s %s.%s%s\&quot;\n&quot;, NAME, VERSION, PATCHLEVEL, EXTRAVERSION);
++  _kcolor(7);
++  logo();
++}
++
++void logo()
++{
++  _kcolor (5);
++  printf(&quot;\n&quot;);
++  printf(&quot;\t\t\t The Dream Operating System \n&quot;
++	 &quot;\t\t           v%s.%s%s      \n\n&quot;
++	 &quot;\t\t\t\t Welcome to DreamOS\n&quot;
++	 &quot;\t\t Where dreams don't become Reality and remain dreams. \n&quot;
++	 &quot;\t\t\tR.I.P - Rest in peace with dreamos ^_^        \n&quot;,VERSION, PATCHLEVEL, EXTRAVERSION);
++	
++  printf(&quot;\n\n\n\n&quot;);
++  _kcolor(7);
++}
++
++void help()
++{
++  printf (&quot;Available commands:\n&quot;);
++  printf(&quot;help      - See the 'help' list to learn the DreamOS commands now available\n&quot;
++         &quot;clear     - Clear the screen\n&quot;
++	 &quot;poweroff  - Turn off the machine\n&quot;
++         &quot;kmalloc   - Test a basic kmalloc function\n&quot;
++         &quot;do_fault  - Test a page_fault\n&quot;
++         &quot;aalogo    - Show an ascii art logo\n&quot;
++         &quot;uname     - Print kernel version, try uname --help for more info\n&quot;
++         &quot;printmem  - Print used locations of memory\n&quot;
++         &quot;credits   - Show DreamOS credits\n&quot;
++	 &quot;sleep     - pause DreamOS for a particular number of seconds\n&quot;
++	 &quot;cpuid     - Show cpu identification informations\n&quot;
++	 &quot;date      - Show date and time\n&quot;
++	 &quot;echo      - Print some lines of text\n&quot;);
++}
++
++void echo()
++{
++  int c;
++
++    for (c=1; c&lt;argc; c++)
++      printf (&quot;%s &quot;, argv[c]);
++    printf (&quot;\n&quot;);
++}
++
++void poweroff()
++{
++  printf (&quot;Poweroff...\n&quot;);
++  
++  asm(&quot;sti&quot;);
++  printf(&quot;E' ora possibile spegnere il computer.\n&quot;);
++  while(1);
++}
++
++void kmalloc_try()
++{
++  int *b;
++  int i=0;
++
++  printf(&quot;Kmalloc try: ...\n&quot;);
++  b = (int *)kmalloc(10 * sizeof(int));
++  printf(&quot;Address obtained: %d\n&quot;, b);
++  
++  while(i&lt;10) {
++    b[i] = i*2;
++    i++;
++  }
++  i=0;
++
++  while(i&lt;10) {
++    printf(&quot;b[%d] = %d\n&quot;,i, b[i]);
++    i++;
++  }
++
++  printf(&quot;Address of b: %d\n&quot;, b);
++  printf(&quot;Navigating used list...\n&quot;);
++  print_heap_list (kheap-&gt;used_list);
++  free (b);
++}
++
++void do_fault()
++{
++  int *prova;
++
++  printf (&quot;Genero un pagefault scrivendo 10 nella locazione 0xa0000000...\n&quot;);
++  prova = (int *)0xa0000000;
++  *prova = 10;
++
++  printf (&quot;Contenuto della locazione 0xa0000000 dopo l'intervento dell'handler: %d\n&quot;, *prova);
++}
++
++void uname()
++{
++  if (!(strcmp(argv[1], &quot;-a&quot;)) || !(strcmp(argv[1], &quot;--all&quot;)))
++    printf(&quot;%s %s.%s%s #1 CEST 2009 %s\n&quot;, NAME, VERSION, PATCHLEVEL, EXTRAVERSION, cpu_vendor);
++  else if (!(strcmp(argv[1], &quot;-r&quot;)) || !(strcmp(argv[1], &quot;--rev&quot;)))
++    printf(&quot;%s.%s%s\n&quot;, VERSION, PATCHLEVEL, EXTRAVERSION);
++  else if (!(strcmp(argv[1], &quot;-h&quot;) ) || !(strcmp(argv[1], &quot;--help&quot;)))
++    uname_help();
++  else if (!(strcmp(argv[1], &quot;-i&quot;)) || !(strcmp(argv[1], &quot;--info&quot;)))
++    uname_info();
++  else
++    printf(&quot;%s. For more info about this tool, please do 'uname --help'\n&quot;,NAME);
++}
++
++void uname_help() 
++{
++  printf(&quot;Uname function allow you to see the kernel and system information.\n&quot;);
++  printf(&quot;Function avaibles:\n&quot;);
++  printf(&quot;1) '-a'   - Kernel version and processor type\n&quot;
++  	 &quot;2) '-r'   - Only the kernel version\n&quot;
++  	 &quot;3) '-i'   - All info of system and kernel\n&quot;);	
++}
++
++void uname_info()
++{
++  printf(&quot;\n:==========: :System info: :==========:\n\n&quot;);
++	
++  // Kernel info
++  printf( &quot;Version: '%s'\n&quot;
++	  &quot;Patchlevel: '%s'\n&quot;
++	  &quot;Extraversion: '%s'\n&quot;
++	  &quot;Name: '%s'\n&quot;
++	  &quot;Revision: '%s'\n&quot;,VERSION,PATCHLEVEL,EXTRAVERSION,NAME,REV_NUM);
++
++  // CPU Info
++  _kputs (LNG_CPU);
++  _kcolor (4);
++  _kgoto (61, _kgetline());
++  _kputs (cpu_vendor);
++  _kcolor(7);
++  printf(&quot;\n&quot;);
++
++  // Memory RAM Info
++  printf(&quot;Memory RAM: &quot;);
++  _kgoto(60, _kgetline());
++  printf(&quot; %d Kb\n&quot;, get_memsize()/1024);
++
++  // Memory free RAM Info
++  printf(LNG_FREERAM);
++  _kgoto(60, _kgetline());
++  printf(&quot; %d Kb\n&quot;, get_numpages());
++  
++  printf(&quot;\n&quot;);
++
++  // Bitmap Info
++  printf(&quot;Number bitmap's elements: &quot;);
++  _kgoto(60, _kgetline());
++  printf(&quot; %d&quot;, get_bmpelements());
++  _kgoto(60, _kgetline());
++
++  // Mem_area Info
++  printf(&quot;\nSize of mem_area: &quot;);
++  _kgoto(60, _kgetline());	
++  printf(&quot; %d\n&quot;, sizeof(mem_area));
++
++  // Page Dir Info
++  printf(&quot;Page Dir Entry n.0 is: &quot;);
++  _kgoto(60, _kgetline());
++  printf(&quot; %d\n&quot;, get_pagedir_entry(0));
++        
++  // Page Table Info
++  printf(&quot;Page Table Entry n.4 in Page dir 0 is: &quot;);
++  _kgoto(60, _kgetline());	
++  printf(&quot; %d\n&quot;, get_pagetable_entry(0,4));
++
++  printf(&quot;\n:==========: :===========: :==========:\n\n&quot;);
++}
++
++void printmem(void)
++{
++  print_heap_list(kheap-&gt;used_list);
++}
++
++void credits(void)
++{
++  _kcolor('\011');
++  _kputs(&quot;DreamOS Credits\n\n&quot;);                
++  _kputs(&quot;Main Developers:\n&quot;);
++  _kcolor('\012');
++   printf(&quot;Shainer - Lisa\n&quot;
++          &quot;Finarfin - Ivan\n\n\n&quot;            
++         );
++
++  _kcolor('\011');
++  _kputs(&quot;Contributors:\n&quot;);
++  _kcolor('\012');
++  _kputs(&quot;Osiris\n&quot;
++         &quot;Celeron\n&quot;
++	 &quot;Hamcha\n&quot;
++         &quot;m0nt0\n&quot;
++         &quot;and many others (3 or 4 :P)\n\n&quot;);
++  _kcolor('\007');
++}
++
++void sleep_cmd(void)
++{
++  int s;
++
++  if (argv[1]) {
++    s = atoi(argv[1]);
++    if (s != -1)
++      sleep (s);
++  } else printf (&quot;Missing operand\n&quot;);
++}
++
++void cpuid(void)
++{
++  struct cpuinfo_generic *sinfo = get_cpuid();
++
++  printf (&quot;----- CPUID Information -----\n&quot;);
++  printf (&quot;Vendor: %s\n&quot;, sinfo-&gt;cpu_vendor);
++  printf (&quot;Type: %s\n&quot;, sinfo-&gt;cpu_type);
++  free (sinfo);
++}
++
++void answer(void)
++{
++  printf(&quot;42\n&quot;);
++}
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-01-25 17:52:26 UTC (rev 58)
++++ trunk/shell/shell.c	2009-01-28 20:07:11 UTC (rev 59)
+@@ -1,54 +1,13 @@
+-/***************************************************************************
+- *            shell.c
+- *
+- *  Sun Apr  1 00:16:03 2007
+- *  Copyright  2007  Osiris
+- *  Email	jeek69 [at] katamail dot com
+- ****************************************************************************/
++#include &lt;commands.h&gt;
+ 
++#define NUM_COM 14
++
+ /*
+- *  This program is free software; you can redistribute it and/or modify
+- *  it under the terms of the GNU General Public License as published by
+- *  the Free Software Foundation; either version 2 of the License, or
+- *  (at your option) any later version.
+- *
+- *  This program is distributed in the hope that it will be useful,
+- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- *  GNU General Public License for more details.
+- *
+- *  You should have received a copy of the GNU General Public License
+- *  along with this program; if not, write to the Free Software
+- *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ * Inserisce gli argomenti di un comando in un array di stringhe
++ * argc = numero degli argomenti
++ * argv[0] = nome del comando
++ * argv[n] = opzioni successive
+  */
+-
+-
+-#include &lt;multiboot.h&gt;
+-#include &lt;kernel.h&gt;
+-#include &lt;stddef.h&gt;
+-#include &lt;video.h&gt;
+-#include &lt;pic8259.h&gt;
+-#include &lt;8253.h&gt;
+-#include &lt;gdt.h&gt;
+-#include &lt;idt.h&gt;
+-#include &lt;cpuid.h&gt;
+-#include &lt;stdio.h&gt;
+-#include &lt;string.h&gt;
+-#include &lt;fismem.h&gt;
+-#include &lt;io.h&gt;
+-#include &lt;keyboard.h&gt;
+-#include &lt;paging.h&gt;
+-#include &lt;use.h&gt;
+-#include &lt;shell.h&gt;
+-#include &lt;kheap.h&gt;
+-#include &lt;version.h&gt;
+-#include &lt;cpuid.h&gt;
+-#include &lt;clock.h&gt;
+-    
+-extern heap_t *kheap;
+-int argc;
+-char **argv;
+-
+ void options(char *com)
+ {
+   int i=0;
+@@ -60,7 +19,7 @@
+     while (*com != ' ') {
+       *(argv[argc] + i) = *com++;
+       i++;
+-    } 
++    }
+     *(argv[argc] + i) = '\0';
+     argc++;
+     i=0;
+@@ -68,333 +27,54 @@
+   argv[argc] = '\0';
+ }
+ 
++/* corpo della shell */
+ void shell()
+ {
+-	char cmd[256];
+-	char string[256];
+-	char *user = kmalloc(24);
+-	memset(user, 0, strlen(user));
++  char cmd[256];
++  char *user = kmalloc(24);
++  char *commands[NUM_COM+1] = { &quot;help&quot;, &quot;clear&quot;, &quot;poweroff&quot;, &quot;kmalloc&quot;, &quot;do_fault&quot;, &quot;aalogo&quot;, &quot;uname&quot;, &quot;printmem&quot;, &quot;credits&quot;, &quot;sleep&quot;, &quot;cpuid&quot;, &quot;date&quot;, &quot;echo&quot;, &quot;answer&quot;, NULL };
++  void (*routines[NUM_COM])(void) = { help, _kclear, poweroff, kmalloc_try, do_fault, aalogo, uname, printmem, credits, sleep_cmd, cpuid, date, echo, answer };
++  int i;
+ 
+-	printf(LNG_USER);
+-	scanf (&quot;%23s&quot;,user);
++  memset(user, 0, strlen(user));
++  printf(LNG_USER);
++  scanf (&quot;%23s&quot;,user);
+ 
+-	while (!strlen(user))
+-	{		
+-			printf(LNG_USER);
+-			scanf (&quot;%s&quot;,user);
+-			printf(LNG_USER_R);
+-	}
++  while (!strlen(user)) {		
++    printf(LNG_USER);
++    scanf (&quot;%23s&quot;,user);
++    printf(LNG_USER_R);
++  }
++  *(user + strlen(user)) = '\0';
+ 	
+-	_kclear();
+-	aalogo();
+-	printf(&quot;\n\n\n\n&quot;);
++  _kclear();
++  aalogo();
++  printf(&quot;\n\n\n\n&quot;);
++  argc=1;
+ 
+-        shell_mess = strlen (user) + 3;
+-        argc=1;
+-
+-	for (;;)
+-	{
+-	    printf(&quot;%s~# &quot;,user);
+-	    scanf(&quot;%254s&quot;,cmd);
++  for (;;)
++  {
++    printf(&quot;%s~# &quot;,user);
++    scanf(&quot;%254s&quot;,cmd);
+         
+-            options (cmd);
++    options (cmd);
++    if (strlen(argv[0]) == 0)
++      goto end;
+ 
+-		if (strcmp(argv[0], &quot;help&quot;) == 0)
+-		{
+-			
+-			printf(&quot;Available commands:\n&quot;);
+-			help();
+-		}
++    for (i=NUM_COM; i&gt;=0; --i) {
++      if(strcmp(argv[0], commands[i]) == 0) {
++        (*routines[i])();
++        break;
++      }
++    }
++    if (i&lt;0)
++      printf(LNG_UNKNOWN_CMD &quot; %s\n&quot;, argv[0]);
+ 
+-		else if (strcmp(argv[0], &quot;echo&quot;) == 0)
+-		{
+-			int c;
+-
+-			for (c=1; c&lt;argc; c++)
+-			  printf (&quot;%s &quot;, argv[c]);
+-			printf (&quot;\n&quot;);
+-		}
+-
+-		else if (strcmp(argv[0], &quot;poweroff&quot;) == 0)
+-		{
+-			printf(&quot;Poweroff..\n&quot;);
+-			poweroff();
+-		}
+-		
+-		else if (strcmp(argv[0], &quot;clear&quot;) == 0)
+-		{
+-			_kclear();
+-		}
+-
+-		else if (strcmp (argv[0], &quot;uname&quot;) == 0)
+-		{
+-			/*if (argv[2] != &quot; &quot;)
+-			{
+-				memmove(argv[2], argv[2]+6, strlen(argv[2]));
+-			}*/
+-
+-			if (!(_kstrncmp(argv[1], &quot;-a&quot;, 2)) || !(_kstrncmp(argv[1], &quot;--all&quot;, 5)))
+-       		{
+-				printf(&quot;%s %s.%s.%s%s #1 beta CEST 2008 %s\n&quot;,NAME,VERSION,PATCHLEVEL,REV_NUM,EXTRAVERSION,cpu_vendor);
+-			}
+-
+-			else if (!(_kstrncmp(argv[1], &quot;-r&quot;, 2)) || !(_kstrncmp(argv[1], &quot;--rev&quot;, 5)))
+-       		{
+-			 	printf(&quot;%s.%s.%s%s\n&quot;,VERSION,PATCHLEVEL,REV_NUM,EXTRAVERSION);
+-			}
+-
+-			else if (!(_kstrncmp(argv[1], &quot;-h&quot;, 2) ) || !(_kstrncmp(argv[1], &quot;--help&quot;, 6)))
+-       		{
+-			 	uname_help();
+-			}
+-				
+-			else if (!(_kstrncmp(argv[1], &quot;-i&quot;, 2)) || !(_kstrncmp(argv[1], &quot;--info&quot;, 6)))
+-			{
+-				info();
+-			}
+-
+-			if (!(_kstrncmp(argv[1], '\0', 1)))
+-			{
+-				printf(&quot;%s\n&quot;
+-				       &quot;For more info about this tool, please do 'uname --help'\n&quot;,NAME);
+-			}
+-
+-
+-		}
+-
+-		else if (strcmp(argv[0], &quot;cpuid&quot;) == 0)
+-		{
+-			struct cpuinfo_generic *sinfo = get_cpuid();
+-
+-			printf (&quot;----- CPUID Information -----\n&quot;);
+-			printf (&quot;Vendor: %s\n&quot;, sinfo-&gt;cpu_vendor);
+-			printf (&quot;Type: %s\n&quot;, sinfo-&gt;cpu_type);
+-			free (sinfo);
+-		}
+-
+-		else if (strcmp(argv[0], &quot;answer&quot;) == 0)
+-      		{
+-          		  printf(&quot;42\n&quot;);			  
+-			  outportb('4',0xe9);
+-        	}
+-		else if (strcmp(argv[0], &quot;sleep&quot;) == 0)
+-		{
+-			int s;
+-
+-			if (argv[1]) {
+-			  s = atoi(argv[1]);
+-			  if (s != -1)
+-			    sleep (s);
+-		 	} else printf (&quot;Missing operand\n&quot;);
+-		}
+-
+-        else if (strcmp(argv[0], &quot;kmalloc&quot;) == 0)
+-        {
+-            printf(&quot;kmalloc try: ...\n&quot;);
+-            int *b;
+-            b = (int*) kmalloc(10*sizeof(int));
+-	    printf(&quot;Address obtained: %d\n&quot;, b);
+-            int i = 0;
+-            while(i&lt;10){
+-                b[i] = i*2;
+-                i++;
+-            }
+-            i=0;
+-            while(i&lt;10) {
+-                printf(&quot;b[%d] = %d\n&quot;,i, b[i]);
+-                i++;
+-            }
+-            printf(&quot;Address of a: %d\n&quot;, b);
+-	  printf(&quot;Navigating used list...\n&quot;);
+-          print_heap_list (kheap-&gt;used_list);
+-            free (b);
+-
+-        }
+-
+-        else if (strcmp(argv[0], &quot;do_fault&quot;) == 0)
+-    	{  
+-             printf (&quot;Genero un pagefault scrivendo 10 nella locazione 0xa0000000...\n&quot;);
+-             int *prova;
+-             prova = (int*)0xa0000000;
+-             *prova = 10;
+-              printf (&quot;Contenuto della locazione 0xa0000000 dopo l'intervento dell'handler: %d\n&quot;, *prova);
+-        }
+-
+-        /*else if (!(_kstrncmp(cmd,&quot;try_heap&quot;,8))){
+-            try_alloc();
+-        }
+-        
+-        else if (!(_kstrncmp(cmd,&quot;free&quot;,4))) {
+-          unsigned int ptr = 425548;
+-          free((unsigned int*)ptr);
+-          ptr = 437836;
+-          free((unsigned int*)ptr);
+-          ptr=446028;
+-          free((unsigned int*)ptr);
+-          printf(&quot;Navigating used list...\n&quot;);
+-          print_heap_list (kheap-&gt;used_list);
+-          printf(&quot;Navigating free list...\n&quot;);
+-          print_heap_list (kheap-&gt;free_list);
+-          printf(&quot;Navigating free nodes...\n&quot;);
+-          print_heap_list (kheap-&gt;free_nodes);
+-        }*/
+-
+-        else if (strcmp(argv[0], &quot;printmem&quot;) == 0) print_heap_list(kheap-&gt;used_list);        
+-	else if (strcmp(argv[0], &quot;date&quot;) == 0) date();                
+-        else if (strcmp(argv[0], &quot;aalogo&quot;) == 0) 
+-		aalogo();
+-        
+-        else if (strcmp(argv[0], &quot;credits&quot;) == 0)
+-            {
+-                _kcolor('\011');
+-                _kputs(&quot;DreamOS Credits\n\n&quot;);                
+-                _kputs(&quot;Main Developers:\n&quot;);
+-                _kcolor('\012');
+-                printf(&quot;Shainer - Lisa\n&quot;
+-                    &quot;Finarfin - Ivan\n\n\n&quot;            
+-                );
+-                _kcolor('\011');
+-                _kputs(&quot;Contributors:\n&quot;);
+-                _kcolor('\012');
+-                _kputs(&quot;Osiris\n&quot;
+-                    &quot;Celeron\n&quot;
+-		    &quot;Hamcha\n&quot;
+-                    &quot;m0nt0\n&quot;
+-                    &quot;and many others (3 or 4 :P)\n\n&quot;);
+-                _kcolor('\007');
+-            }
+-        else if (strlen(cmd)&gt;0)
+-	    {
+-            printf(LNG_UNKNOWN_CMD &quot; %s\n&quot;, argv[0]);            
+-        }
+-
+-	memset(string+5, 0, strlen(string));
+-	memset(cmd, 0, strlen(cmd));
+-
+-        for (--argc; argc&gt;=0; argc--) {
+-	  free (argv[argc]);
+-        }
+-
+-	}
++    end:
++    memset (cmd, 0, strlen(cmd));
++    for (--argc; argc&gt;=0; argc--) {
++      free (argv[argc]);
++    }
++  }
+ }
+ 
+-void aalogo() {
+-_kcolor (4);
+-printf(&quot;\t\t ____           _____          _____ _____\n&quot;);
+-printf(&quot;\t\t|    \\ ___ ___ |  _  | _______|     |   __|\n&quot;);
+-printf(&quot;\t\t|  |  |  _| -_|| |_| ||       |  |  |__   |\n&quot;);
+-printf(&quot;\t\t|____/|_| |___||_| |_||_|\134_/|_|_____|_____|\n&quot;);
+-_kcolor (6);
+-printf(&quot;\t\tRevision: \&quot;%s\&quot;\n&quot;,REV_NUM);
+-_kcolor(7);
+-logo();
+-}
+-
+-void logo()
+-{
+-	_kcolor (5);
+-	printf(&quot;\n&quot;);
+-	printf(&quot;\t\t\t The Dream Operating System \n&quot;
+-	       &quot;\t\t           v0.01%s pre-alpha      \n\n&quot;
+-	  &quot;\t\t\t\t Welcome to DreamOS\n&quot;
+-	  &quot;\t\t Where dreams don't become Reality and remain dreams. \n&quot;
+-	              &quot;\t\t\tR.I.P - Rest in peace with dreamos ^_^        \n&quot;,REV_NUM);
+-	
+-	printf(&quot;\n\n\n\n&quot;);
+-	_kcolor(7);
+-}
+-
+-void uname_help() 
+-{
+-	//_kcolor (5);
+-	printf(&quot;Uname function allow you to see the kernel and system information.\n&quot;);
+-	printf(&quot;Function avaibles:\n&quot;);
+-	//_kcolor (2);
+-	printf(&quot;1) '-a'   - Kernel version and processor type\n&quot;
+-  	       &quot;2) '-r'   - Only the kernel version\n&quot;
+-  	       &quot;3) '-i'   - All info of system and kernel\n&quot;);	
+-	_kcolor (7);
+-}
+-
+-void help()
+-{
+-	printf(&quot;help      - See the 'help' list to learn the DreamOS commands now available\n&quot;
+-           &quot;clear     - Clear the screen\n&quot;
+-	   &quot;poweroff  - Turn off the machine\n&quot;
+-           &quot;kmalloc   - Test a basic kmalloc function\n&quot;
+-           &quot;do_fault  - Test a page_fault\n&quot;
+-           &quot;aalogo    - Show an ascii art logo\n&quot;
+-           &quot;uname     - Print kernel version, try uname --help for more info\n&quot;
+-           &quot;printmem  - Print used locations of memory\n&quot;
+-           &quot;credits   - Show DreamOS credits\n&quot;
+-	   &quot;sleep     - pause DreamOS for a particular number of seconds\n&quot;
+-	   &quot;cpuid     - Show cpu identification informations\n&quot;
+-	   &quot;date      - Show date and time\n&quot;
+-	   &quot;echo      - Print some lines of text\n&quot;);
+-}
+-
+-void poweroff()
+-{
+-	/*asm(	&quot;movl %0, %%eax\n&quot;
+-		&quot;int $0xff\n&quot;
+-		: : &quot;g&quot;(1)); // valore di enum*/
+-    asm(&quot;sti&quot;);
+-    printf(&quot;E' ora possibile spegnere il computer.\n&quot;);
+-    while(1);
+-}
+-
+-void info()
+-{
+-	printf(&quot;\n:==========: :System info: :==========:\n\n&quot;);
+-	
+-	// Kernel info
+-	printf( &quot;Version: '%s'\n&quot;
+-		&quot;Patchlevel: '%s'\n&quot;
+-		&quot;Extraversion: '%s'\n&quot;
+-		&quot;Name: '%s'\n&quot;
+-		&quot;Revision: '%s'\n&quot;,VERSION,PATCHLEVEL,EXTRAVERSION,NAME,REV_NUM);
+-
+-	// CPU Info
+-	_kputs (LNG_CPU);
+-        _kcolor (4);
+-        _kgoto (61, _kgetline());
+-        _kputs (cpu_vendor);
+-        _kcolor(7);
+-	printf(&quot;\n&quot;);
+-
+-	// Memory RAM Info
+-        printf(&quot;Memory RAM: &quot;);
+-	_kgoto(60, _kgetline());
+-	printf(&quot; %d Kb\n&quot;, get_memsize()/1024);
+-
+-	// Memory free RAM Info
+-	printf(LNG_FREERAM);
+-        _kgoto(60, _kgetline());
+-        printf(&quot; %d Kb\n&quot;, get_numpages());
+-  
+-	printf(&quot;\n&quot;);
+-
+-	// Bitmap Info
+-        printf(&quot;Number bitmap's elements: &quot;);
+-	_kgoto(60, _kgetline());
+-	printf(&quot; %d&quot;, get_bmpelements());
+-        _kgoto(60, _kgetline());
+-
+-	// Mem_area Info
+-        printf(&quot;\nSize of mem_area: &quot;);
+-	_kgoto(60, _kgetline());	
+-	printf(&quot; %d\n&quot;, sizeof(mem_area));
+-
+-	// Page Dir Info
+-        printf(&quot;Page Dir Entry n.0 is: &quot;);
+-	_kgoto(60, _kgetline());
+-	printf(&quot; %d\n&quot;, get_pagedir_entry(0));
+-        
+-	// Page Table Info
+-	printf(&quot;Page Table Entry n.4 in Page dir 0 is: &quot;);
+-	_kgoto(60, _kgetline());	
+-	printf(&quot; %d\n&quot;, get_pagetable_entry(0,4));
+-
+-	printf(&quot;\n:==========: :===========: :==========:\n\n&quot;);
+-}
+-
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000059.html">[Dreamos-dev] r58 - branches/0.1/boot
+</A></li>
+	<LI>Next message: <A HREF="000061.html">[Dreamos-dev] r60 - in trunk: . include/libc io libc shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#60">[ date ]</a>
+              <a href="thread.html#60">[ thread ]</a>
+              <a href="subject.html#60">[ subject ]</a>
+              <a href="author.html#60">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

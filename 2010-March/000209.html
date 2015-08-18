@@ -1,0 +1,99 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r206 - in trunk: . drivers
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-March/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r206%20-%20in%20trunk%3A%20.%20drivers&In-Reply-To=%3C201003031538.o23FcKF9030508%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000208.html">
+   <LINK REL="Next"  HREF="000210.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r206 - in trunk: . drivers</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r206%20-%20in%20trunk%3A%20.%20drivers&In-Reply-To=%3C201003031538.o23FcKF9030508%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r206 - in trunk: . drivers">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Wed Mar  3 16:38:20 CET 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000208.html">[Dreamos-dev] r205 - in trunk: . io libc utils
+</A></li>
+        <LI>Next message: <A HREF="000210.html">[Dreamos-dev] r207 - in trunk: . fs include/sys shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#209">[ date ]</a>
+              <a href="thread.html#209">[ thread ]</a>
+              <a href="subject.html#209">[ subject ]</a>
+              <a href="author.html#209">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-03-03 16:38:15 +0100 (Wed, 03 Mar 2010)
+New Revision: 206
+
+Modified:
+   trunk/dreamos.img
+   trunk/drivers/keyboard.c
+Log:
+Sbloccato KEY_ALT in keyboard isr.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/drivers/keyboard.c
+===================================================================
+--- trunk/drivers/keyboard.c	2010-03-03 10:26:49 UTC (rev 205)
++++ trunk/drivers/keyboard.c	2010-03-03 15:38:15 UTC (rev 206)
+@@ -213,12 +213,13 @@
+ 
+ // Presente un bug qui che non permette il fix dei relativi tasti
+ // se si decommenta, il sistema all'avvio va in panic e si riavvia
+-/*    case KEY_ALT:
++    case KEY_ALT:
++		//_kputs(&quot;Alt key pressed, nothing to be done\n&quot;);
+ 	break;
+ 
+-    case KEY_ALTGR:
+-	break;
+-*/	
++    /*case KEY_ALTGR:
++	break;*/
++	
+     case KEY_CTRL:
+ 	break;
+ 	
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000208.html">[Dreamos-dev] r205 - in trunk: . io libc utils
+</A></li>
+	<LI>Next message: <A HREF="000210.html">[Dreamos-dev] r207 - in trunk: . fs include/sys shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#209">[ date ]</a>
+              <a href="thread.html#209">[ thread ]</a>
+              <a href="subject.html#209">[ subject ]</a>
+              <a href="author.html#209">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

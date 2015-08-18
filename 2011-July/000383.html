@@ -1,0 +1,110 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r380 - in trunk: . tasks
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2011-July/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r380%20-%20in%20trunk%3A%20.%20tasks&In-Reply-To=%3C20110711212033.85FAB4813CD%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000382.html">
+   <LINK REL="Next"  HREF="000384.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r380 - in trunk: . tasks</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r380%20-%20in%20trunk%3A%20.%20tasks&In-Reply-To=%3C20110711212033.85FAB4813CD%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r380 - in trunk: . tasks">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Mon Jul 11 23:20:33 CEST 2011</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000382.html">[Dreamos-dev] r379 - in trunk: include/tasks tasks
+</A></li>
+        <LI>Next message: <A HREF="000384.html">[Dreamos-dev] r381 - in trunk: . boot include/processore	include/tasks processore tasks
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#383">[ date ]</a>
+              <a href="thread.html#383">[ thread ]</a>
+              <a href="subject.html#383">[ subject ]</a>
+              <a href="author.html#383">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2011-07-11 23:20:33 +0200 (Mon, 11 Jul 2011)
+New Revision: 380
+
+Modified:
+   trunk/dreamos.img
+   trunk/tasks/task.c
+Log:
+Completed task_init function. 
+
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/tasks/task.c
+===================================================================
+--- trunk/tasks/task.c	2011-07-07 21:29:56 UTC (rev 379)
++++ trunk/tasks/task.c	2011-07-11 21:20:33 UTC (rev 380)
+@@ -23,6 +23,7 @@
+   
+ #include &lt;task.h&gt;
+ #include &lt;stdio.h&gt;
++#include &lt;stddef.h&gt;
+ 
+ pid_t current_pid; 
+ task_t task_list[MAX_TASKS];
+@@ -33,6 +34,11 @@
+ 	while(i&lt;MAX_TASKS){
+ 		task_list[i].pid = 0;
+ 		task_list[i].pdir = 0x0;
++		task_list[i].state = DEAD;
++		task_list[i].start_function = NULL;
++		task_list[i].esp = 0x0;
++		task_list[i].pdir = 0x0;
++		task_list[i].ptable = 0x0;
+ 		i++;
+ 	}
+ 	printf(&quot;Init Tasks&quot;);	
+@@ -45,6 +51,7 @@
+ }
+ 
+ void new_task(char *task_name, void (*start_function)()){
++	unsigned int new_pid = request_pid();
+ 	return;
+ }
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000382.html">[Dreamos-dev] r379 - in trunk: include/tasks tasks
+</A></li>
+	<LI>Next message: <A HREF="000384.html">[Dreamos-dev] r381 - in trunk: . boot include/processore	include/tasks processore tasks
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#383">[ date ]</a>
+              <a href="thread.html#383">[ thread ]</a>
+              <a href="subject.html#383">[ subject ]</a>
+              <a href="author.html#383">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

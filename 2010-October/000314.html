@@ -1,0 +1,187 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r311 - in trunk: . boot include/mem mem misc
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-October/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r311%20-%20in%20trunk%3A%20.%20boot%20include/mem%20mem%20misc&In-Reply-To=%3C20101024184544.8156A48107E%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000313.html">
+   
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r311 - in trunk: . boot include/mem mem misc</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r311%20-%20in%20trunk%3A%20.%20boot%20include/mem%20mem%20misc&In-Reply-To=%3C20101024184544.8156A48107E%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r311 - in trunk: . boot include/mem mem misc">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun Oct 24 20:45:44 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000313.html">[Dreamos-dev] r310 - in trunk: . boot hardware include include/mem	include/misc mem misc
+</A></li>
+        
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#314">[ date ]</a>
+              <a href="thread.html#314">[ thread ]</a>
+              <a href="subject.html#314">[ subject ]</a>
+              <a href="author.html#314">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-10-24 20:45:44 +0200 (Sun, 24 Oct 2010)
+New Revision: 311
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/include/mem/heap.h
+   trunk/mem/heap.c
+   trunk/misc/ordered_array.c
+Log:
+Sostituito memset con un ciclo per inizializzare l'array in new_array.
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/mem/heap.h
+===================================================================
+--- trunk/include/mem/heap.h	2010-10-24 15:23:52 UTC (rev 310)
++++ trunk/include/mem/heap.h	2010-10-24 18:45:44 UTC (rev 311)
+@@ -67,6 +67,6 @@
+ void init_newmem();
+ 
+ unsigned int new_malloc(unsigned int);
+-static short int locate_smallest_hole(unsigned int, unsigned short int, new_heap_t*);
++short int locate_smallest_hole(unsigned int, unsigned short int, new_heap_t*);
+ short int header_t_less_than(void *,void *);
+ #endif
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-10-24 15:23:52 UTC (rev 310)
++++ trunk/mem/heap.c	2010-10-24 18:45:44 UTC (rev 311)
+@@ -52,6 +52,8 @@
+ 		first_hole-&gt;magic = HEAP_MAGIC;		
+ 		first_hole-&gt;is_hole = 1; /*TRUE*/			
+ 		insert_array((void*) first_hole, &amp;t_heap-&gt;index);
++		//get_array(0, &amp;t_heap-&gt;index);
++		//locate_smallest_hole(size, PAGE_ALIGNED,&amp;t_heap-&gt;index);
+ 		return t_heap;
+ 	}
+ 	else printf(&quot;ERROR\n&quot;);
+@@ -79,18 +81,19 @@
+ 	return 0;
+ }
+ 
+-void *new_alloc(unsigned int size, unsigned short int p_aligned, new_heap_t *t_heap){
++void *new_alloc(unsigned int size, unsigned short int p_aligned, new_heap_t* t_heap){
+ 	unsigned int real_size = size +sizeof(header_t) + sizeof(footer_t);	
+ 	printf(&quot;Size of:\n\theader_t: %d\n\tfooter_t: %d\n\treal_size: %d\n\tsize: %d\n&quot;, sizeof(header_t), sizeof(footer_t), real_size, size);	
+ 	//unsigned int min_index = locate_smallest_hole(real_size, PAGE_ALIGNED, t_heap);
++	//get_array(0, &amp;t_heap-&gt;index);
+ }
+ 
+-static short int locate_smallest_hole(unsigned int size, unsigned short int p_align, new_heap_t* in_heap){
++short int locate_smallest_hole(unsigned int size, unsigned short int p_align, new_heap_t* in_heap){
+ 	unsigned int index = 0; 
+ 	printf(&quot;Size index: %d\n&quot;, in_heap-&gt;index.size);
+ 	while(index &lt; in_heap-&gt;index.size){
+ 		header_t *header = (header_t *)get_array(index, &amp;in_heap-&gt;index);
+-		printf(&quot;Header: %u\n&quot;, header-&gt;magic);
++		printf(&quot;Header: 0x%x\tSize: %d\n&quot;, header-&gt;magic, header-&gt;size);
+ 		index++;
+ 	}
+ }
+
+Modified: trunk/misc/ordered_array.c
+===================================================================
+--- trunk/misc/ordered_array.c	2010-10-24 15:23:52 UTC (rev 310)
++++ trunk/misc/ordered_array.c	2010-10-24 18:45:44 UTC (rev 311)
+@@ -45,13 +45,17 @@
+   */
+ ordered_array_t new_array(void* start, unsigned int size, lessthan_predicate_t predicate){
+     ordered_array_t tmp_array;
++    int i=0;
+     tmp_array.array = (type_t*)start;    
+     tmp_array.size_max = size;
+     tmp_array.size = 0;	    
+     tmp_array.less_than = predicate;    
+     printf(&quot;SizeMax: %d\n&quot;, tmp_array.size_max);
+-
+-    memset(tmp_array.array, 0, tmp_array.size_max);
++	while(i &lt; tmp_array.size_max){
++		tmp_array.array = 0x0;
++		i++;
++	}
++    //memset(tmp_array.array, 0, tmp_array.size_max);
+     return tmp_array;
+ }
+ 
+@@ -73,17 +77,15 @@
+         i++;
+ 	}
+     if(i==t_array-&gt;size){
+-		//header_t* hel = (header_t*) elem;
+-		//printf(&quot;i = t_arraysize\n&quot;);				
+-		//printf(&quot;elem-&gt;magic: %d:  %u\n&quot;, i, hel-&gt;magic);
++		/*header_t* hel;
++		printf(&quot;i = t_arraysize\n&quot;);*/
+ 		t_array-&gt;array[t_array-&gt;size] = elem;
+ 		t_array-&gt;size++;		
+-		//printf(&quot;elem-&gt;magic: %d:  %u\n&quot;, i, hel-&gt;magic);
+-		//printf(&quot;elem: %u\n&quot;, elem);		
+-		//printf(&quot;t_array: %u\n&quot;, t_array-&gt;array[0]);
++		//hel = (header_t*) t_array-&gt;array[0];
++		//printf(&quot;array: %u\n&quot;,t_array-&gt;array[0]);				
+ 	}
+     else {
+-		printf(&quot;insert in the middle\n&quot;);
++		//printf(&quot;insert in the middle\n&quot;);
+ 		type_t tmp = t_array-&gt;array[i];
+ 		t_array-&gt;array[i] = elem;
+ 		while(i &lt; t_array-&gt;size){
+@@ -106,6 +108,7 @@
+   */
+ type_t get_array(int index, ordered_array_t* t_array){
+ 	if(index &lt; t_array-&gt;size){
++		printf(&quot;Value: %u&quot;, (type_t*)t_array-&gt;array[0]);
+ 		return t_array-&gt;array[index];
+ 	}
+ 	else {		
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000313.html">[Dreamos-dev] r310 - in trunk: . boot hardware include include/mem	include/misc mem misc
+</A></li>
+	
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#314">[ date ]</a>
+              <a href="thread.html#314">[ thread ]</a>
+              <a href="subject.html#314">[ subject ]</a>
+              <a href="author.html#314">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

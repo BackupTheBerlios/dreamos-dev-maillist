@@ -1,0 +1,212 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r165 - in trunk: . files fs include include/fs
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-January/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r165%20-%20in%20trunk%3A%20.%20files%20fs%20include%20include/fs&In-Reply-To=%3C201001072011.o07KBDGp003853%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000166.html">
+   <LINK REL="Next"  HREF="000168.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r165 - in trunk: . files fs include include/fs</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r165%20-%20in%20trunk%3A%20.%20files%20fs%20include%20include/fs&In-Reply-To=%3C201001072011.o07KBDGp003853%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r165 - in trunk: . files fs include include/fs">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Thu Jan  7 21:11:13 CET 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000166.html">[Dreamos-dev] r164 - trunk/utils
+</A></li>
+        <LI>Next message: <A HREF="000168.html">[Dreamos-dev] r166 - in trunk: . fs include libc sys utils
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#167">[ date ]</a>
+              <a href="thread.html#167">[ thread ]</a>
+              <a href="subject.html#167">[ subject ]</a>
+              <a href="author.html#167">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-01-07 21:11:12 +0100 (Thu, 07 Jan 2010)
+New Revision: 165
+
+Modified:
+   trunk/dreamos.img
+   trunk/files/test4.txt
+   trunk/fs/fcntl.c
+   trunk/fs/initrd.c
+   trunk/include/fs/initrd.h
+   trunk/include/version.h
+Log:
+Aggiunta struttura dati per la gestione dei File Descriptor di initrd.
+Modificata la initfs_open, ora torna il suo file_descriptor.
+Aggiornato numero versione.
+Aggiornata initfs_init.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/files/test4.txt
+===================================================================
+--- trunk/files/test4.txt	2010-01-06 23:21:54 UTC (rev 164)
++++ trunk/files/test4.txt	2010-01-07 20:11:12 UTC (rev 165)
+@@ -1 +1 @@
+-tanto questa &#232; solo una prova :\
++tanto questa e' solo una prova :\
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2010-01-06 23:21:54 UTC (rev 164)
++++ trunk/fs/fcntl.c	2010-01-07 20:11:12 UTC (rev 165)
+@@ -46,7 +46,7 @@
+ 		mpid = get_mountpoint_id(path);
+ 		fd_list[cur_fd].mountpoint_id = mpid;				
+ 		path = get_rel_path(mpid, path);
+-		printf(&quot;Mpoint id: %d %s\n&quot;, mpid, path);
++		printf(&quot;Mpoint id: %d %s\n&quot;, fd_list[cur_fd].mountpoint_id, path);		
+ 		if(mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open != NULL)
+ 			mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open(path, oflags);
+ 		else 
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-01-06 23:21:54 UTC (rev 164)
++++ trunk/fs/initrd.c	2010-01-07 20:11:12 UTC (rev 165)
+@@ -27,14 +27,22 @@
+ extern char *module_start;
+ initrd_t *fs_specs;
+ initrd_file_t* fs_headers;
++initrd_fd ird_descriptors[MAX_INITRD_DESCRIPTORS];
++unsigned int cur_irdfd;
+ 
+ void dummy(){
+ 	printf(&quot;Qui solo per una prova\n&quot;);
+ }	
+ 
+ int initfs_init(){	
++	int i=0;
+ 	fs_specs = (initrd_t *) module_start;
+ 	fs_headers = (initrd_file_t *)(module_start + sizeof(initrd_t));
++	while (i&lt;MAX_INITRD_DESCRIPTORS) {
++		ird_descriptors[i].file_descriptor = -1;
++		i++;
++	}
++	cur_irdfd = 0;
+ 	return fs_specs-&gt;nfiles;
+ 	//printf(&quot;Number of files present: %d\n&quot;, fs_specs-&gt;nfiles);		
+ }
+@@ -46,15 +54,18 @@
+ 
+ int initfs_open(const char *path, int flags, ...){
+ 	initrd_file_t *module_var;
+-	int ifs_fd;
+-	ifs_fd = 0;
++	int ifs_fd;	
+ 	int j = 0;
+ 	module_var = fs_headers;	
+ 	while (j &lt; fs_specs-&gt;nfiles) {
+-		if(!strcmp(path, module_var[j].fileName)) printf(&quot;%s Found. Size: %d\n&quot;, path, module_var[j].length);
++		if(!strcmp(path, module_var[j].fileName)){
++				ird_descriptors[cur_irdfd].file_descriptor	= j;
++				printf(&quot;%s Found. Size: %d FS fd val: %d - ID File val: %d\n&quot;, path, module_var[j].length, cur_irdfd, ird_descriptors[cur_irdfd].file_descriptor);
++				return cur_irdfd++;
++		}
+ 		j++;
+ 	}
+-	return ifs_fd;
++	return -1;	
+ }
+ 
+ ssize_t initfs_read(int fildes, void *buf, size_t nbyte){
+
+Modified: trunk/include/fs/initrd.h
+===================================================================
+--- trunk/include/fs/initrd.h	2010-01-06 23:21:54 UTC (rev 164)
++++ trunk/include/fs/initrd.h	2010-01-07 20:11:12 UTC (rev 165)
+@@ -24,21 +24,33 @@
+ 
+ #define FILENAME_LENGTH 64
+ #define MAX_FILES 32
++#define MAX_INITRD_DESCRIPTORS 10
+ 
++/*! Contiene il numero dei files contenuti nel filesystem initrd.
++ */
+ struct initrd_t{
+-	int nfiles;
++	int nfiles; /*!&lt; Numero Files letti*/
+ };
+ 
++/*! Contiene le informazioni relative ai singoli files contenuti in initrd
++ */
+ struct initrd_file_t{
+-	int magic;
+-	char fileName[FILENAME_LENGTH];
+-	int  uid;
+-	unsigned int offset;
+-	unsigned int length;
++	int magic; /*!&lt; Numero usato come delimitatore da settare a 0xBF*/
++	char fileName[FILENAME_LENGTH]; /*!&lt; Nome del file*/
++	int  uid; /*!&lt; User id del proprietario del file */
++	unsigned int offset; /*!&lt; indirizzo relativo di partenza */
++	unsigned int length; /*!&lt; Dimensione del File */
+ };
+ 
++/*! File Descriptor relativo ai files aperti.
++ */
++struct initrd_fd{
++	int file_descriptor;
++};
++
+ typedef struct initrd_t initrd_t;
+ typedef struct initrd_file_t initrd_file_t;
++typedef struct initrd_fd initrd_fd;
+ 
+ extern initrd_t* fs_specs;
+ extern initrd_file_t* fs_headers;
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2010-01-06 23:21:54 UTC (rev 164)
++++ trunk/include/version.h	2010-01-07 20:11:12 UTC (rev 165)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL &quot;2.0&quot;
+ #define EXTRAVERSION &quot;-trunk&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r160&quot;
++#define REV_NUM &quot;-r164&quot;
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000166.html">[Dreamos-dev] r164 - trunk/utils
+</A></li>
+	<LI>Next message: <A HREF="000168.html">[Dreamos-dev] r166 - in trunk: . fs include libc sys utils
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#167">[ date ]</a>
+              <a href="thread.html#167">[ thread ]</a>
+              <a href="subject.html#167">[ subject ]</a>
+              <a href="author.html#167">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

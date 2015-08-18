@@ -1,0 +1,375 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r276 - in trunk: . doc include utils	utils/eltorito_iso utils/eltorito_iso/boot	utils/eltorito_iso/boot/grub
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-July/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r276%20-%20in%20trunk%3A%20.%20doc%20include%20utils%0A%09utils/eltorito_iso%20utils/eltorito_iso/boot%0A%09utils/eltorito_iso/boot/grub&In-Reply-To=%3C20100715103403.B9FF1480BE7%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000278.html">
+   <LINK REL="Next"  HREF="000280.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r276 - in trunk: . doc include utils	utils/eltorito_iso utils/eltorito_iso/boot	utils/eltorito_iso/boot/grub</H1>
+    <B>osiris_h4ck at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r276%20-%20in%20trunk%3A%20.%20doc%20include%20utils%0A%09utils/eltorito_iso%20utils/eltorito_iso/boot%0A%09utils/eltorito_iso/boot/grub&In-Reply-To=%3C20100715103403.B9FF1480BE7%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r276 - in trunk: . doc include utils	utils/eltorito_iso utils/eltorito_iso/boot	utils/eltorito_iso/boot/grub">osiris_h4ck at mail.berlios.de
+       </A><BR>
+    <I>Thu Jul 15 12:34:03 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000278.html">[Dreamos-dev] r275 - in trunk: . include include/lng include/shell	shell
+</A></li>
+        <LI>Next message: <A HREF="000280.html">[Dreamos-dev] r277 - trunk
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#279">[ date ]</a>
+              <a href="thread.html#279">[ thread ]</a>
+              <a href="subject.html#279">[ subject ]</a>
+              <a href="author.html#279">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: osiris_h4ck
+Date: 2010-07-15 12:34:03 +0200 (Thu, 15 Jul 2010)
+New Revision: 276
+
+Added:
+   trunk/doc/help.txt
+Modified:
+   trunk/include/version.h
+   trunk/initfs
+   trunk/start.sh
+   trunk/utils/eltorito_gen.sh
+   trunk/utils/eltorito_iso/boot/dreamos.img
+   trunk/utils/eltorito_iso/boot/grub/stage2_eltorito
+   trunk/utils/eltorito_iso/initfs
+Log:
+- script eltorito in fase di miglioramento: ora e' implementato nello start.sh
+- ripulito il codice 'help' dello start.sh, ora e' un file ad occuparsi di quest'ultimo
+
+altri aggiornamenti in arrivo (a breve).
+
+
+
+
+Added: trunk/doc/help.txt
+===================================================================
+--- trunk/doc/help.txt	                        (rev 0)
++++ trunk/doc/help.txt	2010-07-15 10:34:03 UTC (rev 276)
+@@ -0,0 +1,76 @@
++	             
++	        The DreamOS Operating System
++		        Init Script
++		           ----
++		            --
++		                    
++
++
++Usage: ./start.sh options command language
++---------------------------------------------------------------
++Starting DreamOS Emulation:
++
++Usage: ./start.sh qemu  -&gt; to use Qemu Emulator
++       ./start.sh bochs -&gt; to use Bochs Emulator
++be sure you have one of those, else you can try it from
++floppy drive, or boot it form your grub.. DreamOS can! :) 
++
++However you have the possibility to choose if you want to 
++compile DreamOS or only lunch the 'Emulator'.
++If you want to compile, use the USE Flags '--compile' then
++the command, like:&quot;
++
++Usage: ./start.sh --compile emulator
++or any command you like to compile before.
++---------------------------------------------------------------
++
++Also you can chose the language for the boot message, it
++can be very important to understanding the OS and do the
++debug.
++
++So please add the argv[3] into your option to this launch
++script, something like that:
++
++Usage: ./start.sh --compile emulator language
++where, now, language supported is 'it' or 'en'
++---------------------------------------------------------------
++
++If you want, you can install DreamOS on your floppy
++So, it's very simple, just type install in argv[1] then
++your test on emulators:&quot;
++
++Usage: ./start.sh floppy_install
++---------------------------------------------------------------
++
++If you want to install DreamOS into your grub, the step
++is very simple, just grub into your argv[1] :-)
++Please, be sure you have python.&quot;
++
++Usage: ./start.sh grub
++---------------------------------------------------------------
++
++If you want, you can create a DreamOS ISO Image Disk
++to burn it on a cdrom and boot it from a real PC.
++Make sure you have installed mkisofs from cdrkit package.
++The command is like this:
++
++Usage: ./start.sh create_iso
++---------------------------------------------------------------
++
++If you want, you can create a DreamOS FileSystem
++You know, this is *VERY* important :)
++To add the file and then re-create the FS, put you files
++into files/ and do:
++
++Usage: ./start.sh create_fs
++
++Also you should know that this process is maked during the
++compilation of DreamOS.
++---------------------------------------------------------------
++
++If you want, you can create a DreamOS Floppy ISO Image
++to burn it on a cdrom and boot it from a real PC.
++Make sure you have installed genisoimage from cdrkit package.
++
++Usage: ./start.sh eltorito_iso
++---------------------------------------------------------------
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2010-07-12 21:26:35 UTC (rev 275)
++++ trunk/include/version.h	2010-07-15 10:34:03 UTC (rev 276)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL &quot;2.1&quot;
+ #define EXTRAVERSION &quot;-trunk&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r251&quot;
++#define REV_NUM &quot;-r275&quot;
+
+Modified: trunk/initfs
+===================================================================
+(Binary files differ)
+
+Modified: trunk/start.sh
+===================================================================
+--- trunk/start.sh	2010-07-12 21:26:35 UTC (rev 275)
++++ trunk/start.sh	2010-07-15 10:34:03 UTC (rev 276)
+@@ -15,69 +15,7 @@
+ if [ &quot;$1&quot; != &quot;--compile&quot; ]; then
+ 
+ if [ &quot;$1&quot; == &quot;help&quot; ]; then
+-echo &quot;&quot;
+-echo &quot;	    The DreamOS Operating System&quot;
+-echo &quot;		    Init Script&quot;
+-echo &quot;&quot;
+-echo &quot;Usage: '$0 'options' 'command' 'language'&quot;
+-echo &quot;------------------------------------------------------&quot;
+-echo &quot;Starting DreamOS Emulation:&quot;
+-echo &quot;&quot;
+-echo &quot;Usage: '$0 qemu'  -&gt; to use Qemu Emulator&quot;
+-echo &quot;       '$0 bochs' -&gt; to use Bochs Emulator&quot;
+-echo &quot;be sure you have one of those, else you can try it from&quot;
+-echo &quot;floppy drive, or boot it form your grub.. DreamOS can! :) &quot;
+-echo &quot;&quot;
+-echo &quot;However you have the possibility to choose if you want to &quot;
+-echo &quot;compile DreamOS or only lunch the 'Emulator'.&quot;
+-echo &quot;If you want to compile, use the USE Flags '--compile' then&quot;
+-echo &quot;the command, like:&quot;
+-echo &quot;&quot;
+-echo &quot;Usage: '$0' '--compile' 'emulator'&quot;
+-echo &quot;or any command you like to compile before.&quot;
+-echo &quot;------------------------------------------------------&quot;
+-echo &quot;Also you can chose the language for the boot message, it&quot;
+-echo &quot;can be very important to understanding the OS and do the&quot;
+-echo &quot;			 debug.&quot;
+-echo &quot;&quot;
+-echo &quot;So please add the argv[3] into your option to this launch &quot;
+-echo &quot;script, something like that:&quot;
+-echo &quot;&quot;
+-echo &quot;Usage: '$0' '--compile' 'emulator' 'language'&quot;
+-echo &quot;where, now, language supported is 'it' or 'en'&quot;
+-echo &quot;------------------------------------------------------&quot;
+-echo &quot;&quot;
+-echo &quot;If you want, you can install DreamOS on your floppy&quot;
+-echo &quot;So, it's very simple, just type install in argv[1] then&quot;
+-echo &quot;your test on emulators:&quot;
+-echo &quot;&quot;
+-echo &quot;Usage: '$0' 'floppy_install'&quot;
+-echo &quot;------------------------------------------------------&quot;
+-echo &quot;&quot;
+-echo &quot;If you want to install DreamOS into your grub, the step&quot;
+-echo &quot;is very simple, just grub into your argv[1] :-)&quot;
+-echo &quot;Please, be sure you have python.&quot;
+-echo &quot;&quot;
+-echo &quot;Usage: '$0' 'grub'&quot;
+-echo &quot;------------------------------------------------------&quot;
+-echo &quot;&quot;
+-echo &quot;If you want, you can create a DreamOS ISO Image Disk&quot;
+-echo &quot;to burn it on a cdrom and boot it from a real PC.&quot;
+-echo &quot;Make sure you have installed mkisofs from cdrkit package.&quot;
+-echo &quot;The command is like this:&quot;
+-echo &quot;&quot;
+-echo &quot;Usage: '$0' 'create_iso'&quot;
+-echo &quot;------------------------------------------------------&quot;
+-echo &quot;&quot;
+-echo &quot;If you want, you can create a DreamOS FileSystem&quot;
+-echo &quot;You know, this is *VERY* important :)&quot;
+-echo &quot;To add the file and then re-create the FS, put you files&quot;
+-echo &quot;into files/ and do:&quot;
+-echo &quot;&quot;
+-echo &quot;Usage: '$0' 'create_fs'&quot;
+-echo &quot;Also you should know that this process is do during the&quot;
+-echo &quot;compilation of DreamOS.&quot;
+-echo &quot;------------------------------------------------------&quot;
++	less doc/help.txt
+ exit 1
+ 
+ elif [ &quot;$1&quot; == &quot;qemu&quot; ] || [ &quot;$1&quot; == &quot;bochs&quot; ]; then
+@@ -124,6 +62,17 @@
+   echo &quot;---------------------------------------------&quot;
+   exit
+ 
++   
++elif [ &quot;$1&quot; == &quot;eltorito_iso&quot; ]; then
++   
++  echo &quot;--------------------------------------------- &quot;
++  echo &quot;Launching ISO Creating script ...&quot;
++  echo &quot;&quot;
++  sh utils/eltorito_gen.sh
++  echo &quot;done.&quot;
++  echo &quot;--------------------------------------------- &quot;
++exit
++
+ elif [ &quot;$1&quot; == &quot;create_fs&quot; ]; then
+ 
+   echo &quot;--------------------------------------------- &quot;
+@@ -139,16 +88,13 @@
+   exit
+ 
+ elif [ &quot;$1&quot; == &quot;&quot; ]; then
+-  echo &quot;Error: No command inserted!&quot;
+-  echo &quot;-----------------------&gt;&quot;
+-  echo &quot;Usage: '$0 help'&quot;
++  echo &quot;no command passed; please, read the help!&quot;
++  echo &quot;Usage: $0 help&quot;
+   exit
+ 
+ else
+-  echo &quot;'$1' is not a command known to me.&quot;
+-  echo &quot;Please, read the help!&quot;
+-  echo &quot;-----------------------&gt;&quot;
+-  echo &quot;Usage: '$0 help'&quot;
++  echo &quot;'$1' is not a command that I known to me, please, read the help!&quot;
++  echo &quot;Usage: $0 help&quot;
+   exit
+ 
+ fi
+@@ -245,9 +191,8 @@
+ 
+ 
+ elif [ &quot;$2&quot; == &quot;&quot; ]; then
+-  echo &quot;Error: No commands inserted!&quot;
+-  echo &quot;-----------------------&gt;&quot;
+-  echo &quot;Usage: '$0 help'&quot;
++  echo &quot;the argv[2] is empty, and it will be not.&quot;
++  echo &quot;Usage: $0 help&quot;
+   exit
+ 
+ 
+@@ -263,11 +208,19 @@
+   echo &quot;--------------------------------------------- &quot;
+   exit
+ 
++elif [ &quot;$1&quot; == &quot;eltorito_iso&quot; ]; then
++      
++  echo &quot;--------------------------------------------- &quot;
++  echo &quot;Launching ISO Creating script ...&quot;
++  echo &quot;&quot;
++  sh utils/eltorito_gen.sh
++  echo &quot;done.&quot;
++  echo &quot;--------------------------------------------- &quot;
++  exit
++
+ else
+-  echo &quot;'$2' is not a command known to me.&quot;
+-  echo &quot;Please, read the help!&quot;
+-  echo &quot;-----------------------&gt;&quot;
+-  echo &quot;Usage: '$0 help'&quot;
++  echo &quot;'$2' is not a command that I known to me, please, read the help!&quot;
++  echo &quot;Usage: $0 help&quot;
+   exit
+ 
+ fi  
+
+Modified: trunk/utils/eltorito_gen.sh
+===================================================================
+--- trunk/utils/eltorito_gen.sh	2010-07-12 21:26:35 UTC (rev 275)
++++ trunk/utils/eltorito_gen.sh	2010-07-15 10:34:03 UTC (rev 276)
+@@ -1,19 +1,19 @@
+ #!/bin/bash
+-#Script for build an eltorito iso image of dreamos
++# Script for build an eltorito iso image of dreamos
+ 
+ echo &quot;Welcome to DreamOS iso generator ver 0.1 - Development&quot;
+-if [ -f ../dreamos.img ] 
++if [ -f dreamos.img ] 
+ 	then 
+ 		echo &quot;File dreamos.img found&quot;
+-		cp ../dreamos.img ./eltorito_iso/boot/
+-		if [ -f ../initfs ]
++		cp dreamos.img ./utils/eltorito_iso/boot/
++		if [ -f initfs ]
+ 		then
+ 			echo &quot;File initfs found: replacing it&quot;
+-			cp ../initfs ./eltorito_iso
++			cp initfs ./utils/eltorito_iso
+ 		else
+ 			echo &quot;file initfs not found&quot;
+ 		fi
+-		 genisoimage -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o dreamos.iso eltorito_iso
++		 genisoimage -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o dreamos.iso utils/eltorito_iso
+ 	else
+ 		echo &quot;No dreamOS file found&quot;
+ fi
+
+Modified: trunk/utils/eltorito_iso/boot/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/utils/eltorito_iso/boot/grub/stage2_eltorito
+===================================================================
+(Binary files differ)
+
+Modified: trunk/utils/eltorito_iso/initfs
+===================================================================
+(Binary files differ)
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000278.html">[Dreamos-dev] r275 - in trunk: . include include/lng include/shell	shell
+</A></li>
+	<LI>Next message: <A HREF="000280.html">[Dreamos-dev] r277 - trunk
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#279">[ date ]</a>
+              <a href="thread.html#279">[ thread ]</a>
+              <a href="subject.html#279">[ subject ]</a>
+              <a href="author.html#279">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

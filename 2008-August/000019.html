@@ -1,0 +1,280 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r19 - in trunk: . shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2008-August/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r19%20-%20in%20trunk%3A%20.%20shell&In-Reply-To=%3C200808261743.m7QHhnPQ006249%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000018.html">
+   <LINK REL="Next"  HREF="000020.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r19 - in trunk: . shell</H1>
+    <B>osiris_h4ck at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r19%20-%20in%20trunk%3A%20.%20shell&In-Reply-To=%3C200808261743.m7QHhnPQ006249%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r19 - in trunk: . shell">osiris_h4ck at mail.berlios.de
+       </A><BR>
+    <I>Tue Aug 26 19:43:49 CEST 2008</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000018.html">[Dreamos-dev] r18 - in trunk: . include/mem mem
+</A></li>
+        <LI>Next message: <A HREF="000020.html">[Dreamos-dev] r20 - trunk/include
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#19">[ date ]</a>
+              <a href="thread.html#19">[ thread ]</a>
+              <a href="subject.html#19">[ subject ]</a>
+              <a href="author.html#19">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: osiris_h4ck
+Date: 2008-08-26 19:43:49 +0200 (Tue, 26 Aug 2008)
+New Revision: 19
+
+Modified:
+   trunk/Makefile
+   trunk/kernel.c
+   trunk/shell/shell.c
+   trunk/start.sh
+Log:
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2008-08-20 14:07:02 UTC (rev 18)
++++ trunk/Makefile	2008-08-26 17:43:49 UTC (rev 19)
+@@ -1,4 +1,5 @@
+ CFLAGS = -nostdlib -fomit-frame-pointer -fno-builtin -fno-stack-protector -Wall -march=i686 -m32 -I./include -I./include/io -I./include/drivers -I./include/libc -I./include/processore -I./include/hardware -I./include/mem -I./include/system -I./include/shell -I./include/misc
++
+ OBJ = kernel.o io/video.o drivers/keyboard.o libc/ctype.o libc/string.o io/io.o libc/stdio.o hardware/cpuid.o hardware/keyboard.o processore/gdt.o processore/idt.o processore/handlers.o hardware/pic8259.o mem/fismem.o mem/paging.o mem/kheap.o mem/buddy.o misc/ordered_array.o system/syscall.o hardware/8253.o shell/shell.o
+ 
+ dreamos.img: bl.img kernel.bin
+@@ -38,7 +39,14 @@
+ 	mount -o loop boot/grub.img boot/os
+ 	cp dreamos.img boot/os/boot/grub/
+ 	umount boot/os
++# End :)
+ 
++vers: 
++	 #sed -i -e &quot;14d&quot; include/version.h
++	 #echo &quot;#define REV_NUM \&quot;-r`cat .svn/entries | head -n 4 | tail -n 1`&quot;\&quot; &gt;&gt; include/version.h
++	 #echo &quot;-r`cat .svn/entries | head -n 4 | tail -n 1`&quot; &gt; vers.txt
++	 sed -i -e &quot;/^#define REV_NUM/s/\&quot;.*\&quot;/\&quot;&quot;-r`cat .svn/entries | head -n 4 | tail -n 1`&quot;\&quot;/&quot; include/version.h
++
+ .PHONY: clean install qemu
+ 
+ clean:
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2008-08-20 14:07:02 UTC (rev 18)
++++ trunk/kernel.c	2008-08-26 17:43:49 UTC (rev 19)
+@@ -40,6 +40,7 @@
+ #include &lt;use.h&gt;
+ #include &lt;shell.h&gt;
+ 
++
+ unsigned int *current_page_table;
+ extern unsigned int end;
+ // multiboot_info_t *boot_informations;
+@@ -79,7 +80,8 @@
+     _kputs(LNG_PIC8259);
+     init_IRQ();
+     asm(&quot;sti&quot;);
+-    _kprintOK();   
++    _kprintOK();
++    init_paging();   
+     printf(&quot;End: %d\n&quot;, end);    
+     printf(LNG_PIT8253);
+     //configure_PIT ();
+@@ -88,14 +90,34 @@
+     /*asm (&quot;movl $0, %eax\n&quot;
+      &quot;movl $37, %ebx\n&quot;
+      &quot;int $80&quot;);    */
++
+     printf(&quot;Memory (upper) amount-&gt; %d kb \n&quot;, boot_info-&gt;mem_upper);
+     printf(&quot;Memory (lower) amount-&gt; %d kb end \n&quot;, boot_info-&gt;mem_lower);    
+     get_cpuid();    
+     printf(&quot;\n&quot;);    
+-    printf(&quot;----\n&quot;);
+-    printf(&quot;Loading the shell..\n&quot;);
+-    printf(&quot;[+] Loading complete!!\n\n&quot;);    
+-    printf(&quot;End: %d Address: 0x%x\n&quot;, end, &amp;end);
+ 
+-    shell();
++    printf(&quot;\n\n[+] It's TODO ok ------------------------------------------&gt;&quot;);
++    _kprintOK();
++    printf(&quot;Now you can try the OS with the Shell\n\n&quot;);
++    printf(&quot; [?] Would you like to load the shell ? [Y/n] &quot;);
++    char choise[16];
++    scanf(&quot;%s&quot;,choise);
++	if (!(_kstrncmp(choise,&quot;Y&quot;,1) ) || !(_kstrncmp(choise,&quot;y&quot;,1)))
++   	{
++		printf(&quot;\n----\n&quot;);
++    		printf(&quot;Loading the shell..\n&quot;);
++		printf(&quot;[+] End: %d \n&quot;
++		       &quot;[+] Address: 0x%x\n&quot;, end, &amp;end);
++		printf(&quot;[+] Loading complete!!&quot;);   
++   	        _kprintOK();
++		printf(&quot;\n\n&quot;);
++		shell();
++	 }
++		else {
++			printf(&quot;\n\n[-] Mmh.. fuck.\n\n&quot;);
++			poweroff();
++			
++	        }
++
+ }
++
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2008-08-20 14:07:02 UTC (rev 18)
++++ trunk/shell/shell.c	2008-08-26 17:43:49 UTC (rev 19)
+@@ -37,27 +37,29 @@
+ #include &lt;shell.h&gt;
+ #include &lt;kheap.h&gt;
+ #include &lt;buddy.h&gt;
++#include &lt;version.h&gt;
+ 
++
++
+ extern buddy_t* kbuddy;
+ void logo()
+ {
+-	printf(&quot;\t-------------------------- \n&quot;
+-	       &quot;\tThe Dream Operating System \n&quot;
+-	       &quot;\t      v0.01 pre-alpha      \n&quot;
+-	       &quot;\t-------------------------- \n&quot;);
+-	printf(&quot;\n\n\n&quot;);
++	printf(&quot;\n\n\t\t-------------------------- \n&quot;
++	       &quot;\t\tThe Dream Operating System \n&quot;
++	       &quot;\t\t      v0.01 pre-alpha      \n&quot;
++	       &quot;\t\t-------------------------- \n&quot;);
++	printf(&quot;\n\n\n\n\n\n&quot;);
+ }
+ 
+ void help()
+ {
+-	printf(&quot;help     - See the 'help' list to learn the DreamOS command now avaible\n&quot;
+-	       &quot;poweroff - Turn off the machine\n&quot;
+-	       &quot;info     - See the system info about Memory and other stuffs like that\n&quot;
+-           &quot;kmalloc  - Test a basic kmalloc function\n&quot;
+-           &quot;do_fault - Test a page_fault (WARNING: This hang the OS)\n&quot;
+-           &quot;aalogo - Show an ascii art logo\n&quot;
+-           &quot;try_buddy - Try buddy mmu\n&quot;
+-		);
++	printf(&quot;help      - See the 'help' list to learn the DreamOS command now avaible\n&quot;
++	       &quot;poweroff  - Turn off the machine\n&quot;
++	       &quot;info      - See the system info about Memory and other stuffs like that\n&quot;
++               &quot;kmalloc   - Test a basic kmalloc function\n&quot;
++               &quot;do_fault  - Test a page_fault (WARNING: This hang the OS)\n&quot;
++               &quot;aalogo    - Show an ascii art logo\n&quot;
++               &quot;try_buddy - Try buddy mmu\n&quot;);
+ }
+ 
+ void poweroff()
+@@ -66,7 +68,7 @@
+ 		&quot;int $0xff\n&quot;
+ 		: : &quot;g&quot;(1)); // valore di enum*/
+     asm(&quot;hlt&quot;);
+-    printf(&quot;E' ora possibile spegnere il computer\n&quot;);
++    printf(&quot;E' ora possibile spegnere il computer.\n&quot;);
+     while(1);
+ }
+ 
+@@ -98,8 +100,9 @@
+ 
+ void shell(void)
+ {
+-	unsigned char cmd[256];
++	//unsigned char cmd[256];
+ 	//char *cmd=malloc(256); Dio maiale, Page Fault con il puntatore...
++	char *cmd;
+ 	int a = 1;
+ 	aalogo();
+ 
+@@ -107,7 +110,9 @@
+ 	for (;;)
+ 	{
+ 		_kputs(&quot;root~# &quot;);
+-	        scanf(&quot;%s&quot;,cmd);
++	        //scanf(&quot;%s&quot;,cmd);	// scanf non va bene per gli argomenti..
++		gets(cmd); //vulnerabile, da correggere, poi prevvedo na cosa alla volta :P 
++
+ 		if (!(_kstrncmp(cmd,&quot;help&quot;,4) ) )
+ 		{
+ 			printf(&quot;Available command: \n&quot;);
+@@ -122,6 +127,12 @@
+ 			cmd[a]=NULL;
+ 		}
+ 		
++		else if (!(_kstrncmp(cmd, &quot;uname&quot;,5)))
++		{
++			printf(&quot;%s %s.%s.%s%s #1 beta CEST 2008 %s\n&quot;,NAME,VERSION,PATCHLEVEL,REV_NUM,EXTRAVERSION,cpu_vendor);
++
++		}
++
+ 		else if (!(_kstrncmp(cmd,&quot;info&quot;,4)))
+ 		{
+ 			info();
+@@ -169,9 +180,12 @@
+ }
+ 
+ void aalogo() {
++//printf(&quot;\n\n&quot;);
+ printf(&quot;\t____                     _____ _____\n&quot;);
+ printf(&quot;\t|    \\ ___ ___ ___ _____|     |   __|\n&quot;);
+ printf(&quot;\t|  |  |  _| -_| = |     |  |  |__   |\n&quot;);
+ printf(&quot;\t|____/|_| |___|__||_|_|_|_____|_____|\n&quot;);
+-printf(&quot;\t Rev17\n&quot;);
++printf(&quot;\t|------rev: \&quot;%s\&quot;|\n&quot;,REV_NUM);
++printf(&quot;\t|:::::::::::......|\n&quot;);
++logo();
+ }
+
+Modified: trunk/start.sh
+===================================================================
+--- trunk/start.sh	2008-08-20 14:07:02 UTC (rev 18)
++++ trunk/start.sh	2008-08-26 17:43:49 UTC (rev 19)
+@@ -1,4 +1,6 @@
+ make clean 
++make vers
+ make 
+ make img 
+ qemu -fda boot/grub.img
++#bochs boot/grub.img
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000018.html">[Dreamos-dev] r18 - in trunk: . include/mem mem
+</A></li>
+	<LI>Next message: <A HREF="000020.html">[Dreamos-dev] r20 - trunk/include
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#19">[ date ]</a>
+              <a href="thread.html#19">[ thread ]</a>
+              <a href="subject.html#19">[ subject ]</a>
+              <a href="author.html#19">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

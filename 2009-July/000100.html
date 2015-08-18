@@ -1,0 +1,339 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r98 - in trunk: . drivers include include/shell shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-July/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r98%20-%20in%20trunk%3A%20.%20drivers%20include%20include/shell%20shell&In-Reply-To=%3C200907131415.n6DEF0BG025305%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   
+   <LINK REL="Next"  HREF="000101.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r98 - in trunk: . drivers include include/shell shell</H1>
+    <B>osiris_h4ck at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r98%20-%20in%20trunk%3A%20.%20drivers%20include%20include/shell%20shell&In-Reply-To=%3C200907131415.n6DEF0BG025305%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r98 - in trunk: . drivers include include/shell shell">osiris_h4ck at mail.berlios.de
+       </A><BR>
+    <I>Mon Jul 13 16:15:00 CEST 2009</I>
+    <P><UL>
+        
+        <LI>Next message: <A HREF="000101.html">[Dreamos-dev] r99 - in trunk: . hardware include/shell processore	shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#100">[ date ]</a>
+              <a href="thread.html#100">[ thread ]</a>
+              <a href="subject.html#100">[ subject ]</a>
+              <a href="author.html#100">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: osiris_h4ck
+Date: 2009-07-13 16:14:39 +0200 (Mon, 13 Jul 2009)
+New Revision: 98
+
+Modified:
+   trunk/.bochsrc
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/drivers/mouse.c
+   trunk/include/shell/commands.h
+   trunk/include/version.h
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+Log:
+- Modificato comando modprobe, ora si chiama drv_load().
+- Risolti alcuni bug relativi a drv_load e drv_load -r
+- Rimosso il movimento cursore del mouse_driver perch?\195?\168 in alcuni PC non funzia
+- Modificati alcuni output
+
+Lord Osiris
+
+
+Modified: trunk/.bochsrc
+===================================================================
+--- trunk/.bochsrc	2009-06-23 18:13:07 UTC (rev 97)
++++ trunk/.bochsrc	2009-07-13 14:14:39 UTC (rev 98)
+@@ -17,7 +17,7 @@
+ # the &quot;wx&quot; display library.
+ #=======================================================================
+ #config_interface: textconfig
+-config_interface: wx
++#config_interface: wx
+ 
+ #=======================================================================
+ # DISPLAY_LIBRARY
+@@ -59,7 +59,7 @@
+ #display_library: sdl, options=&quot;fullscreen&quot; # startup in fullscreen mode
+ #display_library: term
+ #display_library: win32, options=&quot;legacyF12&quot; # use F12 to toggle mouse
+-display_library: wx
++#display_library: wx
+ #display_library: x, options=&quot;gui_debug&quot;
+ #display_library: x
+ #=======================================================================
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2009-06-23 18:13:07 UTC (rev 97)
++++ trunk/Makefile	2009-07-13 14:14:39 UTC (rev 98)
+@@ -107,6 +107,7 @@
+ clean:
+ 	rm -f *.img *.bin *.map
+ 	rm -f $(OBJ)
++#	echo &quot;&quot; &gt; include/version.h
+ 
+ install:
+ 	mkfs.ext2 /dev/fd0
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/drivers/mouse.c
+===================================================================
+--- trunk/drivers/mouse.c	2009-06-23 18:13:07 UTC (rev 97)
++++ trunk/drivers/mouse.c	2009-07-13 14:14:39 UTC (rev 98)
+@@ -141,15 +141,15 @@
+ 	if (cycle == 3) {
+ 	  cycle = 0; 
+ 
+-//	if ((mouse_bytes[0] &amp; 0x80) || (mouse_bytes[0] &amp; 0x40))
+-//	  return;
++	//if ((mouse_bytes[0] &amp; 0x80) || (mouse_bytes[0] &amp; 0x40))
++	//  return;
+ 
+ 	// coordinate x stanno in mouse_bytes[1] e
+ 	// le coordinate y stanno in mouse_bytes[2]
+ 	// direzione (0=destra, 1=sinitra)
+ 
+-	if((mouse_bytes[0] &amp; 0x07)==0) // 0x07 forse non &#232; un valore corretto
+-	//if((mouse_bytes[0] &amp; 0x40)==0)
++	//if((mouse_bytes[0] &amp; 0x07)==0) // 0x07 forse non &#232; un valore corretto
++	if((mouse_bytes[0] &amp; 0x40)==0)
+ 	{
+ 	  //if((mouse_bytes[0] &amp; 0x05)==0) // 0x05 forse non &#232; un valore corretto
+ 	  if((mouse_bytes[0] &amp; 0x10)==0)
+@@ -162,8 +162,8 @@
+ 	  MousePositionX+=mouse_bytes[1]/2;
+    
+ 	// direzioni (0=su, 1=sotto)
+-	if((mouse_bytes[0] &amp; 0x08)==0) // 0x08 forse non &#232; un valore corretto
+-	//if((mouse_bytes[0] &amp; 0x80)==0)
++	//if((mouse_bytes[0] &amp; 0x08)==0) // 0x08 forse non &#232; un valore corretto
++	if((mouse_bytes[0] &amp; 0x80)==0)
+ 	{
+ 	  //if((mouse_bytes[0] &amp; 0x06)==0) // 0x06 forse non &#232; un valore corretto
+ 	  if((mouse_bytes[0] &amp; 0x20)==0)
+@@ -195,19 +195,19 @@
+ 	printf(&quot;\rx: %d | y: %d&quot;, MousePositionX, MousePositionY);
+ 
+ 	// e muove il cursore 
+-	_ksetcursor(MousePositionX, MousePositionY);
+-/*
++	//_ksetcursor(MousePositionX, MousePositionY); // Not now
++
+ 	// Qui &#232; si rilevato un problema, se il mouse si muove
+ 	// vengono rilevati tasti premuti..
+-
++/*
+ 	// Rilevo i tasti premuti..
+ 	if (mouse_bytes[0] &amp; 0x4) 
+ 	    printf(LNG_MOUSE_MID);  // Centrale premuto
+ 
+-	else if (mouse_bytes[0] &amp; 0x2) 
++	if (mouse_bytes[0] &amp; 0x2) 
+ 	    printf(LNG_MOUSE_RIGHT);  // Destro premuto
+ 
+-	else if (mouse_bytes[0] &amp; 0x1) 
++	if (mouse_bytes[0] &amp; 0x1) 
+ 	    printf(LNG_MOUSE_LEFT);  // Sinistro premuto
+ */
+ 	}
+
+Modified: trunk/include/shell/commands.h
+===================================================================
+--- trunk/include/shell/commands.h	2009-06-23 18:13:07 UTC (rev 97)
++++ trunk/include/shell/commands.h	2009-07-13 14:14:39 UTC (rev 98)
+@@ -45,5 +45,5 @@
+ void sleep_cmd();
+ void cpuid();
+ void answer();
+-void modprobe();
++void drv_load();
+ #endif
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-06-23 18:13:07 UTC (rev 97)
++++ trunk/include/version.h	2009-07-13 14:14:39 UTC (rev 98)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL &quot;1.3&quot;
+ #define EXTRAVERSION &quot;-trunk&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r95&quot;
++#define REV_NUM &quot;-r97&quot;
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-06-23 18:13:07 UTC (rev 97)
++++ trunk/shell/commands.c	2009-07-13 14:14:39 UTC (rev 98)
+@@ -66,7 +66,7 @@
+ 	 &quot;cpuid     - Show cpu identification informations\n&quot;
+ 	 &quot;date      - Show date and time\n&quot;
+ 	 &quot;echo      - Print some lines of text\n&quot;
+-	 &quot;modprobe  - Tool to load and kill modules\n&quot;);
++	 &quot;drv_load  - Tool to load and kill modules\n&quot;);
+ }
+ 
+ void echo()
+@@ -223,15 +223,14 @@
+   _kputs(&quot;DreamOS Credits\n\n&quot;);                
+   _kputs(&quot;Main Developers:\n&quot;);
+   _kcolor('\012');
+-   printf(&quot;Shainer - Lisa\n&quot;	  
+-          &quot;Finarfin - Ivan\n\n\n&quot;            
++   printf(&quot;Osiris - Diego Stamigni \n&quot;	  
++             &quot;Finarfin - Ivan\n\n\n&quot;            
+          );
+ 
+   _kcolor('\011');
+   _kputs(&quot;Contributors:\n&quot;);
+   _kcolor('\012');
+-  _kputs(	&quot;Osiris\n&quot;
+-		    &quot;vinc94\n&quot;
++  _kputs(&quot;vinc94\n&quot;
+ 	  		&quot;tk0\n&quot;
+ 	  		&quot;DT\n&quot;
+          	&quot;Celeron\n&quot;
+@@ -324,51 +323,57 @@
+   printf(&quot;42\n&quot;);
+ }
+ 
+-void modprobe(void)
++void  drv_load(void)
+ {
+   if (argc &lt; 2)
+-      printf(&quot;No module inserted or bad usage! Type modprobe --help for the usage.\n&quot;);
++      printf(&quot;No driver inserted or bad usage! Type %s --help for the usage.\n&quot;, argv[0]);
+   
+   else
+-  {
+-      if ( argv[2] != NULL &amp;&amp; (_kstrncmp (argv[1], &quot;-r&quot;, 2) == 0) &amp;&amp; 
+-	  (_kstrncmp (argv[2], &quot;mouse&quot;, 5) == 0) )
++  { 
++      if ( (_kstrncmp (argv[1], &quot;-r&quot;, 2) == 0) ) 
++	  { 
++		  if ( ( argv[2] != NULL ) ) 
++		  {
++			  if (_kstrncmp (argv[2], &quot;mouse&quot;, 5) == 0)  { 
++		 	 	 printf(&quot;Disattivamento %s in corso..\n&quot;, argv[2]);
++		 	  	 mouse_dead();
++			  }
++      		  else 
++				  printf(&quot;FATAL: Driver %s not found.\n&quot;, argv[2]); 
++		  }
++		  else 
++			  printf(&quot;Warning, no driver name inserted!\n&quot;); 
++	  }
++      // per ora lo impostiamo cos&#236;, static,
++      // tanto non abbiamo nessun altro modulo, per ora..
++      else if (_kstrncmp (argv[1], &quot;mouse&quot;, 5) == 0)
+       {
+-	  printf(&quot;Removing %s..\n&quot;, argv[2]);
+-	  mouse_dead();
++	 	 // enabling mouse
++	  	 mouse_init();
+       }
+-      /* per ora lo impostiamo cos&#236;, static,
+-      tanto non abbiamo nessun altro modulo, per ora.. */
+-      else if (_kstrncmp (argv[1], &quot;mouse&quot;, 5) == 0)
+-      {
+-	 /* enabling mouse */
+-	 mouse_init();
+-       }
+ 
+-      else if (_kstrncmp (argv[1], &quot;--help&quot;, 6) == 0)
++      else if ( (_kstrncmp (argv[1], &quot;--help&quot;, 6) == 0) || (_kstrncmp (argv[1], &quot;-h&quot;, 2) == 0) )
+       {
+ 	  printf(&quot;---------------------------------------------------\n&quot;
+-		 &quot;Module tool to load and kill modules\n&quot;
++		 &quot;Driver tool to load and kill driver\n&quot;
+ 		 &quot;Simple to use, just type:\n&quot;
+ 		 &quot;\n&quot;
+-		 &quot;Usage: %s -&lt;options&gt; module_name\n&quot;
+-		 &quot;\t-&gt; %s module_name     - to load module\n&quot;
+-		 &quot;\t-&gt; %s -r module_name  - to kill module\n&quot;
++		 &quot;Usage: %s -&lt;options&gt; driver_name\n&quot;
++		 &quot;\t-&gt; %s module_name     - to load driver\n&quot;
++		 &quot;\t-&gt; %s -r module_name  - to kill driver\n&quot;
+ 		  &quot;---------------------------------------------------\n&quot;
+ 		  , argv[0], argv[0], argv[0]);
+       }
+ 
+-      else
+-	 if ( (_kstrncmp (argv[1], &quot;-r&quot;, 2) == 0) &amp;&amp; (_kstrncmp (argv[2], &quot;mouse&quot;, 5) == -1) )
+-	 {   printf(&quot;FATAL: Module %s not found.\n&quot;, argv[2]); }
++     else
++	{
++	 	if ( (_kstrncmp (argv[1], &quot;-r&quot;, 2) == 0) &amp;&amp; (_kstrncmp (argv[2], &quot;mouse&quot;, 5) == -1) )
++	 	   printf(&quot;FATAL: Driver %s not found.\n&quot;, argv[2]); 
+ 	
+-	 else
+-	     printf(&quot;FATAL: Module %s not found.\n&quot;, argv[1]);
++		 else
++	    	 printf(&quot;FATAL: Driver %s not found.\n&quot;, argv[1]);
++	 }
+ 
+    }
+-
+-
++	
+ }
+-
+-
+-
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-06-23 18:13:07 UTC (rev 97)
++++ trunk/shell/shell.c	2009-07-13 14:14:39 UTC (rev 98)
+@@ -93,7 +93,7 @@
+ 	{ &quot;echo&quot;,     echo 	  },
+ 	{ &quot;help&quot;,     help	  },
+ 	{ &quot;answer&quot;,   answer  },
+-	{ &quot;modprobe&quot;, modprobe},
++	{ &quot;drv_load&quot;, drv_load},
+         };
+ 
+   int i = 0;
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	
+	<LI>Next message: <A HREF="000101.html">[Dreamos-dev] r99 - in trunk: . hardware include/shell processore	shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#100">[ date ]</a>
+              <a href="thread.html#100">[ thread ]</a>
+              <a href="subject.html#100">[ subject ]</a>
+              <a href="author.html#100">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

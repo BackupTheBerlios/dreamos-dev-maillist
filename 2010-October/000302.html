@@ -1,0 +1,137 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r299 - in trunk: . boot include/misc mem misc
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-October/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r299%20-%20in%20trunk%3A%20.%20boot%20include/misc%20mem%20misc&In-Reply-To=%3C20101004205436.DD8DB4810E7%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000301.html">
+   <LINK REL="Next"  HREF="000303.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r299 - in trunk: . boot include/misc mem misc</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r299%20-%20in%20trunk%3A%20.%20boot%20include/misc%20mem%20misc&In-Reply-To=%3C20101004205436.DD8DB4810E7%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r299 - in trunk: . boot include/misc mem misc">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Mon Oct  4 22:54:36 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000301.html">[Dreamos-dev] r298 - in trunk: . boot include/mem misc
+</A></li>
+        <LI>Next message: <A HREF="000303.html">[Dreamos-dev] r300 - in trunk: . boot mem misc
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#302">[ date ]</a>
+              <a href="thread.html#302">[ thread ]</a>
+              <a href="subject.html#302">[ subject ]</a>
+              <a href="author.html#302">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-10-04 22:54:36 +0200 (Mon, 04 Oct 2010)
+New Revision: 299
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/include/misc/ordered_array.h
+   trunk/mem/heap.c
+   trunk/misc/ordered_array.c
+Log:
+Corrette definizioni di tipo in new_array, e in ordered_array_t
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/misc/ordered_array.h
+===================================================================
+--- trunk/include/misc/ordered_array.h	2010-10-03 21:06:02 UTC (rev 298)
++++ trunk/include/misc/ordered_array.h	2010-10-04 20:54:36 UTC (rev 299)
+@@ -35,13 +35,13 @@
+      \brief Struttura dati che un vettore ordinato.
+  */
+ typedef struct {
+-    void_t *array; /**&lt; Il vettore che sara' ordinato*/
++    type_t* array; /**&lt; Il vettore che sara' ordinato*/
+     unsigned int size; /**&lt; La dimensione attuale*/
+     unsigned int size_max; /**&lt; La dimensione massima*/
+     lessthan_predicate_t less_than;
+ }ordered_array_t;
+ 
+-ordered_array_t new_array(unsigned int, unsigned int, lessthan_predicate_t);
++ordered_array_t new_array(void*, unsigned int, lessthan_predicate_t);
+ void insert_array(void_t, ordered_array_t*);
+ void destroy_array(ordered_array_t*);
+ type_t get_array(int, ordered_array_t*);
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-10-03 21:06:02 UTC (rev 298)
++++ trunk/mem/heap.c	2010-10-04 20:54:36 UTC (rev 299)
+@@ -47,7 +47,7 @@
+ 		printf(&quot;all right\n&quot;);
+ 		t_heap-&gt;start_address = start;
+ 		t_heap-&gt;end_address = start + size;	
+-		t_heap-&gt;index = new_array(start,size, &amp;header_t_less_than);
++		t_heap-&gt;index = new_array((void*)start,size, &amp;header_t_less_than);
+ 		printf(&quot;Start_address: %u\n&quot;, n_heap-&gt;start_address);		
+ 		printf(&quot;End Address: %u\n&quot;, n_heap-&gt;end_address);
+ 		return t_heap;		
+
+Modified: trunk/misc/ordered_array.c
+===================================================================
+--- trunk/misc/ordered_array.c	2010-10-03 21:06:02 UTC (rev 298)
++++ trunk/misc/ordered_array.c	2010-10-04 20:54:36 UTC (rev 299)
+@@ -43,11 +43,12 @@
+   * @param size grandezza massima dell'array
+   * @return Pointer to a new ordered_array_t
+   */
+-ordered_array_t new_array(unsigned int start, unsigned int size, lessthan_predicate_t predicate){
++ordered_array_t new_array(void* start, unsigned int size, lessthan_predicate_t predicate){
+     int i;
+     i=0;
+     printf(&quot;Make array code goes here...\n&quot;);        
+     ordered_array_t tmp_array;
++    tmp_array.array = (type_t*)start;
+     tmp_array.size_max = size;
+     tmp_array.size = 0;
+     tmp_array.array = (void_t*)start;
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000301.html">[Dreamos-dev] r298 - in trunk: . boot include/mem misc
+</A></li>
+	<LI>Next message: <A HREF="000303.html">[Dreamos-dev] r300 - in trunk: . boot mem misc
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#302">[ date ]</a>
+              <a href="thread.html#302">[ thread ]</a>
+              <a href="subject.html#302">[ subject ]</a>
+              <a href="author.html#302">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

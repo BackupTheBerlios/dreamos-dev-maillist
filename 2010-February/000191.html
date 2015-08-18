@@ -1,0 +1,127 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r189 - in trunk: . fs shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-February/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r189%20-%20in%20trunk%3A%20.%20fs%20shell&In-Reply-To=%3C201002012230.o11MUIXV032249%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   
+   <LINK REL="Next"  HREF="000192.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r189 - in trunk: . fs shell</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r189%20-%20in%20trunk%3A%20.%20fs%20shell&In-Reply-To=%3C201002012230.o11MUIXV032249%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r189 - in trunk: . fs shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Mon Feb  1 23:30:18 CET 2010</I>
+    <P><UL>
+        
+        <LI>Next message: <A HREF="000192.html">[Dreamos-dev] r190 - in trunk: . fs include/fs shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#191">[ date ]</a>
+              <a href="thread.html#191">[ thread ]</a>
+              <a href="subject.html#191">[ subject ]</a>
+              <a href="author.html#191">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-02-01 23:30:14 +0100 (Mon, 01 Feb 2010)
+New Revision: 189
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/initrd.c
+   trunk/shell/testing.c
+Log:
+Corretto errore in initfs_read. 
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-01-31 09:21:22 UTC (rev 188)
++++ trunk/fs/initrd.c	2010-02-01 22:30:14 UTC (rev 189)
+@@ -61,14 +61,7 @@
+ 		if(!strcmp(path, module_var[j].fileName)){
+ 				ird_descriptors[cur_irdfd].file_descriptor	= j;
+ 				printf(&quot;%s Found. Size: %d FS fd val: %d - ID File val: %d\n&quot;, path, module_var[j].length, cur_irdfd, ird_descriptors[cur_irdfd].file_descriptor);
+-				ret_fd = cur_irdfd;
+-				/*while(ird_descriptors[++cur_irdfd].file_descriptor != -1){
+-					if(cur_irdfd &gt;= MAX_INITRD_DESCRIPTORS) cur_irdfd = 0;
+-					else if(cur_irdfd == ret_fd) {
+-						printf(&quot;No more file descriptors available\n&quot;);
+-						return -1;
+-					}
+-				}*/
++				ret_fd = cur_irdfd;				
+ 				return cur_irdfd++; 
+ 		}
+ 		j++;
+@@ -87,9 +80,10 @@
+ 	//printf(&quot;try to read something...\n&quot;);
+ 	while(j&lt;file_size){
+ 		putchar(file_start[j]);
+-		//buf[j] = file_start[j];		
++		//buf[j] = file_start[j];			
+ 		j++;
+-	}	
++	}
++	//buf[j] = '\0';
+ 	return nbyte;
+ }
+ 
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-01-31 09:21:22 UTC (rev 188)
++++ trunk/shell/testing.c	2010-02-01 22:30:14 UTC (rev 189)
+@@ -128,10 +128,10 @@
+ 
+ void try_open(){
+ 	char appoggio[50];
+-	char *prova;
++	char prova[50];
+ 	int i;
+ 	i=0;
+-	prova = NULL;
++	//prova = NULL;
+ 	while(i&lt;50){
+ 		appoggio[i] = '\0';
+ 		i++;
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	
+	<LI>Next message: <A HREF="000192.html">[Dreamos-dev] r190 - in trunk: . fs include/fs shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#191">[ date ]</a>
+              <a href="thread.html#191">[ thread ]</a>
+              <a href="subject.html#191">[ subject ]</a>
+              <a href="author.html#191">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

@@ -1,0 +1,1062 @@
+From finarfin at mail.berlios.de  Wed Jun  2 23:11:28 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Wed, 2 Jun 2010 23:11:28 +0200
+Subject: [Dreamos-dev] r256 - in trunk: . shell
+Message-ID: <201006022111.o52LBS0i015253@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-06-02 23:11:17 +0200 (Wed, 02 Jun 2010)
+New Revision: 256
+
+Modified:
+   trunk/dreamos.img
+   trunk/shell/commands.c
+Log:
+Aggiunto comando newfile, per creare un file di testo.
+Per ora e' limitato ad una sola riga di input, di dimensione massima
+di 256 caratteri.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-05-30 21:24:46 UTC (rev 255)
++++ trunk/shell/commands.c	2010-06-02 21:11:17 UTC (rev 256)
+@@ -550,5 +550,20 @@
+ 		if(strcmp(argv[1], "--help")==0) {
+ 			printf("newfile FILENAME - Make a new file, and prompt for it's content\n");
+ 		}
++		else {
++			int fd;			
++			fd = open(argv[1], O_RDONLY);
++			if(fd>=0) printf("-ERROR: %s File already exist\n", argv[1]);
++			else {
++				char text[256];
++				printf("Filname: %s", argv[1]);
++				close(fd);
++				fd = open(argv[1], O_RDWR|O_CREAT|O_APPEND);
++				printf("Type your text here, actually only one line available!!\n");
++				scanf("%s", text);
++				if(fd>=0) write(fd,text, strlen(text));
++				close(fd);
++			}
++		}
+ 	}
+ }
+
+
+
+From finarfin at mail.berlios.de  Wed Jun  2 23:43:20 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Wed, 2 Jun 2010 23:43:20 +0200
+Subject: [Dreamos-dev] r257 - trunk/shell
+Message-ID: <201006022143.o52LhK0X019269@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-06-02 23:43:16 +0200 (Wed, 02 Jun 2010)
+New Revision: 257
+
+Modified:
+   trunk/shell/commands.c
+Log:
+Corretto help con il nuovo comando
+
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-06-02 21:11:17 UTC (rev 256)
++++ trunk/shell/commands.c	2010-06-02 21:43:16 UTC (rev 257)
+@@ -88,6 +88,7 @@
+ 	"tester        - Try some functions, 'tester --help' for more info'\n"
+ 	"pwd           - Print current working directory\n"
+ 	"more		   - read content of a file\n"
++	"newfile	   - create a newfile\n"
+ 	);
+ }
+ 
+
+
+
+From finarfin at mail.berlios.de  Thu Jun  3 23:21:45 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Thu, 3 Jun 2010 23:21:45 +0200
+Subject: [Dreamos-dev] r258 - in trunk: . shell
+Message-ID: <201006032121.o53LLjCX015759@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-06-03 23:21:43 +0200 (Thu, 03 Jun 2010)
+New Revision: 258
+
+Modified:
+   trunk/dreamos.img
+   trunk/shell/commands.c
+Log:
+Iniziata gestione . e ..
+Per ora solo .
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-06-02 21:43:16 UTC (rev 257)
++++ trunk/shell/commands.c	2010-06-03 21:21:43 UTC (rev 258)
+@@ -470,8 +470,9 @@
+ 			dirp=opendir(argv[1]);
+ 		}
+ 		else if(argv[1][0]=='.') {
+-			printf(". option\n");
+-			return;
++			printf(". option\n");			
++			if(strlen(argv[1]) == 1) return;
++			else printf("str_len: %d\n", strlen(argv[1]));
+ 		}
+ 		else {			
+ 			int abs_size = 0;			
+
+
+
+From finarfin at mail.berlios.de  Sun Jun 13 20:48:13 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun, 13 Jun 2010 20:48:13 +0200
+Subject: [Dreamos-dev] r259 - in trunk: . include/libc libc shell
+Message-ID: <201006131848.o5DImD7O020985@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-06-13 20:48:01 +0200 (Sun, 13 Jun 2010)
+New Revision: 259
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/libc/string.h
+   trunk/libc/string.c
+   trunk/shell/commands.c
+Log:
+Aggiunta strncmp
+Aggiunto controllo . e .. (per .. rileva solo l'opzione non fa altro)
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/libc/string.h
+===================================================================
+--- trunk/include/libc/string.h	2010-06-03 21:21:43 UTC (rev 258)
++++ trunk/include/libc/string.h	2010-06-13 18:48:01 UTC (rev 259)
+@@ -35,11 +35,13 @@
+ size_t strlen (const char *);
+ 
+ int strcmp (const char *, const char *);
++int  strncmp (const char *, const char *, int);
+ char *strchr (register const char *, register int);
+ char *strstr (const char *, const char *);
+ char *strncat (char *, const char *, size_t);
+ 
+ char *strtok (char *, const char *);
+ char *strcpy (char *, register const char *);
++
+ char *strncpy (char *, register const char *, size_t);
+ #endif
+
+Modified: trunk/libc/string.c
+===================================================================
+--- trunk/libc/string.c	2010-06-03 21:21:43 UTC (rev 258)
++++ trunk/libc/string.c	2010-06-13 18:48:01 UTC (rev 259)
+@@ -85,6 +85,10 @@
+   return 0;
+ }
+ 
++int strncmp(const char *s1, const char *s2, int n){
++	_kstrncmp(s1,s2,n);
++}
++
+ /*
+  * Compare s1 and s2
+  */
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-06-03 21:21:43 UTC (rev 258)
++++ trunk/shell/commands.c	2010-06-13 18:48:01 UTC (rev 259)
+@@ -469,11 +469,14 @@
+ 			//printf("abspath: %s\n", abspath);
+ 			dirp=opendir(argv[1]);
+ 		}
++		else if(!strncmp(argv[1], "..", 2)) {
++			printf(".. option %s\n", argv[1]);
++		}
+ 		else if(argv[1][0]=='.') {
+-			printf(". option\n");			
++			//printf(". option\n");			
+ 			if(strlen(argv[1]) == 1) return;
+ 			else printf("str_len: %d\n", strlen(argv[1]));
+-		}
++		}		
+ 		else {			
+ 			int abs_size = 0;			
+ 			abs_size = strlen(current_user.cur_path);
+
+
+
+From finarfin at mail.berlios.de  Sun Jun 13 23:37:28 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun, 13 Jun 2010 23:37:28 +0200
+Subject: [Dreamos-dev] r260 - in trunk: . fs include/shell shell
+Message-ID: <201006132137.o5DLbSKL029441@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-06-13 23:37:21 +0200 (Sun, 13 Jun 2010)
+New Revision: 260
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/initrd.c
+   trunk/include/shell/shell.h
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+Log:
+Aggiunti alla struttura current_user i campi uid e gid
+Aggiunto nel comando newfile controllo errore
+Sistemata assegnazione uid a file, in base all'utente corrente
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-06-13 18:48:01 UTC (rev 259)
++++ trunk/fs/initrd.c	2010-06-13 21:37:21 UTC (rev 260)
+@@ -26,6 +26,7 @@
+ #include <kheap.h>
+ #include <fcntl.h>
+ #include <sys/stat.h>
++#include <commands.h>
+ 
+ char *module_start;
+ initrd_t *fs_specs;
+@@ -132,7 +133,7 @@
+ 				module_var[fs_specs->nfiles].magic=0xBF;
+ 				strcpy(module_var[fs_specs->nfiles].fileName, path);
+ 				module_var[fs_specs->nfiles].file_type = FS_FILE;
+-				module_var[fs_specs->nfiles].uid = 1;
++				module_var[fs_specs->nfiles].uid = current_user.uid;
+ 				module_var[fs_specs->nfiles].offset = ++fs_end;
+ 				module_var[fs_specs->nfiles].length = 0;
+ 				ird_descriptors[cur_irdfd].file_descriptor	= fs_specs->nfiles;
+
+Modified: trunk/include/shell/shell.h
+===================================================================
+--- trunk/include/shell/shell.h	2010-06-13 18:48:01 UTC (rev 259)
++++ trunk/include/shell/shell.h	2010-06-13 21:37:21 UTC (rev 260)
+@@ -35,6 +35,8 @@
+ struct user_env {
+ 	char username[USER_LEN];
+ 	char cur_path[CURPATH_LEN];
++	unsigned int uid;
++	unsigned int gid;
+ };
+ 
+ //extern char cur_path[256];
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-06-13 18:48:01 UTC (rev 259)
++++ trunk/shell/commands.c	2010-06-13 21:37:21 UTC (rev 260)
+@@ -561,13 +561,15 @@
+ 			if(fd>=0) printf("-ERROR: %s File already exist\n", argv[1]);
+ 			else {
+ 				char text[256];
+-				printf("Filname: %s", argv[1]);
++				printf("Filename: %s\n", argv[1]);
+ 				close(fd);
+-				fd = open(argv[1], O_RDWR|O_CREAT|O_APPEND);
+-				printf("Type your text here, actually only one line available!!\n");
+-				scanf("%s", text);
+-				if(fd>=0) write(fd,text, strlen(text));
+-				close(fd);
++				fd = open(argv[1], O_RDWR|O_CREAT|O_APPEND);		
++				if(fd>=0){ 
++					printf("Type your text here, actually only one line available!!\n");
++					scanf("%s", text);
++					write(fd,text, strlen(text));
++					close(fd);
++				}
+ 			}
+ 		}
+ 	}
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2010-06-13 18:48:01 UTC (rev 259)
++++ trunk/shell/shell.c	2010-06-13 21:37:21 UTC (rev 260)
+@@ -140,7 +140,8 @@
+   printf("\n\n\n\n");
+   argc=1;  
+   strcpy(current_user.cur_path, "/root");
+-  
++  current_user.uid = 1;
++  current_user.gid = 0;
+   for (;;)
+   {
+     for (c = 1 ; c <= 10 ; c++) {
+
+
+
+From finarfin at mail.berlios.de  Mon Jun 21 20:00:09 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Mon, 21 Jun 2010 20:00:09 +0200
+Subject: [Dreamos-dev] r261 - in trunk: . utils utils/eltorito_iso
+	utils/eltorito_iso/boot utils/eltorito_iso/boot/grub
+Message-ID: <201006211800.o5LI09Y8007196@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-06-21 19:59:27 +0200 (Mon, 21 Jun 2010)
+New Revision: 261
+
+Added:
+   trunk/utils/eltorito_gen.sh
+   trunk/utils/eltorito_iso/
+   trunk/utils/eltorito_iso/README
+   trunk/utils/eltorito_iso/boot/
+   trunk/utils/eltorito_iso/boot/dreamos.img
+   trunk/utils/eltorito_iso/boot/grub/
+   trunk/utils/eltorito_iso/boot/grub/e2fs_stage1_5
+   trunk/utils/eltorito_iso/boot/grub/fat_stage1_5
+   trunk/utils/eltorito_iso/boot/grub/ffs_stage1_5
+   trunk/utils/eltorito_iso/boot/grub/iso9660_stage1_5
+   trunk/utils/eltorito_iso/boot/grub/jfs_stage1_5
+   trunk/utils/eltorito_iso/boot/grub/menu.lst
+   trunk/utils/eltorito_iso/boot/grub/minix_stage1_5
+   trunk/utils/eltorito_iso/boot/grub/reiserfs_stage1_5
+   trunk/utils/eltorito_iso/boot/grub/stage1
+   trunk/utils/eltorito_iso/boot/grub/stage2
+   trunk/utils/eltorito_iso/boot/grub/stage2_eltorito
+   trunk/utils/eltorito_iso/boot/grub/ufs2_stage1_5
+   trunk/utils/eltorito_iso/boot/grub/vstafs_stage1_5
+   trunk/utils/eltorito_iso/boot/grub/xfs_stage1_5
+   trunk/utils/eltorito_iso/initfs
+Modified:
+   trunk/README
+Log:
+Aggiunti script per creazione della ISO bootabile con grub. 
+Modificato readme.
+Per lanciare la generazione della iso dare: sh eltorito_gen.sh
+E' necessario avere genisoimage installato.
+
+
+Modified: trunk/README
+===================================================================
+--- trunk/README	2010-06-13 21:37:21 UTC (rev 260)
++++ trunk/README	2010-06-21 17:59:27 UTC (rev 261)
+@@ -25,7 +25,6 @@
+ Il team di sviluppo attuale ? composto dagli sviluppatori
+ 
+ Ivan - Finarfin (http://earyrian.elenhost.org)
+-Lisa - Shainer (http://shandril.altervista.org)
+ 
+ e dai contributori:
+ 
+
+Added: trunk/utils/eltorito_gen.sh
+===================================================================
+--- trunk/utils/eltorito_gen.sh	2010-06-13 21:37:21 UTC (rev 260)
++++ trunk/utils/eltorito_gen.sh	2010-06-21 17:59:27 UTC (rev 261)
+@@ -0,0 +1,19 @@
++#!/bin/bash
++#Script for build an eltorito iso image of dreamos
++
++echo "Welcome to DreamOS iso generator ver 0.1 - Development"
++if [ -f ../dreamos.img ] 
++	then 
++		echo "File dreamos.img found"
++		cp ../dreamos.img ./eltorito_iso/boot/
++		if [ -f ../initfs ]
++		then
++			echo "File initfs found: replacing it"
++			cp ../initfs ./eltorito_iso
++		else
++			echo "file initfs not found"
++		fi
++		 genisoimage -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o dreamos.iso eltorito_iso
++	else
++		echo "No dreamOS file found"
++fi
+
+Added: trunk/utils/eltorito_iso/README
+===================================================================
+--- trunk/utils/eltorito_iso/README	2010-06-13 21:37:21 UTC (rev 260)
++++ trunk/utils/eltorito_iso/README	2010-06-21 17:59:27 UTC (rev 261)
+@@ -0,0 +1,77 @@
++---------------------------
++ DreamOS - ISO VERSION
++---------------------------
++
++1. Cosa ? DreamOS
++	a. Cosa NON ? DreamOS
++2. Usare DreamOS
++	a. L'avvio
++	b. Uso della CLI
++4. Feedback
++	a. Come segnalare bug
++	b. Come mandare un feedback
++
++
++- 1 -----------------------
++--- Cosa ? DreamOS --------
++
++Il DreamOS ? un sistema operativo open source rilasciato sotto licenza GPLv3 sviluppato partendo da 0 puramente per scopi didattici o comunque per capire come funzionano i sistemi operativi.
++Il team di sviluppo attuale ? composto dagli sviluppatori
++
++Ivan - Finarfin (http://earyrian.elenhost.org)
++
++e dai contributori:
++
++Osiris
++Celeron
++Hamcha
++m0nt0.
++vinc94
++tk0
++
++	- a -- Cosa NON ? DreamOS -
++
++DreamOS non ? un sistema operativo completo e pronto per essere utilizzato per l'uso quotidiano, non ? basato su Kernel esistenti e non ? supportato/sponsorizzato da alcuna societ?.
++
++
++- 3 -----------------------
++---- Usare DreamOS --------
++
++L'Interattivit? di DreamOS al momento si ferma ad una CLI (Command Line Interface, Interfaccia a linea di comando) con un numero limitato di comandi utilizzabili, la maggior parte a scopo di test.
++Se non lo avete gia fatto masterizzate questa ISO su un CD e inseritela nel vostro lettore e riavvite il CD e scegliete come boot device il CDROM.
++	- a ------- L'Avvio -------
++
++L'avvio di DreamOS contiene il loading di tutte le funzioni necessarie al funzionamento del S.O. e della CLI, alla fine dell'avvio verr? chiesto un Username che verr? usato in seguito nella CLI.
++
++	- b ---- Uso della CLI ----
++
++La CLI di DreamOS ha una struttura molto comune a quella *NIX
++	Username~# Comando inserito
++Dove Username ? l'username inserito durante l'avvio.
++Si pu? avere una lista di comandi disponibili attraverso il comando:
++	help
++Inoltre sono presenti alcuni comandi che rimarcano la controparte *NIX come uname (uname --help) o echo.
++
++- 4 -----------------------
++---- Feedback -------------
++
++	- a -- Come segnalare Bug -
++	
++Per segnalare bug riscontrati durante l'uso di DreamOS bisogna segnalarli usando il modulo di berliOS presente alla pagina:
++	http://developer.berlios.de/bugs/?group_id=9715
++Oppure potete segnalarlo sul forum osdev.it, precisamente:
++	http://forum.osdev.it/viewforum.php?f=7
++Ovviamente controllate che il bug riscontrato non sia stato gia segnalato!
++
++	- b - Come mandare un feedback
++
++Potete mandare un resoconto o comunque raccontare la vostra esperienza con DreamOS sul forum di osdev.it:
++	http://forum.osdev.it/
++Oppure ci trovate su irc: 
++	Server: irc.azzurra.org
++	Chan: #dreamos
++	
++
++DreamOS 2003-2009 by finarfin/shainer
++http://www.dreamos.org
++http://www.osdev.it
+
+Added: trunk/utils/eltorito_iso/boot/dreamos.img
+===================================================================
+(Binary files differ)
+
+
+Property changes on: trunk/utils/eltorito_iso/boot/dreamos.img
+___________________________________________________________________
+Name: svn:executable
+   + *
+Name: svn:mime-type
+   + application/octet-stream
+
+Added: trunk/utils/eltorito_iso/boot/grub/e2fs_stage1_5
+===================================================================
+(Binary files differ)
+
+
+Property changes on: trunk/utils/eltorito_iso/boot/grub/e2fs_stage1_5
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Added: trunk/utils/eltorito_iso/boot/grub/fat_stage1_5
+===================================================================
+(Binary files differ)
+
+
+Property changes on: trunk/utils/eltorito_iso/boot/grub/fat_stage1_5
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Added: trunk/utils/eltorito_iso/boot/grub/ffs_stage1_5
+===================================================================
+(Binary files differ)
+
+
+Property changes on: trunk/utils/eltorito_iso/boot/grub/ffs_stage1_5
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Added: trunk/utils/eltorito_iso/boot/grub/iso9660_stage1_5
+===================================================================
+(Binary files differ)
+
+
+Property changes on: trunk/utils/eltorito_iso/boot/grub/iso9660_stage1_5
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Added: trunk/utils/eltorito_iso/boot/grub/jfs_stage1_5
+===================================================================
+(Binary files differ)
+
+
+Property changes on: trunk/utils/eltorito_iso/boot/grub/jfs_stage1_5
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Added: trunk/utils/eltorito_iso/boot/grub/menu.lst
+===================================================================
+--- trunk/utils/eltorito_iso/boot/grub/menu.lst	2010-06-13 21:37:21 UTC (rev 260)
++++ trunk/utils/eltorito_iso/boot/grub/menu.lst	2010-06-21 17:59:27 UTC (rev 261)
+@@ -0,0 +1,6 @@
++default=0
++timeout=30
++title DreamOS 0.2 
++color light-green/brown blink-red/blue
++kernel /boot/dreamos.img
++module /initfs
+
+Added: trunk/utils/eltorito_iso/boot/grub/minix_stage1_5
+===================================================================
+(Binary files differ)
+
+
+Property changes on: trunk/utils/eltorito_iso/boot/grub/minix_stage1_5
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Added: trunk/utils/eltorito_iso/boot/grub/reiserfs_stage1_5
+===================================================================
+(Binary files differ)
+
+
+Property changes on: trunk/utils/eltorito_iso/boot/grub/reiserfs_stage1_5
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Added: trunk/utils/eltorito_iso/boot/grub/stage1
+===================================================================
+(Binary files differ)
+
+
+Property changes on: trunk/utils/eltorito_iso/boot/grub/stage1
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Added: trunk/utils/eltorito_iso/boot/grub/stage2
+===================================================================
+(Binary files differ)
+
+
+Property changes on: trunk/utils/eltorito_iso/boot/grub/stage2
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Added: trunk/utils/eltorito_iso/boot/grub/stage2_eltorito
+===================================================================
+(Binary files differ)
+
+
+Property changes on: trunk/utils/eltorito_iso/boot/grub/stage2_eltorito
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Added: trunk/utils/eltorito_iso/boot/grub/ufs2_stage1_5
+===================================================================
+(Binary files differ)
+
+
+Property changes on: trunk/utils/eltorito_iso/boot/grub/ufs2_stage1_5
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Added: trunk/utils/eltorito_iso/boot/grub/vstafs_stage1_5
+===================================================================
+(Binary files differ)
+
+
+Property changes on: trunk/utils/eltorito_iso/boot/grub/vstafs_stage1_5
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Added: trunk/utils/eltorito_iso/boot/grub/xfs_stage1_5
+===================================================================
+(Binary files differ)
+
+
+Property changes on: trunk/utils/eltorito_iso/boot/grub/xfs_stage1_5
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Added: trunk/utils/eltorito_iso/initfs
+===================================================================
+(Binary files differ)
+
+
+Property changes on: trunk/utils/eltorito_iso/initfs
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+
+
+From finarfin at mail.berlios.de  Mon Jun 21 23:10:40 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Mon, 21 Jun 2010 23:10:40 +0200
+Subject: [Dreamos-dev] r262 - trunk/utils
+Message-ID: <201006212110.o5LLAeWM026427@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-06-21 23:10:37 +0200 (Mon, 21 Jun 2010)
+New Revision: 262
+
+Added:
+   trunk/utils/README.eltorito_gen
+Log:
+Aggiunto Readme per script eltorito_gen.sh
+
+
+Added: trunk/utils/README.eltorito_gen
+===================================================================
+--- trunk/utils/README.eltorito_gen	2010-06-21 17:59:27 UTC (rev 261)
++++ trunk/utils/README.eltorito_gen	2010-06-21 21:10:37 UTC (rev 262)
+@@ -0,0 +1,13 @@
++ELTORITO_GEN README
++
++Lo script eltorito_gen.sh per funzionare necessita di:
++1. genisoimage
++2. mkisofs
++
++Tale script funziona in maniera molto semplice, date il comando:
++
++ eltorito_gen.sh
++ 
++ E questo creera automaticamente, il file dreamos.iso se presenti i 2 files:
++ 1. ../dreamos.img
++ 2. ../initfs
+
+
+
+From finarfin at mail.berlios.de  Tue Jun 22 19:59:20 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Tue, 22 Jun 2010 19:59:20 +0200
+Subject: [Dreamos-dev] r263 - in trunk: . files include/shell shell
+Message-ID: <201006221759.o5MHxKFR013391@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-06-22 19:59:12 +0200 (Tue, 22 Jun 2010)
+New Revision: 263
+
+Added:
+   trunk/files/passwd
+   trunk/include/shell/user_shell.h
+   trunk/shell/user_shell.c
+Modified:
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/initfs
+   trunk/shell/shell.c
+Log:
+Aggiunto nel filesystem initfs un file passwd.
+Creato ader user_shell e relativo file, per la gestione degli utenti della cli.
+Per ora non contiene funzioni utili.
+
+Corretto e aggiornato il Makefile.
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2010-06-21 21:10:37 UTC (rev 262)
++++ trunk/Makefile	2010-06-22 17:59:12 UTC (rev 263)
+@@ -60,6 +60,7 @@
+       hardware/8253.o\
+       shell/commands.o\
+       shell/testing.o\
++      shell/user_shell.o\
+       sys/utsname.o\
+       sys/dirent.o\
+       sys/stat.o
+@@ -103,6 +104,8 @@
+ hardware/8253.o: hardware/8253.c
+ shell/shell.o: shell/shell.c
+ shell/commands.o: shell/commands.c
++shell/testing.o: shell/testing.c
++shell/user_shell.o: shell/user_shell.c
+ sys/utsname.o: sys/utsname.c
+ sys/dirent.o: sys/dirent.c
+ sys/stat.o: sys/stat.c
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Added: trunk/files/passwd
+===================================================================
+--- trunk/files/passwd	2010-06-21 21:10:37 UTC (rev 262)
++++ trunk/files/passwd	2010-06-22 17:59:12 UTC (rev 263)
+@@ -0,0 +1 @@
++root:password
+
+Added: trunk/include/shell/user_shell.h
+===================================================================
+--- trunk/include/shell/user_shell.h	2010-06-21 21:10:37 UTC (rev 262)
++++ trunk/include/shell/user_shell.h	2010-06-22 17:59:12 UTC (rev 263)
+@@ -0,0 +1,23 @@
++/*
++ * Dreamos
++ * user_shell.h
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++#ifndef USER_SHELL_H
++#define USER_SHELL_H
++
++int user_chk(char *);
++#endif
+
+Modified: trunk/initfs
+===================================================================
+(Binary files differ)
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2010-06-21 21:10:37 UTC (rev 262)
++++ trunk/shell/shell.c	2010-06-22 17:59:12 UTC (rev 263)
+@@ -38,6 +38,7 @@
+ #include <cpuid.h>
+ #include <clock.h>
+ #include <sys/utsname.h>
++#include <user_shell.h>
+ 
+ #define NUM_COM 30
+ userenv_t current_user;
+@@ -134,7 +135,8 @@
+     scanf ("%23s",current_user.username);
+     printf(LNG_USER_R);
+   } while (!strlen(current_user.username));
+- 
++  
++  user_chk(current_user.username);
+   _kclear();
+   aalogo();
+   printf("\n\n\n\n");
+
+Added: trunk/shell/user_shell.c
+===================================================================
+--- trunk/shell/user_shell.c	2010-06-21 21:10:37 UTC (rev 262)
++++ trunk/shell/user_shell.c	2010-06-22 17:59:12 UTC (rev 263)
+@@ -0,0 +1,22 @@
++/*
++ * Dreamos
++ * user_shell.c
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++ 
++ 
++int user_chk(char *username){
++
++}
+
+
+
+From finarfin at sheep.berlios.de  Tue Jun 29 14:46:08 2010
+From: finarfin at sheep.berlios.de (finarfin at sheep.berlios.de)
+Date: Tue, 29 Jun 2010 14:46:08 +0200
+Subject: [Dreamos-dev] r264 - in trunk: . include/shell shell
+Message-ID: <20100629124608.ADC254800DF@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-06-29 14:46:08 +0200 (Tue, 29 Jun 2010)
+New Revision: 264
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/shell/commands.h
+   trunk/include/shell/testing.h
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+   trunk/shell/testing.c
+   trunk/shell/user_shell.c
+Log:
+Aggiunto comando di test try_check per test sul controllo utente in passwd.
+Iniziata implementazione ricerca utente all'interno di passwd. 
+Aggiornato help del comando tester. 
+Ora user_chk stampa l'utente inserito e quello presente nella prima riga del file.
+
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/shell/commands.h
+===================================================================
+--- trunk/include/shell/commands.h	2010-06-22 17:59:12 UTC (rev 263)
++++ trunk/include/shell/commands.h	2010-06-29 12:46:08 UTC (rev 264)
+@@ -25,7 +25,7 @@
+ 
+ #include <shell.h>
+ #include <kheap.h>
+-#define MAX_TEST 10
++#define MAX_TEST 12
+ 
+ extern int argc;
+ extern char **argv;
+
+Modified: trunk/include/shell/testing.h
+===================================================================
+--- trunk/include/shell/testing.h	2010-06-22 17:59:12 UTC (rev 263)
++++ trunk/include/shell/testing.h	2010-06-29 12:46:08 UTC (rev 264)
+@@ -27,6 +27,7 @@
+ void try_open();
+ void try_ocreat();
+ void try_syscall();
++void try_check();
+ void show_fd();
+ void test_stat();
+ 
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-06-22 17:59:12 UTC (rev 263)
++++ trunk/shell/commands.c	2010-06-29 12:46:08 UTC (rev 264)
+@@ -524,6 +524,7 @@
+ 					{ "try_syscall", try_syscall},
+ 					{ "show_fd", show_fd},
+ 					{ "test_stat", test_stat},
++					{ "try_check", try_check},
+ 					{ "--help", help_tester },
+ 					};
+ 	if (argc != 2) {
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2010-06-22 17:59:12 UTC (rev 263)
++++ trunk/shell/shell.c	2010-06-29 12:46:08 UTC (rev 264)
+@@ -136,7 +136,7 @@
+     printf(LNG_USER_R);
+   } while (!strlen(current_user.username));
+   
+-  user_chk(current_user.username);
++  //user_chk(current_user.username);
+   _kclear();
+   aalogo();
+   printf("\n\n\n\n");
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-06-22 17:59:12 UTC (rev 263)
++++ trunk/shell/testing.c	2010-06-29 12:46:08 UTC (rev 264)
+@@ -110,6 +110,8 @@
+ 		"  -> try_printmem      - Print used locations of memory\n"		
+ 		"  -> try_open          - Function to test open() & stdarg() \n"		
+ 		"  -> try_syscall	    - Try some syscall functions\n"
++		"  -> try_check         - Test username if exist\n"
++		"  -> test_stat			- Test stat function\n"
+ 		);	
+ }
+ 
+@@ -128,6 +130,14 @@
+ 	_kputs("\n");
+ }
+ 
++void try_check(){
++	char test_name[50];
++	memset(test_name, '\0', 50);
++	printf("Please insert a username: "); 
++	scanf("%s", test_name);
++	user_chk(test_name);
++}
++
+ void try_open(){
+ 	char appoggio[50];
+ 	char prova;
+@@ -191,7 +201,7 @@
+ 
+ void test_stat(){
+ 	struct stat *stats;
+-	printf("Testing stat functions\n");
++	printf("Testing stat functions on README\n");
+ 	stats = (struct stat*) kmalloc(sizeof(struct stat));
+ 	stat("README", stats);
+ 	printf("Device_id: %d\n", stats->st_dev);	
+
+Modified: trunk/shell/user_shell.c
+===================================================================
+--- trunk/shell/user_shell.c	2010-06-22 17:59:12 UTC (rev 263)
++++ trunk/shell/user_shell.c	2010-06-29 12:46:08 UTC (rev 264)
+@@ -16,7 +16,28 @@
+  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+  
++#include <stdio.h>
++#include <vfs.h>
++#include <fcntl.h>
++#include <string.h>
+  
+ int user_chk(char *username){
+-
++	int fd = -1;
++	int i = 0;
++	int err;
++	char appo[50];
++	memset(appo, '\0', 50);
++	printf("Username provided: %s\n", username);
++	fd = open("/passwd", O_RDONLY,0);
++	if(fd != -1) printf("File passwd found\n");
++	else printf("not found\n");
++	while(i < 50 || appo[i] != ':'){
++		err = read(fd, &appo[i], 1);
++		if(appo[i] == ':') {
++			appo[i] = '\0'; 
++			break;
++		}
++		else i++;
++	}
++	printf("%s - %s\n", username, appo);
+ }
+
+
+
+From finarfin at mail.berlios.de  Wed Jun 30 10:45:57 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Wed, 30 Jun 2010 10:45:57 +0200
+Subject: [Dreamos-dev] r265 - in trunk: . include/shell shell
+Message-ID: <20100630084557.E992F480A12@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-06-30 10:45:57 +0200 (Wed, 30 Jun 2010)
+New Revision: 265
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/shell/user_shell.h
+   trunk/shell/user_shell.c
+Log:
+Aggiunta struttura passwd_user per futuri controlli su utente inserito. 
+Aggiunto prototipo funzione user_get, una volta terminata servira per 
+leggere l'utente dal file pwd. 
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/shell/user_shell.h
+===================================================================
+--- trunk/include/shell/user_shell.h	2010-06-29 12:46:08 UTC (rev 264)
++++ trunk/include/shell/user_shell.h	2010-06-30 08:45:57 UTC (rev 265)
+@@ -19,5 +19,11 @@
+ #ifndef USER_SHELL_H
+ #define USER_SHELL_H
+ 
++struct passwd_user {
++	char username[50];
++	char password[50];
++};
++
+ int user_chk(char *);
++
+ #endif
+
+Modified: trunk/shell/user_shell.c
+===================================================================
+--- trunk/shell/user_shell.c	2010-06-29 12:46:08 UTC (rev 264)
++++ trunk/shell/user_shell.c	2010-06-30 08:45:57 UTC (rev 265)
+@@ -15,7 +15,8 @@
+  * along with this program; if not, write to the Free Software
+  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+- 
++
++#include <user_shell.h>
+ #include <stdio.h>
+ #include <vfs.h>
+ #include <fcntl.h>
+@@ -26,6 +27,7 @@
+ 	int i = 0;
+ 	int err;
+ 	char appo[50];
++	struct passwd_user checking_user;
+ 	memset(appo, '\0', 50);
+ 	printf("Username provided: %s\n", username);
+ 	fd = open("/passwd", O_RDONLY,0);
+@@ -39,5 +41,11 @@
+ 		}
+ 		else i++;
+ 	}
+-	printf("%s - %s\n", username, appo);
++	strcpy(checking_user.username, appo);
++	printf("%s - %s\n", username, checking_user.username);
++	close(fd);
+ }
++
++struct passwd_user user_get(int fd){
++	printf("placeholder\n");
++}
+
+
+

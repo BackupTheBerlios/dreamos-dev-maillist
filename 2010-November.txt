@@ -1,0 +1,577 @@
+From finarfin at mail.berlios.de  Tue Nov  2 22:55:20 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Tue,  2 Nov 2010 22:55:20 +0100
+Subject: [Dreamos-dev] r312 - in trunk: . boot mem
+Message-ID: <20101102215520.BF90F480FE7@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-11-02 22:55:20 +0100 (Tue, 02 Nov 2010)
+New Revision: 312
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/mem/heap.c
+Log:
+Decommentata una funzione.
+(sto cercando di riprendere in mano la situazione memoria che e' un po complicata da gestire)
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-10-24 18:45:44 UTC (rev 311)
++++ trunk/mem/heap.c	2010-11-02 21:55:20 UTC (rev 312)
+@@ -52,6 +52,7 @@
+ 		first_hole->magic = HEAP_MAGIC;		
+ 		first_hole->is_hole = 1; /*TRUE*/			
+ 		insert_array((void*) first_hole, &t_heap->index);
++		//printf("First hole: %u size: %u", t_heap->start_address, t_heap->end_address);
+ 		//get_array(0, &t_heap->index);
+ 		//locate_smallest_hole(size, PAGE_ALIGNED,&t_heap->index);
+ 		return t_heap;
+@@ -84,7 +85,7 @@
+ void *new_alloc(unsigned int size, unsigned short int p_aligned, new_heap_t* t_heap){
+ 	unsigned int real_size = size +sizeof(header_t) + sizeof(footer_t);	
+ 	printf("Size of:\n\theader_t: %d\n\tfooter_t: %d\n\treal_size: %d\n\tsize: %d\n", sizeof(header_t), sizeof(footer_t), real_size, size);	
+-	//unsigned int min_index = locate_smallest_hole(real_size, PAGE_ALIGNED, t_heap);
++	unsigned int min_index = locate_smallest_hole(real_size, PAGE_ALIGNED, t_heap);
+ 	//get_array(0, &t_heap->index);
+ }
+ 
+
+
+
+From finarfin at mail.berlios.de  Wed Nov  3 22:34:31 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Wed,  3 Nov 2010 22:34:31 +0100
+Subject: [Dreamos-dev] r313 - in trunk: . boot mem
+Message-ID: <20101103213432.1EB3F480BFD@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-11-03 22:34:31 +0100 (Wed, 03 Nov 2010)
+New Revision: 313
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/mem/heap.c
+Log:
+Proseguita locate_smallest_hole. 
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-11-02 21:55:20 UTC (rev 312)
++++ trunk/mem/heap.c	2010-11-03 21:34:31 UTC (rev 313)
+@@ -85,7 +85,7 @@
+ void *new_alloc(unsigned int size, unsigned short int p_aligned, new_heap_t* t_heap){
+ 	unsigned int real_size = size +sizeof(header_t) + sizeof(footer_t);	
+ 	printf("Size of:\n\theader_t: %d\n\tfooter_t: %d\n\treal_size: %d\n\tsize: %d\n", sizeof(header_t), sizeof(footer_t), real_size, size);	
+-	unsigned int min_index = locate_smallest_hole(real_size, PAGE_ALIGNED, t_heap);
++	//unsigned int min_index = locate_smallest_hole(real_size, PAGE_ALIGNED, t_heap);
+ 	//get_array(0, &t_heap->index);
+ }
+ 
+@@ -93,8 +93,16 @@
+ 	unsigned int index = 0; 
+ 	printf("Size index: %d\n", in_heap->index.size);
+ 	while(index < in_heap->index.size){
++		unsigned int h_size;
+ 		header_t *header = (header_t *)get_array(index, &in_heap->index);
+ 		printf("Header: 0x%x\tSize: %d\n", header->magic, header->size);
++		h_size = header->size;
++		if(h_size >= size)
++			break;
+ 		index++;
+ 	}
++	if(index >= in_heap->index.size)
++		return -1;
++	else 
++		return index;
+ }
+
+
+
+From finarfin at mail.berlios.de  Fri Nov  5 22:57:15 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Fri,  5 Nov 2010 22:57:15 +0100
+Subject: [Dreamos-dev] r314 - in trunk: . boot mem
+Message-ID: <20101105215715.8A461480A38@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-11-05 22:57:15 +0100 (Fri, 05 Nov 2010)
+New Revision: 314
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/kernel.c
+   trunk/mem/heap.c
+Log:
+Portata avanti new_alloc.
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2010-11-03 21:34:31 UTC (rev 313)
++++ trunk/kernel.c	2010-11-05 21:57:15 UTC (rev 314)
+@@ -99,6 +99,10 @@
+     _kprintOK();   
+     init_paging();
+     init_newmem();     
++    /*
++    try_newheap();
++    while(1);
++    */
+     _kprintOK();    	
+     printf("Memory (upper) amount-> %d Mb \n", boot_info->mem_upper/1024);
+     printf("Memory (lower) amount-> %d kb \n", boot_info->mem_lower);	
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-11-03 21:34:31 UTC (rev 313)
++++ trunk/mem/heap.c	2010-11-05 21:57:15 UTC (rev 314)
+@@ -83,10 +83,20 @@
+ }
+ 
+ void *new_alloc(unsigned int size, unsigned short int p_aligned, new_heap_t* t_heap){
++	//#define MEMDEBUG
+ 	unsigned int real_size = size +sizeof(header_t) + sizeof(footer_t);	
+ 	printf("Size of:\n\theader_t: %d\n\tfooter_t: %d\n\treal_size: %d\n\tsize: %d\n", sizeof(header_t), sizeof(footer_t), real_size, size);	
+-	//unsigned int min_index = locate_smallest_hole(real_size, PAGE_ALIGNED, t_heap);
+-	//get_array(0, &t_heap->index);
++	#ifdef  MEMDEBUG
++	unsigned int min_index = locate_smallest_hole(real_size, PAGE_ALIGNED, t_heap);
++	if(min_index == -1 ){
++		/*No hole with the requested size found, asking more space for heap*/
++		printf("No hole  found we need to grow\n");
++	}
++	else {
++		printf("Good News: Hole found\n");
++		//get_array(0, &t_heap->index);
++	}	
++	#endif
+ }
+ 
+ short int locate_smallest_hole(unsigned int size, unsigned short int p_align, new_heap_t* in_heap){
+@@ -95,7 +105,7 @@
+ 	while(index < in_heap->index.size){
+ 		unsigned int h_size;
+ 		header_t *header = (header_t *)get_array(index, &in_heap->index);
+-		printf("Header: 0x%x\tSize: %d\n", header->magic, header->size);
++		printf("Header: 0x%x\tSize: 0x%x\n", header->magic, header->size);
+ 		h_size = header->size;
+ 		if(h_size >= size)
+ 			break;
+
+
+
+From finarfin at mail.berlios.de  Sun Nov  7 15:48:11 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun,  7 Nov 2010 15:48:11 +0100
+Subject: [Dreamos-dev] r315 - in trunk: boot mem
+Message-ID: <20101107144811.8847E480F1B@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-11-07 15:48:11 +0100 (Sun, 07 Nov 2010)
+New Revision: 315
+
+Modified:
+   trunk/boot/grub.img
+   trunk/mem/heap.c
+Log:
+new_alloc aggiunto controllo su dimensione hole. 
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-11-05 21:57:15 UTC (rev 314)
++++ trunk/mem/heap.c	2010-11-07 14:48:11 UTC (rev 315)
+@@ -83,7 +83,7 @@
+ }
+ 
+ void *new_alloc(unsigned int size, unsigned short int p_aligned, new_heap_t* t_heap){
+-	//#define MEMDEBUG
++	//#define MEMDEBUG 1
+ 	unsigned int real_size = size +sizeof(header_t) + sizeof(footer_t);	
+ 	printf("Size of:\n\theader_t: %d\n\tfooter_t: %d\n\treal_size: %d\n\tsize: %d\n", sizeof(header_t), sizeof(footer_t), real_size, size);	
+ 	#ifdef  MEMDEBUG
+@@ -93,7 +93,14 @@
+ 		printf("No hole  found we need to grow\n");
+ 	}
+ 	else {
++		header_t *header = get_array(min_index, &t_heap->index);
++		unsigned int hole_address = (unsigned int)header;
++		unsigned int hole_size = header->size;
+ 		printf("Good News: Hole found\n");
++		printf("In new_alloc: Header: 0x%x\tSize: 0x%x\n", header->magic, header->size);
++		if(hole_size - real_size < sizeof(header_t) + sizeof(footer_t)){
++			printf("A good step forward");
++		}
+ 		//get_array(0, &t_heap->index);
+ 	}	
+ 	#endif
+
+
+
+From finarfin at mail.berlios.de  Sun Nov 14 22:49:59 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun, 14 Nov 2010 22:49:59 +0100
+Subject: [Dreamos-dev] r316 - in trunk: . boot mem
+Message-ID: <20101114214959.8AB62481184@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-11-14 22:49:59 +0100 (Sun, 14 Nov 2010)
+New Revision: 316
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/mem/heap.c
+Log:
+Reinserita la chiamata a new_malloc nell'inizializzazione dell'heap.
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-11-07 14:48:11 UTC (rev 315)
++++ trunk/mem/heap.c	2010-11-14 21:49:59 UTC (rev 316)
+@@ -42,7 +42,7 @@
+ 
+ new_heap_t *new_heap(unsigned int start, unsigned int size){
+ 	/*Actually we need to use kmalloc!*/
+-	new_heap_t* t_heap =(new_heap_t*) kmalloc(sizeof(new_heap_t));		
++	new_heap_t* t_heap =(new_heap_t*) new_malloc(sizeof(new_heap_t));		
+ 	if(start%0x1000 == 0){		
+ 		header_t *first_hole = (header_t*)start;		
+ 		t_heap->index = new_array((void*)start,size, &header_t_less_than);
+@@ -100,6 +100,8 @@
+ 		printf("In new_alloc: Header: 0x%x\tSize: 0x%x\n", header->magic, header->size);
+ 		if(hole_size - real_size < sizeof(header_t) + sizeof(footer_t)){
+ 			printf("A good step forward");
++			size = hole_size + real_size;
++			new_size = hole_size;
+ 		}
+ 		//get_array(0, &t_heap->index);
+ 	}	
+
+
+
+From finarfin at mail.berlios.de  Mon Nov 15 23:25:07 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Mon, 15 Nov 2010 23:25:07 +0100
+Subject: [Dreamos-dev] r317 - in trunk: . mem
+Message-ID: <20101115222508.1519A481185@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-11-15 23:25:07 +0100 (Mon, 15 Nov 2010)
+New Revision: 317
+
+Modified:
+   trunk/dreamos.img
+   trunk/mem/heap.c
+Log:
+new_alloc: inizio gestione split dell'hole.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-11-14 21:49:59 UTC (rev 316)
++++ trunk/mem/heap.c	2010-11-15 22:25:07 UTC (rev 317)
+@@ -99,10 +99,16 @@
+ 		printf("Good News: Hole found\n");
+ 		printf("In new_alloc: Header: 0x%x\tSize: 0x%x\n", header->magic, header->size);
+ 		if(hole_size - real_size < sizeof(header_t) + sizeof(footer_t)){
++			/*We can't split the hole?*/
+ 			printf("A good step forward");
+ 			size = hole_size + real_size;
+ 			new_size = hole_size;
+ 		}
++		//Temporaneamente commentato!
++		//remove_array(iterator, &t_heap->index);
++		if(hole_size - real_size >0){
++			printf("Add a new hole!\n");
++		}
+ 		//get_array(0, &t_heap->index);
+ 	}	
+ 	#endif
+
+
+
+From finarfin at mail.berlios.de  Sat Nov 20 15:52:18 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sat, 20 Nov 2010 15:52:18 +0100
+Subject: [Dreamos-dev] r318 - in trunk: include/mem mem
+Message-ID: <20101120145219.02223480C2F@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-11-20 15:52:18 +0100 (Sat, 20 Nov 2010)
+New Revision: 318
+
+Modified:
+   trunk/include/mem/heap.h
+   trunk/mem/heap.c
+Log:
+new_alloc: preparato header del block da inserire.
+
+
+Modified: trunk/include/mem/heap.h
+===================================================================
+--- trunk/include/mem/heap.h	2010-11-15 22:25:07 UTC (rev 317)
++++ trunk/include/mem/heap.h	2010-11-20 14:52:18 UTC (rev 318)
+@@ -29,6 +29,8 @@
+ #define HEAP_INDEX_SIZE 0x20000
+ #define HEAP_MAGIC 0x12893457
+ #define PAGE_ALIGNED 1
++#define HEAP_HOLE 1
++#define HEAP_BLOCK 0
+ 
+ #include <ordered_array.h>
+ 
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-11-15 22:25:07 UTC (rev 317)
++++ trunk/mem/heap.c	2010-11-20 14:52:18 UTC (rev 318)
+@@ -99,13 +99,19 @@
+ 		printf("Good News: Hole found\n");
+ 		printf("In new_alloc: Header: 0x%x\tSize: 0x%x\n", header->magic, header->size);
+ 		if(hole_size - real_size < sizeof(header_t) + sizeof(footer_t)){
+-			/*We can't split the hole?*/
++			/*We can't split the hole!*/
+ 			printf("A good step forward");
+ 			size = hole_size + real_size;
+-			new_size = hole_size;
++			real_size = hole_size;
+ 		}
+-		//Temporaneamente commentato!
+-		//remove_array(iterator, &t_heap->index);
++		//else remove_array(iterator, &t_heap->index);
++		//Temporaneamente commentato!	
++		#ifdef DEBUG
++		header_t *block_header  = (header_t *)hole_address;
++		block_header->magic = HEAP_MAGIC;
++		block_header->size = real_size
++		block_header->is_hole= HEAP_BLOCK;
++		#endif
+ 		if(hole_size - real_size >0){
+ 			printf("Add a new hole!\n");
+ 		}
+
+
+
+From finarfin at mail.berlios.de  Tue Nov 23 22:58:42 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Tue, 23 Nov 2010 22:58:42 +0100
+Subject: [Dreamos-dev] r319 - trunk/mem
+Message-ID: <20101123215842.DDFBF480750@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-11-23 22:58:42 +0100 (Tue, 23 Nov 2010)
+New Revision: 319
+
+Modified:
+   trunk/mem/heap.c
+Log:
+new_alloc: aggiunta nuovo hole nel caso si necessiti uno split.
+
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-11-20 14:52:18 UTC (rev 318)
++++ trunk/mem/heap.c	2010-11-23 21:58:42 UTC (rev 319)
+@@ -113,7 +113,14 @@
+ 		block_header->is_hole= HEAP_BLOCK;
+ 		#endif
+ 		if(hole_size - real_size >0){
+-			printf("Add a new hole!\n");
++			/*We need to add a new hole. The new_hole address is given by:
++			 * the current hole address + size + sizeof(header_t) + sizeof(footer_t) 
++			 * */
++			header_t *head_hole = (header_t *)hole_address + sizeof(header_t) + size + sizeof(footer_t);
++			head_hole->magic = HEAP_MAGIC;
++			head_hole->is_hole = HEAP_HOLE;
++			head_hole->size = hole_size - real_size;
++			printf("Add a new hole!\n");			
+ 		}
+ 		//get_array(0, &t_heap->index);
+ 	}	
+
+
+
+From finarfin at mail.berlios.de  Mon Nov 29 21:14:29 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Mon, 29 Nov 2010 21:14:29 +0100
+Subject: [Dreamos-dev] r320 - in trunk: . boot mem
+Message-ID: <20101129201429.C182B480034@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-11-29 21:14:29 +0100 (Mon, 29 Nov 2010)
+New Revision: 320
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/mem/heap.c
+Log:
+In new_alloc: definito footer e inserito in lista hole.
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-11-23 21:58:42 UTC (rev 319)
++++ trunk/mem/heap.c	2010-11-29 20:14:29 UTC (rev 320)
+@@ -120,6 +120,10 @@
+ 			head_hole->magic = HEAP_MAGIC;
+ 			head_hole->is_hole = HEAP_HOLE;
+ 			head_hole->size = hole_size - real_size;
++			footer_t *footer_hole = (footer_t*)(hole_address + head_hole->size - sizeof(footer_t));
++			footer_hole->magic = HEAP_MAGIC;
++			footer_hole->header = head_hole;
++			insert_array((void *)head_hole, &t_heap->index);
+ 			printf("Add a new hole!\n");			
+ 		}
+ 		//get_array(0, &t_heap->index);
+
+
+
+From finarfin at mail.berlios.de  Mon Nov 29 23:09:30 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Mon, 29 Nov 2010 23:09:30 +0100
+Subject: [Dreamos-dev] r321 - in trunk: . boot include/mem mem
+Message-ID: <20101129220930.471ED480034@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-11-29 23:09:29 +0100 (Mon, 29 Nov 2010)
+New Revision: 321
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/include/mem/heap.h
+   trunk/mem/heap.c
+Log:
+Aggiunto header funzione expand. 
+Definita la medesima funzione nel file C. 
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/mem/heap.h
+===================================================================
+--- trunk/include/mem/heap.h	2010-11-29 20:14:29 UTC (rev 320)
++++ trunk/include/mem/heap.h	2010-11-29 22:09:29 UTC (rev 321)
+@@ -65,6 +65,7 @@
+ new_heap_t *new_heap(unsigned int, unsigned int);
+ 
+ void *new_alloc(unsigned int, unsigned short int, new_heap_t*);
++void expand(unsigned int, new_heap_t*);
+ void new_free();
+ void init_newmem();
+ 
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-11-29 20:14:29 UTC (rev 320)
++++ trunk/mem/heap.c	2010-11-29 22:09:29 UTC (rev 321)
+@@ -91,12 +91,13 @@
+ 	if(min_index == -1 ){
+ 		/*No hole with the requested size found, asking more space for heap*/
+ 		printf("No hole  found we need to grow\n");
++		expand(real_size, t_heap);
+ 	}
+ 	else {
+ 		header_t *header = get_array(min_index, &t_heap->index);
+ 		unsigned int hole_address = (unsigned int)header;
+ 		unsigned int hole_size = header->size;
+-		printf("Good News: Hole found\n");
++		printf("HOLE FOUND\n");
+ 		printf("In new_alloc: Header: 0x%x\tSize: 0x%x\n", header->magic, header->size);
+ 		if(hole_size - real_size < sizeof(header_t) + sizeof(footer_t)){
+ 			/*We can't split the hole!*/
+@@ -115,7 +116,8 @@
+ 		if(hole_size - real_size >0){
+ 			/*We need to add a new hole. The new_hole address is given by:
+ 			 * the current hole address + size + sizeof(header_t) + sizeof(footer_t) 
+-			 * */
++			 **/
++			printf("Add a new hole!\n");			
+ 			header_t *head_hole = (header_t *)hole_address + sizeof(header_t) + size + sizeof(footer_t);
+ 			head_hole->magic = HEAP_MAGIC;
+ 			head_hole->is_hole = HEAP_HOLE;
+@@ -123,14 +125,17 @@
+ 			footer_t *footer_hole = (footer_t*)(hole_address + head_hole->size - sizeof(footer_t));
+ 			footer_hole->magic = HEAP_MAGIC;
+ 			footer_hole->header = head_hole;
+-			insert_array((void *)head_hole, &t_heap->index);
+-			printf("Add a new hole!\n");			
++			insert_array((void *)head_hole, &t_heap->index);			
+ 		}
+ 		//get_array(0, &t_heap->index);
+ 	}	
+ 	#endif
+ }
+ 
++void expand(unsigned int new_size, new_heap_t *t_heap){
++	printf("Placeholder for expand\n");	
++}
++
+ short int locate_smallest_hole(unsigned int size, unsigned short int p_align, new_heap_t* in_heap){
+ 	unsigned int index = 0; 
+ 	printf("Size index: %d\n", in_heap->index.size);
+
+
+

@@ -1,0 +1,291 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r216 - in trunk: . files fs include/shell libc shell	system
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-March/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r216%20-%20in%20trunk%3A%20.%20files%20fs%20include/shell%20libc%20shell%0A%09system&In-Reply-To=%3C201003282226.o2SMQWEu015351%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000218.html">
+   <LINK REL="Next"  HREF="000220.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r216 - in trunk: . files fs include/shell libc shell	system</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r216%20-%20in%20trunk%3A%20.%20files%20fs%20include/shell%20libc%20shell%0A%09system&In-Reply-To=%3C201003282226.o2SMQWEu015351%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r216 - in trunk: . files fs include/shell libc shell	system">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Mon Mar 29 00:26:32 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000218.html">[Dreamos-dev] r215 - in trunk: . shell
+</A></li>
+        <LI>Next message: <A HREF="000220.html">[Dreamos-dev] r217 - in trunk: . shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#219">[ date ]</a>
+              <a href="thread.html#219">[ thread ]</a>
+              <a href="subject.html#219">[ subject ]</a>
+              <a href="author.html#219">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-03-29 00:26:22 +0200 (Mon, 29 Mar 2010)
+New Revision: 216
+
+Modified:
+   trunk/README
+   trunk/dreamos.img
+   trunk/files/README
+   trunk/fs/fcntl.c
+   trunk/fs/initrd.c
+   trunk/include/shell/testing.h
+   trunk/libc/stdio.c
+   trunk/shell/commands.c
+   trunk/shell/testing.c
+   trunk/system/syscall.c
+Log:
+Aggiunto comando try_syscall.
+Per ora prova solo la sysputch.
+Questa syscall ha la funzione di _kputc.
+Il supporto delle syscall ancora presenta molti bug, ed e' da 
+migliorare. Ci sono problemi con i valori passati nei registri.
+Aggiornato file README.
+Aggiornato file files/README
+
+
+Modified: trunk/README
+===================================================================
+--- trunk/README	2010-03-18 22:03:20 UTC (rev 215)
++++ trunk/README	2010-03-28 22:26:22 UTC (rev 216)
+@@ -129,7 +129,9 @@
+ 
+ Potete mandare un resoconto o comunque raccontare la vostra esperienza con DreamOS sul forum di osdev.it:
+ 	<A HREF="http://forum.osdev.it/">http://forum.osdev.it/</A>
+-
++Oppure ci trovate su irc: 
++	Server: irc.azzurra.org
++	Chan: #dreamos
+ 	
+ 
+ DreamOS 2003-2009 by finarfin/shainer
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/files/README
+===================================================================
+--- trunk/files/README	2010-03-18 22:03:20 UTC (rev 215)
++++ trunk/files/README	2010-03-28 22:26:22 UTC (rev 216)
+@@ -1,6 +1,6 @@
+ DREAMOS 0.2.0-trunk
+ 
+-Welcome to the dreamOS operting system.
++Welcome to the dreamOS operating system.
+ 
+ If you want some help enter the &quot;help&quot; command into the cli.
+ 
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2010-03-18 22:03:20 UTC (rev 215)
++++ trunk/fs/fcntl.c	2010-03-28 22:26:22 UTC (rev 216)
+@@ -50,9 +50,7 @@
+ 	}
+ 	prova = va_arg(ap, int);
+ 	if(cur_fd == _SC_OPEN_MAX) cur_fd = 0;
+-		//printf(&quot;Cur_fd reset\n&quot;);
+ 		//printf(&quot;No more file descriptors available\n&quot;);
+-		//return -1;
+ 	while(fd_list[cur_fd].mountpoint_id != -1 &amp;&amp; cur_fd &lt; _SC_OPEN_MAX){
+ 		cur_fd++;
+ 	}
+@@ -78,12 +76,9 @@
+ 			va_end(ap);
+ 			return -1;
+ 		}
+-		//printf(&quot;%d---%d---&quot;, cur_fd, fd_list[cur_fd].fs_spec_id);
+-			//printf(&quot;Mpoint id: %d %s fs_spec_fd: %d\n&quot;, fd_list[cur_fd].mountpoint_id, path, fd_list[cur_fd].fs_spec_id);			
+ 	}
+ 	else {
+ 		if(mpid&gt;-1) printf(&quot;No OPEN services found here\n&quot;);					
+-		//fd_list[cur_fd].mountpoint_id = -1; //Controllare se va messa
+ 		va_end(ap);
+ 		return -1;
+ 	}
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-03-18 22:03:20 UTC (rev 215)
++++ trunk/fs/initrd.c	2010-03-28 22:26:22 UTC (rev 216)
+@@ -127,8 +127,7 @@
+ 	file_start = (char *) (module_start	+ fs_headers[lfd].offset);
+ 	//printf(&quot;cur_pos val: %d\n&quot;, ird_descriptors[fildes].cur_pos);
+ 	if(nbyte == 0) return 0;	
+-	while(j&lt;nbyte &amp;&amp; read_pos&lt;file_size){
+-		//putchar(file_start[j]);		
++	while(j&lt;nbyte &amp;&amp; read_pos&lt;file_size){		
+ 		*buf++ = file_start[read_pos];			
+ 		read_pos++;
+ 		j++;
+
+Modified: trunk/include/shell/testing.h
+===================================================================
+--- trunk/include/shell/testing.h	2010-03-18 22:03:20 UTC (rev 215)
++++ trunk/include/shell/testing.h	2010-03-28 22:26:22 UTC (rev 216)
+@@ -26,4 +26,6 @@
+ void try_module();
+ void try_open();
+ void try_fsinit();
++void try_syscall();
++
+ #endif
+
+Modified: trunk/libc/stdio.c
+===================================================================
+--- trunk/libc/stdio.c	2010-03-18 22:03:20 UTC (rev 215)
++++ trunk/libc/stdio.c	2010-03-28 22:26:22 UTC (rev 216)
+@@ -63,9 +63,15 @@
+ 
+ void putchar (char ch)
+ {
+-	char s[2];
++	/*asm (
++		&quot;movl $0x0, %%eax\n&quot;
++		&quot;movl %0, %%ecx\n&quot;
++		&quot;int $80\n\t&quot;
++		::&quot;g&quot; (ch) );*/
++	/*char s[2];
+ 	s[0] = ch;
+ 	s[1] = '\0';
++	*/
+ 	//_kputs(s);
+ 	_kputc(ch); 
+ 
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-03-18 22:03:20 UTC (rev 215)
++++ trunk/shell/commands.c	2010-03-28 22:26:22 UTC (rev 216)
+@@ -487,6 +487,7 @@
+ 					{ &quot;try_printmem&quot;, try_printmem },
+ 					{ &quot;try_module&quot;, try_module },
+ 					{ &quot;try_open&quot;, try_open},					
++					{ &quot;try_syscall&quot;, try_syscall},
+ 					{ &quot;--help&quot;, help_tester },
+ 					};
+ 	if (argc != 2) {
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-03-18 22:03:20 UTC (rev 215)
++++ trunk/shell/testing.c	2010-03-28 22:26:22 UTC (rev 216)
+@@ -155,3 +155,18 @@
+ void try_fsinit(){
+ 	printf(&quot;Number of files present: %d\n&quot;, initfs_init());
+ }
++
++void try_syscall(){
++	printf(&quot;Trying sysputch:\n&quot;);
++	int i;
++	//i='A';
++    for(i='A';i&lt;='Z';i++) {
++		asm(
++			&quot;movl %0, %%ecx\n&quot;
++			&quot;movl $0x0, %%eax\n&quot;
++			&quot;int $80\n&quot;
++			: : &quot;g&quot;(i)	
++		);	
++	}
++	printf(&quot;\n&quot;);
++}
+
+Modified: trunk/system/syscall.c
+===================================================================
+--- trunk/system/syscall.c	2010-03-18 22:03:20 UTC (rev 215)
++++ trunk/system/syscall.c	2010-03-28 22:26:22 UTC (rev 216)
+@@ -27,16 +27,19 @@
+ #include &lt;stdio.h&gt;
+ #include &lt;video.h&gt;
+ #include &lt;keyboard.h&gt;
++#include &lt;video.h&gt;
+ 
+ void (*syscall_table[SYSCALL_NUMBER])(int *) = {sysputch};  
+ 
+ void sysputch(int *args)
+-{
+-   char s[2];
++{	
++/*   char s[2];
+    s[0] = args[0];
+    s[1] = '\0';
+ 
+-   _kputs (s);
++   _kputs (s);*/
++   //putchar(&quot;A&quot;);
++   _kputc((char)args[0]); 
+ }
+ 
+ void syscall_init()
+@@ -57,20 +60,19 @@
+      int eax=0;
+      int ebx=0, ecx=0, edx=0;
+      int arguments[3] = {0,0,0};
+-
+-     asm (&quot;cli&quot;);
+-
++	 int reg=5;	 
++     asm (&quot;cli&quot;);	 
+      asm (&quot;movl %%eax, %0\n\t&quot;
+-	  &quot;movl %%ebx, %1\n\t&quot;
+-	  &quot;movl %%ecx, %2\n\t&quot;
++	  &quot;movl %%ecx, %1\n\t&quot;
++	  &quot;movl %%ebx, %2\n\t&quot;
+ 	  &quot;movl %%edx, %3\n\t&quot;
+-	  : &quot;=r&quot; (eax), &quot;=r&quot; (ebx), &quot;=r&quot; (ecx), &quot;=r&quot; (edx));
++	  : &quot;=r&quot; (eax), &quot;=r&quot; (ecx), &quot;=r&quot; (ebx), &quot;=r&quot; (edx));
+      
+-     arguments[0] = ebx;
+-     arguments[1] = ecx;
++     arguments[0] = ecx;
++     arguments[1] = ebx;
+      arguments[2] = edx;
+-         
+-     (*syscall_table[eax])(arguments);
++     	 
++     (*syscall_table[eax])(arguments);     
+      asm (&quot;sti&quot;);
+ }
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000218.html">[Dreamos-dev] r215 - in trunk: . shell
+</A></li>
+	<LI>Next message: <A HREF="000220.html">[Dreamos-dev] r217 - in trunk: . shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#219">[ date ]</a>
+              <a href="thread.html#219">[ thread ]</a>
+              <a href="subject.html#219">[ subject ]</a>
+              <a href="author.html#219">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

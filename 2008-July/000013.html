@@ -1,0 +1,316 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r13 - in trunk: . include/mem include/shell mem shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2008-July/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r13%20-%20in%20trunk%3A%20.%20include/mem%20include/shell%20mem%20shell&In-Reply-To=%3C200807172131.m6HLVMN8013781%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000012.html">
+   <LINK REL="Next"  HREF="000014.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r13 - in trunk: . include/mem include/shell mem shell</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r13%20-%20in%20trunk%3A%20.%20include/mem%20include/shell%20mem%20shell&In-Reply-To=%3C200807172131.m6HLVMN8013781%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r13 - in trunk: . include/mem include/shell mem shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Thu Jul 17 23:31:22 CEST 2008</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000012.html">[Dreamos-dev] r12 - in trunk: . include include/mem include/shell	mem processore shell system
+</A></li>
+        <LI>Next message: <A HREF="000014.html">[Dreamos-dev] r14 - in trunk: . include include/mem include/misc	mem misc
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#13">[ date ]</a>
+              <a href="thread.html#13">[ thread ]</a>
+              <a href="subject.html#13">[ subject ]</a>
+              <a href="author.html#13">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2008-07-17 23:31:21 +0200 (Thu, 17 Jul 2008)
+New Revision: 13
+
+Modified:
+   trunk/Makefile
+   trunk/TODO
+   trunk/dreamos.img
+   trunk/include/mem/kheap.h
+   trunk/include/shell/shell.h
+   trunk/kernel.map
+   trunk/mem/kheap.c
+   trunk/shell/shell.c
+Log:
+Aggiunto un parametro di compilazione al Makefile
+Aggiunto comando do_fault per testare i fault in scrittura.
+Corretto un errore sull'header della licenza in shell.h
+Aggiunte le prime strutture dati utili per la gestione della memoria dinamica.
+Modificata funzione kmalloc (il return value ora e' quello corretto). Anche se entro le 
+prossime revisioni verra riscritta completamente.
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2008-07-16 21:51:35 UTC (rev 12)
++++ trunk/Makefile	2008-07-17 21:31:21 UTC (rev 13)
+@@ -1,4 +1,4 @@
+-CFLAGS = -nostdlib -fomit-frame-pointer -fno-builtin -fno-stack-protector -Wall -march=i686 -I./include -I./include/io -I./include/drivers -I./include/libc -I./include/processore -I./include/hardware -I./include/mem -I./include/system -I./include/shell
++CFLAGS = -nostdlib -fomit-frame-pointer -fno-builtin -fno-stack-protector -Wall -march=i686 -m32 -I./include -I./include/io -I./include/drivers -I./include/libc -I./include/processore -I./include/hardware -I./include/mem -I./include/system -I./include/shell
+ OBJ = kernel.o io/video.o drivers/keyboard.o libc/ctype.o libc/string.o io/io.o libc/stdio.o hardware/cpuid.o hardware/keyboard.o processore/gdt.o processore/idt.o processore/handlers.o hardware/pic8259.o mem/fismem.o mem/paging.o mem/kheap.o system/syscall.o hardware/8253.o shell/shell.o
+ 
+ dreamos.img: bl.img kernel.bin
+@@ -28,6 +28,7 @@
+ drivers/keyboard.o: drivers/keyboard.c
+ system/syscall.o: system/syscall.c
+ hardware/8253.o: hardware/8253.c
++shell/shell.o: shell/shell.c
+ 
+ # Autonomatizzazione aggiornamento file immagine distro
+ # Only root
+
+Modified: trunk/TODO
+===================================================================
+--- trunk/TODO	2008-07-16 21:51:35 UTC (rev 12)
++++ trunk/TODO	2008-07-17 21:31:21 UTC (rev 13)
+@@ -12,9 +12,11 @@
+ - Todo rivedere quali sono le eccezioni che hanno un error code e sostituire le relative EXCEPTION(xx) con EXCEPTION_EC(xx)
+ - Fare una mega pulizia del codice
+ - Eliminare il maggior numero di messaggi di errore dalla compilazione
+--Script che memorizza nei sorci il numero di revisione (genera un file header)
++- Script che memorizza nei sorci il numero di revisione (genera un file header)
+ - fare in modo che quando stampa &quot;root#~&quot; se premo backspace non cancelli quella scritta.
+ - Comandi: echo - clear
++- bitmasks per interpretare errori del pagefault.
++- Makefile -m32 da aggiungere?
+ 
+ PROGETTI A LUNGO TERMINE:
+ - Implementazione di un migliore scrolling
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/mem/kheap.h
+===================================================================
+--- trunk/include/mem/kheap.h	2008-07-16 21:51:35 UTC (rev 12)
++++ trunk/include/mem/kheap.h	2008-07-17 21:31:21 UTC (rev 13)
+@@ -27,6 +27,22 @@
+ 
+ extern unsigned int address_cur;
+ 
+-unsigned int kmalloc(int);
++typedef struct{
++    unsigned int magic;
++    unsigned int hole;
++    unsigned int size;
++} header_t;
+ 
++typedef struct{
++    unsigned int magic;
++    unsigned int *header;
++} footer_t;
++
++void* kmalloc(unsigned int);
++void kfree(unsigned int);
++
++void *alloc(unsigned int);
++// void free(unsigned int);
++
++
+ #endif
+\ No newline at end of file
+
+Modified: trunk/include/shell/shell.h
+===================================================================
+--- trunk/include/shell/shell.h	2008-07-16 21:51:35 UTC (rev 12)
++++ trunk/include/shell/shell.h	2008-07-17 21:31:21 UTC (rev 13)
+@@ -1,6 +1,6 @@
+ /*  DreamOS
+     shell.h
+-    This file is part of Foobar.
++    This file is part of DreamOS.
+     Foobar is free software: you can redistribute it and/or modify
+     it under the terms of the GNU General Public License as published by
+     the Free Software Foundation, either version 3 of the License, or
+
+Modified: trunk/kernel.map
+===================================================================
+--- trunk/kernel.map	2008-07-16 21:51:35 UTC (rev 12)
++++ trunk/kernel.map	2008-07-17 21:31:21 UTC (rev 13)
+@@ -148,27 +148,27 @@
+                 0x0000000000103c70                set_pagedir_entry_ric
+                 0x0000000000103cb5                set_pagetable_entry
+  *fill*         0x0000000000103dd5        0x3 00
+- .text          0x0000000000103dd8       0x26 mem/kheap.o
++ .text          0x0000000000103dd8       0x22 mem/kheap.o
+                 0x0000000000103dd8                kmalloc
+- *fill*         0x0000000000103dfe        0x2 00
+- .text          0x0000000000103e00       0xdd system/syscall.o
+-                0x0000000000103e22                syscall_init
+-                0x0000000000103e00                sysputch
+-                0x0000000000103e58                syscall_handler
+- *fill*         0x0000000000103edd        0x3 00
+- .text          0x0000000000103ee0      0x11e hardware/8253.o
+-                0x0000000000103fcf                sleep
+-                0x0000000000103ee0                PIT_handler
+-                0x0000000000103f66                configure_PIT
+- *fill*         0x0000000000103ffe        0x2 00
+- .text          0x0000000000104000      0x3ea shell/shell.o
+-                0x0000000000104044                info
+-                0x00000000001041d7                shell
+-                0x0000000000104032                poweroff
+-                0x000000000010401f                help
+-                0x0000000000104000                logo
++ *fill*         0x0000000000103dfa        0x2 00
++ .text          0x0000000000103dfc       0xdd system/syscall.o
++                0x0000000000103e1e                syscall_init
++                0x0000000000103dfc                sysputch
++                0x0000000000103e54                syscall_handler
++ *fill*         0x0000000000103ed9        0x3 00
++ .text          0x0000000000103edc      0x11e hardware/8253.o
++                0x0000000000103fcb                sleep
++                0x0000000000103edc                PIT_handler
++                0x0000000000103f62                configure_PIT
++ *fill*         0x0000000000103ffa        0x2 00
++ .text          0x0000000000103ffc      0x440 shell/shell.o
++                0x0000000000104040                info
++                0x00000000001041d3                shell
++                0x000000000010402e                poweroff
++                0x000000000010401b                help
++                0x0000000000103ffc                logo
+                 0x0000000000105000                . = ALIGN (0x1000)
+- *fill*         0x00000000001043ea      0xc16 00
++ *fill*         0x000000000010443c      0xbc4 00
+ 
+ .rel.dyn        0x0000000000105000        0x0
+  .rel.text      0x0000000000000000        0x0 bl.img
+@@ -220,9 +220,9 @@
+  *fill*         0x00000000001057ba        0x2 00
+  .rodata        0x00000000001057bc       0x23 mem/paging.o
+  *fill*         0x00000000001057df        0x1 00
+- .rodata        0x00000000001057e0      0x31a shell/shell.o
++ .rodata        0x00000000001057e0      0x35b shell/shell.o
+                 0x0000000000106000                . = ALIGN (0x1000)
+- *fill*         0x0000000000105afa      0x506 00
++ *fill*         0x0000000000105b3b      0x4c5 00
+ 
+ .bss            0x0000000000106000    0x33fec
+                 0x0000000000106000                bss = .
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2008-07-16 21:51:35 UTC (rev 12)
++++ trunk/mem/kheap.c	2008-07-17 21:31:21 UTC (rev 13)
+@@ -22,14 +22,13 @@
+  *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+  */
+ 
+-#include &lt;kernel.h&gt;
+ #include &lt;kheap.h&gt;
+ #include &lt;paging.h&gt;
+ 
+ extern unsigned int end;
+ unsigned int address_cur = (unsigned int) &end;
+ 
+-unsigned int kmalloc(int size){
++void* kmalloc(unsigned int size){
+     int temp;
+     
+     temp = address_cur;
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2008-07-16 21:51:35 UTC (rev 12)
++++ trunk/shell/shell.c	2008-07-17 21:31:21 UTC (rev 13)
+@@ -1,6 +1,6 @@
+ /*  DreamOS
+     shell.c
+-    This file is part of Foobar.
++    This file is part of DreamOSr.
+     Foobar is free software: you can redistribute it and/or modify
+     it under the terms of the GNU General Public License as published by
+     the Free Software Foundation, either version 3 of the License, or
+@@ -52,6 +52,7 @@
+ 	       &quot;poweroff - Turn off the machine\n&quot;
+ 	       &quot;info     - See the system info about Memory and other staffs like that\n&quot;
+            &quot;kmalloc  - Test a basic kmalloc function\n&quot;
++           &quot;do_fault - Test a page_fault (WARNING: This hang the OS)\n&quot;
+ 		);
+ }
+ 
+@@ -120,28 +121,35 @@
+ 			info();
+ 			cmd[a]=NULL;
+ 		}
+-		else if (!(_kstrncmp(cmd,&quot;answer&quot;,4)))
++		else if (!(_kstrncmp(cmd,&quot;answer&quot;,6)))
+         {
+             printf(&quot;42\n&quot;);
+             cmd[a]=NULL;
+         }
+-        else if (!(_kstrncmp(cmd,&quot;kmalloc&quot;,4)))
++        else if (!(_kstrncmp(cmd,&quot;kmalloc&quot;,7)))
+         {
+             printf(&quot;kmalloc try: ...\n&quot;);
+-            int *a;
+-            a = kmalloc(10*sizeof(int));
++            int *b;
++            b = (int) kmalloc(10*sizeof(int));
+             int i = 0;
+             while(i&lt;10){
+-                a[i] = i*2;
++                b[i] = i*2;
+                 i++;
+             }
+             i=0;
+             while(i&lt;10) {
+-                printf(&quot;a[%d] = %d\n&quot;,i, a[i]);
++                printf(&quot;b[%d] = %d\n&quot;,i, b[i]);
+                 i++;
+             }
+-            printf(&quot;Address of a: %d\n&quot;, a);
++            printf(&quot;Address of a: %d\n&quot;, b);
++            cmd[a]=NULL;
+         }
++        else if (!(_kstrncmp(cmd,&quot;do_fault&quot;,8))){  
++            char *prova;
++            prova = 0xa0000000;
++            *prova = 10;
++cmd[a]=NULL;
++        }
+ 	}
+ 
+ }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000012.html">[Dreamos-dev] r12 - in trunk: . include include/mem include/shell	mem processore shell system
+</A></li>
+	<LI>Next message: <A HREF="000014.html">[Dreamos-dev] r14 - in trunk: . include include/mem include/misc	mem misc
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#13">[ date ]</a>
+              <a href="thread.html#13">[ thread ]</a>
+              <a href="subject.html#13">[ subject ]</a>
+              <a href="author.html#13">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

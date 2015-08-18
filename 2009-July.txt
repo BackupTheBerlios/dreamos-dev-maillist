@@ -1,0 +1,1785 @@
+From osiris_h4ck at mail.berlios.de  Mon Jul 13 16:15:00 2009
+From: osiris_h4ck at mail.berlios.de (osiris_h4ck at mail.berlios.de)
+Date: Mon, 13 Jul 2009 16:15:00 +0200
+Subject: [Dreamos-dev] r98 - in trunk: . drivers include include/shell shell
+Message-ID: <200907131415.n6DEF0BG025305@sheep.berlios.de>
+
+Author: osiris_h4ck
+Date: 2009-07-13 16:14:39 +0200 (Mon, 13 Jul 2009)
+New Revision: 98
+
+Modified:
+   trunk/.bochsrc
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/drivers/mouse.c
+   trunk/include/shell/commands.h
+   trunk/include/version.h
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+Log:
+- Modificato comando modprobe, ora si chiama drv_load().
+- Risolti alcuni bug relativi a drv_load e drv_load -r
+- Rimosso il movimento cursore del mouse_driver perch?\195?\168 in alcuni PC non funzia
+- Modificati alcuni output
+
+Lord Osiris
+
+
+Modified: trunk/.bochsrc
+===================================================================
+--- trunk/.bochsrc	2009-06-23 18:13:07 UTC (rev 97)
++++ trunk/.bochsrc	2009-07-13 14:14:39 UTC (rev 98)
+@@ -17,7 +17,7 @@
+ # the "wx" display library.
+ #=======================================================================
+ #config_interface: textconfig
+-config_interface: wx
++#config_interface: wx
+ 
+ #=======================================================================
+ # DISPLAY_LIBRARY
+@@ -59,7 +59,7 @@
+ #display_library: sdl, options="fullscreen" # startup in fullscreen mode
+ #display_library: term
+ #display_library: win32, options="legacyF12" # use F12 to toggle mouse
+-display_library: wx
++#display_library: wx
+ #display_library: x, options="gui_debug"
+ #display_library: x
+ #=======================================================================
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2009-06-23 18:13:07 UTC (rev 97)
++++ trunk/Makefile	2009-07-13 14:14:39 UTC (rev 98)
+@@ -107,6 +107,7 @@
+ clean:
+ 	rm -f *.img *.bin *.map
+ 	rm -f $(OBJ)
++#	echo "" > include/version.h
+ 
+ install:
+ 	mkfs.ext2 /dev/fd0
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/drivers/mouse.c
+===================================================================
+--- trunk/drivers/mouse.c	2009-06-23 18:13:07 UTC (rev 97)
++++ trunk/drivers/mouse.c	2009-07-13 14:14:39 UTC (rev 98)
+@@ -141,15 +141,15 @@
+ 	if (cycle == 3) {
+ 	  cycle = 0; 
+ 
+-//	if ((mouse_bytes[0] & 0x80) || (mouse_bytes[0] & 0x40))
+-//	  return;
++	//if ((mouse_bytes[0] & 0x80) || (mouse_bytes[0] & 0x40))
++	//  return;
+ 
+ 	// coordinate x stanno in mouse_bytes[1] e
+ 	// le coordinate y stanno in mouse_bytes[2]
+ 	// direzione (0=destra, 1=sinitra)
+ 
+-	if((mouse_bytes[0] & 0x07)==0) // 0x07 forse non ? un valore corretto
+-	//if((mouse_bytes[0] & 0x40)==0)
++	//if((mouse_bytes[0] & 0x07)==0) // 0x07 forse non ? un valore corretto
++	if((mouse_bytes[0] & 0x40)==0)
+ 	{
+ 	  //if((mouse_bytes[0] & 0x05)==0) // 0x05 forse non ? un valore corretto
+ 	  if((mouse_bytes[0] & 0x10)==0)
+@@ -162,8 +162,8 @@
+ 	  MousePositionX+=mouse_bytes[1]/2;
+    
+ 	// direzioni (0=su, 1=sotto)
+-	if((mouse_bytes[0] & 0x08)==0) // 0x08 forse non ? un valore corretto
+-	//if((mouse_bytes[0] & 0x80)==0)
++	//if((mouse_bytes[0] & 0x08)==0) // 0x08 forse non ? un valore corretto
++	if((mouse_bytes[0] & 0x80)==0)
+ 	{
+ 	  //if((mouse_bytes[0] & 0x06)==0) // 0x06 forse non ? un valore corretto
+ 	  if((mouse_bytes[0] & 0x20)==0)
+@@ -195,19 +195,19 @@
+ 	printf("\rx: %d | y: %d", MousePositionX, MousePositionY);
+ 
+ 	// e muove il cursore 
+-	_ksetcursor(MousePositionX, MousePositionY);
+-/*
++	//_ksetcursor(MousePositionX, MousePositionY); // Not now
++
+ 	// Qui ? si rilevato un problema, se il mouse si muove
+ 	// vengono rilevati tasti premuti..
+-
++/*
+ 	// Rilevo i tasti premuti..
+ 	if (mouse_bytes[0] & 0x4) 
+ 	    printf(LNG_MOUSE_MID);  // Centrale premuto
+ 
+-	else if (mouse_bytes[0] & 0x2) 
++	if (mouse_bytes[0] & 0x2) 
+ 	    printf(LNG_MOUSE_RIGHT);  // Destro premuto
+ 
+-	else if (mouse_bytes[0] & 0x1) 
++	if (mouse_bytes[0] & 0x1) 
+ 	    printf(LNG_MOUSE_LEFT);  // Sinistro premuto
+ */
+ 	}
+
+Modified: trunk/include/shell/commands.h
+===================================================================
+--- trunk/include/shell/commands.h	2009-06-23 18:13:07 UTC (rev 97)
++++ trunk/include/shell/commands.h	2009-07-13 14:14:39 UTC (rev 98)
+@@ -45,5 +45,5 @@
+ void sleep_cmd();
+ void cpuid();
+ void answer();
+-void modprobe();
++void drv_load();
+ #endif
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-06-23 18:13:07 UTC (rev 97)
++++ trunk/include/version.h	2009-07-13 14:14:39 UTC (rev 98)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "1.3"
+ #define EXTRAVERSION "-trunk"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r95"
++#define REV_NUM "-r97"
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-06-23 18:13:07 UTC (rev 97)
++++ trunk/shell/commands.c	2009-07-13 14:14:39 UTC (rev 98)
+@@ -66,7 +66,7 @@
+ 	 "cpuid     - Show cpu identification informations\n"
+ 	 "date      - Show date and time\n"
+ 	 "echo      - Print some lines of text\n"
+-	 "modprobe  - Tool to load and kill modules\n");
++	 "drv_load  - Tool to load and kill modules\n");
+ }
+ 
+ void echo()
+@@ -223,15 +223,14 @@
+   _kputs("DreamOS Credits\n\n");                
+   _kputs("Main Developers:\n");
+   _kcolor('\012');
+-   printf("Shainer - Lisa\n"	  
+-          "Finarfin - Ivan\n\n\n"            
++   printf("Osiris - Diego Stamigni \n"	  
++             "Finarfin - Ivan\n\n\n"            
+          );
+ 
+   _kcolor('\011');
+   _kputs("Contributors:\n");
+   _kcolor('\012');
+-  _kputs(	"Osiris\n"
+-		    "vinc94\n"
++  _kputs("vinc94\n"
+ 	  		"tk0\n"
+ 	  		"DT\n"
+          	"Celeron\n"
+@@ -324,51 +323,57 @@
+   printf("42\n");
+ }
+ 
+-void modprobe(void)
++void  drv_load(void)
+ {
+   if (argc < 2)
+-      printf("No module inserted or bad usage! Type modprobe --help for the usage.\n");
++      printf("No driver inserted or bad usage! Type %s --help for the usage.\n", argv[0]);
+   
+   else
+-  {
+-      if ( argv[2] != NULL && (_kstrncmp (argv[1], "-r", 2) == 0) && 
+-	  (_kstrncmp (argv[2], "mouse", 5) == 0) )
++  { 
++      if ( (_kstrncmp (argv[1], "-r", 2) == 0) ) 
++	  { 
++		  if ( ( argv[2] != NULL ) ) 
++		  {
++			  if (_kstrncmp (argv[2], "mouse", 5) == 0)  { 
++		 	 	 printf("Disattivamento %s in corso..\n", argv[2]);
++		 	  	 mouse_dead();
++			  }
++      		  else 
++				  printf("FATAL: Driver %s not found.\n", argv[2]); 
++		  }
++		  else 
++			  printf("Warning, no driver name inserted!\n"); 
++	  }
++      // per ora lo impostiamo cos?, static,
++      // tanto non abbiamo nessun altro modulo, per ora..
++      else if (_kstrncmp (argv[1], "mouse", 5) == 0)
+       {
+-	  printf("Removing %s..\n", argv[2]);
+-	  mouse_dead();
++	 	 // enabling mouse
++	  	 mouse_init();
+       }
+-      /* per ora lo impostiamo cos?, static,
+-      tanto non abbiamo nessun altro modulo, per ora.. */
+-      else if (_kstrncmp (argv[1], "mouse", 5) == 0)
+-      {
+-	 /* enabling mouse */
+-	 mouse_init();
+-       }
+ 
+-      else if (_kstrncmp (argv[1], "--help", 6) == 0)
++      else if ( (_kstrncmp (argv[1], "--help", 6) == 0) || (_kstrncmp (argv[1], "-h", 2) == 0) )
+       {
+ 	  printf("---------------------------------------------------\n"
+-		 "Module tool to load and kill modules\n"
++		 "Driver tool to load and kill driver\n"
+ 		 "Simple to use, just type:\n"
+ 		 "\n"
+-		 "Usage: %s -<options> module_name\n"
+-		 "\t-> %s module_name     - to load module\n"
+-		 "\t-> %s -r module_name  - to kill module\n"
++		 "Usage: %s -<options> driver_name\n"
++		 "\t-> %s module_name     - to load driver\n"
++		 "\t-> %s -r module_name  - to kill driver\n"
+ 		  "---------------------------------------------------\n"
+ 		  , argv[0], argv[0], argv[0]);
+       }
+ 
+-      else
+-	 if ( (_kstrncmp (argv[1], "-r", 2) == 0) && (_kstrncmp (argv[2], "mouse", 5) == -1) )
+-	 {   printf("FATAL: Module %s not found.\n", argv[2]); }
++     else
++	{
++	 	if ( (_kstrncmp (argv[1], "-r", 2) == 0) && (_kstrncmp (argv[2], "mouse", 5) == -1) )
++	 	   printf("FATAL: Driver %s not found.\n", argv[2]); 
+ 	
+-	 else
+-	     printf("FATAL: Module %s not found.\n", argv[1]);
++		 else
++	    	 printf("FATAL: Driver %s not found.\n", argv[1]);
++	 }
+ 
+    }
+-
+-
++	
+ }
+-
+-
+-
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-06-23 18:13:07 UTC (rev 97)
++++ trunk/shell/shell.c	2009-07-13 14:14:39 UTC (rev 98)
+@@ -93,7 +93,7 @@
+ 	{ "echo",     echo 	  },
+ 	{ "help",     help	  },
+ 	{ "answer",   answer  },
+-	{ "modprobe", modprobe},
++	{ "drv_load", drv_load},
+         };
+ 
+   int i = 0;
+
+
+
+From finarfin at mail.berlios.de  Mon Jul 13 23:25:48 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Mon, 13 Jul 2009 23:25:48 +0200
+Subject: [Dreamos-dev] r99 - in trunk: . hardware include/shell processore
+	shell
+Message-ID: <200907132125.n6DLPmRO022556@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-07-13 23:25:47 +0200 (Mon, 13 Jul 2009)
+New Revision: 99
+
+Removed:
+   trunk/hardware/keyboard.c
+Modified:
+   trunk/.bochsrc
+   trunk/Makefile
+   trunk/README
+   trunk/dreamos.img
+   trunk/include/shell/shell.h
+   trunk/processore/handlers.c
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+Log:
+Pulito un po' di codice
+Eliminato il file hardware/keyboard.h
+Eliminati i riferimenti a tali files dal Makefile
+Aggiornato il Readme
+
+
+Modified: trunk/.bochsrc
+===================================================================
+--- trunk/.bochsrc	2009-07-13 14:14:39 UTC (rev 98)
++++ trunk/.bochsrc	2009-07-13 21:25:47 UTC (rev 99)
+@@ -17,7 +17,7 @@
+ # the "wx" display library.
+ #=======================================================================
+ #config_interface: textconfig
+-#config_interface: wx
++config_interface: wx
+ 
+ #=======================================================================
+ # DISPLAY_LIBRARY
+@@ -59,7 +59,7 @@
+ #display_library: sdl, options="fullscreen" # startup in fullscreen mode
+ #display_library: term
+ #display_library: win32, options="legacyF12" # use F12 to toggle mouse
+-#display_library: wx
++display_library: wx
+ #display_library: x, options="gui_debug"
+ #display_library: x
+ #=======================================================================
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2009-07-13 14:14:39 UTC (rev 98)
++++ trunk/Makefile	2009-07-13 21:25:47 UTC (rev 99)
+@@ -36,8 +36,7 @@
+       io/io.o\
+       libc/stdio.o\
+       hardware/cpuid.o\
+-      hardware/keyboard.o\
+-      processore/gdt.o\
++	  processore/gdt.o\
+       processore/idt.o\
+       processore/handlers.o\
+       hardware/pic8259.o\
+
+Modified: trunk/README
+===================================================================
+--- trunk/README	2009-07-13 14:14:39 UTC (rev 98)
++++ trunk/README	2009-07-13 21:25:47 UTC (rev 99)
+@@ -67,10 +67,10 @@
+ 
+ 	- c -- Compilare DreamOS --
+ 
+-Posizionatevi dentro la cartella con i sorgenti ed eseguite il comando:
+-	sh start sh
+-Se avete qemu installato vi partira' in automatico, se invece avete bochs, al termine della compilazione con lo script start.sh dovete dare:
+-bochs
++Posizionatevi dentro la cartella con i sorgenti troverete uno script chiamato start.sh, per lanciarlo date:
++	sh start.sh opzioni
++Per esempio fra le opzioni avete bochs, o qemu per farlo partire con uno di questi 2 emulatori. Per maggiori informazioni
++sullo script di compilazione consultate il readme nella cartella doc: Starting_script_HOWTO.txt
+ 
+ 	- d -- Mettere su floppy -- (Opzionale)
+ 
+@@ -94,6 +94,8 @@
+ 	boot
+ Naturalmenet modificando /path/al/file/dreamos.img con la path al file dreamos.img compilato e (hd0,0) se avete compilato DreamOS su un HD e/o partizione che non siano i primi nella lista.
+ 
++Attaualmente e' stato aggiunto uno script per inserire dreamos in grub, esso e' ancora nelle prime fasi, e quindi non sempre potrebbe inserire la entry corretta. Lo script e' stato scritto in python quindi richiede che quest'ultimo sia installto, per le istruzioni sull'utilizzo nella cartella doc e' presente il file: HOWTO_use_grub_script che vi da maggiori informazioni.
++
+ - 3 -----------------------
+ ---- Usare DreamOS --------
+ 
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Deleted: trunk/hardware/keyboard.c
+===================================================================
+--- trunk/hardware/keyboard.c	2009-07-13 14:14:39 UTC (rev 98)
++++ trunk/hardware/keyboard.c	2009-07-13 21:25:47 UTC (rev 99)
+@@ -1,36 +0,0 @@
+-/*
+- * Dreamos
+- * keyboard.c
+- * This program is free software; you can redistribute it and/or
+- * modify it under the terms of the GNU General Public License
+- * as published by the Free Software Foundation; either version 2
+- * of the License, or (at your option) any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program; if not, write to the Free Software
+- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+-
+- */
+-
+-#include <keyboard.h>
+-#include <video.h>
+-#include <string.h>
+-#include <pic8259.h>
+-#include <io.h>
+-
+-void keyboard_irq(){
+-    char *s;
+-    int keyvalue;
+-    keyvalue = inportb(0x60);
+-     if(keyvalue<0x80){
+-        _kputs("E' Stato premuto un tasto ");
+-        _kntos(s, keyvalue, 10);
+-        _kputs(s);
+-        _kputs("\n");
+-    }
+-}
+
+Modified: trunk/include/shell/shell.h
+===================================================================
+--- trunk/include/shell/shell.h	2009-07-13 14:14:39 UTC (rev 98)
++++ trunk/include/shell/shell.h	2009-07-13 21:25:47 UTC (rev 99)
+@@ -21,6 +21,11 @@
+ #define USER_LEN 24
+ #define CMD_LEN 256
+ 
++struct cmd {
++	const char cmdname[CMD_LEN];
++	void (*h_func)(void);
++};
++
+ void shell(void);
+ 
+ #endif
+
+Modified: trunk/processore/handlers.c
+===================================================================
+--- trunk/processore/handlers.c	2009-07-13 14:14:39 UTC (rev 98)
++++ trunk/processore/handlers.c	2009-07-13 21:25:47 UTC (rev 99)
+@@ -34,8 +34,7 @@
+ // #define DEBUG 1
+ void (*IntTable[IDT_SIZE])();
+ IRQ_s *shareHandler[16];
+-// IRQ_s *tmpHandler;
+-// IRQ_s shareHandler[16];
++
+ /** @author Ivan Gualandri
+  *  @return none
+  * Questa funzione si occupa di inizializzare la tabella di funzioni che gestiscono le 
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-07-13 14:14:39 UTC (rev 98)
++++ trunk/shell/commands.c	2009-07-13 21:25:47 UTC (rev 99)
+@@ -55,18 +55,18 @@
+   printf ("Available commands:\n");
+   printf("help      - See the 'help' list to learn the DreamOS commands now available\n"
+          "clear     - Clear the screen\n"
+-	 "poweroff  - Turn off the machine\n"
++		 "poweroff  - Turn off the machine\n"
+          "kmalloc   - Test a basic kmalloc function\n"
+          "do_fault  - Test a page_fault\n"
+          "aalogo    - Show an ascii art logo\n"
+          "uname     - Print kernel version, try uname --help for more info\n"
+          "printmem  - Print used locations of memory\n"
+          "credits   - Show DreamOS credits\n"
+-	 "sleep     - pause DreamOS for a particular number of seconds\n"
+-	 "cpuid     - Show cpu identification informations\n"
+-	 "date      - Show date and time\n"
+-	 "echo      - Print some lines of text\n"
+-	 "drv_load  - Tool to load and kill modules\n");
++	 	 "sleep     - pause DreamOS for a particular number of seconds\n"
++	 	 "cpuid     - Show cpu identification informations\n"
++	 	 "date      - Show date and time\n"
++	  	 "echo      - Print some lines of text\n"
++	 	 "drv_load  - Tool to load and kill drivers\n");
+ }
+ 
+ void echo()
+@@ -81,7 +81,7 @@
+ {
+   printf ("Poweroff...\n");
+   
+-  asm("sti");
++  asm("cli");
+   printf("E' ora possibile spegnere il computer.\n");
+   while(1);
+ }
+@@ -223,11 +223,12 @@
+   _kputs("DreamOS Credits\n\n");                
+   _kputs("Main Developers:\n");
+   _kcolor('\012');
+-   printf("Osiris - Diego Stamigni \n"	  
+-             "Finarfin - Ivan\n\n\n"            
+-         );
+-
++   printf(  "Finarfin - Ivan (Founder)\n\n");
+   _kcolor('\011');
++  _kputs("Developers:\n");
++  _kcolor('\012');
++  _kputs("Osiris - Diego Stamigni \n\n");
++  _kcolor('\011');
+   _kputs("Contributors:\n");
+   _kcolor('\012');
+   _kputs("vinc94\n"
+@@ -236,6 +237,7 @@
+          	"Celeron\n"
+ 	 		"Hamcha\n"
+          	"m0nt0\n"
++			"shainer\n"
+          	"and many others (3 or 4 :P)\n\n");
+   _kcolor('\007');
+ }
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-07-13 14:14:39 UTC (rev 98)
++++ trunk/shell/shell.c	2009-07-13 21:25:47 UTC (rev 99)
+@@ -41,11 +41,6 @@
+ 
+ #define NUM_COM 16
+ 
+-struct cmd {
+-	const char cmdname[CMD_LEN];
+-	void (*h_func)(void);
+-};
+-
+ /*
+  * Inserisce gli argomenti di un comando in un array di stringhe
+  * argc = numero degli argomenti
+@@ -140,4 +135,3 @@
+     }
+   }
+ }
+-
+
+
+
+From osiris_h4ck at mail.berlios.de  Tue Jul 14 11:03:00 2009
+From: osiris_h4ck at mail.berlios.de (osiris_h4ck at mail.berlios.de)
+Date: Tue, 14 Jul 2009 11:03:00 +0200
+Subject: [Dreamos-dev] r100 - in trunk: . doc include
+Message-ID: <200907140903.n6E930OR028197@sheep.berlios.de>
+
+Author: osiris_h4ck
+Date: 2009-07-14 10:57:04 +0200 (Tue, 14 Jul 2009)
+New Revision: 100
+
+Added:
+   trunk/ISO/
+   trunk/dreamos-image.iso
+Modified:
+   trunk/.bochsrc
+   trunk/Makefile
+   trunk/doc/Starting_script_HOWTO.txt
+   trunk/dreamos.img
+   trunk/include/version.h
+   trunk/start.sh
+Log:
+- Aggiunta funzione nello start.sh per creare la iso di DreamOS
+  ./start.sh create_iso
+- Corretti alcuni permessi nello start.sh e nel Makefile, ora non ?\195?\168 necessario avviare
+  obbligatoriamente lo script da root, ma ?\195?\168 lui a decidere quando ha bisogno di UID=0
+- Aggiunte informazioni sul create_iso() nella doc dello start.sh in doc/
+
+
+
+Modified: trunk/.bochsrc
+===================================================================
+--- trunk/.bochsrc	2009-07-13 21:25:47 UTC (rev 99)
++++ trunk/.bochsrc	2009-07-14 08:57:04 UTC (rev 100)
+@@ -17,7 +17,7 @@
+ # the "wx" display library.
+ #=======================================================================
+ #config_interface: textconfig
+-config_interface: wx
++#config_interface: wx
+ 
+ #=======================================================================
+ # DISPLAY_LIBRARY
+@@ -59,7 +59,7 @@
+ #display_library: sdl, options="fullscreen" # startup in fullscreen mode
+ #display_library: term
+ #display_library: win32, options="legacyF12" # use F12 to toggle mouse
+-display_library: wx
++#display_library: wx
+ #display_library: x, options="gui_debug"
+ #display_library: x
+ #=======================================================================
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2009-07-13 21:25:47 UTC (rev 99)
++++ trunk/Makefile	2009-07-14 08:57:04 UTC (rev 100)
+@@ -60,7 +60,7 @@
+ 	nasm -f elf ./boot/multicatcher.S -o bl.img
+ 
+ kernel.bin: $(OBJ)
+-	ld -static --oformat elf32-i386 --output=kernel.bin --script=kernel.lds bl.img $(OBJ) -Ttext 0x100000 -Map kernel.map
++	su -c "ld -static --oformat elf32-i386 --output=kernel.bin --script=kernel.lds bl.img $(OBJ) -Ttext 0x100000 -Map kernel.map"
+ 
+ kernel.o: kernel.c
+ io/video.o: io/video.c
+@@ -90,9 +90,7 @@
+ sys/utsname.o: sys/utsname.c
+ 
+ img:
+-	mount -o loop boot/grub.img boot/os
+-	cp dreamos.img boot/os/boot/grub/
+-	umount boot/os
++	su -c "mount -o loop boot/grub.img boot/os && cp dreamos.img boot/os/boot/grub/ && umount boot/os"
+ 
+ vers: 
+ 	 sed -i -e "/^#define VERSION/s/\".*\"/\"$(VERSION)\"/" include/version.h
+@@ -106,7 +104,6 @@
+ clean:
+ 	rm -f *.img *.bin *.map
+ 	rm -f $(OBJ)
+-#	echo "" > include/version.h
+ 
+ install:
+ 	mkfs.ext2 /dev/fd0
+
+Modified: trunk/doc/Starting_script_HOWTO.txt
+===================================================================
+--- trunk/doc/Starting_script_HOWTO.txt	2009-07-13 21:25:47 UTC (rev 99)
++++ trunk/doc/Starting_script_HOWTO.txt	2009-07-14 08:57:04 UTC (rev 100)
+@@ -52,5 +52,11 @@
+ 
+ Please Read the HOW To Grub Script to a secure use of it.
+ 
++However, if you want, there is a possibility to create an ISO Image
++to burn it then on your CDRom and boot DreamOS on every PC you want.
++Make sure you have installed mkisofs from cdrkit package.
+ 
+-						  Lord Osiris
+\ No newline at end of file
++Usage: start.sh create_iso
++
++
++						  Lord Osiris
+
+Added: trunk/dreamos-image.iso
+===================================================================
+(Binary files differ)
+
+
+Property changes on: trunk/dreamos-image.iso
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-07-13 21:25:47 UTC (rev 99)
++++ trunk/include/version.h	2009-07-14 08:57:04 UTC (rev 100)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "1.3"
+ #define EXTRAVERSION "-trunk"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r97"
++#define REV_NUM "-r99"
+
+Modified: trunk/start.sh
+===================================================================
+--- trunk/start.sh	2009-07-13 21:25:47 UTC (rev 99)
++++ trunk/start.sh	2009-07-14 08:57:04 UTC (rev 100)
+@@ -6,8 +6,6 @@
+ # diego.stamigni at linux.com
+ # greez ;
+ 
+-
+-
+ VERS="make vers"
+ CLEAN="make clean"
+ MAKE="make"
+@@ -15,10 +13,10 @@
+ 
+ if [ "$1" != "--compile" ]; then
+ 
+-  if [ $UID != "0" ]; then
+-      echo "[-] You need to run this install script as root!"
+-      exit
+-  fi
++#  if [ $UID != "0" ]; then
++#      echo "[-] You need to run this install script as root!"
++#     exit
++#  fi
+ 
+ if [ "$1" == "help" ]; then
+ echo ""
+@@ -66,6 +64,14 @@
+ echo ""
+ echo "Usage: '$0' 'grub'"
+ echo "------------------------------------------------------"
++echo ""
++echo "If you want, you can create a DreamOS ISO Image Disk"
++echo "to burn it on a cdrom and boot it from a real PC."
++echo "Make sure you have installed mkisofs from cdrkit package."
++echo "The command is like this:"
++echo ""
++echo "Usage: '$0' 'create_iso'"
++echo "------------------------------------------------------"
+ exit 1
+ 
+ elif [ "$1" == "qemu" ] || [ "$1" == "bochs" ]; then
+@@ -82,7 +88,7 @@
+ 
+   echo "---------------------- "
+   echo "Installing in progres.."
+-  make install
++  su -c "make install"
+   echo "done."
+   echo "---------------------- "
+   exit
+@@ -92,11 +98,21 @@
+   echo "--------------------------------------------- "
+   echo "Launching grub installer script in progress.."
+   echo ""
+-  python grub.py
++  su -c "python grub.py"
+   echo "done."
+   echo "--------------------------------------------- "
+   exit
+ 
++elif [ "$1" == "create_iso" ]; then
++
++  echo "--------------------------------------------- "
++  echo "Launching ISO Creating script in progress.."
++  echo ""
++  mkisofs -o dreamos-image.iso -A DreamOS -b boot/grub.img `pwd`
++  echo "done."
++  echo "--------------------------------------------- "
++  exit
++
+ elif [ "$1" == "" ]; then
+   echo "Error: No command inserted!"
+   echo "----------------------->"
+@@ -114,10 +130,10 @@
+ 
+ else
+ 
+-  if [ $UID != "0" ]; then
+-      echo "[-] You need to run this install script as root!"
+-      exit
+-  fi
++#  if [ $UID != "0" ]; then
++#      echo "[-] You need to run this install script as root!"
++#      exit
++#  fi
+ 
+ if [ "$2" == "qemu" ] || [ "$2" == "bochs" ]; then
+ 
+@@ -168,7 +184,7 @@
+   $VERS && $CLEAN && $MAKE && $MAKE_IMG
+   echo "---------------------- "
+   echo "Installing in progres.."
+-  make install
++  su -c "make install"
+   echo "done."
+   echo "---------------------- "
+   exit
+@@ -178,7 +194,7 @@
+   $VERS && $CLEAN && $MAKE && $MAKE_IMG
+   echo "--------------------------------------------- "
+   echo "Launching grub installer script in progress.."
+-  python grub.py
++  su -c "python grub.py"
+   echo "done."
+   echo "--------------------------------------------- "
+   exit
+@@ -189,7 +205,26 @@
+   echo "----------------------->"
+   echo "Usage: '$0 help'"
+   exit
++
++
++elif [ "$2" == "create_iso" ]; then
++  $VERS && $CLEAN && $MAKE && $MAKE_IMG
++  echo "--------------------------------------------- "
++  echo "Launching ISO Creating script in progress.."
++  echo ""
++  mkisofs -o dreamos-image.iso -A DreamOS -b boot/grub.img `pwd`
++  echo "done."
++  echo "--------------------------------------------- "
++  exit
++
++else
++  echo "Uhm? What the hell did you insert ? Lool! '$2' ?? I don't know what is it!"
++  echo "Please, read the help!!!"
++  echo "----------------------->"
++  echo "Usage: '$0 help'"
++  exit
++
+ fi  
+-    
++ 
+ fi
+ 
+
+
+
+From osiris_h4ck at mail.berlios.de  Tue Jul 14 11:16:06 2009
+From: osiris_h4ck at mail.berlios.de (osiris_h4ck at mail.berlios.de)
+Date: Tue, 14 Jul 2009 11:16:06 +0200
+Subject: [Dreamos-dev] r101 - in trunk: . include
+Message-ID: <200907140916.n6E9G6IN029583@sheep.berlios.de>
+
+Author: osiris_h4ck
+Date: 2009-07-14 11:16:04 +0200 (Tue, 14 Jul 2009)
+New Revision: 101
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/version.h
+   trunk/start.sh
+Log:
+- Aggiunta funzione di backup nello start.sh per quanto riguarda lo script grub.py
+  che aggiunge, per chi possiede Grub, la voce DreamOS per il Boot nel menu.lst.
+  Adesso, prima di modificare 'menu.lst', crea una copia di backup chiamata 'menu.lst_backup'
+  dalla quale ?\195?\168 possibile ripristinare il menu di Grub in caso di problemi.
+
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-07-14 08:57:04 UTC (rev 100)
++++ trunk/include/version.h	2009-07-14 09:16:04 UTC (rev 101)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "1.3"
+ #define EXTRAVERSION "-trunk"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r99"
++#define REV_NUM "-r100"
+
+Modified: trunk/start.sh
+===================================================================
+--- trunk/start.sh	2009-07-14 08:57:04 UTC (rev 100)
++++ trunk/start.sh	2009-07-14 09:16:04 UTC (rev 101)
+@@ -96,6 +96,9 @@
+ elif [ "$1" == "grub" ]; then
+ 
+   echo "--------------------------------------------- "
++  echo "Creating backup of menu.lst (/boot/grub/menu.lst_backup) .."
++  su -c "cp /boot/grub/menu.lst /boot/grub/menu.lst_backup"
++  echo "done.."
+   echo "Launching grub installer script in progress.."
+   echo ""
+   su -c "python grub.py"
+
+
+
+From finarfin at mail.berlios.de  Tue Jul 14 19:14:56 2009
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Tue, 14 Jul 2009 19:14:56 +0200
+Subject: [Dreamos-dev] r102 - branches
+Message-ID: <200907141714.n6EHEucU017293@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-07-14 19:14:46 +0200 (Tue, 14 Jul 2009)
+New Revision: 102
+
+Added:
+   branches/0.1.3/
+Log:
+Creazioene cartella per release 0.1.3
+
+
+
+
+From finarfin at mail.berlios.de  Tue Jul 14 20:10:47 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Tue, 14 Jul 2009 20:10:47 +0200
+Subject: [Dreamos-dev] r103 - in trunk: . include
+Message-ID: <200907141810.n6EIAloK000275@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-07-14 20:10:46 +0200 (Tue, 14 Jul 2009)
+New Revision: 103
+
+Modified:
+   trunk/.bochsrc
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/include/version.h
+Log:
+Eliminato su - dal Make file nella riga del ld...
+
+
+Modified: trunk/.bochsrc
+===================================================================
+--- trunk/.bochsrc	2009-07-14 17:14:46 UTC (rev 102)
++++ trunk/.bochsrc	2009-07-14 18:10:46 UTC (rev 103)
+@@ -17,7 +17,7 @@
+ # the "wx" display library.
+ #=======================================================================
+ #config_interface: textconfig
+-#config_interface: wx
++config_interface: wx
+ 
+ #=======================================================================
+ # DISPLAY_LIBRARY
+@@ -59,7 +59,7 @@
+ #display_library: sdl, options="fullscreen" # startup in fullscreen mode
+ #display_library: term
+ #display_library: win32, options="legacyF12" # use F12 to toggle mouse
+-#display_library: wx
++display_library: wx
+ #display_library: x, options="gui_debug"
+ #display_library: x
+ #=======================================================================
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2009-07-14 17:14:46 UTC (rev 102)
++++ trunk/Makefile	2009-07-14 18:10:46 UTC (rev 103)
+@@ -60,7 +60,7 @@
+ 	nasm -f elf ./boot/multicatcher.S -o bl.img
+ 
+ kernel.bin: $(OBJ)
+-	su -c "ld -static --oformat elf32-i386 --output=kernel.bin --script=kernel.lds bl.img $(OBJ) -Ttext 0x100000 -Map kernel.map"
++	ld -static --oformat elf32-i386 --output=kernel.bin --script=kernel.lds bl.img $(OBJ) -Ttext 0x100000 -Map kernel.map
+ 
+ kernel.o: kernel.c
+ io/video.o: io/video.c
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-07-14 17:14:46 UTC (rev 102)
++++ trunk/include/version.h	2009-07-14 18:10:46 UTC (rev 103)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "1.3"
+ #define EXTRAVERSION "-trunk"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r100"
++#define REV_NUM "-r101"
+
+
+
+From finarfin at mail.berlios.de  Tue Jul 14 20:11:59 2009
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Tue, 14 Jul 2009 20:11:59 +0200
+Subject: [Dreamos-dev] r104 - branches
+Message-ID: <200907141811.n6EIBxHD000393@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-07-14 20:11:56 +0200 (Tue, 14 Jul 2009)
+New Revision: 104
+
+Removed:
+   branches/0.1.3/
+Log:
+Errata corrige
+
+
+
+
+From finarfin at mail.berlios.de  Tue Jul 14 20:12:27 2009
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Tue, 14 Jul 2009 20:12:27 +0200
+Subject: [Dreamos-dev] r105 - branches
+Message-ID: <200907141812.n6EICR64000485@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-07-14 20:12:23 +0200 (Tue, 14 Jul 2009)
+New Revision: 105
+
+Added:
+   branches/0.1.3/
+Log:
+Copia dei files per la release - Ancora non e' la release!!!
+
+
+Copied: branches/0.1.3 (from rev 104, trunk)
+
+
+
+From finarfin at mail.berlios.de  Tue Jul 14 21:55:10 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Tue, 14 Jul 2009 21:55:10 +0200
+Subject: [Dreamos-dev] r106 - in branches/0.1.3: . include shell
+Message-ID: <200907141955.n6EJtAYt011349@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-07-14 21:55:09 +0200 (Tue, 14 Jul 2009)
+New Revision: 106
+
+Added:
+   branches/0.1.3/CHANGELOG
+Modified:
+   branches/0.1.3/Makefile
+   branches/0.1.3/dreamos.img
+   branches/0.1.3/include/kernel.h
+   branches/0.1.3/include/version.h
+   branches/0.1.3/shell/commands.c
+Log:
+Modifica informazioni di release su vari files, eliminati numeri di revisione.
+
+
+Added: branches/0.1.3/CHANGELOG
+===================================================================
+--- branches/0.1.3/CHANGELOG	2009-07-14 18:12:23 UTC (rev 105)
++++ branches/0.1.3/CHANGELOG	2009-07-14 19:55:09 UTC (rev 106)
+@@ -0,0 +1,30 @@
++DreamOS ver 0.1.3 Codename: wensleydale - Changelog
++
++Compilazione: Sistemato codice per il makefile
++Compilazione: Aggiunta parametro per abilitare Debug di Bochs in fase di compilazione
++Compilazione: Aggiornamenti script start.sh
++Compilazione: Eliminato dal Makefile il riferimento a hardware/keyboard.c che non era utilizzato.
++
++libc: Correzione di strcpy
++libc: Disabilitazione syscall per putchar. E modifica putchar
++
++misc: aggiunto script grub.py per l'inserimento di uan entry in grub dell'os
++misc: aggiunto in doc il file su come utilizzare lo script di grub
++misc: corretto bug sulla data #15831
++misc: aggiunto comando modprobe (per abilitare alcuni driver, per ora solo il mouse)
++misc: aggiornamento readme
++
++Shell: Modifica gestione comandi ora viene usata una struct con due campi al posto che i 2 vettori di prima
++Shell: Modificato comando sleep, nella struttura dei comandi (vedi bug #15810).
++Shell: spostata definizione della struct cmd da shell.c in shell.h
++
++hardware: abilitato irq per il pic slave
++hardware: miglioramento gestione irq (prima non venivano rilevate le irq dello slave)
++hardware: implementazione prima bozza di driver mouse (rileva movimento se abilitato)
++hardware: eliminato file hardware/keyboard.c perche non piu utilizzato.
++
++io: Invertiti parametri di outportb per seguire la chiamata standard
++io: aggiunto \r nelle stampe per printf e affini
++
++mem: mappata pagina 0xFEE00000 dell'apic nella mem logica
++mem: mappata pagina 0xFEC00000 dell'apic nella mem logica
+
+Modified: branches/0.1.3/Makefile
+===================================================================
+--- branches/0.1.3/Makefile	2009-07-14 18:12:23 UTC (rev 105)
++++ branches/0.1.3/Makefile	2009-07-14 19:55:09 UTC (rev 106)
+@@ -5,7 +5,7 @@
+ NAME = DreamOS
+ VERSION = 0
+ PATCHLEVEL = 1.3
+-EXTRAVERSION = -trunk
++EXTRAVERSION = -adam
+ 
+ CFLAGS = -nostdlib\
+ 	 -nostdinc\
+
+Modified: branches/0.1.3/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: branches/0.1.3/include/kernel.h
+===================================================================
+--- branches/0.1.3/include/kernel.h	2009-07-14 18:12:23 UTC (rev 105)
++++ branches/0.1.3/include/kernel.h	2009-07-14 19:55:09 UTC (rev 106)
+@@ -29,7 +29,7 @@
+ asmlinkage void _start(struct multiboot_info*);
+ int main_loop(struct multiboot_info*);
+ 
+-#define DREAMOS_VER "DreamOS ver 0.1.3 - trunk"
++#define DREAMOS_VER "DreamOS ver 0.1.3 - adam"
+ #define SITEURL "www.dreamos.org"
+ 
+ #endif
+
+Modified: branches/0.1.3/include/version.h
+===================================================================
+--- branches/0.1.3/include/version.h	2009-07-14 18:12:23 UTC (rev 105)
++++ branches/0.1.3/include/version.h	2009-07-14 19:55:09 UTC (rev 106)
+@@ -22,6 +22,6 @@
+ 
+ #define VERSION "0"
+ #define PATCHLEVEL "1.3"
+-#define EXTRAVERSION "-trunk"
++#define EXTRAVERSION "-adam"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r101"
++#define REV_NUM "-r105"
+
+Modified: branches/0.1.3/shell/commands.c
+===================================================================
+--- branches/0.1.3/shell/commands.c	2009-07-14 18:12:23 UTC (rev 105)
++++ branches/0.1.3/shell/commands.c	2009-07-14 19:55:09 UTC (rev 106)
+@@ -40,11 +40,11 @@
+   _kcolor (5);
+   printf("\n");
+   printf("\t\t\t The Dream Operating System \n"
+-	 "\t\t           v%s.%s%s %s      \n\n"
++	 "\t\t             v%s.%s%s       \n\n"
+ 	 "\t\t\t   Welcome to DreamOS\n"
+ 	 "\t  Where dreams don't become Reality and remain dreams. \n"
+ 	 "\t          R.I.P - Rest in peace with dreamos ^_^        \n", 
+-	 VERSION, PATCHLEVEL, EXTRAVERSION, REV_NUM);
++	 VERSION, PATCHLEVEL, EXTRAVERSION);
+ 	
+   printf("\n\n\n\n");
+   _kcolor(7);
+@@ -136,7 +136,7 @@
+   infos = kmalloc(sizeof(struct utsname *));
+   uname(infos);
+   if (!(strcmp(argv[1], "-a")) || !(strcmp(argv[1], "--all")))
+-    printf("%s %s.%s%s Rev: %s #1 CEST 2009 %s\n", infos->sysname, infos->version, infos->release, EXTRAVERSION,REV_NUM, cpu_vendor);
++    printf("%s %s.%s%s #1 CEST 2009 %s\n", infos->sysname, infos->version, infos->release, EXTRAVERSION, cpu_vendor);
+   else if (!(strcmp(argv[1], "-r")) || !(strcmp(argv[1], "--rev")))
+     printf("%s.%s%s\n", infos->version, infos->release, EXTRAVERSION);
+   else if (!(strcmp(argv[1], "-h") ) || !(strcmp(argv[1], "--help")))
+@@ -165,8 +165,8 @@
+   printf( "Version: '%s'\n"
+ 	  "Patchlevel: '%s'\n"
+ 	  "Extraversion: '%s'\n"
+-	  "Name: '%s'\n"
+-	  "Revision: '%s'\n",VERSION,PATCHLEVEL,EXTRAVERSION,NAME,REV_NUM);
++	  "Name: '%s'\n",
++	  VERSION,PATCHLEVEL,EXTRAVERSION,NAME);
+ 
+   // CPU Info
+   _kputs (LNG_CPU);
+
+
+
+From finarfin at mail.berlios.de  Tue Jul 14 21:56:03 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Tue, 14 Jul 2009 21:56:03 +0200
+Subject: [Dreamos-dev] r107 - branches/0.1.3/boot
+Message-ID: <200907141956.n6EJu3Ps011407@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-07-14 21:56:02 +0200 (Tue, 14 Jul 2009)
+New Revision: 107
+
+Removed:
+   branches/0.1.3/boot/grub.img
+Log:
+Verr?\195?\160 immediatamente riaggiunto
+
+
+Deleted: branches/0.1.3/boot/grub.img
+===================================================================
+(Binary files differ)
+
+
+
+From finarfin at mail.berlios.de  Tue Jul 14 21:57:29 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Tue, 14 Jul 2009 21:57:29 +0200
+Subject: [Dreamos-dev] r108 - branches/0.1.3/boot
+Message-ID: <200907141957.n6EJvTbt011454@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-07-14 21:57:20 +0200 (Tue, 14 Jul 2009)
+New Revision: 108
+
+Added:
+   branches/0.1.3/boot/grub.img
+Log:
+Aggiunto file grub.img con dreamos 0.1.3
+
+
+Added: branches/0.1.3/boot/grub.img
+===================================================================
+(Binary files differ)
+
+
+Property changes on: branches/0.1.3/boot/grub.img
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+
+
+From finarfin at mail.berlios.de  Thu Jul 23 19:26:10 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Thu, 23 Jul 2009 19:26:10 +0200
+Subject: [Dreamos-dev] r109 - in trunk: . fs include include/fs
+	include/shell shell
+Message-ID: <200907231726.n6NHQAhD002527@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-07-23 19:26:05 +0200 (Thu, 23 Jul 2009)
+New Revision: 109
+
+Added:
+   trunk/fs/
+   trunk/fs/initrd.c
+   trunk/fs/vfs.c
+   trunk/include/fs/
+   trunk/include/fs/initrd.h
+   trunk/include/fs/vfs.h
+Modified:
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/include/shell/commands.h
+   trunk/include/version.h
+   trunk/kernel.c
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+Log:
+Aggiunte cartelle fs/ e include/fs
+Aggiunti files fs/vfs.c fs/initrd.c
+Aggiunti files include/fs/vfs.h include/fs/initrd.h
+Aggiornato Makefile per compilare questi nuovi files.
+Aggiornato l'avvio del kernel: ora all'avvio carica anche vfs_init()
+Aggiunto comando ls (per ora naviga vettore dei mountpoint)
+Aggiornato numero versione.
+Aggiornato il comando help.
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2009-07-14 19:57:20 UTC (rev 108)
++++ trunk/Makefile	2009-07-23 17:26:05 UTC (rev 109)
+@@ -4,7 +4,7 @@
+ 
+ NAME = DreamOS
+ VERSION = 0
+-PATCHLEVEL = 1.3
++PATCHLEVEL = 2.0
+ EXTRAVERSION = -trunk
+ 
+ CFLAGS = -nostdlib\
+@@ -25,12 +25,14 @@
+ 	 -I./include/system\
+ 	 -I./include/shell\
+ 	 -I./include/misc\
++	 -I./include/fs\
+ 	 -DBOCHS_DEBUG
+ 
+ OBJ = kernel.o\
+       io/video.o\
+       drivers/keyboard.o\
+       drivers/mouse.o\
++	  fs/vfs.o\
+       libc/ctype.o\
+       libc/string.o\
+       io/io.o\
+@@ -63,6 +65,7 @@
+ 	ld -static --oformat elf32-i386 --output=kernel.bin --script=kernel.lds bl.img $(OBJ) -Ttext 0x100000 -Map kernel.map
+ 
+ kernel.o: kernel.c
++fs/vfs.o: fs/vfs.c
+ io/video.o: io/video.c
+ io/io.o: io/io.c
+ processore/gdt.o: processore/gdt.c
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Added: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2009-07-14 19:57:20 UTC (rev 108)
++++ trunk/fs/initrd.c	2009-07-23 17:26:05 UTC (rev 109)
+@@ -0,0 +1,23 @@
++/*
++ * Dreamos
++ * initrd.c
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++#include <initrd.h>
++
++void dummy(){
++	printf("Qui solo per una prova\n");
++}	
+
+Added: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2009-07-14 19:57:20 UTC (rev 108)
++++ trunk/fs/vfs.c	2009-07-23 17:26:05 UTC (rev 109)
+@@ -0,0 +1,65 @@
++/*
++ * Dreamos
++ * vfs.c
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++ 
++#include <vfs.h>
++#include <stdio.h>
++#include <kheap.h>
++#include <stddef.h>
++#include <string.h>
++#include <kheap.h>
++
++struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
++
++void vfs_init(){
++	int i=0;
++ 	printf("\nPreparing VFS\n");
++ 	while(i<MAX_MOUNTPOINT){
++ 		strcpy(mountpoint_list[i].mountpoint,"");
++ 		mountpoint_list[i].uid = 0;
++ 		mountpoint_list[i].gid = 0;
++ 		mountpoint_list[i].pmask = 0;
++ 		mountpoint_list[i].dev_id = 0;
++	 	mountpoint_list[i].start_address = 0;
++	 	mountpoint_list[i].operations = NULL;
++ 		i++;
++	}
++ 	strcpy(mountpoint_list[0].mountpoint,"/");
++ 	mountpoint_list[0].uid = 0;
++ 	mountpoint_list[0].gid = 0;
++ 	mountpoint_list[0].pmask = 0;
++ 	mountpoint_list[0].dev_id = 0;
++ 	mountpoint_list[0].start_address = 0;
++ 	mountpoint_list[0].operations = kmalloc(sizeof(struct super_node_operations));
++ 	
++    strcpy(mountpoint_list[1].mountpoint,"/dev"); 	
++    mountpoint_list[1].uid = 0;
++ 	mountpoint_list[1].gid = 0;
++ 	mountpoint_list[1].pmask = 0;
++ 	mountpoint_list[1].dev_id = 0;
++ 	mountpoint_list[1].start_address = 0;
++ 	mountpoint_list[1].operations = kmalloc(sizeof(struct super_node_operations));
++
++	printf("Created mountpoint: %s\n", mountpoint_list[0].mountpoint);
++	printf("Created mountpoint: %s\n", mountpoint_list[1].mountpoint);
++ 	//initrd = kmalloc(sizeof(struct inode)); 	 	
++}
++
++void open_vfs (struct inode *node){
++	if(node->read!=0) printf("read node");
++	else return;
++}
+
+Added: trunk/include/fs/initrd.h
+===================================================================
+--- trunk/include/fs/initrd.h	2009-07-14 19:57:20 UTC (rev 108)
++++ trunk/include/fs/initrd.h	2009-07-23 17:26:05 UTC (rev 109)
+@@ -0,0 +1,35 @@
++/*
++ * Dreamos
++ * initrd.h
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++#ifndef INITRD_H
++
++#define FILENAME_LENGTH 64
++
++struct initrd_t{
++	int nfiles;
++};
++
++struct initrd_file_t{
++	char fileName[FILENAME_LENGTH];
++	int  uid;
++	unsigned int offset;
++	unsigned int length;
++};
++
++void dummy();
++#endif
+
+Added: trunk/include/fs/vfs.h
+===================================================================
+--- trunk/include/fs/vfs.h	2009-07-14 19:57:20 UTC (rev 108)
++++ trunk/include/fs/vfs.h	2009-07-23 17:26:05 UTC (rev 109)
+@@ -0,0 +1,77 @@
++/*
++ * Dreamos
++ * vfs.h
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++#ifndef _VFS_H
++#define _VFS_H
++
++#define MAX_MOUNTPOINT 10
++#define MAX_FD 255
++
++#define FS_FILE 0x01
++#define FS_DIRECTORY 0x02
++
++struct inode {
++	char filename[256];
++	int type;
++ 	int length;
++	struct inode *parent;
++
++	/* Inutili per adesso */
++	int uid;
++	int gid;
++	int pmask;
++
++ 	/* puntatori a funzione */
++	void (*open)(struct inode *);
++	void (*close)(struct inode *);
++	int (*read)(struct inode *, int, int, int *);
++	int (*write)(struct inode *, int, int, int *);
++};
++
++/*!  \struct mountpoint_t
++     \brief Struttura dati che contiene le informazioni sui files system montati
++ */
++struct mountpoint_t {
++		char mountpoint[64];/**< Indica il nome del mountpoint*/
++		unsigned int pmask; /**< Maschera dei permessi*/
++		unsigned int uid; /**< User ID*/
++		unsigned int gid; /**< Group ID*/
++		unsigned int start_address; /**< Indirizzo di partenza del FileSystem*/
++		int dev_id; /**< Device ID*/		
++		struct super_node_operations *operations;
++};
++
++struct super_node_operations {
++	/*Qui vanno i puntatori alle funzioni sul supernode*/
++	void (*open)(char *r_path, int o_flags);
++	void (*close)(int);
++	/*t (*read)(stct inode *, int, int, int *);
++	int (*write)(struct inode *, int, int, int *);*/
++};
++
++extern struct inode *root;
++extern struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
++
++void open_vfs (struct inode *);
++void close (struct inode *);
++int read (struct inode *, int, int, int *);
++int write (struct inode *, int, int, int *);
++
++void vfs_init();
++
++#endif
++
+
+Modified: trunk/include/shell/commands.h
+===================================================================
+--- trunk/include/shell/commands.h	2009-07-14 19:57:20 UTC (rev 108)
++++ trunk/include/shell/commands.h	2009-07-23 17:26:05 UTC (rev 109)
+@@ -46,4 +46,5 @@
+ void cpuid();
+ void answer();
+ void drv_load();
++void ls();
+ #endif
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-07-14 19:57:20 UTC (rev 108)
++++ trunk/include/version.h	2009-07-23 17:26:05 UTC (rev 109)
+@@ -21,7 +21,7 @@
+  */
+ 
+ #define VERSION "0"
+-#define PATCHLEVEL "1.3"
++#define PATCHLEVEL "2.0"
+ #define EXTRAVERSION "-trunk"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r101"
++#define REV_NUM "-r105"
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2009-07-14 19:57:20 UTC (rev 108)
++++ trunk/kernel.c	2009-07-23 17:26:05 UTC (rev 109)
+@@ -42,6 +42,7 @@
+ #include <syscall.h>
+ #include <kheap.h>
+ #include <debug.h>
++#include <vfs.h>
+ 
+ unsigned int *current_page_table;
+ extern unsigned int end;
+@@ -94,7 +95,7 @@
+     sinfo = kmalloc(sizeof(struct cpuinfo_generic));
+     get_cpuid (sinfo);
+         
+-
++    vfs_init();
+     /* Driver mouse init */
+     //mouse_init();
+     //_kprintOK();
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-07-14 19:57:20 UTC (rev 108)
++++ trunk/shell/commands.c	2009-07-23 17:26:05 UTC (rev 109)
+@@ -21,7 +21,10 @@
+ #include <clock.h>
+ #include <sys/utsname.h>
+ #include <mouse.h>
++#include <vfs.h>
+ 
++struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
++
+ void aalogo()
+ {
+   _kcolor (4);
+@@ -66,7 +69,8 @@
+ 	 	 "cpuid     - Show cpu identification informations\n"
+ 	 	 "date      - Show date and time\n"
+ 	  	 "echo      - Print some lines of text\n"
+-	 	 "drv_load  - Tool to load and kill drivers\n");
++	 	 "drv_load  - Tool to load and kill drivers\n"
++		 "ls        - Tool for listing dir - not complete-\n");
+ }
+ 
+ void echo()
+@@ -379,3 +383,13 @@
+    }
+ 	
+ }
++
++void ls(){
++	int i;
++	i=0;
++	printf("Listing files and dirs\n");
++	while(i<64 && strcmp(mountpoint_list[i].mountpoint, "")){
++		printf("%s \t uid: %d Gid: %d\n",mountpoint_list[i].mountpoint, mountpoint_list[i].uid, mountpoint_list[i].gid);
++		i++;
++	}	
++}
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-07-14 19:57:20 UTC (rev 108)
++++ trunk/shell/shell.c	2009-07-23 17:26:05 UTC (rev 109)
+@@ -89,6 +89,7 @@
+ 	{ "help",     help	  },
+ 	{ "answer",   answer  },
+ 	{ "drv_load", drv_load},
++	{ "ls",       ls},
+         };
+ 
+   int i = 0;
+
+
+
+From finarfin at mail.berlios.de  Sat Jul 25 11:16:36 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Sat, 25 Jul 2009 11:16:36 +0200
+Subject: [Dreamos-dev] r110 - in trunk: . fs include/fs include/shell shell
+Message-ID: <200907250916.n6P9GaQu017469@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-07-25 11:16:31 +0200 (Sat, 25 Jul 2009)
+New Revision: 110
+
+Modified:
+   trunk/bl.img
+   trunk/dreamos.img
+   trunk/fs/vfs.c
+   trunk/include/fs/vfs.h
+   trunk/include/shell/commands.h
+   trunk/include/shell/shell.h
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+Log:
+Iniziata bozza di funzione per apertura directory
+Implementato comando cd
+Nella shell ora viene stampato anche il path corrente
+
+
+Modified: trunk/bl.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2009-07-23 17:26:05 UTC (rev 109)
++++ trunk/fs/vfs.c	2009-07-25 09:16:31 UTC (rev 110)
+@@ -54,8 +54,8 @@
+  	mountpoint_list[1].start_address = 0;
+  	mountpoint_list[1].operations = kmalloc(sizeof(struct super_node_operations));
+ 
+-	printf("Created mountpoint: %s\n", mountpoint_list[0].mountpoint);
+-	printf("Created mountpoint: %s\n", mountpoint_list[1].mountpoint);
++	//printf("Created mountpoint: %s\n", mountpoint_list[0].mountpoint);
++	//printf("Created mountpoint: %s\n", mountpoint_list[1].mountpoint);
+  	//initrd = kmalloc(sizeof(struct inode)); 	 	
+ }
+ 
+@@ -63,3 +63,15 @@
+ 	if(node->read!=0) printf("read node");
+ 	else return;
+ }
++
++int open_dir(char *path){
++	int i = 0;
++	while(i<MAX_MOUNTPOINT ){
++			if(!strcmp(path, mountpoint_list[i].mountpoint)) {
++				printf("Changing dir %s\n", mountpoint_list[i].mountpoint);
++				return i;
++			}
++			i++;
++		}		
++		return -1;		
++}
+
+Modified: trunk/include/fs/vfs.h
+===================================================================
+--- trunk/include/fs/vfs.h	2009-07-23 17:26:05 UTC (rev 109)
++++ trunk/include/fs/vfs.h	2009-07-25 09:16:31 UTC (rev 110)
+@@ -68,6 +68,7 @@
+ 
+ void open_vfs (struct inode *);
+ void close (struct inode *);
++int open_dir(char *);
+ int read (struct inode *, int, int, int *);
+ int write (struct inode *, int, int, int *);
+ 
+
+Modified: trunk/include/shell/commands.h
+===================================================================
+--- trunk/include/shell/commands.h	2009-07-23 17:26:05 UTC (rev 109)
++++ trunk/include/shell/commands.h	2009-07-25 09:16:31 UTC (rev 110)
+@@ -47,4 +47,5 @@
+ void answer();
+ void drv_load();
+ void ls();
++void cd();
+ #endif
+
+Modified: trunk/include/shell/shell.h
+===================================================================
+--- trunk/include/shell/shell.h	2009-07-23 17:26:05 UTC (rev 109)
++++ trunk/include/shell/shell.h	2009-07-25 09:16:31 UTC (rev 110)
+@@ -26,6 +26,8 @@
+ 	void (*h_func)(void);
+ };
+ 
++extern char cur_path[256];
++
+ void shell(void);
+ 
+ #endif
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-07-23 17:26:05 UTC (rev 109)
++++ trunk/shell/commands.c	2009-07-25 09:16:31 UTC (rev 110)
+@@ -24,6 +24,7 @@
+ #include <vfs.h>
+ 
+ struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
++char cur_path[256];
+ 
+ void aalogo()
+ {
+@@ -70,7 +71,8 @@
+ 	 	 "date      - Show date and time\n"
+ 	  	 "echo      - Print some lines of text\n"
+ 	 	 "drv_load  - Tool to load and kill drivers\n"
+-		 "ls        - Tool for listing dir - not complete-\n");
++		 "ls        - Tool for listing dir - not complete-\n"
++		 "cd        - Change dir - not complete-\n");
+ }
+ 
+ void echo()
+@@ -393,3 +395,15 @@
+ 		i++;
+ 	}	
+ }
++
++void cd(){
++	if(argc > 2) printf("Too many arguments\n");
++	else if(argc <2) printf("Too few arguments\n");
++	else {
++		int i=0;
++		//printf("Argc: %d ", argc);
++		i = open_dir(argv[1]);
++		if(i == -1) printf("Path not found\n");
++		else strcpy(cur_path, mountpoint_list[i].mountpoint);		
++	}
++}
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-07-23 17:26:05 UTC (rev 109)
++++ trunk/shell/shell.c	2009-07-25 09:16:31 UTC (rev 110)
+@@ -39,7 +39,7 @@
+ #include <clock.h>
+ #include <sys/utsname.h>
+ 
+-#define NUM_COM 16
++#define NUM_COM 17
+ 
+ /*
+  * Inserisce gli argomenti di un comando in un array di stringhe
+@@ -90,10 +90,12 @@
+ 	{ "answer",   answer  },
+ 	{ "drv_load", drv_load},
+ 	{ "ls",       ls},
++	{ "cd",       cd},
+         };
+ 
+   int i = 0;
+ 
++  memset(cmd, '\0', CMD_LEN);
+   memset(user, '\0', USER_LEN);
+   printf(LNG_WELCOME);
+   
+@@ -107,10 +109,11 @@
+   aalogo();
+   printf("\n\n\n\n");
+   argc=1;  
++  strcpy(cur_path, "");
+   
+   for (;;)
+   {
+-    printf("%s~# ",user);
++    printf("%s~%s# ",user, cur_path);
+     scanf("%254s",cmd);
+         
+     /* elimina eventuali spazi all'inizio del comando */
+
+
+

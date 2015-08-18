@@ -1,0 +1,470 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r61 - in trunk: . include include/shell include/sys	libc shell sys
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-February/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r61%20-%20in%20trunk%3A%20.%20include%20include/shell%20include/sys%0A%09libc%20shell%20sys&In-Reply-To=%3C200902012222.n11MMx4h002188%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   
+   <LINK REL="Next"  HREF="000063.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r61 - in trunk: . include include/shell include/sys	libc shell sys</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r61%20-%20in%20trunk%3A%20.%20include%20include/shell%20include/sys%0A%09libc%20shell%20sys&In-Reply-To=%3C200902012222.n11MMx4h002188%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r61 - in trunk: . include include/shell include/sys	libc shell sys">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun Feb  1 23:22:59 CET 2009</I>
+    <P><UL>
+        
+        <LI>Next message: <A HREF="000063.html">[Dreamos-dev] r62 - in trunk: . shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#62">[ date ]</a>
+              <a href="thread.html#62">[ thread ]</a>
+              <a href="subject.html#62">[ subject ]</a>
+              <a href="author.html#62">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-02-01 23:22:54 +0100 (Sun, 01 Feb 2009)
+New Revision: 61
+
+Added:
+   trunk/include/sys/
+   trunk/include/sys/utsname.h
+   trunk/sys/
+   trunk/sys/utsname.c
+Modified:
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/include/shell/commands.h
+   trunk/include/version.h
+   trunk/libc/stdio.c
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+Log:
+Aggiunta libreria posix: sys/utsname.*
+Il comando della shell uname ora usa la chiamata posix uname(...) in utsname
+Corretto bug che premendo backspace si cancellava tutta la linea (compreso il messaggio della cli)
+Corretto bug della printf (ripristinata la funzione dalla rev58) che ogni printmem aggiungeva un nodo.
+Aggiornato makefile
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2009-01-30 23:23:49 UTC (rev 60)
++++ trunk/Makefile	2009-02-01 22:22:54 UTC (rev 61)
+@@ -5,11 +5,11 @@
+ NAME = DreamOS
+ VERSION = 0
+ PATCHLEVEL = 1
+-EXTRAVERSION = -pepper
++EXTRAVERSION = -trunk
+ 
+ CFLAGS = -nostdlib -nostdinc -fomit-frame-pointer -fno-builtin -fno-stack-protector -Wall -march=i686 -m32 -I./include -I./include/io -I./include/drivers -I./include/libc -I./include/processore -I./include/hardware -I./include/mem -I./include/system -I./include/shell -I./include/misc
+ 
+-OBJ = kernel.o io/video.o drivers/keyboard.o libc/ctype.o libc/string.o io/io.o libc/stdio.o hardware/cpuid.o hardware/keyboard.o processore/gdt.o processore/idt.o processore/handlers.o hardware/pic8259.o mem/fismem.o mem/paging.o mem/kheap.o misc/clock.o misc/bitops.o misc/ordered_list.o system/syscall.o hardware/8253.o shell/shell.o shell/commands.o
++OBJ = kernel.o io/video.o drivers/keyboard.o libc/ctype.o libc/string.o io/io.o libc/stdio.o hardware/cpuid.o hardware/keyboard.o processore/gdt.o processore/idt.o processore/handlers.o hardware/pic8259.o mem/fismem.o mem/paging.o mem/kheap.o misc/clock.o misc/bitops.o misc/ordered_list.o system/syscall.o hardware/8253.o shell/shell.o shell/commands.o sys/utsname.o
+ 
+ dreamos.img: bl.img kernel.bin
+ 	mv kernel.bin dreamos.img
+@@ -43,6 +43,7 @@
+ hardware/8253.o: hardware/8253.c
+ shell/shell.o: shell/shell.c
+ shell/commands.o: shell/commands.c
++sys/utsname.o: sys/utsname.c
+ 
+ img:
+ 	mount -o loop boot/grub.img boot/os
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/shell/commands.h
+===================================================================
+--- trunk/include/shell/commands.h	2009-01-30 23:23:49 UTC (rev 60)
++++ trunk/include/shell/commands.h	2009-02-01 22:22:54 UTC (rev 61)
+@@ -23,27 +23,7 @@
+ #ifndef __COMMANDS_H
+ #define __COMMANDS_H
+ 
+-#include &lt;multiboot.h&gt;
+-#include &lt;kernel.h&gt;
+-#include &lt;stddef.h&gt;
+-#include &lt;video.h&gt;
+-#include &lt;pic8259.h&gt;
+-#include &lt;8253.h&gt;
+-#include &lt;gdt.h&gt;
+-#include &lt;idt.h&gt;
+-#include &lt;cpuid.h&gt;
+-#include &lt;stdio.h&gt;
+-#include &lt;string.h&gt;
+-#include &lt;fismem.h&gt;
+-#include &lt;io.h&gt;
+-#include &lt;keyboard.h&gt;
+-#include &lt;paging.h&gt;
+-#include &lt;use.h&gt;
+-#include &lt;shell.h&gt;
+ #include &lt;kheap.h&gt;
+-#include &lt;version.h&gt;
+-#include &lt;cpuid.h&gt;
+-#include &lt;clock.h&gt;
+ 
+ int argc;
+ char **argv;
+@@ -57,7 +37,7 @@
+ void kmalloc_try();
+ void do_fault();
+ 
+-void uname();
++void uname_cmd();
+ void uname_help();
+ void uname_info();
+ void printmem();
+
+Added: trunk/include/sys/utsname.h
+===================================================================
+--- trunk/include/sys/utsname.h	2009-01-30 23:23:49 UTC (rev 60)
++++ trunk/include/sys/utsname.h	2009-02-01 22:22:54 UTC (rev 61)
+@@ -0,0 +1,41 @@
++/***************************************************************************
++ *            utsname.h
++ *
++ *  Mon Jan 26 23:30:13 2008
++ *  Copyright  2007  Ivan Gualandri
++ *  Email
++ ****************************************************************************/
++
++/*
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2 of the License, or
++ *  (at your option) any later version.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++#ifndef _UTSNAME_H
++#define _UTSNAME_H
++
++#define SYS_LEN 257
++
++struct utsname {
++  char  sysname[SYS_LEN];
++  char  nodename[SYS_LEN];
++                 
++  char  release[SYS_LEN];
++  char  version[SYS_LEN];
++  char  machine[SYS_LEN];
++};
++
++int uname(struct utsname*);
++  
++#endif
+\ No newline at end of file
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-01-30 23:23:49 UTC (rev 60)
++++ trunk/include/version.h	2009-02-01 22:22:54 UTC (rev 61)
+@@ -22,6 +22,6 @@
+ 
+ #define VERSION &quot;0&quot;
+ #define PATCHLEVEL &quot;1&quot;
+-#define EXTRAVERSION &quot;-pepper&quot;
++#define EXTRAVERSION &quot;-trunk&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r58&quot;
++#define REV_NUM &quot;-r61&quot;
+
+Modified: trunk/libc/stdio.c
+===================================================================
+--- trunk/libc/stdio.c	2009-01-30 23:23:49 UTC (rev 60)
++++ trunk/libc/stdio.c	2009-02-01 22:22:54 UTC (rev 61)
+@@ -93,75 +93,75 @@
+     va_start (ap, format);
+ 
+     while (*format) {
++
+         /* % marks a specific */
+-	if (*format == '%') {
+-	    format++;
++        if (*format == '%') {
++            format++;
+ 
+             /* The field width is to be written to left */
+-	    if (*format == '-') {
+-		direction=LEFT;
+-		format++;
+-	    }
++            if (*format == '-') {
++                direction=LEFT;
++                format++;
++            }
+ 
+             /* Take field width if present and convert it to an int */
+-	    if (isdigit (*format) == 1) { // precisione di campo
+-		while (isdigit(*format))
+-		    field[i++] = *format++;
++            if (isdigit (*format) == 1) { // precisione di campo
++                while (isdigit(*format))
++                    field[i++] = *format++;
+                 field[i] = '\0';
+-		width = atoi (field);
+-	    }
++                width = atoi (field);
++            }
+ 
+-	    /* Some data type aren't supported yet
++            /* Some data type aren't supported yet
+              * In the future we will fix this */
+-	    if (*format == 's')
+-		cur_p = va_arg (ap, char *);
+-	    if (*format == 'd' || *format == 'i') {
+-		int varint = va_arg (ap, int);
+-		_kntos (cur_p, varint, 10);
+-	    }
+-	    if (*format == 'u') {
+-		unsigned int uint = va_arg (ap, int);
+-		_kntos (cur_p, uint, 10);
+-	    }
+-	    if (*format == 'x' || *format == 'X') {
+-	        int varhex = va_arg (ap, int);
+-		_kntos (cur_p, varhex, 16);
++            if (*format == 's')
++                cur_p = va_arg (ap, char *);
++            if (*format == 'd' || *format == 'i') {
++                int varint = va_arg (ap, int);
++                _kntos (cur_p, varint, 10);
++            }
++            if (*format == 'u') {
++                unsigned int uint = va_arg (ap, int);
++                _kntos (cur_p, uint, 10);
++            }
++            if (*format == 'x' || *format == 'X') {
++                int varhex = va_arg (ap, int);
++                _kntos (cur_p, varhex, 16);
+                 ishex = 1;
+-	    }
+-	    if (*format == 'n')
++            }
++            if (*format == 'n')
+                 _kntos (cur_p, len, 10);
+-	    if (*format == '%')
++            if (*format == '%')
+                 putchar ('%');
+ 
+-	    cursize = strlen(cur_p);
++            cursize = strlen(cur_p);
+ 
+             /* Actually write the field width */
+-	    if (direction==LEFT) {
+-		for(i=1; i&lt;=width; i++)
+-		    _kbackspace();
+-	    } else {
+-	    for (i=1; i&lt;=width; i++)
+-		putchar (' ');
+-	    }
++            if (direction==LEFT) {
++                for(i=1; i&lt;=width; i++)
++                    _kbackspace();
++            } else {
++            for (i=1; i&lt;=width; i++)
++                putchar (' ');
++            }
+             /* Print the argument converted to a string */
+ 
+-	    if (ishex != 1) {
+-	      *(cur_p + cursize) = '\0';
+-	      _kputs (cur_p);
+-	    }
++            if (ishex != 1) {
++              *(cur_p + cursize) = '\0';
++              _kputs (cur_p);
++            }
+             ishex = 0;
+-	}
+-	else
++        }
++        else
+             putchar (*format);
+ 
+         /* Update values */
+-	format++;
+-	direction=RIGHT;
++        format++;
++        direction=RIGHT;
+         width=0;
+-	len++;
+-	for (i=0; i&lt;255; i++)
++        len++;
++        for (i=0; i&lt;255; i++)
+             current[i] = 0;
+-        cur_p = 0;
+     }
+     va_end (ap); // end of arguments
+     return len;
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-01-30 23:23:49 UTC (rev 60)
++++ trunk/shell/commands.c	2009-02-01 22:22:54 UTC (rev 61)
+@@ -1,4 +1,25 @@
+ #include &lt;commands.h&gt;
++#include &lt;multiboot.h&gt;
++#include &lt;kernel.h&gt;
++#include &lt;stddef.h&gt;
++#include &lt;video.h&gt;
++#include &lt;pic8259.h&gt;
++#include &lt;8253.h&gt;
++#include &lt;gdt.h&gt;
++#include &lt;idt.h&gt;
++#include &lt;cpuid.h&gt;
++#include &lt;stdio.h&gt;
++#include &lt;string.h&gt;
++#include &lt;fismem.h&gt;
++#include &lt;io.h&gt;
++#include &lt;keyboard.h&gt;
++#include &lt;paging.h&gt;
++#include &lt;use.h&gt;
++#include &lt;shell.h&gt;
++#include &lt;version.h&gt;
++#include &lt;cpuid.h&gt;
++#include &lt;clock.h&gt;
++#include &lt;sys/utsname.h&gt;
+ 
+ void aalogo()
+ {
+@@ -100,18 +121,22 @@
+   printf (&quot;Contenuto della locazione 0xa0000000 dopo l'intervento dell'handler: %d\n&quot;, *prova);
+ }
+ 
+-void uname()
++void uname_cmd()
+ {
++  struct utsname *infos;
++  infos = kmalloc(sizeof(struct utsname *));
++  uname(infos);
+   if (!(strcmp(argv[1], &quot;-a&quot;)) || !(strcmp(argv[1], &quot;--all&quot;)))
+-    printf(&quot;%s %s.%s%s #1 CEST 2009 %s\n&quot;, NAME, VERSION, PATCHLEVEL, EXTRAVERSION, cpu_vendor);
++    printf(&quot;%s %s.%s%s Rev: %s #1 CEST 2009 %s\n&quot;, infos-&gt;sysname, infos-&gt;version, infos-&gt;release, EXTRAVERSION,REV_NUM, cpu_vendor);
+   else if (!(strcmp(argv[1], &quot;-r&quot;)) || !(strcmp(argv[1], &quot;--rev&quot;)))
+-    printf(&quot;%s.%s%s\n&quot;, VERSION, PATCHLEVEL, EXTRAVERSION);
++    printf(&quot;%s.%s%s\n&quot;, infos-&gt;version, infos-&gt;release, EXTRAVERSION);
+   else if (!(strcmp(argv[1], &quot;-h&quot;) ) || !(strcmp(argv[1], &quot;--help&quot;)))
+     uname_help();
+   else if (!(strcmp(argv[1], &quot;-i&quot;)) || !(strcmp(argv[1], &quot;--info&quot;)))
+     uname_info();
+   else
+-    printf(&quot;%s. For more info about this tool, please do 'uname --help'\n&quot;,NAME);
++    printf(&quot;%s. For more info about this tool, please do 'uname --help'\n&quot;,infos-&gt;sysname);
++  free(infos);
+ }
+ 
+ void uname_help() 
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-01-30 23:23:49 UTC (rev 60)
++++ trunk/shell/shell.c	2009-02-01 22:22:54 UTC (rev 61)
+@@ -34,7 +34,7 @@
+   char *cmd_ptr;
+   char *user = kmalloc(24);
+   char *commands[NUM_COM+1] = { &quot;help&quot;, &quot;clear&quot;, &quot;poweroff&quot;, &quot;kmalloc&quot;, &quot;do_fault&quot;, &quot;aalogo&quot;, &quot;uname&quot;, &quot;printmem&quot;, &quot;credits&quot;, &quot;sleep&quot;, &quot;cpuid&quot;, &quot;date&quot;, &quot;echo&quot;, &quot;answer&quot;, NULL };
+-  void (*routines[NUM_COM])(void) = { help, _kclear, poweroff, kmalloc_try, do_fault, aalogo, uname, printmem, credits, sleep_cmd, cpuid, date, echo, answer };
++  void (*routines[NUM_COM])(void) = { help, _kclear, poweroff, kmalloc_try, do_fault, aalogo, uname_cmd, printmem, credits, sleep_cmd, cpuid, date, echo, answer };
+   int i=0;
+ 
+   memset(user, 0, strlen(user));
+@@ -51,6 +51,7 @@
+   aalogo();
+   printf(&quot;\n\n\n\n&quot;);
+   argc=1;
++  shell_mess = strlen (user) + 3;
+ 
+   for (;;)
+   {
+
+Added: trunk/sys/utsname.c
+===================================================================
+--- trunk/sys/utsname.c	2009-01-30 23:23:49 UTC (rev 60)
++++ trunk/sys/utsname.c	2009-02-01 22:22:54 UTC (rev 61)
+@@ -0,0 +1,36 @@
++/***************************************************************************
++ *            utsname.c
++ *
++ *  Mon Jan 26 23:30:13 2008
++ *  Copyright  2007  Ivan Gualandri
++ *  Email
++ ****************************************************************************/
++
++/*
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2 of the License, or
++ *  (at your option) any later version.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++#include &lt;sys/utsname.h&gt;
++#include &lt;string.h&gt;
++#include &lt;version.h&gt;
++
++int uname(struct utsname* os_infos){
++/*Uname code goes here*/  
++  strcpy(os_infos-&gt;sysname, NAME);
++  strcpy(os_infos-&gt;release, PATCHLEVEL);
++  strcpy(os_infos-&gt;version, VERSION);
++  strcpy(os_infos-&gt;nodename, &quot;testbed&quot;);
++  strcpy(os_infos-&gt;machine, &quot;i686&quot;);
++}
+\ No newline at end of file
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	
+	<LI>Next message: <A HREF="000063.html">[Dreamos-dev] r62 - in trunk: . shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#62">[ date ]</a>
+              <a href="thread.html#62">[ thread ]</a>
+              <a href="subject.html#62">[ subject ]</a>
+              <a href="author.html#62">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

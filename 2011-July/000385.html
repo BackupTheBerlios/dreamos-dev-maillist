@@ -1,0 +1,176 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r382 - in trunk: . boot include/shell include/tasks	shell tasks
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2011-July/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r382%20-%20in%20trunk%3A%20.%20boot%20include/shell%20include/tasks%0A%09shell%20tasks&In-Reply-To=%3C20110714211614.51459481490%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000384.html">
+   <LINK REL="Next"  HREF="000386.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r382 - in trunk: . boot include/shell include/tasks	shell tasks</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r382%20-%20in%20trunk%3A%20.%20boot%20include/shell%20include/tasks%0A%09shell%20tasks&In-Reply-To=%3C20110714211614.51459481490%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r382 - in trunk: . boot include/shell include/tasks	shell tasks">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Thu Jul 14 23:16:14 CEST 2011</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000384.html">[Dreamos-dev] r381 - in trunk: . boot include/processore	include/tasks processore tasks
+</A></li>
+        <LI>Next message: <A HREF="000386.html">[Dreamos-dev] r383 - in trunk: . boot include/tasks shell tasks
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#385">[ date ]</a>
+              <a href="thread.html#385">[ thread ]</a>
+              <a href="subject.html#385">[ subject ]</a>
+              <a href="author.html#385">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2011-07-14 23:16:13 +0200 (Thu, 14 Jul 2011)
+New Revision: 382
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/include/shell/commands.h
+   trunk/include/shell/testing.h
+   trunk/include/tasks/task.h
+   trunk/shell/commands.c
+   trunk/shell/testing.c
+   trunk/tasks/task.c
+Log:
+started some test functions for task creation. 
+Added some comments. 
+
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/shell/commands.h
+===================================================================
+--- trunk/include/shell/commands.h	2011-07-13 21:13:28 UTC (rev 381)
++++ trunk/include/shell/commands.h	2011-07-14 21:16:13 UTC (rev 382)
+@@ -25,7 +25,7 @@
+ 
+ #include &lt;shell.h&gt;
+ #include &lt;kheap.h&gt;
+-#define MAX_TEST 13
++#define MAX_TEST 14
+ 
+ extern int argc;
+ extern char **argv;
+
+Modified: trunk/include/shell/testing.h
+===================================================================
+--- trunk/include/shell/testing.h	2011-07-13 21:13:28 UTC (rev 381)
++++ trunk/include/shell/testing.h	2011-07-14 21:16:13 UTC (rev 382)
+@@ -33,5 +33,6 @@
+ void try_shadow();
+ void try_newheap();
+ void try_mapaddress();
++void try_tasksetup();
+ 
+ #endif
+
+Modified: trunk/include/tasks/task.h
+===================================================================
+--- trunk/include/tasks/task.h	2011-07-13 21:13:28 UTC (rev 381)
++++ trunk/include/tasks/task.h	2011-07-14 21:16:13 UTC (rev 382)
+@@ -26,6 +26,7 @@
+ #define _TASK__H
+ 
+ #define MAX_TASKS 10
++#define STACK_SIZE 0x1000 //Dimensione dello stack
+ 
+ typedef unsigned int pid_t;
+ 
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2011-07-13 21:13:28 UTC (rev 381)
++++ trunk/shell/commands.c	2011-07-14 21:16:13 UTC (rev 382)
+@@ -526,6 +526,7 @@
+ 					{ &quot;try_check&quot;, try_check},
+ 					{ &quot;try_shadow&quot;, try_shadow},
+ 					{ &quot;try_mapaddress&quot;, try_mapaddress},
++					{ &quot;try_tasksetup&quot;, try_tasksetup},
+ 					#ifdef LATEST
+ 					{ &quot;try_newheap&quot;, try_newheap},
+ 					#endif
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2011-07-13 21:13:28 UTC (rev 381)
++++ trunk/shell/testing.c	2011-07-14 21:16:13 UTC (rev 382)
+@@ -262,3 +262,8 @@
+ 	//map_kernel();
+ 	return;
+ }
++
++void try_tasksetup(){
++	printf(&quot;Testing task creation functions:\n&quot;);
++	return;
++}
+
+Modified: trunk/tasks/task.c
+===================================================================
+--- trunk/tasks/task.c	2011-07-13 21:13:28 UTC (rev 381)
++++ trunk/tasks/task.c	2011-07-14 21:16:13 UTC (rev 382)
+@@ -25,6 +25,7 @@
+ #include &lt;stdio.h&gt;
+ #include &lt;stddef.h&gt;
+ #include &lt;string.h&gt;
++#include &lt;kheap.h&gt;
+ 
+ pid_t current_pid; 
+ task_t task_list[MAX_TASKS];
+@@ -58,6 +59,8 @@
+ 	strcpy(new_task.name, task_name);
+ 	new_task.pid = new_pid;			
+ 	new_task.eip = (unsigned int)start_function;	
++	new_task.esp = (unsigned int) kmalloc(STACK_SIZE) + STACK_SIZE - 100;
++	
+ 	asm(&quot;sti&quot;);
+ 	return;
+ }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000384.html">[Dreamos-dev] r381 - in trunk: . boot include/processore	include/tasks processore tasks
+</A></li>
+	<LI>Next message: <A HREF="000386.html">[Dreamos-dev] r383 - in trunk: . boot include/tasks shell tasks
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#385">[ date ]</a>
+              <a href="thread.html#385">[ thread ]</a>
+              <a href="subject.html#385">[ subject ]</a>
+              <a href="author.html#385">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

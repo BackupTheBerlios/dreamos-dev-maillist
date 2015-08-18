@@ -1,0 +1,326 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r25 - in trunk: . shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2008-August/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r25%20-%20in%20trunk%3A%20.%20shell&In-Reply-To=%3C200808310933.m7V9XWCM016939%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000024.html">
+   
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r25 - in trunk: . shell</H1>
+    <B>osiris_h4ck at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r25%20-%20in%20trunk%3A%20.%20shell&In-Reply-To=%3C200808310933.m7V9XWCM016939%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r25 - in trunk: . shell">osiris_h4ck at mail.berlios.de
+       </A><BR>
+    <I>Sun Aug 31 11:33:32 CEST 2008</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000024.html">[Dreamos-dev] r24 - in trunk: . include include/libc libc shell
+</A></li>
+        
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#25">[ date ]</a>
+              <a href="thread.html#25">[ thread ]</a>
+              <a href="subject.html#25">[ subject ]</a>
+              <a href="author.html#25">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: osiris_h4ck
+Date: 2008-08-31 11:33:31 +0200 (Sun, 31 Aug 2008)
+New Revision: 25
+
+Modified:
+   trunk/Makefile
+   trunk/kernel.c
+   trunk/shell/shell.c
+Log:
+- Implementazione argomenti argv e argc, un po rozza come cosa adesso, vedr?\195?\178 subito di scrivere una libreria etc..
+	* comando per testare: 'uname' e 'uname -a'
+- Organizzazione varia del Makefile e kernel.c
+
+Osiris, jeek69 [at] katamail.com
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2008-08-27 08:56:22 UTC (rev 24)
++++ trunk/Makefile	2008-08-31 09:33:31 UTC (rev 25)
+@@ -60,8 +60,9 @@
+ 	rm -f *.img *.bin *.map
+ 	rm -f $(OBJ)
+ 
+-install: dreamos.img
+-	dd if=dreamos.img of=/dev/fd0
++install:
++	mkfs.ext2 /dev/fd0
++	dd if=boot/grub.img of=/dev/fd0
+ 
+ qemu: dreamos.img
+ 	dd if=/dev/zero bs=$(shell let bs=1474560 -$(shell stat --format=%s dreamos.img); echo $$bs) count=1 2&gt;/dev/null | cat dreamos.img - &gt; dreamos_padded.img
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2008-08-27 08:56:22 UTC (rev 24)
++++ trunk/kernel.c	2008-08-31 09:33:31 UTC (rev 25)
+@@ -96,8 +96,8 @@
+     get_cpuid();    
+     printf(&quot;\n&quot;);    
+ 
+-    printf(&quot;\n\n[+] It's TODO ok ------------------------------------------&gt;&quot;);
+-    _kprintOK();
++    //printf(&quot;\n\n[+] It's TODO ok ------------------------------------------&gt;&quot;);
++    //_kprintOK();
+ 
+ 		printf(&quot;\n----\n&quot;);
+     		printf(&quot;Loading the shell..\n&quot;);
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2008-08-27 08:56:22 UTC (rev 24)
++++ trunk/shell/shell.c	2008-08-31 09:33:31 UTC (rev 25)
+@@ -14,8 +14,10 @@
+ */
+ 
+ /* 
+-  Shell Coded by
+-	Osiris 
++*  Shell Coded by
++*	Osiris 
++*
++*   jeek69 [at] katamail dot com
+ */
+ 
+ #include &lt;multiboot.h&gt;
+@@ -38,9 +40,9 @@
+ #include &lt;kheap.h&gt;
+ #include &lt;buddy.h&gt;
+ #include &lt;version.h&gt;
++//#include &lt;stdlib.h&gt;
+ 
+ 
+-
+ extern buddy_t* kbuddy;
+ void logo()
+ {
+@@ -69,7 +71,7 @@
+ 	/*asm(	&quot;movl %0, %%eax\n&quot;
+ 		&quot;int $0xff\n&quot;
+ 		: : &quot;g&quot;(1)); // valore di enum*/
+-    asm(&quot;hlt&quot;);
++    asm(&quot;sti&quot;);
+     printf(&quot;E' ora possibile spegnere il computer.\n&quot;);
+     while(1);
+ }
+@@ -103,37 +105,69 @@
+ void shell(int argc, char *argv[])
+ {
+ 	unsigned char cmd[256];
+-	//char *cmd=malloc(256); //Dio maiale, Page Fault con il puntatore...
+-	unsigned char text[256];
+-	int a = 1;
++	//char *cmd=kmalloc(sizeof(cmd));
++	//char *string=kmalloc(sizeof(string));
++	unsigned char string[256];
++	int a = 1, flag = 1;
++	char *str1;
++
+ 	printf(&quot;[?] Enter your username: &quot;);
+-    	char user[16];
++    	char user[24];
+ 	scanf (&quot;%s&quot;,user);
++
+ 	printf(&quot;\n\n\n\n\n\n&quot;);
+ 	aalogo();
+ 	printf(&quot;\n\n\n\n&quot;);
+ 
+     shell_mess = 7;
++    argc=1;
++
+ 	for (;;)
+ 	{
+-		printf(&quot;%s~# &quot;,user);
+-	        scanf(&quot;%s&quot;,cmd);	// scanf non va bene per gli argomenti..
++	    printf(&quot;%s~# &quot;,user);
++	    scanf(&quot;%s&quot;,cmd);
+ 
++	    // Inizio funzione argc e argv ---&gt;
++
++	   while (1)
++	   {
++		if (flag) {
++			str1 = strtok(cmd, &quot; &quot;);
++			flag = 0;
++		} 
++		else 
++		{
++			str1 = strtok(NULL, &quot; &quot;);
++		}
++
++		if (str1 == NULL)
++		{
++			break;
++		}
++
++		argv[argc] = (char *)kmalloc(strlen(str1) + 1); // Qui ho usato kmalloc() perch&#232; non c'&#232; malloc() 
++
++		strncpy(argv[argc], str1, strlen(str1));
++		argc++;
++	    }
++	    // fine argomentazione.. facile no ? :) --&gt; Osiris r0x :P
++
++
+ 		if (!(_kstrncmp(cmd,&quot;help&quot;,4) ) )
+ 		{
+ 			printf(&quot;Available command: \n&quot;);
+ 			help();
+ 			cmd[a]=NULL;
++			memset(cmd, 0, strlen(cmd));
+ 		}
+ 
+ 		if (!(_kstrncmp(cmd, &quot;echo&quot;, 4) ) )
+ 		{
+-			char string[256];
+-			strncpy(string,cmd, strlen(cmd));
++			strncpy(string,cmd,strlen(cmd));
+ 			memmove(string, string+5, strlen(string));
+ 			printf(&quot;%s\n&quot;,string);
+-			cmd[a]=NULL;
+-			string[a]=NULL;	
++			memset(string+5, 0, strlen(string));
++			memset(cmd, 0, strlen(cmd));
+ 		}
+ 
+ 		else if (!(_kstrncmp(cmd,&quot;poweroff&quot;,8)))
+@@ -141,29 +175,45 @@
+ 			printf(&quot;Poweroff..\n&quot;);
+ 			poweroff();
+ 			cmd[a]=NULL;
++			memset(cmd, 0, strlen(cmd));
+ 		}
+ 		
++		else if (!(_kstrncmp(cmd, &quot;clear&quot;, 5)))
++		{
++			_kclear();
++			cmd[a]=NULL;
++			memset(cmd, 0, strlen(cmd));
++		}
++
+ 		else if (!(_kstrncmp(cmd, &quot;uname&quot;,5)))
+ 		{
+-			//if (argv[2] == &quot;-a&quot;)
+-       			//{
+-			printf(&quot;%s %s.%s.%s%s #1 beta CEST 2008 %s\n&quot;,NAME,VERSION,PATCHLEVEL,REV_NUM,EXTRAVERSION,cpu_vendor);
+-			cmd[a]=NULL;
++			//if (_kstrncmp(argv[2], NULL,0) == -1)
++			//{
++				memmove(argv[2], argv[2]+6, strlen(argv[2]));
++				//printf(&quot;%s\n&quot;, argv[2]);
+ 			//}
+-			//else { printf(&quot;%s\n&quot;, NAME); }
+ 
++			if (!(_kstrncmp(argv[2], &quot;-a&quot;, 2)))
++       			{
++			printf(&quot;%s %s.%s.%s%s #1 beta CEST 2008 %s\n&quot;,NAME,VERSION,PATCHLEVEL,REV_NUM,EXTRAVERSION,cpu_vendor);
++			}
++			else { printf(&quot;%s\n&quot;, NAME); }
++			memset(cmd, 0, strlen(cmd));
++
+ 		}
+ 
+ 		else if (!(_kstrncmp(cmd,&quot;info&quot;,4)))
+ 		{
+ 			info();
+ 			cmd[a]=NULL;
++			memset(cmd, 0, strlen(cmd));
+ 		}
+ 		else if (!(_kstrncmp(cmd,&quot;answer&quot;,6)))
+-        {
+-            printf(&quot;42\n&quot;);
+-            cmd[a]=NULL;
+-        }
++      		  {
++          		  printf(&quot;42\n&quot;);
++          		  cmd[a]=NULL;
++			  memset(cmd, 0, strlen(cmd));
++        	}
+         else if (!(_kstrncmp(cmd,&quot;kmalloc&quot;,7)))
+         {
+             printf(&quot;kmalloc try: ...\n&quot;);
+@@ -181,12 +231,16 @@
+             }
+             printf(&quot;Address of a: %d\n&quot;, b);
+             cmd[a]=NULL;
++        	memset(cmd, 0, strlen(cmd));
++
+         }
+         else if (!(_kstrncmp(cmd,&quot;do_fault&quot;,8))){  
+             char *prova;
+             prova = 0xa0000000;
+             *prova = 10;
+             cmd[a]=NULL;
++	    memset(cmd, 0, strlen(cmd));
++
+         }
+         else if (!(_kstrncmp(cmd,&quot;try_buddy&quot;,9))){
+              printf(&quot;L'indirizzo di kbuddy e': 0x%x\n&quot;, kbuddy);
+@@ -194,12 +248,15 @@
+              printf(&quot;New allocation\n\n&quot;);
+              alloc_buddy(8, kbuddy);
+             cmd[a] = NULL;
++	    memset(cmd, 0, strlen(cmd));
++
+         }
+         else if (!(_kstrncmp(cmd,&quot;aalogo&quot;,6))) aalogo();        
+-        else printf(&quot;Error %s\n&quot;, cmd);
++        //else printf(&quot;Error %s\n&quot;, cmd);
+         cmd[a]=NULL;
++	memset(cmd, 0, strlen(cmd));
++
+ 	}
+-
+ }
+ 
+ void aalogo() {
+@@ -207,8 +264,7 @@
+ printf(&quot;\t |    \\ ___ ___ ___ _____|     |   __|\n&quot;);
+ printf(&quot;\t |  |  |  _| -_| = |     |  |  |__   |\n&quot;);
+ printf(&quot;\t |____/|_| |___|__||_|_|_|_____|_____|\n&quot;);
+-printf(&quot;\t |------rev: \&quot;%s\&quot;|\n&quot;,REV_NUM);
+-printf(&quot;\t |:::::::::::......|\n&quot;);
++printf(&quot;\t -.rev: \&quot;%s\&quot;\n&quot;,REV_NUM);
+ logo();
+ }
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000024.html">[Dreamos-dev] r24 - in trunk: . include include/libc libc shell
+</A></li>
+	
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#25">[ date ]</a>
+              <a href="thread.html#25">[ thread ]</a>
+              <a href="subject.html#25">[ subject ]</a>
+              <a href="author.html#25">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

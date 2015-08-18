@@ -1,0 +1,3821 @@
+From finarfin at mail.berlios.de  Sat Jan  3 23:28:00 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Sat, 3 Jan 2009 23:28:00 +0100
+Subject: [Dreamos-dev] r43 - in trunk: . include mem
+Message-ID: <200901032228.n03MS00K003762@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-01-03 23:27:59 +0100 (Sat, 03 Jan 2009)
+New Revision: 43
+
+Modified:
+   trunk/include/version.h
+   trunk/kernel.c
+   trunk/mem/kheap.c
+   trunk/mem/paging.c
+Log:
+Eliminate stampe di prova.
+Le stampe di debug sono state rese visibili solo se viene definito DEBUG 
+Sistemato layout di alcune stampe
+Pulizia del codice
+
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2008-12-30 20:38:10 UTC (rev 42)
++++ trunk/include/version.h	2009-01-03 22:27:59 UTC (rev 43)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "0"
+ #define EXTRAVERSION "-dreamos"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r41"
++#define REV_NUM "-r42"
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2008-12-30 20:38:10 UTC (rev 42)
++++ trunk/kernel.c	2009-01-03 22:27:59 UTC (rev 43)
+@@ -83,8 +83,7 @@
+     init_IRQ();
+     asm("sti");
+     _kprintOK();   
+-    init_paging();
+-    printf("End: %x\n", end);
++    init_paging();    
+     printf(LNG_PIT8253);
+     configure_PIT ();
+     _kprintOK();    
+@@ -95,8 +94,7 @@
+     printf("----\n");
+     printf("Loading the shell");
+     _kprintOK();
+-		printf("[+] End: %d \n"
+-		       "[+] Address: 0x%x\n", end, &end);		   	        
++		printf("[+] Address: 0x%x\n", &end);		   	        
+ 		printf("\n\n");
+ 		shell();
+ 
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2008-12-30 20:38:10 UTC (rev 42)
++++ trunk/mem/kheap.c	2009-01-03 22:27:59 UTC (rev 43)
+@@ -92,8 +92,8 @@
+     new_heap->free_list = first_node;
+     new_heap->used_list = NULL;
+     new_heap->free_nodes = NULL;
+-    printf("First heap created...\n");   
+-    printf("Size: %d - Tot mem: %d - Start address: %x\n", (new_heap->free_list)->size, tot_mem, new_heap);    
++    printf("\tFirst heap created...\n");   
++    printf("\tSize: %d - Tot mem: %d - Start address: %x\n", (new_heap->free_list)->size, tot_mem, new_heap);    
+     return (heap_t*) new_heap;
+ }
+     
+@@ -165,7 +165,7 @@
+    #ifdef DEBUG
+    printf("Prev_node: %d \n", prev_node->start_address);
+    #endif
+-   return (void *)new_node;
++   return (void *)new_node->start_address;
+ }
+ 
+ /**
+@@ -180,7 +180,9 @@
+     if(kheap->free_nodes!=NULL){      
+       new_address = kheap->free_nodes;
+       kheap->free_nodes = new_address->next;
++      #ifdef DEBUG
+       printf("riciclo un nodo\n");
++      #endif
+       return new_address;
+     }
+     else {
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2008-12-30 20:38:10 UTC (rev 42)
++++ trunk/mem/paging.c	2009-01-03 22:27:59 UTC (rev 43)
+@@ -42,7 +42,7 @@
+ 
+ void init_paging(){
+     int i;
+-    printf("Abilito Paging: In lavorazione....");
++    printf("Abilito Paging: ");
+     _kprintOK();    
+     current_page_dir = create_pageDir();
+     #ifdef DEBUG
+@@ -233,24 +233,33 @@
+     if ((ecode & 0b0011) == 2 || (ecode & 0b0011) == 0) {
+     pdir = BITRANGE (fault_addr, 22, 31);
+     ptable = BITRANGE (fault_addr, 12, 21);
++    #ifdef DEBUG
+     printf ("PD entry num: %d, PT entry num: %d, Indirizzo: %d\n", ptable, pdir, fault_addr);
+-
++    #endif
+  	  /* Mappatura della pagedir se non presente */
+ 	pd_entry = get_pagedir_entry (pdir);
++	#ifdef DEBUG
+ 	printf ("Entry corrente della pagedir: %d\n", pd_entry);
++	#endif
+     if (pd_entry == 0) {
+ 	    new_pt = create_pageTable();
+         set_pagedir_entry_ric (pdir, new_pt, PD_PRESENT|SUPERVISOR|WRITE, 0);
++	    #ifdef DEBUG
+ 	    printf ("Nuova entry dopo la mappatura: %d\n", get_pagedir_entry (pdir));
++	    #endif
+     }
+ 
+ 	/* Mappatura della pagetable se non presente */
+ 	pt_entry = get_pagetable_entry (pdir, ptable);
++	#ifdef DEBUG
+ 	printf ("Entry corrente della pagetable: %d\n", pt_entry);
++	#endif
+ 	if (pt_entry == 0) {
+ 	    new_p = request_pages (1, ADD_LIST);
+ 	    set_pagetable_entry_ric (pdir, ptable, new_p, PD_PRESENT|SUPERVISOR|WRITE, 0);
++	    #ifdef DEBUG
+ 	    printf ("Nuova entry dopo la mappatura: %d\n", get_pagetable_entry (pdir, ptable));
++	    #endif
+ 	  }
+ 	}        
+     return;
+
+
+
+From shainer at mail.berlios.de  Tue Jan  6 16:29:50 2009
+From: shainer at mail.berlios.de (shainer at BerliOS)
+Date: Tue, 6 Jan 2009 16:29:50 +0100
+Subject: [Dreamos-dev] r44 - in trunk: . hardware include include/hardware
+	libc mem shell system
+Message-ID: <200901061529.n06FTo7q017467@sheep.berlios.de>
+
+Author: shainer
+Date: 2009-01-06 16:29:49 +0100 (Tue, 06 Jan 2009)
+New Revision: 44
+
+Modified:
+   trunk/bl.img
+   trunk/dreamos.img
+   trunk/hardware/cpuid.c
+   trunk/include/hardware/cpuid.h
+   trunk/include/version.h
+   trunk/libc/stdio.c
+   trunk/mem/kheap.c
+   trunk/shell/shell.c
+   trunk/system/syscall.c
+Log:
+Sistemati alcuni elementi della shell, free della memoria usata e vecchi comandi di test eliminati.
+Piccola modifica alla cpuid che adesso ritorna la struttura riempita.
+Cambiata la kmalloc in modo che chiami la alloc.
+Definizione di KHEAP_LIST_ADDRESS in kheap.c
+Aggiunta di printmem nell'output di help.
+
+
+Modified: trunk/bl.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/hardware/cpuid.c
+===================================================================
+--- trunk/hardware/cpuid.c	2009-01-03 22:27:59 UTC (rev 43)
++++ trunk/hardware/cpuid.c	2009-01-06 15:29:49 UTC (rev 44)
+@@ -25,7 +25,7 @@
+ 
+ #include <cpuid.h>
+ 
+-void get_cpuid()
++struct cpuinfo_generic *get_cpuid()
+ {
+     int eax, ebx, ecx, edx;
+     struct cpuinfo_generic *info;
+@@ -90,5 +90,8 @@
+   case 3:
+       info->cpu_type = "Intel Overdrive";
+   }
+-  return;
++
++  
++
++  return info;
+ }
+
+Modified: trunk/include/hardware/cpuid.h
+===================================================================
+--- trunk/include/hardware/cpuid.h	2009-01-03 22:27:59 UTC (rev 43)
++++ trunk/include/hardware/cpuid.h	2009-01-06 15:29:49 UTC (rev 44)
+@@ -60,6 +60,6 @@
+ 
+ char cpu_vendor[12]; // This will contain the main string
+ /* Have a look into cpuid.c for this procedure */
+-void get_cpuid ();
++struct cpuinfo_generic *get_cpuid ();
+ 
+ #endif
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-01-03 22:27:59 UTC (rev 43)
++++ trunk/include/version.h	2009-01-06 15:29:49 UTC (rev 44)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "0"
+ #define EXTRAVERSION "-dreamos"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r42"
++#define REV_NUM "-r43"
+
+Modified: trunk/libc/stdio.c
+===================================================================
+--- trunk/libc/stdio.c	2009-01-03 22:27:59 UTC (rev 43)
++++ trunk/libc/stdio.c	2009-01-06 15:29:49 UTC (rev 44)
+@@ -35,7 +35,6 @@
+ 
+ /*
+  * Print a character
+- * This is going to become a syscall to _kputc
+  */
+ void putchar (char ch)
+ {
+@@ -143,7 +142,7 @@
+ 		    _kbackspace();
+ 	    } else {
+ 	    for (i=1; i<=width; i++)
+-		_kputs (" ");
++		putchar (' ');
+ 	    }
+             /* Print the argument converted to a string */
+ 
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2009-01-03 22:27:59 UTC (rev 43)
++++ trunk/mem/kheap.c	2009-01-06 15:29:49 UTC (rev 44)
+@@ -28,6 +28,7 @@
+ #include <ordered_list.h>
+ #include <stddef.h>
+ #include <stdio.h>
++#define KHEAP_LIST_ADDRESS 0xC0000000
+ 
+ // #define DEBUG 1
+ extern unsigned int end;
+@@ -38,11 +39,15 @@
+ 
+ void* kmalloc(unsigned int size)
+ {
+-    unsigned int temp;
+-    
+-    temp = address_cur;
+-    address_cur+=size;
+-    return (void *) temp;
++   unsigned int temp;
++   if(kheap!=0) {
++     return (void *) alloc(size, kheap);
++   }
++   else {            
++     temp = address_cur;
++     address_cur+=size;
++   }
++     return (void *) temp;
+ }
+ 
+ /* Test procedure ("try_heap" shell command") */
+@@ -77,8 +82,8 @@
+     heap_t* new_heap;
+     heap_node_t* first_node;
+ 
+-    new_heap = (heap_t*)0xC0000000;
+-    node_address = 0xC0000000 + sizeof(heap_t);
++    new_heap = (heap_t*)KHEAP_LIST_ADDRESS;
++    node_address = KHEAP_LIST_ADDRESS + sizeof(heap_t);
+ //     new_heap = (heap_t*)kmalloc(sizeof(heap_t));
+ //     first_node = (heap_node_t*)alloc_node();
+     first_node = (heap_node_t*)node_address;
+@@ -254,7 +259,7 @@
+         busy->size += n2->size;
+         busy->next = n2->next;
+ // 	insert_list (n2, &(kheap->free_nodes));
+-	printf("Node_address: %d\n", n2);
++
+ 	free_node(n2);
+       }
+ 
+@@ -296,4 +301,4 @@
+     toadd->size = 0;    
+     toadd->next = kheap->free_nodes;
+     kheap->free_nodes = toadd;        
+-}
+\ No newline at end of file
++}
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-01-03 22:27:59 UTC (rev 43)
++++ trunk/shell/shell.c	2009-01-06 15:29:49 UTC (rev 44)
+@@ -42,6 +42,7 @@
+ #include <shell.h>
+ #include <kheap.h>
+ #include <version.h>
++#include <cpuid.h>
+     
+ extern heap_t *kheap;
+ int argc;
+@@ -158,6 +159,15 @@
+ 
+ 		}
+ 
++		else if (!(_kstrncmp(cmd, "cpuid",5)))
++		{
++			struct cpuinfo_generic *sh_info = get_cpuid();
++
++			printf ("----- CPUID Information -----\n");
++			printf ("Vendor: %s\n", sh_info->cpu_vendor);
++			printf ("Type: %s\n", sh_info->cpu_type);
++		}
++
+ 		else if (!(_kstrncmp(cmd,"answer",6)))
+       		{
+           		  printf("42\n");			  
+@@ -179,6 +189,7 @@
+                 i++;
+             }
+             printf("Address of a: %d\n", b);
++            free (b);
+ 
+         }
+ 
+@@ -191,24 +202,25 @@
+               printf ("Contenuto della locazione 0xa0000000 dopo l'intervento dell'handler: %d\n", *prova);
+         }
+ 
+-        else if (!(_kstrncmp(cmd,"try_heap",8))){
++        /*else if (!(_kstrncmp(cmd,"try_heap",8))){
+             try_alloc();
+         }
+         
+- 	    else if (!(_kstrncmp(cmd,"free",4))) {
+-    	    unsigned int ptr = 425532;
+-	        free((unsigned int*)ptr);
+-	        ptr = 433724;
+- 	        free((unsigned int*)ptr);
+-            ptr=446012;
+-            free((unsigned int*)ptr);
+-            printf("Navigating used list...\n");
+-            print_heap_list (kheap->used_list);
+-            printf("Navigating free list...\n");
+-            print_heap_list (kheap->free_list);
+-	    printf("Navigati free nodes...\n");
+-            print_heap_list (kheap->free_nodes);
+-	    }
++        else if (!(_kstrncmp(cmd,"free",4))) {
++          unsigned int ptr = 425548;
++          free((unsigned int*)ptr);
++          ptr = 437836;
++          free((unsigned int*)ptr);
++          ptr=446028;
++          free((unsigned int*)ptr);
++          printf("Navigating used list...\n");
++          print_heap_list (kheap->used_list);
++          printf("Navigating free list...\n");
++          print_heap_list (kheap->free_list);
++          printf("Navigating free nodes...\n");
++          print_heap_list (kheap->free_nodes);
++        }*/
++
+         else if (!(_kstrncmp(cmd,"printmem",8))) print_heap_list(kheap->used_list);        
+         else if (!(_kstrncmp(cmd,"aalogo",6))) 
+ 		aalogo();
+@@ -239,6 +251,10 @@
+ 	memset(string+5, 0, strlen(string));
+ 	memset(cmd, 0, strlen(cmd));
+ 
++        for (--argc; argc>=0; argc--) {
++	  free (argv[argc]);
++        }
++
+ 	}
+ }
+ 
+@@ -284,14 +300,13 @@
+ {
+ 	printf("help      - See the 'help' list to learn the DreamOS command now avaible\n"
+            "clear     - Clear the screen\n"
+-	       "poweroff  - Turn off the machine\n"
++	   "poweroff  - Turn off the machine\n"
+            "kmalloc   - Test a basic kmalloc function\n"
+            "do_fault  - Test a page_fault\n"
+            "aalogo    - Show an ascii art logo\n"
+            "uname     - Print kernel version, try uname --help for more info\n"
+-           "try_heap  - Try heap mmu\n"
+-           "free      - Try free() with merge\n"
+-           "credits  - Show DreamOS credists\n"
++           "printmem  - Print used locations of memory\n"
++           "credits   - Show DreamOS credits\n"
+ 	       "echo      - Print some lines of text\n");
+ }
+ 
+
+Modified: trunk/system/syscall.c
+===================================================================
+--- trunk/system/syscall.c	2009-01-03 22:27:59 UTC (rev 43)
++++ trunk/system/syscall.c	2009-01-06 15:29:49 UTC (rev 44)
+@@ -26,8 +26,9 @@
+ #include <syscall.h>
+ #include <stdio.h>
+ #include <video.h>
++#include <keyboard.h>
+ 
+-void (*syscall_table[SYSCALL_NUMBER])(int *) = {sysputch};
++void (*syscall_table[SYSCALL_NUMBER])(int *) = {sysputch};  
+ 
+ void sysputch(int *args)
+ {
+@@ -35,12 +36,13 @@
+    s[0] = args[0];
+    s[1] = '\0';
+ 
+-    _kputs (s);
++   _kputs (s);
+ }
+ 
+-void syscall_init(){
++void syscall_init()
++{
+     int i=0;
+-    while(i<SYSCALL_NUMBER){
++    while(i<SYSCALL_NUMBER) {
+         syscall_table[i]=0;
+         i++;
+     }
+@@ -56,16 +58,19 @@
+      int ebx=0, ecx=0, edx=0;
+      int arguments[3] = {0,0,0};
+ 
++     asm ("cli");
++
+      asm ("movl %%eax, %0\n\t"
+ 	  "movl %%ebx, %1\n\t"
+ 	  "movl %%ecx, %2\n\t"
+ 	  "movl %%edx, %3\n\t"
+ 	  : "=r" (eax), "=r" (ebx), "=r" (ecx), "=r" (edx));
+-
++     
+      arguments[0] = ebx;
+      arguments[1] = ecx;
+      arguments[2] = edx;
+          
+      (*syscall_table[eax])(arguments);
++     asm ("sti");
+ }
+ 
+
+
+
+From finarfin at mail.berlios.de  Wed Jan  7 12:27:45 2009
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Wed, 7 Jan 2009 12:27:45 +0100
+Subject: [Dreamos-dev] r45 - in trunk: . include mem shell
+Message-ID: <200901071127.n07BRjUp030140@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-01-07 12:27:16 +0100 (Wed, 07 Jan 2009)
+New Revision: 45
+
+Modified:
+   trunk/bl.img
+   trunk/dreamos.img
+   trunk/include/version.h
+   trunk/mem/paging.c
+   trunk/shell/shell.c
+Log:
+Risoluzione bug 15019 - Aggiunto ciclo per inizializzazione della ptable a 0.
+Aggiunto nell'help informazioni su comando cpuid
+Invertite fra le stampe di debug pdir e ptable in una printf (erano invertite rispetto a quello che veniva stampato)
+Nel comando kmalloc prima della free, viene stampata la lista kheap->used_list
+
+
+Modified: trunk/bl.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-01-06 15:29:49 UTC (rev 44)
++++ trunk/include/version.h	2009-01-07 11:27:16 UTC (rev 45)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "0"
+ #define EXTRAVERSION "-dreamos"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r43"
++#define REV_NUM "-r44"
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2009-01-06 15:29:49 UTC (rev 44)
++++ trunk/mem/paging.c	2009-01-07 11:27:16 UTC (rev 45)
+@@ -234,7 +234,7 @@
+     pdir = BITRANGE (fault_addr, 22, 31);
+     ptable = BITRANGE (fault_addr, 12, 21);
+     #ifdef DEBUG
+-    printf ("PD entry num: %d, PT entry num: %d, Indirizzo: %d\n", ptable, pdir, fault_addr);
++    printf ("PD entry num: %d, PT entry num: %d, Indirizzo: %d\n", pdir, ptable, fault_addr);
+     #endif
+  	  /* Mappatura della pagedir se non presente */
+ 	pd_entry = get_pagedir_entry (pdir);
+@@ -242,8 +242,13 @@
+ 	printf ("Entry corrente della pagedir: %d\n", pd_entry);
+ 	#endif
+     if (pd_entry == 0) {
++	    int i=0;
+ 	    new_pt = create_pageTable();
+-        set_pagedir_entry_ric (pdir, new_pt, PD_PRESENT|SUPERVISOR|WRITE, 0);
++	    while(i<PT_LIMIT){
++	      new_pt[i] = 0x00000000;
++	      i++;
++	    }
++	    set_pagedir_entry_ric (pdir, new_pt, PD_PRESENT|SUPERVISOR|WRITE, 0);
+ 	    #ifdef DEBUG
+ 	    printf ("Nuova entry dopo la mappatura: %d\n", get_pagedir_entry (pdir));
+ 	    #endif
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-01-06 15:29:49 UTC (rev 44)
++++ trunk/shell/shell.c	2009-01-07 11:27:16 UTC (rev 45)
+@@ -178,6 +178,7 @@
+             printf("kmalloc try: ...\n");
+             int *b;
+             b = (int*) kmalloc(10*sizeof(int));
++	    printf("Address obtained: %d\n", b);
+             int i = 0;
+             while(i<10){
+                 b[i] = i*2;
+@@ -189,6 +190,8 @@
+                 i++;
+             }
+             printf("Address of a: %d\n", b);
++	  printf("Navigating used list...\n");
++          print_heap_list (kheap->used_list);
+             free (b);
+ 
+         }
+@@ -307,6 +310,7 @@
+            "uname     - Print kernel version, try uname --help for more info\n"
+            "printmem  - Print used locations of memory\n"
+            "credits   - Show DreamOS credits\n"
++	   "cpuid     - Show cpu identification informations\n"
+ 	       "echo      - Print some lines of text\n");
+ }
+ 
+
+
+
+From shainer at mail.berlios.de  Fri Jan 16 00:20:45 2009
+From: shainer at mail.berlios.de (shainer at BerliOS)
+Date: Fri, 16 Jan 2009 00:20:45 +0100
+Subject: [Dreamos-dev] r46 - in trunk: . libc processore shell
+Message-ID: <200901152320.n0FNKjH5000898@sheep.berlios.de>
+
+Author: shainer
+Date: 2009-01-16 00:20:44 +0100 (Fri, 16 Jan 2009)
+New Revision: 46
+
+Modified:
+   trunk/dreamos.img
+   trunk/libc/stdio.c
+   trunk/processore/handlers.c
+   trunk/shell/shell.c
+Log:
+Corretto momentaneamente un bug relativo alla gestione degli IRQ condivisi che, su Bochs, faceva andare l'OS in un loop infinito di eccezioni. Aggiunto comando sleep nella shell
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/libc/stdio.c
+===================================================================
+--- trunk/libc/stdio.c	2009-01-07 11:27:16 UTC (rev 45)
++++ trunk/libc/stdio.c	2009-01-15 23:20:44 UTC (rev 46)
+@@ -55,7 +55,7 @@
+   /* Make sure all chars are numbers */
+   for (i=0; *(nptr+i); ++i) {
+     if(!isdigit(*(nptr+i)))
+-      return 0;
++      return -1;
+   }
+ 
+   i=0;
+
+Modified: trunk/processore/handlers.c
+===================================================================
+--- trunk/processore/handlers.c	2009-01-07 11:27:16 UTC (rev 45)
++++ trunk/processore/handlers.c	2009-01-15 23:20:44 UTC (rev 46)
+@@ -101,26 +101,34 @@
+     int irqn;
+     irqn = get_current_irq();  
+     IRQ_s* tmpHandler; 
+-    #ifdef DEBUG
+-    printf("Next shareHandler: %d\n", tmpHandler->next);
+-    #endif
+     if(irqn>0) {
+-        tmpHandler = shareHandler[irqn-1];
+-        tmpHandler->IRQ_func();
+-        #ifdef DEBUG
+-        printf("2 - IRQ_func: %d, %d\n", tmpHandler->IRQ_func, tmpHandler);
+-        #endif
+-        while(tmpHandler->next!=NULL) {
+-            tmpHandler = tmpHandler->next;                           
+-            #ifdef DEBUG
+-            printf("1 - IRQ_func (_prova): %d, %d\n", tmpHandler->IRQ_func, tmpHandler);
+-            #endif
+-            tmpHandler->IRQ_func();
+-        }
++      switch(irqn){
++	case 1: 
++	  PIT_handler();
++	  break;
++	case 2:
++	  keyboard_isr();
++	  break;
++      }
++//         tmpHandler = shareHandler[irqn-1];
++//         tmpHandler->IRQ_func();
++//         #ifdef DEBUG
++//         printf("2 - IRQ_func: %d, %d\n", tmpHandler->IRQ_func, tmpHandler);
++//         #endif
++//         while(tmpHandler->next!=NULL) {
++//             tmpHandler = tmpHandler->next;                           
++//             #ifdef DEBUG
++//             printf("1 - IRQ_func (_prova): %d, %d\n", tmpHandler->IRQ_func, tmpHandler);
++//             #endif
++//             tmpHandler->IRQ_func();
++//         }
+     }
+ //  else printf("IRQ N: %d E' arrivato qualcosa che non so gestire ", irqn);
+     if(irqn<=8) outportb(0x20, MASTER_PORT);
+-    else if(irqn<=16)outportb(0x20, SLAVE_PORT);
++    else if(irqn<=16){
++      outportb(0x20, SLAVE_PORT);
++      outportb(0x20, MASTER_PORT);
++    }
+ }
+ 
+ void _int_rsv(){
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-01-07 11:27:16 UTC (rev 45)
++++ trunk/shell/shell.c	2009-01-15 23:20:44 UTC (rev 46)
+@@ -168,11 +168,21 @@
+ 			printf ("Type: %s\n", sh_info->cpu_type);
+ 		}
+ 
+-		else if (!(_kstrncmp(cmd,"answer",6)))
++		else if (!(_kstrncmp(cmd, "answer",6)))
+       		{
+           		  printf("42\n");			  
+         	}
++		else if (!(_kstrncmp(cmd, "sleep", 5)))
++		{
++			int s;
+ 
++			if (argv[1]) {
++			  s = atoi(argv[1]);
++			  if (s != -1)
++			    sleep (s);
++		 	} else printf ("Missing operand\n");
++		}
++
+         else if (!(_kstrncmp(cmd,"kmalloc",7)))
+         {
+             printf("kmalloc try: ...\n");
+@@ -310,6 +320,7 @@
+            "uname     - Print kernel version, try uname --help for more info\n"
+            "printmem  - Print used locations of memory\n"
+            "credits   - Show DreamOS credits\n"
++	   "sleep     - pause DreamOS for a particular number of seconds\n"
+ 	   "cpuid     - Show cpu identification informations\n"
+ 	       "echo      - Print some lines of text\n");
+ }
+
+
+
+From finarfin at mail.berlios.de  Sun Jan 18 00:48:40 2009
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun, 18 Jan 2009 00:48:40 +0100
+Subject: [Dreamos-dev] r47 - in trunk: . hardware include include/misc mem
+	misc processore shell
+Message-ID: <200901172348.n0HNmeWu022531@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-01-18 00:48:29 +0100 (Sun, 18 Jan 2009)
+New Revision: 47
+
+Added:
+   trunk/include/misc/bitops.h
+   trunk/include/misc/clock.h
+   trunk/misc/bitops.c
+   trunk/misc/clock.c
+Modified:
+   trunk/.bochsrc
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/hardware/pic8259.c
+   trunk/include/version.h
+   trunk/mem/kheap.c
+   trunk/processore/handlers.c
+   trunk/shell/shell.c
+Log:
+Corretto bug in bochs. E' stata modificata la funzione get_current_irq.
+Corretto bug che se si premeva piu volte invio si generava un irq non gestibile.
+Aggiunti files bitops.h bitops.c clock.h e clock.c
+Aggiunto comando date
+Piccole correzioni alla free.
+Aggiornato makefile.
+In bochs aggiunta sincronizzazione con il clock del pc, e linea commentata per usare la gui di bochs.
+
+
+
+Modified: trunk/.bochsrc
+===================================================================
+--- trunk/.bochsrc	2009-01-15 23:20:44 UTC (rev 46)
++++ trunk/.bochsrc	2009-01-17 23:48:29 UTC (rev 47)
+@@ -60,8 +60,8 @@
+ #display_library: term
+ #display_library: win32, options="legacyF12" # use F12 to toggle mouse
+ #display_library: wx
++#display_library: x, options="gui_debug"
+ display_library: x
+-
+ #=======================================================================
+ # ROMIMAGE:
+ # The ROM BIOS controls what the PC does when it first powers on.
+@@ -306,8 +306,8 @@
+ # Default value are sync=none, time0=local
+ #=======================================================================
+ #clock: sync=none, time0=local
++clock: sync=realtime, time0=local
+ 
+-
+ #=======================================================================
+ # FLOPPY_BOOTSIG_CHECK: disabled=[0|1]
+ # Enables or disables the 0xaa55 signature check on boot floppies
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2009-01-15 23:20:44 UTC (rev 46)
++++ trunk/Makefile	2009-01-17 23:48:29 UTC (rev 47)
+@@ -9,7 +9,7 @@
+ 
+ CFLAGS = -nostdlib -fomit-frame-pointer -fno-builtin -fno-stack-protector -Wall -march=i686 -m32 -I./include -I./include/io -I./include/drivers -I./include/libc -I./include/processore -I./include/hardware -I./include/mem -I./include/system -I./include/shell -I./include/misc
+ 
+-OBJ = kernel.o io/video.o drivers/keyboard.o libc/ctype.o libc/string.o io/io.o libc/stdio.o hardware/cpuid.o hardware/keyboard.o processore/gdt.o processore/idt.o processore/handlers.o hardware/pic8259.o mem/fismem.o mem/paging.o mem/kheap.o misc/ordered_array.o misc/ordered_list.o system/syscall.o hardware/8253.o shell/shell.o
++OBJ = kernel.o io/video.o drivers/keyboard.o libc/ctype.o libc/string.o io/io.o libc/stdio.o hardware/cpuid.o hardware/keyboard.o processore/gdt.o processore/idt.o processore/handlers.o hardware/pic8259.o mem/fismem.o mem/paging.o mem/kheap.o misc/clock.o misc/ordered_array.o misc/bitops.o misc/ordered_list.o system/syscall.o hardware/8253.o shell/shell.o
+ 
+ dreamos.img: bl.img kernel.bin
+ 	mv kernel.bin dreamos.img
+@@ -35,8 +35,10 @@
+ mem/fismem.o: mem/fismem.c
+ mem/paging.o: mem/paging.c
+ mem/kheap.o: mem/kheap.c
++misc/clock.o: misc/clock.c
+ misc/ordered_array.o: misc/ordered_array.c
+ misc/ordered_list.o: misc/ordered_list.c
++misc/bitops.o: misc/bitops.c
+ drivers/keyboard.o: drivers/keyboard.c
+ system/syscall.o: system/syscall.c
+ hardware/8253.o: hardware/8253.c
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/hardware/pic8259.c
+===================================================================
+--- trunk/hardware/pic8259.c	2009-01-15 23:20:44 UTC (rev 46)
++++ trunk/hardware/pic8259.c	2009-01-17 23:48:29 UTC (rev 47)
+@@ -27,6 +27,7 @@
+ #include <keyboard.h>
+ #include <fismem.h>
+ #include <8253.h>
++#include <bitops.h>
+ 
+ IRQ_s *shareHandler[16];
+ // IRQ_s shareHandler[16];
+@@ -183,7 +184,12 @@
+     outportb(GET_IRR_STATUS, MASTER_PORT);
+     cur_irq = inportb(MASTER_PORT);
+ //     if(cur_irq!=1) printf("%d\n", cur_irq);
+-    return cur_irq;
++    if(cur_irq == 0) {
++      outportb(GET_IRR_STATUS, SLAVE_PORT);
++      cur_irq = inportb(SLAVE_PORT);
++    }
++//     printf("%d\n", find_first_bit(cur_irq));
++    return find_first_bit(cur_irq);
+ }
+ 
+ /** This Function add an IRQ Handler to the givent irq number
+
+Added: trunk/include/misc/bitops.h
+===================================================================
+--- trunk/include/misc/bitops.h	2009-01-15 23:20:44 UTC (rev 46)
++++ trunk/include/misc/bitops.h	2009-01-17 23:48:29 UTC (rev 47)
+@@ -0,0 +1,24 @@
++/*
++ * Dreamos
++ * bitops.h
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++#ifndef __BITOPS_H
++#define __BITOPS_H
++
++int find_first_bit(unsigned short int);
++
++#endif
+\ No newline at end of file
+
+Added: trunk/include/misc/clock.h
+===================================================================
+--- trunk/include/misc/clock.h	2009-01-15 23:20:44 UTC (rev 46)
++++ trunk/include/misc/clock.h	2009-01-17 23:48:29 UTC (rev 47)
+@@ -0,0 +1,48 @@
++/***************************************************************************
++ *            cloch.h
++ *
++ *  Sat Mar 31 07:47:17 2007
++ *  Copyright  2007  Alessandro Lopez - Ivan Gualandri
++ *  Email
++ ****************************************************************************/
++
++/*
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2 of the License, or
++ *  (at your option) any later version.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++#ifndef __CLOCK_H
++#define __CLOCK_H
++
++#define SECOND_RTC 0x00
++#define MINUTE_RTC 0x02
++#define HOUR_RTC 0x04
++#define DAY_W_RTC 0x06
++#define DAY_M_RTC 0x07
++#define MONTH_RTC 0x08
++#define YEAR_RTC 0x09
++
++int get_second();
++int get_hour();
++int get_minute();
++int get_second();
++int get_day_m();
++int get_month();
++int get_year();
++int get_day_w();
++char* get_month_lng();
++void date();
++
++
++#endif
+\ No newline at end of file
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-01-15 23:20:44 UTC (rev 46)
++++ trunk/include/version.h	2009-01-17 23:48:29 UTC (rev 47)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "0"
+ #define EXTRAVERSION "-dreamos"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r44"
++#define REV_NUM "-r46"
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2009-01-15 23:20:44 UTC (rev 46)
++++ trunk/mem/kheap.c	2009-01-17 23:48:29 UTC (rev 47)
+@@ -211,8 +211,8 @@
+ //   heap_node_t *free = kheap->free_list;
+   heap_node_t *n2;
+ 
+-  if ((unsigned int)location % 4 != 0)
+-    printf ("Indirizzo non allineato a 4kb\n");
++  if ((unsigned int)location % 4 != 0) return -1;
++//     printf ("Indirizzo non allineato a 4kb\n");
+ 
+   while (busy) {
+     if (busy->start_address == (unsigned int)location) {
+@@ -269,8 +269,8 @@
+     busy = (heap_node_t*)busy->next;
+   }
+ 
+-  if (!busy)
+-    printf ("Address not found in list\n");
++  if (!busy) return -1;
++//     printf ("Address not found in list\n");
+ }
+ 
+ /**
+
+Added: trunk/misc/bitops.c
+===================================================================
+--- trunk/misc/bitops.c	2009-01-15 23:20:44 UTC (rev 46)
++++ trunk/misc/bitops.c	2009-01-17 23:48:29 UTC (rev 47)
+@@ -0,0 +1,28 @@
++/*
++ * Dreamos
++ * bitops.c
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++#include <video.h>
++#include <bitops.h>
++
++int find_first_bit(unsigned short int irq_mask)
++{
++   int i=0;
++   if (irq_mask==0) return 0;
++   for (i=0; i<8;i++) if ((1<<i)&irq_mask) break;
++       return i;
++}
+\ No newline at end of file
+
+Added: trunk/misc/clock.c
+===================================================================
+--- trunk/misc/clock.c	2009-01-15 23:20:44 UTC (rev 46)
++++ trunk/misc/clock.c	2009-01-17 23:48:29 UTC (rev 47)
+@@ -0,0 +1,125 @@
++/***************************************************************************
++ *            cloch.c
++ *
++ *  Sat Mar 31 07:47:17 2007
++ *  Copyright  2007  Alessandro Lopez - Ivan Gualandri
++ *  Email
++ ****************************************************************************/
++
++/*
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2 of the License, or
++ *  (at your option) any later version.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++#include <clock.h>
++#include <stdio.h>
++
++int get_second()
++{
++  outportb(SECOND_RTC,0x70);
++  int c = inportb(0x71);
++  return c;
++}
++
++int get_minute()
++{
++  outportb(MINUTE_RTC,0x70);
++  int c = inportb(0x71);
++  return c;
++}
++
++int get_hour()
++{
++  outportb(HOUR_RTC,0x70);
++  int c = inportb(0x71);
++  return c;
++}
++
++int get_day_w()
++{
++  outportb(DAY_W_RTC,0x70);
++  int c = inportb(0x71);
++  return c;
++}
++
++int get_day_m()
++{
++  outportb(DAY_M_RTC,0x70);
++  int c = inportb(0x71);
++  return c;
++}
++
++int get_month()
++{
++  outportb(MONTH_RTC,0x70);
++  int c = inportb(0x71);
++  return c;
++}
++
++int get_year()
++{
++  outportb(YEAR_RTC,0x70);
++  int c = inportb(0x71);
++  return c;
++}
++
++char* get_month_lng()
++{
++  int c;
++  c = get_month();
++  switch(c) {
++    case 1:
++      return "Gennaio";
++      break;
++    case 2:
++      return "Febbraio";
++      break;
++    case 3:
++      return "Marzo";
++      break;
++    case 4:
++      return "Aprile";
++      break;
++    case 5:
++      return "Maggio";      
++    case 6:
++      return "Giugno";      
++      break;
++    case 7:
++      return "Luglio";     
++      break;
++    case 8:
++      return "Agosto";  
++      break;
++    case 9:
++      return "Settembre";
++      break;
++    case 10:
++      return "Ottobre";
++      break;
++    case 11:
++      return "Novembre";
++      break;
++    case 12:
++      return "Dicembre";     
++      break;
++  }
++  return "";
++}
++		
++void date()
++{
++	asm("cli");	
++	printf("Ora: %02x:%02x:%02x - %02x - %s - %02x\n",get_hour(),get_minute(),get_second(),get_day_m(),get_month_lng(),0x2000+get_year());	
++	asm("sti");
++}
+\ No newline at end of file
+
+Modified: trunk/processore/handlers.c
+===================================================================
+--- trunk/processore/handlers.c	2009-01-15 23:20:44 UTC (rev 46)
++++ trunk/processore/handlers.c	2009-01-17 23:48:29 UTC (rev 47)
+@@ -101,29 +101,31 @@
+     int irqn;
+     irqn = get_current_irq();  
+     IRQ_s* tmpHandler; 
+-    if(irqn>0) {
+-      switch(irqn){
+-	case 1: 
+-	  PIT_handler();
+-	  break;
+-	case 2:
+-	  keyboard_isr();
+-	  break;
+-      }
+-//         tmpHandler = shareHandler[irqn-1];
+-//         tmpHandler->IRQ_func();
+-//         #ifdef DEBUG
+-//         printf("2 - IRQ_func: %d, %d\n", tmpHandler->IRQ_func, tmpHandler);
+-//         #endif
+-//         while(tmpHandler->next!=NULL) {
+-//             tmpHandler = tmpHandler->next;                           
+-//             #ifdef DEBUG
+-//             printf("1 - IRQ_func (_prova): %d, %d\n", tmpHandler->IRQ_func, tmpHandler);
+-//             #endif
+-//             tmpHandler->IRQ_func();
+-//         }
++    if(irqn>=0) {
++//       switch(irqn){
++// 	case 1: 
++// 	  PIT_handler();
++// 	  break;
++// 	case 2:
++// 	  keyboard_isr();
++// 	  break;
++//       }
++         tmpHandler = shareHandler[irqn];
++	 if(tmpHandler!=0) {
++	    tmpHandler->IRQ_func();
++	    #ifdef DEBUG
++	    printf("2 - IRQ_func: %d, %d\n", tmpHandler->IRQ_func, tmpHandler);
++	    #endif
++	    while(tmpHandler->next!=NULL) {
++	      tmpHandler = tmpHandler->next;                           
++	      #ifdef DEBUG
++	      printf("1 - IRQ_func (_prova): %d, %d\n", tmpHandler->IRQ_func, tmpHandler);
++	      #endif
++	      if(tmpHandler!=0) tmpHandler->IRQ_func();
++	    }
++	  } else printf("irqn: %d\n", irqn);
+     }
+-//  else printf("IRQ N: %d E' arrivato qualcosa che non so gestire ", irqn);
++    else printf("IRQ N: %d E' arrivato qualcosa che non so gestire ", irqn);
+     if(irqn<=8) outportb(0x20, MASTER_PORT);
+     else if(irqn<=16){
+       outportb(0x20, SLAVE_PORT);
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-01-15 23:20:44 UTC (rev 46)
++++ trunk/shell/shell.c	2009-01-17 23:48:29 UTC (rev 47)
+@@ -171,6 +171,7 @@
+ 		else if (!(_kstrncmp(cmd, "answer",6)))
+       		{
+           		  printf("42\n");			  
++			  outportb('4',0xe9);
+         	}
+ 		else if (!(_kstrncmp(cmd, "sleep", 5)))
+ 		{
+@@ -235,6 +236,7 @@
+         }*/
+ 
+         else if (!(_kstrncmp(cmd,"printmem",8))) print_heap_list(kheap->used_list);        
++	else if (!(_kstrncmp(cmd,"date",4))) date();                
+         else if (!(_kstrncmp(cmd,"aalogo",6))) 
+ 		aalogo();
+         
+@@ -322,6 +324,7 @@
+            "credits   - Show DreamOS credits\n"
+ 	   "sleep     - pause DreamOS for a particular number of seconds\n"
+ 	   "cpuid     - Show cpu identification informations\n"
++	   "date      - Show date and time\n"
+ 	       "echo      - Print some lines of text\n");
+ }
+ 
+
+
+
+From shainer at mail.berlios.de  Sun Jan 18 19:39:25 2009
+From: shainer at mail.berlios.de (shainer at BerliOS)
+Date: Sun, 18 Jan 2009 19:39:25 +0100
+Subject: [Dreamos-dev] r48 - in trunk: . libc processore shell
+Message-ID: <200901181839.n0IIdP78021179@sheep.berlios.de>
+
+Author: shainer
+Date: 2009-01-18 19:39:25 +0100 (Sun, 18 Jan 2009)
+New Revision: 48
+
+Added:
+   trunk/README.txt
+Modified:
+   trunk/bl.img
+   trunk/dreamos.img
+   trunk/libc/stdio.c
+   trunk/processore/handlers.c
+   trunk/processore/idt.c
+   trunk/shell/shell.c
+Log:
+Aggiunto README con istruzioni per compilare/eseguire l'OS.
+Possibilit?\195?\160 di limitare il numero di caratteri/cifre presi in input con scanf.
+Di conseguenza, adesso inserire un comando della shell pi?\195?\185 grande di 255 caratteri non causa problemi.
+Pulizia codice in handlers.c
+Per ogni eccezione con codice di errore, la macro ?\195?\168 diventata EXCEPTION_EC.
+
+
+
+Added: trunk/README.txt
+===================================================================
+--- trunk/README.txt	2009-01-17 23:48:29 UTC (rev 47)
++++ trunk/README.txt	2009-01-18 18:39:25 UTC (rev 48)
+@@ -0,0 +1,133 @@
++---------------------------
++ DreamOS
++---------------------------
++
++1. Cosa ? DreamOS
++	a. Cosa NON ? DreamOS
++2. Installare DreamOS
++	a. Requisiti necessari
++	b. Scaricare da SVN
++	c. Compilare DreamOS
++	d. Mettere su Floppy (opzionale)
++	e. Fare la entry per GRUB (opzionale)
++3. Usare DreamOS
++	a. L'avvio
++	b. Uso della CLI
++4. Feedback
++	a. Come segnalare bug
++	b. Come mandare un feedback
++
++
++- 1 -----------------------
++--- Cosa ? DreamOS --------
++
++Il DreamOS ? un sistema operativo open source rilasciato sotto licenza GPLv3 sviluppato partendo da 0 puramente per scopi didattici o comunque per capire come funzionano i sistemi operativi.
++Il team di sviluppo attuale ? composto dagli sviluppatori
++
++Ivan - Finarfin (http://earyrian.elenhost.org)
++Lisa - Shainer (http://shandril.altervista.org)
++
++e dai contributori:
++
++Osiris
++Celeron
++Hamcha
++m0nt0.
++
++	- a -- Cosa NON ? DreamOS -
++
++DreamOS non ? un sistema operativo completo e pronto per essere utilizzato per l'uso quotidiano, non ? basato su Kernel esistenti e non ? supportato/sponsorizzato da alcuna societ?.
++
++- 2 -----------------------
++--- Installare DreamOS ----
++
++Per Installazione s'intende compilare e mettere DreamOS su un supporto per l'avvio, visto che attualmente DreamOS non ? predisposto per installazioni vere e proprie.
++
++	- a - Requisiti necessari -
++
++DreamOS ? un sistema operativo sviluppato per funzionare su cpu con architettura Intel x86/IA32 (i386/i686) e attualmente ? sviluppato in modo da partire da floppy anche se, utilizzando GRUB, si pu? farlo partire avendo l'immagine compilata sull'Hard-disk.
++DreamOS pu? essere anche emulato usando Software come qEmu o Bochs.
++
++Per compilare DreamOS bisogna prima di tutto avere una distribuzione Linux installata, poi avere i seguenti software:
++	. Nasm
++	. GCC
++	. make
++
++Opzionalmente un emulatore di cpu se non si vuole provare il sistema operativo su hardware reale e SVN se volete scaricare le versioni pi? recenti da repository.
++
++	- b -- Scaricare da SVN ---
++
++Potete scaricare i sorgenti di DreamOS da SVN attraverso il repository svn://svn.berlios.de/dreamos/trunk
++Per i meno pratici il comando da eseguire ?: (assicuratevi di avere il pacchetto SVN installato)
++	svn checkout svn://svn.berlios.de/dreamos/trunk
++
++Alla fine del download dovreste avere una cartella trunk/ con tutti i sorgenti al suo interno
++
++	- c -- Compilare DreamOS --
++
++Posizionatevi dentro la cartella con i sorgenti ed eseguite il comando:
++	sh start sh
++Se avete qemu installato vi partira' in automatico, se invece avete bochs, al termine della compilazione con lo script start.sh dovete dare:
++bochs
++
++	- d -- Mettere su floppy -- (Opzionale)
++
++Se avete un lettore floppy e volete provare l'ebrezza di usarlo su una macchina reale, allora in questo caso dopo avre lanciato sempre sh start.sh, andate dentro boot/ e date:
++	dd if=grub.img of=/dev/fd0
++E riavviate la macchina con il floppy inserito.
++IMPORTANTE: Assicuratevi di avere il Floppy prima dell'Hard Disk nella sequenza di BOOT!
++
++	- e - Fare la entry per GRUB (Opzionale)
++
++Se volete provare dreamos su pc reale e non avete il floppy potete farlo anche avendo grub come Boot Manager, riavviate il pc, quando si presenta grub premete il tasto c e inserite dei comandi tipo questi:
++root (hdx, y)
++kernel /path/al/file/dreamos.img
++boot
++
++Se invece volete creare una entry apposita su Grub potete farlo nel seguente modo:
++ Aprite il file /boot/grub/grub.conf e aggiugente alla fine le seguenti righe:
++	title DreamOS 0.1
++	root (hd0,0)
++	kernel /path/al/file/dreamos.img
++	boot
++Naturalmenet modificando /path/al/file/dreamos.img con la path al file dreamos.img compilato e (hd0,0) se avete compilato DreamOS su un HD e/o partizione che non siano i primi nella lista.
++
++- 3 -----------------------
++---- Usare DreamOS --------
++
++L'Interattivit? di DreamOS al momento si ferma ad una CLI (Command Line Interface, Interfaccia a linea di comando) con un numero limitato di comandi utilizzabili, la maggior parte a scopo di test.
++
++	- a ------- L'Avvio -------
++
++L'avvio di DreamOS contiene il loading di tutte le funzioni necessarie al funzionamento del S.O. e della CLI, alla fine dell'avvio verr? chiesto un Username che verr? usato in seguito nella CLI.
++
++	- b ---- Uso della CLI ----
++
++La CLI di DreamOS ha una struttura molto comune a quella *NIX
++	Username~# Comando inserito
++Dove Username ? l'username inserito durante l'avvio.
++Si pu? avere una lista di comandi disponibili attraverso il comando:
++	help
++Inoltre sono presenti alcuni comandi che rimarcano la controparte *NIX come uname (uname --help) o echo.
++
++- 4 -----------------------
++---- Feedback -------------
++
++	- a -- Come segnalare Bug -
++	
++Per segnalare bug riscontrati durante l'uso di DreamOS bisogna segnalarli usando il modulo di berliOS presente alla pagina:
++	http://developer.berlios.de/bugs/?group_id=9715
++Oppure potete segnalarlo sul forum osdev.it, precisamente:
++	http://forum.osdev.it/viewforum.php?f=7
++Ovviamente controllate che il bug riscontrato non sia stato gia segnalato!
++
++	- b - Come mandare un feedback
++
++Potete mandare un resoconto o comunque raccontare la vostra esperienza con DreamOS sul forum di osdev.it:
++	http://forum.osdev.it/
++
++	
++
++DreamOS 2003-2008 by finarfin/shainer
++http://www.dreamos.org
++http://www.osdev.it
+
+Modified: trunk/bl.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/libc/stdio.c
+===================================================================
+--- trunk/libc/stdio.c	2009-01-17 23:48:29 UTC (rev 47)
++++ trunk/libc/stdio.c	2009-01-18 18:39:25 UTC (rev 48)
+@@ -200,6 +200,8 @@
+     va_list scan;
+     char *input;
+     int count=0;
++    char maxchars[5] = {0};
++    int i=0, nmax=0;
+ 
+     char *s_ptr;
+     int *i_ptr;
+@@ -212,18 +214,35 @@
+ 	    input = gets();
+             count += strlen (input);
+ 
+-	    switch (*++format) {
++            if (isdigit(*++format)) {
++              while (isdigit(*format)) {
++                maxchars[i++] = *format;
++                format++;
++              }
++              maxchars[i] = '\0';
++              nmax = atoi(maxchars);
++            }
++
++	    switch (*format) {
+ 	    case 's':
+ 		s_ptr = va_arg (scan, char *);
+-		s_ptr = strncpy (s_ptr, input, strlen (input));
++
++                if (nmax == 0 || strlen(input) <= nmax)
++		  s_ptr = strncpy (s_ptr, input, strlen (input));
++                else
++                  s_ptr = strncpy (s_ptr, input, nmax);
+ 		break;
+ 
+ 	    case 'd':
+ 		i_ptr = va_arg (scan, int *);
+-		*i_ptr = atoi (input);
++
++                if (nmax != 0 && strlen(input) > nmax)
++                  input[nmax] = '\0';
++		*i_ptr = atoi(input);
+                 break;
+ 	    }
+ 	}
+     }
++    va_end (scan);
+     return count;
+ }
+
+Modified: trunk/processore/handlers.c
+===================================================================
+--- trunk/processore/handlers.c	2009-01-17 23:48:29 UTC (rev 47)
++++ trunk/processore/handlers.c	2009-01-18 18:39:25 UTC (rev 48)
+@@ -69,32 +69,95 @@
+   *
+   * Questa funzione gestira a livello centralizzato le varie eccezione
+   */
+-void _globalException(int n, int error){
+-	if(n==DIVIDE_ERROR)_kputs("Divide Error\n");
+-	else if(n==DEBUG_EXC) _kputs("Debug Exception\n");
+-	else if(n==NMI_INTERRUPT) _kputs("Nmi Exception\n");
+-	else if(n==OVERFLOW) _kputs("OverFlow Exception\n");
+-	else if(n==BOUND_RANGE_EXCEED) _kputs("Bound Exception\n");
+-	else if(n==DEV_NOT_AVL) _kputs("Device Not Available Exception\n");
+-	else if(n==COPROC_SEG_OVERRUN) _kputs("CoProcessor Segment Overrun\n");
+-	else if(n==BREAKPOINT) _kputs("BreakPoint\n");
+-	else if(n==INVALID_TSS) _kputs("Invalid TSS\n");
+-	else if(n==SEGMENT_NOT_PRESENT) _kputs("Segment Not Present\n");
+-	else if(n==STACK_SEGMENT_FAULT) _kputs("Stack Segment Fault Exception\n");
+-	else if(n==GENERAL_PROTECTION) _kputs("General Protection Exception\n");
+-    else if(n==INVALID_OPCODE) _kputs("Invalid Opcode Exception\n");
+-    else if(n==BOUND_RANGE_EXCEED) _kputs("Bound exception\n");
+-    else if(n==PAGE_FAULT) page_fault_handler (error);    
+-    else if(n==INT_RSV) _kputs("Intel Reserved\n");
+-    else if(n==FLOATING_POINT_ERR) _kputs("Floating Point Exception\n");
+-    else if(n==ALIGNMENT_CHECK) _kputs("Alignment Check Exception\n");             
+-    else if(n==MACHINE_CHECK) _kputs("Machine Check Exception\n");
+-    else if(n==DOUBLE_FAULT) {
+-        _kputs("DoubleFault Exception\n");
+-        _kputs("Ottimo direi\n");
+-    }
+-    else if(n==SIMD_FP_EXC) _kputs("Simd Floating Point Exception\n");
+-    else _kputs("Cose non buone avvengono\n");
++void _globalException(int n, int error)
++{
++  switch (n) {
++
++    case DIVIDE_ERROR:
++    _kputs("Divide Error\n");
++    break;
++
++    case DEBUG_EXC:
++    _kputs("Debug Exception\n");
++    break;
++
++    case NMI_INTERRUPT:
++    _kputs("NMI Exception\n");
++    break;
++
++    case OVERFLOW:
++    _kputs("OverFlow Exception\n");
++    break;
++	 
++    case BOUND_RANGE_EXCEED:
++    _kputs("Bound Exception\n");
++    break;
++
++    case DEV_NOT_AVL:
++    _kputs("Device Not Available Exception\n");
++    break;
++
++    case COPROC_SEG_OVERRUN:
++    _kputs("CoProcessor Segment Overrun\n");
++    break;
++
++    case BREAKPOINT:
++    _kputs("BreakPoint\n");
++    break;
++
++    case INVALID_TSS:
++    _kputs("Invalid TSS\n");
++    break;
++
++    case SEGMENT_NOT_PRESENT:
++    _kputs("Segment Not Present\n");
++    break;
++
++    case STACK_SEGMENT_FAULT:
++    _kputs("Stack Segment Fault Exception\n");
++    break;
++
++    case GENERAL_PROTECTION:
++    _kputs("General Protection Exception\n");
++    break;
++
++    case INVALID_OPCODE:
++    _kputs("Invalid Opcode Exception\n");
++    break;
++
++    case PAGE_FAULT:
++    page_fault_handler (error);
++    break;
++
++    case INT_RSV:
++    _kputs("Intel Reserved\n");
++    break;
++
++    case FLOATING_POINT_ERR:
++    _kputs("Floating Point Exception\n");
++    break;
++
++    case ALIGNMENT_CHECK:
++    _kputs("Alignment Check Exception\n");
++    break;
++
++    case MACHINE_CHECK:
++    _kputs("Machine Check Exception\n");
++    break;
++
++    case DOUBLE_FAULT:
++    _kputs("Double Fault Exception\n");
++    break;
++
++    case SIMD_FP_EXC:
++    _kputs ("Simd Floating Point Exception\n");
++    break;
++
++    default:
++    _kputs ("Unknown exception\n");
++    break;
++
++  }
+ }
+ 
+ void _irqinterrupt(){
+
+Modified: trunk/processore/idt.c
+===================================================================
+--- trunk/processore/idt.c	2009-01-17 23:48:29 UTC (rev 47)
++++ trunk/processore/idt.c	2009-01-18 18:39:25 UTC (rev 48)
+@@ -36,17 +36,17 @@
+ EXCEPTION(5);
+ EXCEPTION(6);
+ EXCEPTION(7);
+-EXCEPTION(8);
++EXCEPTION_EC(8);
+ EXCEPTION(9);
+-EXCEPTION(10);
+-EXCEPTION(11);
+-EXCEPTION(12);
+-EXCEPTION(13);
++EXCEPTION_EC(10);
++EXCEPTION_EC(11);
++EXCEPTION_EC(12);
++EXCEPTION_EC(13);
+ EXCEPTION_EC(14);
+ // PAGEFAULT();
+ EXCEPTION(15);
+ EXCEPTION(16);
+-EXCEPTION(17);
++EXCEPTION_EC(17);
+ EXCEPTION(18);
+ EXCEPTION(19);
+ SYSCALL(80);
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-01-17 23:48:29 UTC (rev 47)
++++ trunk/shell/shell.c	2009-01-18 18:39:25 UTC (rev 48)
+@@ -75,7 +75,7 @@
+ 	memset(user, 0, strlen(user));
+ 
+ 	printf("[?] Enter your username: ");
+-	scanf ("%s",user);
++	scanf ("%23s",user);
+ 
+ 	while (!strlen(user))
+ 	{		
+@@ -94,7 +94,7 @@
+ 	for (;;)
+ 	{
+ 	    printf("%s~# ",user);
+-	    scanf("%s",cmd);
++	    scanf("%255s",cmd);
+         
+             options (cmd);
+ 
+
+
+
+From finarfin at mail.berlios.de  Mon Jan 19 00:28:11 2009
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Mon, 19 Jan 2009 00:28:11 +0100
+Subject: [Dreamos-dev] r49 - in trunk: . hardware include include/lng
+	include/mem mem shell
+Message-ID: <200901182328.n0INSB2W016599@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-01-19 00:28:01 +0100 (Mon, 19 Jan 2009)
+New Revision: 49
+
+Added:
+   trunk/README
+Removed:
+   trunk/README.txt
+Modified:
+   trunk/Makefile
+   trunk/bl.img
+   trunk/dreamos.img
+   trunk/hardware/8253.c
+   trunk/include/lng/en.h
+   trunk/include/lng/it.h
+   trunk/include/mem/kheap.h
+   trunk/include/use.h
+   trunk/include/version.h
+   trunk/kernel.c
+   trunk/mem/kheap.c
+   trunk/mem/paging.c
+   trunk/shell/shell.c
+Log:
+Aggiunti altri messaggi in lingua italiana e inglese
+Dalla funzione make_heap in paging.c e' stato levato il parametro end, in quanto inutilizzato
+Eliminato EOI in PIT_handler in quanto gia se ne occupa l'IRQ Handler
+Rinominato README.txt in README
+Eliminata dalla compilazione ordered_array in quanto non veniva utilizzata.
+
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2009-01-18 18:39:25 UTC (rev 48)
++++ trunk/Makefile	2009-01-18 23:28:01 UTC (rev 49)
+@@ -9,7 +9,7 @@
+ 
+ CFLAGS = -nostdlib -fomit-frame-pointer -fno-builtin -fno-stack-protector -Wall -march=i686 -m32 -I./include -I./include/io -I./include/drivers -I./include/libc -I./include/processore -I./include/hardware -I./include/mem -I./include/system -I./include/shell -I./include/misc
+ 
+-OBJ = kernel.o io/video.o drivers/keyboard.o libc/ctype.o libc/string.o io/io.o libc/stdio.o hardware/cpuid.o hardware/keyboard.o processore/gdt.o processore/idt.o processore/handlers.o hardware/pic8259.o mem/fismem.o mem/paging.o mem/kheap.o misc/clock.o misc/ordered_array.o misc/bitops.o misc/ordered_list.o system/syscall.o hardware/8253.o shell/shell.o
++OBJ = kernel.o io/video.o drivers/keyboard.o libc/ctype.o libc/string.o io/io.o libc/stdio.o hardware/cpuid.o hardware/keyboard.o processore/gdt.o processore/idt.o processore/handlers.o hardware/pic8259.o mem/fismem.o mem/paging.o mem/kheap.o misc/clock.o misc/bitops.o misc/ordered_list.o system/syscall.o hardware/8253.o shell/shell.o
+ 
+ dreamos.img: bl.img kernel.bin
+ 	mv kernel.bin dreamos.img
+@@ -36,7 +36,6 @@
+ mem/paging.o: mem/paging.c
+ mem/kheap.o: mem/kheap.c
+ misc/clock.o: misc/clock.c
+-misc/ordered_array.o: misc/ordered_array.c
+ misc/ordered_list.o: misc/ordered_list.c
+ misc/bitops.o: misc/bitops.c
+ drivers/keyboard.o: drivers/keyboard.c
+
+Copied: trunk/README (from rev 48, trunk/README.txt)
+
+Deleted: trunk/README.txt
+===================================================================
+--- trunk/README.txt	2009-01-18 18:39:25 UTC (rev 48)
++++ trunk/README.txt	2009-01-18 23:28:01 UTC (rev 49)
+@@ -1,133 +0,0 @@
+----------------------------
+- DreamOS
+----------------------------
+-
+-1. Cosa ? DreamOS
+-	a. Cosa NON ? DreamOS
+-2. Installare DreamOS
+-	a. Requisiti necessari
+-	b. Scaricare da SVN
+-	c. Compilare DreamOS
+-	d. Mettere su Floppy (opzionale)
+-	e. Fare la entry per GRUB (opzionale)
+-3. Usare DreamOS
+-	a. L'avvio
+-	b. Uso della CLI
+-4. Feedback
+-	a. Come segnalare bug
+-	b. Come mandare un feedback
+-
+-
+-- 1 -----------------------
+---- Cosa ? DreamOS --------
+-
+-Il DreamOS ? un sistema operativo open source rilasciato sotto licenza GPLv3 sviluppato partendo da 0 puramente per scopi didattici o comunque per capire come funzionano i sistemi operativi.
+-Il team di sviluppo attuale ? composto dagli sviluppatori
+-
+-Ivan - Finarfin (http://earyrian.elenhost.org)
+-Lisa - Shainer (http://shandril.altervista.org)
+-
+-e dai contributori:
+-
+-Osiris
+-Celeron
+-Hamcha
+-m0nt0.
+-
+-	- a -- Cosa NON ? DreamOS -
+-
+-DreamOS non ? un sistema operativo completo e pronto per essere utilizzato per l'uso quotidiano, non ? basato su Kernel esistenti e non ? supportato/sponsorizzato da alcuna societ?.
+-
+-- 2 -----------------------
+---- Installare DreamOS ----
+-
+-Per Installazione s'intende compilare e mettere DreamOS su un supporto per l'avvio, visto che attualmente DreamOS non ? predisposto per installazioni vere e proprie.
+-
+-	- a - Requisiti necessari -
+-
+-DreamOS ? un sistema operativo sviluppato per funzionare su cpu con architettura Intel x86/IA32 (i386/i686) e attualmente ? sviluppato in modo da partire da floppy anche se, utilizzando GRUB, si pu? farlo partire avendo l'immagine compilata sull'Hard-disk.
+-DreamOS pu? essere anche emulato usando Software come qEmu o Bochs.
+-
+-Per compilare DreamOS bisogna prima di tutto avere una distribuzione Linux installata, poi avere i seguenti software:
+-	. Nasm
+-	. GCC
+-	. make
+-
+-Opzionalmente un emulatore di cpu se non si vuole provare il sistema operativo su hardware reale e SVN se volete scaricare le versioni pi? recenti da repository.
+-
+-	- b -- Scaricare da SVN ---
+-
+-Potete scaricare i sorgenti di DreamOS da SVN attraverso il repository svn://svn.berlios.de/dreamos/trunk
+-Per i meno pratici il comando da eseguire ?: (assicuratevi di avere il pacchetto SVN installato)
+-	svn checkout svn://svn.berlios.de/dreamos/trunk
+-
+-Alla fine del download dovreste avere una cartella trunk/ con tutti i sorgenti al suo interno
+-
+-	- c -- Compilare DreamOS --
+-
+-Posizionatevi dentro la cartella con i sorgenti ed eseguite il comando:
+-	sh start sh
+-Se avete qemu installato vi partira' in automatico, se invece avete bochs, al termine della compilazione con lo script start.sh dovete dare:
+-bochs
+-
+-	- d -- Mettere su floppy -- (Opzionale)
+-
+-Se avete un lettore floppy e volete provare l'ebrezza di usarlo su una macchina reale, allora in questo caso dopo avre lanciato sempre sh start.sh, andate dentro boot/ e date:
+-	dd if=grub.img of=/dev/fd0
+-E riavviate la macchina con il floppy inserito.
+-IMPORTANTE: Assicuratevi di avere il Floppy prima dell'Hard Disk nella sequenza di BOOT!
+-
+-	- e - Fare la entry per GRUB (Opzionale)
+-
+-Se volete provare dreamos su pc reale e non avete il floppy potete farlo anche avendo grub come Boot Manager, riavviate il pc, quando si presenta grub premete il tasto c e inserite dei comandi tipo questi:
+-root (hdx, y)
+-kernel /path/al/file/dreamos.img
+-boot
+-
+-Se invece volete creare una entry apposita su Grub potete farlo nel seguente modo:
+- Aprite il file /boot/grub/grub.conf e aggiugente alla fine le seguenti righe:
+-	title DreamOS 0.1
+-	root (hd0,0)
+-	kernel /path/al/file/dreamos.img
+-	boot
+-Naturalmenet modificando /path/al/file/dreamos.img con la path al file dreamos.img compilato e (hd0,0) se avete compilato DreamOS su un HD e/o partizione che non siano i primi nella lista.
+-
+-- 3 -----------------------
+----- Usare DreamOS --------
+-
+-L'Interattivit? di DreamOS al momento si ferma ad una CLI (Command Line Interface, Interfaccia a linea di comando) con un numero limitato di comandi utilizzabili, la maggior parte a scopo di test.
+-
+-	- a ------- L'Avvio -------
+-
+-L'avvio di DreamOS contiene il loading di tutte le funzioni necessarie al funzionamento del S.O. e della CLI, alla fine dell'avvio verr? chiesto un Username che verr? usato in seguito nella CLI.
+-
+-	- b ---- Uso della CLI ----
+-
+-La CLI di DreamOS ha una struttura molto comune a quella *NIX
+-	Username~# Comando inserito
+-Dove Username ? l'username inserito durante l'avvio.
+-Si pu? avere una lista di comandi disponibili attraverso il comando:
+-	help
+-Inoltre sono presenti alcuni comandi che rimarcano la controparte *NIX come uname (uname --help) o echo.
+-
+-- 4 -----------------------
+----- Feedback -------------
+-
+-	- a -- Come segnalare Bug -
+-	
+-Per segnalare bug riscontrati durante l'uso di DreamOS bisogna segnalarli usando il modulo di berliOS presente alla pagina:
+-	http://developer.berlios.de/bugs/?group_id=9715
+-Oppure potete segnalarlo sul forum osdev.it, precisamente:
+-	http://forum.osdev.it/viewforum.php?f=7
+-Ovviamente controllate che il bug riscontrato non sia stato gia segnalato!
+-
+-	- b - Come mandare un feedback
+-
+-Potete mandare un resoconto o comunque raccontare la vostra esperienza con DreamOS sul forum di osdev.it:
+-	http://forum.osdev.it/
+-
+-	
+-
+-DreamOS 2003-2008 by finarfin/shainer
+-http://www.dreamos.org
+-http://www.osdev.it
+
+Modified: trunk/bl.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/hardware/8253.c
+===================================================================
+--- trunk/hardware/8253.c	2009-01-18 18:39:25 UTC (rev 48)
++++ trunk/hardware/8253.c	2009-01-18 23:28:01 UTC (rev 49)
+@@ -31,7 +31,7 @@
+ 	  seconds = 0;     
+     }
+     
+-    outportb(EOI, MASTER_PORT);
++//     outportb(EOI, MASTER_PORT);
+ }
+ 
+ void configure_PIT ()
+
+Modified: trunk/include/lng/en.h
+===================================================================
+--- trunk/include/lng/en.h	2009-01-18 18:39:25 UTC (rev 48)
++++ trunk/include/lng/en.h	2009-01-18 23:28:01 UTC (rev 49)
+@@ -20,11 +20,16 @@
+ #define LNG_SITE "\nSite: "
+ #define LNG_GDT "Initialize GDT   "
+ #define LNG_IDT "Initialize IDT   "
++#define LNG_PAGING "Enabling Paging: "
+ #define LNG_PIT8253 "Initialize PIT    "
+ #define LNG_PIC8259 "Initialize PIC8259    "
+ #define LNG_CPU "\nCPU: "
+ #define LNG_FREERAM "Free RAM:"
+ #define LNG_FREEPAGE "\t- Number free page:"
+ #define LNG_BITMAP "\t- Number bitmap's elements:"
++#define LNG_SHELL "Loading the shell"
++#define LNG_USER "[?] Enter your username: "
++#define LNG_USER_R "[x] Please, insert your username :)\n"
++#define LNG_UNKNOWN_CMD "Unknown command:"
+ 
+ #endif
+
+Modified: trunk/include/lng/it.h
+===================================================================
+--- trunk/include/lng/it.h	2009-01-18 18:39:25 UTC (rev 48)
++++ trunk/include/lng/it.h	2009-01-18 23:28:01 UTC (rev 49)
+@@ -21,11 +21,16 @@
+ #define LNG_SITE "\nSito: "
+ #define LNG_GDT "Inizializzo GDT   "
+ #define LNG_IDT "Inizializzo IDT   "
++#define LNG_PAGING "Abilito Paging: "
+ #define LNG_PIT8253 "Inizializzo PIT    "
+ #define LNG_PIC8259 "Inizializzo PIC8259    "
+ #define LNG_CPU "\nProcessore: "
+ #define LNG_FREERAM "Ram Disposizione:"
+ #define LNG_FREEPAGE "\t- Numero Pagine a disposizione:"
+ #define LNG_BITMAP "\t- Numero elementi della bitmap:"
++#define LNG_SHELL "Carico la shell"
++#define LNG_USER "[?] Inserisci il nome utente: "
++#define LNG_USER_R "[x] Per favore, inserisci il nome utente :)\n"
++#define LNG_UNKNOWN_CMD "Comando sconosciuto:"
+ 
+ #endif
+
+Modified: trunk/include/mem/kheap.h
+===================================================================
+--- trunk/include/mem/kheap.h	2009-01-18 18:39:25 UTC (rev 48)
++++ trunk/include/mem/kheap.h	2009-01-18 23:28:01 UTC (rev 49)
+@@ -47,7 +47,7 @@
+     unsigned int max_size; /** < Massima memoria allocabile */
+ } heap_t;
+ 
+-heap_t* make_heap(unsigned int, unsigned int, unsigned int);
++heap_t* make_heap(unsigned int, unsigned int);
+ void* kmalloc(unsigned int);
+ void kfree(unsigned int);
+ void try_alloc();
+
+Modified: trunk/include/use.h
+===================================================================
+--- trunk/include/use.h	2009-01-18 18:39:25 UTC (rev 48)
++++ trunk/include/use.h	2009-01-18 23:28:01 UTC (rev 49)
+@@ -20,11 +20,16 @@
+ #define LNG_SITE "\nSite: "
+ #define LNG_GDT "Initialize GDT   "
+ #define LNG_IDT "Initialize IDT   "
++#define LNG_PAGING "Enabling Paging: "
+ #define LNG_PIT8253 "Initialize PIT    "
+ #define LNG_PIC8259 "Initialize PIC8259    "
+ #define LNG_CPU "\nCPU: "
+ #define LNG_FREERAM "Free RAM:"
+ #define LNG_FREEPAGE "\t- Number free page:"
+ #define LNG_BITMAP "\t- Number bitmap's elements:"
++#define LNG_SHELL "Loading the shell"
++#define LNG_USER "[?] Enter your username: "
++#define LNG_USER_R "[x] Please, insert your username :)\n"
++#define LNG_UNKNOWN_CMD "Unknown command:"
+ 
+ #endif
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-01-18 18:39:25 UTC (rev 48)
++++ trunk/include/version.h	2009-01-18 23:28:01 UTC (rev 49)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "0"
+ #define EXTRAVERSION "-dreamos"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r46"
++#define REV_NUM "-r48"
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2009-01-18 18:39:25 UTC (rev 48)
++++ trunk/kernel.c	2009-01-18 23:28:01 UTC (rev 49)
+@@ -92,7 +92,7 @@
+     get_cpuid();    
+     printf("\n");
+     printf("----\n");
+-    printf("Loading the shell");
++    printf(LNG_SHELL);
+     _kprintOK();
+ 		printf("[+] Address: 0x%x\n", &end);		   	        
+ 		printf("\n\n");
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2009-01-18 18:39:25 UTC (rev 48)
++++ trunk/mem/kheap.c	2009-01-18 23:28:01 UTC (rev 49)
+@@ -77,7 +77,7 @@
+   * @param size Heap maximum size
+   * @return Pointer to a new heap
+   */
+-heap_t* make_heap(unsigned int start, unsigned int end, unsigned int size)
++heap_t* make_heap(unsigned int start, unsigned int size)
+ {
+     heap_t* new_heap;
+     heap_node_t* first_node;
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2009-01-18 18:39:25 UTC (rev 48)
++++ trunk/mem/paging.c	2009-01-18 23:28:01 UTC (rev 49)
+@@ -28,6 +28,7 @@
+ #include <video.h>
+ #include <stddef.h>
+ #include <kheap.h>
++#include <use.h>
+ // #define DEBUG 1
+ 
+ #define BITMASK(len) ((1<<((len) + 1)) - 1)
+@@ -42,7 +43,7 @@
+ 
+ void init_paging(){
+     int i;
+-    printf("Abilito Paging: ");
++    printf(LNG_PAGING);
+     _kprintOK();    
+     current_page_dir = create_pageDir();
+     #ifdef DEBUG
+@@ -70,7 +71,7 @@
+         i++;
+     }        
+     load_pdbr((unsigned int)current_page_dir);
+-    kheap = make_heap(10,10,tot_mem - ((unsigned int) &end));
++    kheap = make_heap(10,tot_mem - ((unsigned int) &end));
+ }
+ 
+ /**
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-01-18 18:39:25 UTC (rev 48)
++++ trunk/shell/shell.c	2009-01-18 23:28:01 UTC (rev 49)
+@@ -43,6 +43,7 @@
+ #include <kheap.h>
+ #include <version.h>
+ #include <cpuid.h>
++#include <clock.h>
+     
+ extern heap_t *kheap;
+ int argc;
+@@ -74,14 +75,14 @@
+ 	char *user = kmalloc(24);
+ 	memset(user, 0, strlen(user));
+ 
+-	printf("[?] Enter your username: ");
++	printf(LNG_USER);
+ 	scanf ("%23s",user);
+ 
+ 	while (!strlen(user))
+ 	{		
+-			printf("[?] Enter your username: ");
++			printf(LNG_USER);
+ 			scanf ("%s",user);
+-			printf("[x] Please, insert your username :)\n");
++			printf(LNG_USER_R);
+ 	}
+ 	
+ 	_kclear();
+@@ -94,7 +95,7 @@
+ 	for (;;)
+ 	{
+ 	    printf("%s~# ",user);
+-	    scanf("%255s",cmd);
++	    scanf("%254s",cmd);
+         
+             options (cmd);
+ 
+@@ -254,13 +255,14 @@
+                 _kcolor('\012');
+                 _kputs("Osiris\n"
+                     "Celeron\n"
++		    "Hamcha\n"
+                     "m0nt0\n"
+                     "and many others (3 or 4 :P)\n\n");
+                 _kcolor('\007');
+             }
+         else if (strlen(cmd)>0)
+ 	    {
+-            printf("Unknown command: %s\n", cmd);            
++            printf(LNG_UNKNOWN_CMD "%s\n", cmd);            
+         }
+ 
+ 	memset(string+5, 0, strlen(string));
+@@ -313,7 +315,7 @@
+ 
+ void help()
+ {
+-	printf("help      - See the 'help' list to learn the DreamOS command now avaible\n"
++	printf("help      - See the 'help' list to learn the DreamOS commands now available\n"
+            "clear     - Clear the screen\n"
+ 	   "poweroff  - Turn off the machine\n"
+            "kmalloc   - Test a basic kmalloc function\n"
+@@ -325,7 +327,7 @@
+ 	   "sleep     - pause DreamOS for a particular number of seconds\n"
+ 	   "cpuid     - Show cpu identification informations\n"
+ 	   "date      - Show date and time\n"
+-	       "echo      - Print some lines of text\n");
++	   "echo      - Print some lines of text\n");
+ }
+ 
+ void poweroff()
+
+
+
+From shainer at mail.berlios.de  Mon Jan 19 22:40:19 2009
+From: shainer at mail.berlios.de (shainer at BerliOS)
+Date: Mon, 19 Jan 2009 22:40:19 +0100
+Subject: [Dreamos-dev] r50 - in trunk: . include/libc libc shell
+Message-ID: <200901192140.n0JLeJrI010243@sheep.berlios.de>
+
+Author: shainer
+Date: 2009-01-19 22:40:18 +0100 (Mon, 19 Jan 2009)
+New Revision: 50
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/libc/string.h
+   trunk/libc/string.c
+   trunk/shell/shell.c
+Log:
+Introdotta strcmp in string.c
+Sistemato il bug per cui la shell prendeva per validi comandi che iniziassero con quelli esistenti (ad esempio: helpaaa).
+Sistemata la echo in modo che non stampi caratteri strani.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/libc/string.h
+===================================================================
+--- trunk/include/libc/string.h	2009-01-18 23:28:01 UTC (rev 49)
++++ trunk/include/libc/string.h	2009-01-19 21:40:18 UTC (rev 50)
+@@ -29,6 +29,7 @@
+ #include <stddef.h>
+ 
+ int _kstrncmp (const char *, const char *, int);
++int strcmp (const char *, const char *);
+ void *memset(void *, const int, int);
+ extern void * memmove(void *,const void *,size_t);
+ size_t strlen (const char *);
+
+Modified: trunk/libc/string.c
+===================================================================
+--- trunk/libc/string.c	2009-01-18 23:28:01 UTC (rev 49)
++++ trunk/libc/string.c	2009-01-19 21:40:18 UTC (rev 50)
+@@ -69,6 +69,33 @@
+   return 0;
+ }
+ 
++/*
++ * Compare s1 and s2
++ */
++int strcmp (const char *s1, const char *s2)
++{
++  int s1n = strlen(s1);
++  int s2n = strlen(s2);
++
++  if (s1n > s2n)
++    return 1;
++  else if (s1n < s2n)
++    return -1;
++
++  while (*s1 == *s2 && s1n>=0)
++  {
++    s1++;
++    s2++;
++    s1n--;
++  }
++
++  if (s1n>0) {
++    if (*s1 > *s2) return 1;
++    else return -1;
++  }
++  return 0;
++}
++
+ /* Fill memory location dest with c for n times */
+ void *memset(void *dest, const int c, int n)
+ {
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-01-18 23:28:01 UTC (rev 49)
++++ trunk/shell/shell.c	2009-01-19 21:40:18 UTC (rev 50)
+@@ -99,32 +99,34 @@
+         
+             options (cmd);
+ 
+-		if (!(_kstrncmp(cmd,"help",4) ) )
++		if (strcmp(argv[0], "help") == 0)
+ 		{
+-			printf("Available command: \n");
++			
++			printf("Available commands:\n");
+ 			help();
+ 		}
+ 
+-		else if (!(_kstrncmp(cmd, "echo", 4) ) )
++		else if (strcmp(argv[0], "echo") == 0)
+ 		{
+-			strncpy(string,cmd,strlen(cmd));
+-			memmove(string, string+5, strlen(string));
+-			printf("%s\n",string);
+-			memset(string+5, 0, strlen(string));
++			int c;
++
++			for (c=1; c<argc; c++)
++			  printf ("%s ", argv[c]);
++			printf ("\n");
+ 		}
+ 
+-		else if (!(_kstrncmp(cmd,"poweroff",8)))
++		else if (strcmp(argv[0], "poweroff") == 0)
+ 		{
+ 			printf("Poweroff..\n");
+ 			poweroff();
+ 		}
+ 		
+-		else if (!(_kstrncmp(cmd, "clear", 5)))
++		else if (strcmp(argv[0], "clear") == 0)
+ 		{
+ 			_kclear();
+ 		}
+ 
+-		else if (!(_kstrncmp(cmd, "uname",5)))
++		else if (strcmp (argv[0], "uname") == 0)
+ 		{
+ 			/*if (argv[2] != " ")
+ 			{
+@@ -160,7 +162,7 @@
+ 
+ 		}
+ 
+-		else if (!(_kstrncmp(cmd, "cpuid",5)))
++		else if (strcmp(argv[0], "cpuid") == 0)
+ 		{
+ 			struct cpuinfo_generic *sh_info = get_cpuid();
+ 
+@@ -169,12 +171,12 @@
+ 			printf ("Type: %s\n", sh_info->cpu_type);
+ 		}
+ 
+-		else if (!(_kstrncmp(cmd, "answer",6)))
++		else if (strcmp(argv[0], "answer") == 0)
+       		{
+           		  printf("42\n");			  
+ 			  outportb('4',0xe9);
+         	}
+-		else if (!(_kstrncmp(cmd, "sleep", 5)))
++		else if (strcmp(argv[0], "sleep") == 0)
+ 		{
+ 			int s;
+ 
+@@ -185,7 +187,7 @@
+ 		 	} else printf ("Missing operand\n");
+ 		}
+ 
+-        else if (!(_kstrncmp(cmd,"kmalloc",7)))
++        else if (strcmp(argv[0], "kmalloc") == 0)
+         {
+             printf("kmalloc try: ...\n");
+             int *b;
+@@ -208,7 +210,7 @@
+ 
+         }
+ 
+-        else if (!(_kstrncmp(cmd,"do_fault",8)))
++        else if (strcmp(argv[0], "do_fault") == 0)
+     	{  
+              printf ("Genero un pagefault scrivendo 10 nella locazione 0xa0000000...\n");
+              int *prova;
+@@ -236,12 +238,12 @@
+           print_heap_list (kheap->free_nodes);
+         }*/
+ 
+-        else if (!(_kstrncmp(cmd,"printmem",8))) print_heap_list(kheap->used_list);        
+-	else if (!(_kstrncmp(cmd,"date",4))) date();                
+-        else if (!(_kstrncmp(cmd,"aalogo",6))) 
++        else if (strcmp(argv[0], "printmem") == 0) print_heap_list(kheap->used_list);        
++	else if (strcmp(argv[0], "date") == 0) date();                
++        else if (strcmp(argv[0], "aalogo") == 0) 
+ 		aalogo();
+         
+-        else if (!(_kstrncmp(cmd,"credits",7)))
++        else if (strcmp(argv[0], "credits") == 0)
+             {
+                 _kcolor('\011');
+                 _kputs("DreamOS Credits\n\n");                
+@@ -262,7 +264,7 @@
+             }
+         else if (strlen(cmd)>0)
+ 	    {
+-            printf(LNG_UNKNOWN_CMD "%s\n", cmd);            
++            printf(LNG_UNKNOWN_CMD " %s\n", argv[0]);            
+         }
+ 
+ 	memset(string+5, 0, strlen(string));
+
+
+
+From shainer at mail.berlios.de  Tue Jan 20 18:22:19 2009
+From: shainer at mail.berlios.de (shainer at BerliOS)
+Date: Tue, 20 Jan 2009 18:22:19 +0100
+Subject: [Dreamos-dev] r51 - in trunk: . hardware include include/hardware
+	shell
+Message-ID: <200901201722.n0KHMJDQ022309@sheep.berlios.de>
+
+Author: shainer
+Date: 2009-01-20 18:22:18 +0100 (Tue, 20 Jan 2009)
+New Revision: 51
+
+Modified:
+   trunk/bl.img
+   trunk/dreamos.img
+   trunk/hardware/cpuid.c
+   trunk/include/hardware/cpuid.h
+   trunk/include/version.h
+   trunk/shell/shell.c
+Log:
+Corretto un bug della cpuid che generava #GPE sulle ultime versioni di Bochs o su macchina reale.
+
+
+Modified: trunk/bl.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/hardware/cpuid.c
+===================================================================
+--- trunk/hardware/cpuid.c	2009-01-19 21:40:18 UTC (rev 50)
++++ trunk/hardware/cpuid.c	2009-01-20 17:22:18 UTC (rev 51)
+@@ -24,12 +24,12 @@
+ 
+ 
+ #include <cpuid.h>
++#include <kheap.h>
+ 
+-struct cpuinfo_generic *get_cpuid()
++struct cpuinfo_generic *get_cpuid(void)
+ {
+     int eax, ebx, ecx, edx;
+-    struct cpuinfo_generic *info;
+-
++    struct cpuinfo_generic *sh_info = kmalloc(sizeof(struct cpuinfo_generic));
+     /* First call with EAX==0 */
+     asm ("xorl %%eax, %%eax\n\t"
+ 	 "cpuid\n\t"
+@@ -49,7 +49,7 @@
+   cpu_vendor[10] = (char)((ecx & 0x00FF0000)>>16);
+   cpu_vendor[11] = (char)((ecx & 0xFF000000)>>24);
+   cpu_vendor[12] = '\0';
+-  info->cpu_vendor = cpu_vendor;
++  sh_info->cpu_vendor = cpu_vendor;
+ 
+   eax = ebx = ecx = edx = 0;
+ 
+@@ -79,19 +79,17 @@
+   /* Processor type */
+   switch (eax) {
+   case 0:
+-      info->cpu_type = "Others";
++      sh_info->cpu_type = "Others";
+       break;
+   case 1:
+-      info->cpu_type = "Original OEM Processor";
++      sh_info->cpu_type = "Original OEM Processor";
+       break;
+   case 2:
+-      info->cpu_type = "Intel Dual Core";
++      sh_info->cpu_type = "Intel Dual Core";
+       break;
+   case 3:
+-      info->cpu_type = "Intel Overdrive";
++      sh_info->cpu_type = "Intel Overdrive";
+   }
+ 
+-  
+-
+-  return info;
++  return sh_info;
+ }
+
+Modified: trunk/include/hardware/cpuid.h
+===================================================================
+--- trunk/include/hardware/cpuid.h	2009-01-19 21:40:18 UTC (rev 50)
++++ trunk/include/hardware/cpuid.h	2009-01-20 17:22:18 UTC (rev 51)
+@@ -60,6 +60,6 @@
+ 
+ char cpu_vendor[12]; // This will contain the main string
+ /* Have a look into cpuid.c for this procedure */
+-struct cpuinfo_generic *get_cpuid ();
++struct cpuinfo_generic * get_cpuid (void);
+ 
+ #endif
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-01-19 21:40:18 UTC (rev 50)
++++ trunk/include/version.h	2009-01-20 17:22:18 UTC (rev 51)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "0"
+ #define EXTRAVERSION "-dreamos"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r48"
++#define REV_NUM "-r49"
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-01-19 21:40:18 UTC (rev 50)
++++ trunk/shell/shell.c	2009-01-20 17:22:18 UTC (rev 51)
+@@ -164,11 +164,12 @@
+ 
+ 		else if (strcmp(argv[0], "cpuid") == 0)
+ 		{
+-			struct cpuinfo_generic *sh_info = get_cpuid();
++			struct cpuinfo_generic *sinfo = get_cpuid();
+ 
+ 			printf ("----- CPUID Information -----\n");
+-			printf ("Vendor: %s\n", sh_info->cpu_vendor);
+-			printf ("Type: %s\n", sh_info->cpu_type);
++			printf ("Vendor: %s\n", sinfo->cpu_vendor);
++			printf ("Type: %s\n", sinfo->cpu_type);
++			free (sinfo);
+ 		}
+ 
+ 		else if (strcmp(argv[0], "answer") == 0)
+
+
+
+From finarfin at mail.berlios.de  Sat Jan 24 23:04:15 2009
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sat, 24 Jan 2009 23:04:15 +0100
+Subject: [Dreamos-dev] r52 - /
+Message-ID: <200901242204.n0OM4Fcf005218@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-01-24 23:04:13 +0100 (Sat, 24 Jan 2009)
+New Revision: 52
+
+Added:
+   branches/
+Log:
+Adding dir Branches
+
+
+
+
+From finarfin at mail.berlios.de  Sat Jan 24 23:06:37 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Sat, 24 Jan 2009 23:06:37 +0100
+Subject: [Dreamos-dev] r53 - branches
+Message-ID: <200901242206.n0OM6bF6005463@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-01-24 23:06:36 +0100 (Sat, 24 Jan 2009)
+New Revision: 53
+
+Added:
+   branches/0.1/
+Log:
+Preparazione files per la 0.1
+
+
+Copied: branches/0.1 (from rev 52, trunk)
+
+
+
+From shainer at mail.berlios.de  Sat Jan 24 23:30:59 2009
+From: shainer at mail.berlios.de (shainer at mail.berlios.de)
+Date: Sat, 24 Jan 2009 23:30:59 +0100
+Subject: [Dreamos-dev] r54 - branches/0.1
+Message-ID: <200901242230.n0OMUxJ6007604@sheep.berlios.de>
+
+Author: shainer
+Date: 2009-01-24 23:30:55 +0100 (Sat, 24 Jan 2009)
+New Revision: 54
+
+Added:
+   branches/0.1/RELEASE-INFO
+Modified:
+   branches/0.1/TODO
+Log:
+Aggiornato TODO. Inserito file con riassunto delle cose implementate fino ad adesso.
+
+Added: branches/0.1/RELEASE-INFO
+===================================================================
+--- branches/0.1/RELEASE-INFO	2009-01-24 22:06:36 UTC (rev 53)
++++ branches/0.1/RELEASE-INFO	2009-01-24 22:30:55 UTC (rev 54)
+@@ -0,0 +1,16 @@
++DreamOS v0.1
++
++- Avvio con GRUB (specifiche Multiboot)
++- Driver della tastiera
++- Funzioni di input e output su porte binarie
++- GDT e IDT con relativi handler di eccezioni
++- PIC
++- Funzioni di stampa a video con scrolling
++- Implementazione del PIT
++- Funzioni della libreria ctype, alcune di base della stdio e di manipolazione stringhe
++- Paginazione e gestore di memoria (malloc e free). Pagefault handler.
++- Clock di sistema
++- Rilevazione informazioni di base sul processore tramite CPUID
++- Supporto base per le syscall
++- CLI
++- Script di compilazione e avvio automatico per emulatori
+
+Modified: branches/0.1/TODO
+===================================================================
+--- branches/0.1/TODO	2009-01-24 22:06:36 UTC (rev 53)
++++ branches/0.1/TODO	2009-01-24 22:30:55 UTC (rev 54)
+@@ -1,19 +1,14 @@
+ Dreamos Rebuild:
+-Nella alloc fare il contrllo prima della funzione free_nodes.
+-
++ 
+ PROGETTI IMMEDIATI
+ - Revisionare stampa esadecimale. Funzione _kprinthex
+ - Implementare syscall handler (controllare/terminare)
+ - Le routine di gestione degli irq, devono controllare se effettivamente esiste un IRQ per il device che controllano, in caso affermativo proseguono, in caso negativo si fermano.
+-- MMU
+ - Funzioni sullo stato registri EFLAGS e CR*
+ - RIVEDERE PRINTF - Forse non stampa i numeri troppo lunghi - problema degli unsigned int.
+-- Todo rivedere quali sono le eccezioni che hanno un error code e sostituire le relative EXCEPTION(xx) con EXCEPTION_EC(xx)
+-- Fare una mega pulizia del codice
++- Fare una pulizia del codice
+ - Eliminare il maggior numero di messaggi di errore dalla compilazione
+ - bitmasks per interpretare errori del pagefault.
+ - Rivedere il comando info della shell, probabilmente stampa alcune informazioni sbagliate
+-
+-
+-PROGETTI A LUNGO TERMINE:
+ - Implementazione di un migliore scrolling
++
+
+
+
+From shainer at mail.berlios.de  Sun Jan 25 00:15:23 2009
+From: shainer at mail.berlios.de (shainer at mail.berlios.de)
+Date: Sun, 25 Jan 2009 00:15:23 +0100
+Subject: [Dreamos-dev] r55 - in branches/0.1: . include shell
+Message-ID: <200901242315.n0ONFNDH010694@sheep.berlios.de>
+
+Author: shainer
+Date: 2009-01-25 00:15:20 +0100 (Sun, 25 Jan 2009)
+New Revision: 55
+
+Modified:
+   branches/0.1/Makefile
+   branches/0.1/dreamos.img
+   branches/0.1/include/version.h
+   branches/0.1/shell/shell.c
+Log:
+Corretti numeri di versione nell'OS e nel Makefile.
+
+Modified: branches/0.1/Makefile
+===================================================================
+--- branches/0.1/Makefile	2009-01-24 22:30:55 UTC (rev 54)
++++ branches/0.1/Makefile	2009-01-24 23:15:20 UTC (rev 55)
+@@ -2,10 +2,10 @@
+ # Enjoy your self :)
+ # Osiris at jeek69 at katamail.com
+ 
++NAME = DreamOS
+ VERSION = 0
+-PATCHLEVEL = 0
+-EXTRAVERSION = -dreamos
+-NAME = DreamOS
++PATCHLEVEL = 1
++EXTRAVERSION = -pepper
+ 
+ CFLAGS = -nostdlib -fomit-frame-pointer -fno-builtin -fno-stack-protector -Wall -march=i686 -m32 -I./include -I./include/io -I./include/drivers -I./include/libc -I./include/processore -I./include/hardware -I./include/mem -I./include/system -I./include/shell -I./include/misc
+ 
+
+Modified: branches/0.1/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: branches/0.1/include/version.h
+===================================================================
+--- branches/0.1/include/version.h	2009-01-24 22:30:55 UTC (rev 54)
++++ branches/0.1/include/version.h	2009-01-24 23:15:20 UTC (rev 55)
+@@ -21,7 +21,7 @@
+  */
+ 
+ #define VERSION "0"
+-#define PATCHLEVEL "0"
+-#define EXTRAVERSION "-dreamos"
++#define PATCHLEVEL "1"
++#define EXTRAVERSION "-pepper"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r49"
++#define REV_NUM "-r53"
+
+Modified: branches/0.1/shell/shell.c
+===================================================================
+--- branches/0.1/shell/shell.c	2009-01-24 22:30:55 UTC (rev 54)
++++ branches/0.1/shell/shell.c	2009-01-24 23:15:20 UTC (rev 55)
+@@ -135,12 +135,12 @@
+ 
+ 			if (!(_kstrncmp(argv[1], "-a", 2)) || !(_kstrncmp(argv[1], "--all", 5)))
+        		{
+-				printf("%s %s.%s.%s%s #1 beta CEST 2008 %s\n",NAME,VERSION,PATCHLEVEL,REV_NUM,EXTRAVERSION,cpu_vendor);
++			printf("%s %s.%s%s #1 beta CEST 2008 %s\n",NAME,VERSION,PATCHLEVEL,EXTRAVERSION,cpu_vendor);
+ 			}
+ 
+ 			else if (!(_kstrncmp(argv[1], "-r", 2)) || !(_kstrncmp(argv[1], "--rev", 5)))
+        		{
+-			 	printf("%s.%s.%s%s\n",VERSION,PATCHLEVEL,REV_NUM,EXTRAVERSION);
++			printf("%s.%s%s\n",VERSION,PATCHLEVEL,EXTRAVERSION);
+ 			}
+ 
+ 			else if (!(_kstrncmp(argv[1], "-h", 2) ) || !(_kstrncmp(argv[1], "--help", 6)))
+@@ -285,7 +285,7 @@
+ printf("\t\t|  |  |  _| -_|| |_| ||       |  |  |__   |\n");
+ printf("\t\t|____/|_| |___||_| |_||_|\134_/|_|_____|_____|\n");
+ _kcolor (6);
+-printf("\t\tRevision: \"%s\"\n",REV_NUM);
++printf("\t\tVersion: \"%s %s.%s%s\"\n", NAME, VERSION, PATCHLEVEL, EXTRAVERSION);
+ _kcolor(7);
+ logo();
+ }
+@@ -295,10 +295,10 @@
+ 	_kcolor (5);
+ 	printf("\n");
+ 	printf("\t\t\t The Dream Operating System \n"
+-	       "\t\t           v0.01%s pre-alpha      \n\n"
++	       "\t\t           v%s.%s%s      \n\n"
+ 	  "\t\t\t\t Welcome to DreamOS\n"
+ 	  "\t\t Where dreams don't become Reality and remain dreams. \n"
+-	              "\t\t\tR.I.P - Rest in peace with dreamos ^_^        \n",REV_NUM);
++	              "\t\t\tR.I.P - Rest in peace with dreamos ^_^        \n",VERSION, PATCHLEVEL, EXTRAVERSION);
+ 	
+ 	printf("\n\n\n\n");
+ 	_kcolor(7);
+
+
+
+From finarfin at mail.berlios.de  Sun Jan 25 14:36:52 2009
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun, 25 Jan 2009 14:36:52 +0100
+Subject: [Dreamos-dev] r56 - in branches/0.1: . include shell
+Message-ID: <200901251336.n0PDaqvV018064@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-01-25 14:36:48 +0100 (Sun, 25 Jan 2009)
+New Revision: 56
+
+Modified:
+   branches/0.1/README
+   branches/0.1/bl.img
+   branches/0.1/dreamos.img
+   branches/0.1/include/version.h
+   branches/0.1/shell/shell.c
+   branches/0.1/start.sh
+Log:
+Levata dicitura beta da uname. E messo come anno 2009
+Modifica al file start che non deve eseguire per la release il make vers, in quanto nel pacchetto le info su svn non ci sono e potrebbe causare problemi.
+
+
+
+
+Modified: branches/0.1/README
+===================================================================
+--- branches/0.1/README	2009-01-24 23:15:20 UTC (rev 55)
++++ branches/0.1/README	2009-01-25 13:36:48 UTC (rev 56)
+@@ -131,3 +131,4 @@
+ DreamOS 2003-2008 by finarfin/shainer
+ http://www.dreamos.org
+ http://www.osdev.it
++Readme: by hamcha
+
+Modified: branches/0.1/bl.img
+===================================================================
+(Binary files differ)
+
+Modified: branches/0.1/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: branches/0.1/include/version.h
+===================================================================
+--- branches/0.1/include/version.h	2009-01-24 23:15:20 UTC (rev 55)
++++ branches/0.1/include/version.h	2009-01-25 13:36:48 UTC (rev 56)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "1"
+ #define EXTRAVERSION "-pepper"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r53"
++#define REV_NUM "-r56"
+
+Modified: branches/0.1/shell/shell.c
+===================================================================
+--- branches/0.1/shell/shell.c	2009-01-24 23:15:20 UTC (rev 55)
++++ branches/0.1/shell/shell.c	2009-01-25 13:36:48 UTC (rev 56)
+@@ -135,7 +135,7 @@
+ 
+ 			if (!(_kstrncmp(argv[1], "-a", 2)) || !(_kstrncmp(argv[1], "--all", 5)))
+        		{
+-			printf("%s %s.%s%s #1 beta CEST 2008 %s\n",NAME,VERSION,PATCHLEVEL,EXTRAVERSION,cpu_vendor);
++			printf("%s %s.%s%s #1 CEST 2009 %s\n",NAME,VERSION,PATCHLEVEL,EXTRAVERSION,cpu_vendor);
+ 			}
+ 
+ 			else if (!(_kstrncmp(argv[1], "-r", 2)) || !(_kstrncmp(argv[1], "--rev", 5)))
+
+Modified: branches/0.1/start.sh
+===================================================================
+--- branches/0.1/start.sh	2009-01-24 23:15:20 UTC (rev 55)
++++ branches/0.1/start.sh	2009-01-25 13:36:48 UTC (rev 56)
+@@ -12,7 +12,7 @@
+ 
+ else
+ make clean 
+-make vers
++#make vers
+ make 
+ make img
+ umount boot/os
+
+
+
+From syn.shainer at gmail.com  Sun Jan 25 15:52:35 2009
+From: syn.shainer at gmail.com (shainer)
+Date: Sun, 25 Jan 2009 15:52:35 +0100
+Subject: [Dreamos-dev] DreamOS v0.1
+Message-ID: <f1be62090901250652t5aabd595xbfa4c9a65857b969@mail.gmail.com>
+
+E finalmente lo staff ? lieto di annunciare...l'uscita della versione 0.1 di
+DreamOS!
+E' possibile scaricare i pacchetti binari o i sorgenti da SVN nella
+directory apposita.
+
+Tutte le informazioni, i risultati raggiunti e i link si trovano
+qui<http://forum.osdev.it/viewtopic.php?f=6&t=80>oppure sulla nostra
+homepage (
+dreamos.org).
+Un ringraziamento a tutti coloro che ci hanno aiutati ad arrivare questo
+traguardo (e sono tanti! :D).
+
+Lo staff di DreamOS
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: <https://lists.berlios.de/pipermail/dreamos-dev/attachments/20090125/66992aa2/attachment.html>
+
+From finarfin at mail.berlios.de  Sun Jan 25 18:50:35 2009
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun, 25 Jan 2009 18:50:35 +0100
+Subject: [Dreamos-dev] r57 - branches/0.1/boot
+Message-ID: <200901251750.n0PHoZur027128@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-01-25 18:50:33 +0100 (Sun, 25 Jan 2009)
+New Revision: 57
+
+Removed:
+   branches/0.1/boot/grub.img
+Log:
+Per aggiornare grub.img
+
+
+Deleted: branches/0.1/boot/grub.img
+===================================================================
+(Binary files differ)
+
+
+
+From finarfin at mail.berlios.de  Sun Jan 25 19:00:31 2009
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun, 25 Jan 2009 19:00:31 +0100
+Subject: [Dreamos-dev] r58 - branches/0.1/boot
+Message-ID: <200901251800.n0PI0Vpw004197@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-01-25 18:52:26 +0100 (Sun, 25 Jan 2009)
+New Revision: 58
+
+Added:
+   branches/0.1/boot/grub.img
+Log:
+Aggiunto file grub.img aggiornato
+
+
+Added: branches/0.1/boot/grub.img
+===================================================================
+(Binary files differ)
+
+
+Property changes on: branches/0.1/boot/grub.img
+___________________________________________________________________
+Name: svn:mime-type
+   + application/octet-stream
+
+
+
+From shainer at mail.berlios.de  Wed Jan 28 21:07:12 2009
+From: shainer at mail.berlios.de (shainer at BerliOS)
+Date: Wed, 28 Jan 2009 21:07:12 +0100
+Subject: [Dreamos-dev] r59 - in trunk: . include include/shell shell
+Message-ID: <200901282007.n0SK7BZu007007@sheep.berlios.de>
+
+Author: shainer
+Date: 2009-01-28 21:07:11 +0100 (Wed, 28 Jan 2009)
+New Revision: 59
+
+Added:
+   trunk/include/shell/commands.h
+   trunk/shell/commands.c
+Modified:
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/include/shell/shell.h
+   trunk/include/version.h
+   trunk/shell/shell.c
+Log:
+Cambiata la gestione della shell e la selezione del comando (eliminando i vari if-else).
+Spostate le funzioni che gestiscono i comandi in un file a parte, commands.c .
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2009-01-25 17:52:26 UTC (rev 58)
++++ trunk/Makefile	2009-01-28 20:07:11 UTC (rev 59)
+@@ -2,14 +2,14 @@
+ # Enjoy your self :)
+ # Osiris at jeek69 at katamail.com
+ 
++NAME = DreamOS
+ VERSION = 0
+-PATCHLEVEL = 0
+-EXTRAVERSION = -dreamos
+-NAME = DreamOS
++PATCHLEVEL = 1
++EXTRAVERSION = -pepper
+ 
+ CFLAGS = -nostdlib -fomit-frame-pointer -fno-builtin -fno-stack-protector -Wall -march=i686 -m32 -I./include -I./include/io -I./include/drivers -I./include/libc -I./include/processore -I./include/hardware -I./include/mem -I./include/system -I./include/shell -I./include/misc
+ 
+-OBJ = kernel.o io/video.o drivers/keyboard.o libc/ctype.o libc/string.o io/io.o libc/stdio.o hardware/cpuid.o hardware/keyboard.o processore/gdt.o processore/idt.o processore/handlers.o hardware/pic8259.o mem/fismem.o mem/paging.o mem/kheap.o misc/clock.o misc/bitops.o misc/ordered_list.o system/syscall.o hardware/8253.o shell/shell.o
++OBJ = kernel.o io/video.o drivers/keyboard.o libc/ctype.o libc/string.o io/io.o libc/stdio.o hardware/cpuid.o hardware/keyboard.o processore/gdt.o processore/idt.o processore/handlers.o hardware/pic8259.o mem/fismem.o mem/paging.o mem/kheap.o misc/clock.o misc/bitops.o misc/ordered_list.o system/syscall.o hardware/8253.o shell/shell.o shell/commands.o
+ 
+ dreamos.img: bl.img kernel.bin
+ 	mv kernel.bin dreamos.img
+@@ -42,6 +42,7 @@
+ system/syscall.o: system/syscall.c
+ hardware/8253.o: hardware/8253.c
+ shell/shell.o: shell/shell.c
++shell/commands.o: shell/commands.c
+ 
+ img:
+ 	mount -o loop boot/grub.img boot/os
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Added: trunk/include/shell/commands.h
+===================================================================
+--- trunk/include/shell/commands.h	2009-01-25 17:52:26 UTC (rev 58)
++++ trunk/include/shell/commands.h	2009-01-28 20:07:11 UTC (rev 59)
+@@ -0,0 +1,68 @@
++/*
++ * DreamOS
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
++ *
++
++ * Autrice: Lisa
++ * Febbraio 2006
++ * Prototipi di funzione e variabili globali per la shell
++ */
++
++#ifndef __COMMANDS_H
++#define __COMMANDS_H
++
++#include <multiboot.h>
++#include <kernel.h>
++#include <stddef.h>
++#include <video.h>
++#include <pic8259.h>
++#include <8253.h>
++#include <gdt.h>
++#include <idt.h>
++#include <cpuid.h>
++#include <stdio.h>
++#include <string.h>
++#include <fismem.h>
++#include <io.h>
++#include <keyboard.h>
++#include <paging.h>
++#include <use.h>
++#include <shell.h>
++#include <kheap.h>
++#include <version.h>
++#include <cpuid.h>
++#include <clock.h>
++
++int argc;
++char **argv;
++extern heap_t *kheap;
++
++void aalogo();
++void logo();
++void help();
++void echo();
++void poweroff();
++void kmalloc_try();
++void do_fault();
++
++void uname();
++void uname_help();
++void uname_info();
++void printmem();
++void credits();
++void sleep_cmd();
++void cpuid();
++void answer();
++#endif
+
+
+Property changes on: trunk/include/shell/commands.h
+___________________________________________________________________
+Name: svn:executable
+   + *
+
+Modified: trunk/include/shell/shell.h
+===================================================================
+--- trunk/include/shell/shell.h	2009-01-25 17:52:26 UTC (rev 58)
++++ trunk/include/shell/shell.h	2009-01-28 20:07:11 UTC (rev 59)
+@@ -15,19 +15,9 @@
+  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+ 
+-/* 
+-  Shell Coded by
+-    Osiris 
+-*/
++#ifndef _SHELL_H
++#define _SHELL_H
+ 
+-#ifndef __SHELL_H
+-#define __SHELL_H
++void shell(void);
+ 
+-void shell();
+-void logo();
+-void aalogo();
+-void uname_help();
+-void help();
+-void poweroff();
+-void info();
+ #endif
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-01-25 17:52:26 UTC (rev 58)
++++ trunk/include/version.h	2009-01-28 20:07:11 UTC (rev 59)
+@@ -21,7 +21,7 @@
+  */
+ 
+ #define VERSION "0"
+-#define PATCHLEVEL "0"
+-#define EXTRAVERSION "-dreamos"
++#define PATCHLEVEL "1"
++#define EXTRAVERSION "-pepper"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r49"
++#define REV_NUM "-r58"
+
+Added: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-01-25 17:52:26 UTC (rev 58)
++++ trunk/shell/commands.c	2009-01-28 20:07:11 UTC (rev 59)
+@@ -0,0 +1,231 @@
++#include <commands.h>
++
++void aalogo()
++{
++  _kcolor (4);
++  printf("\t\t ____           _____          _____ _____\n");
++  printf("\t\t|    \\ ___ ___ |  _  | _______|     |   __|\n");
++  printf("\t\t|  |  |  _| -_|| |_| ||       |  |  |__   |\n");
++  printf("\t\t|____/|_| |___||_| |_||_|\134_/|_|_____|_____|\n");
++  _kcolor (6);
++  printf("\t\tVersion: \"%s %s.%s%s\"\n", NAME, VERSION, PATCHLEVEL, EXTRAVERSION);
++  _kcolor(7);
++  logo();
++}
++
++void logo()
++{
++  _kcolor (5);
++  printf("\n");
++  printf("\t\t\t The Dream Operating System \n"
++	 "\t\t           v%s.%s%s      \n\n"
++	 "\t\t\t\t Welcome to DreamOS\n"
++	 "\t\t Where dreams don't become Reality and remain dreams. \n"
++	 "\t\t\tR.I.P - Rest in peace with dreamos ^_^        \n",VERSION, PATCHLEVEL, EXTRAVERSION);
++	
++  printf("\n\n\n\n");
++  _kcolor(7);
++}
++
++void help()
++{
++  printf ("Available commands:\n");
++  printf("help      - See the 'help' list to learn the DreamOS commands now available\n"
++         "clear     - Clear the screen\n"
++	 "poweroff  - Turn off the machine\n"
++         "kmalloc   - Test a basic kmalloc function\n"
++         "do_fault  - Test a page_fault\n"
++         "aalogo    - Show an ascii art logo\n"
++         "uname     - Print kernel version, try uname --help for more info\n"
++         "printmem  - Print used locations of memory\n"
++         "credits   - Show DreamOS credits\n"
++	 "sleep     - pause DreamOS for a particular number of seconds\n"
++	 "cpuid     - Show cpu identification informations\n"
++	 "date      - Show date and time\n"
++	 "echo      - Print some lines of text\n");
++}
++
++void echo()
++{
++  int c;
++
++    for (c=1; c<argc; c++)
++      printf ("%s ", argv[c]);
++    printf ("\n");
++}
++
++void poweroff()
++{
++  printf ("Poweroff...\n");
++  
++  asm("sti");
++  printf("E' ora possibile spegnere il computer.\n");
++  while(1);
++}
++
++void kmalloc_try()
++{
++  int *b;
++  int i=0;
++
++  printf("Kmalloc try: ...\n");
++  b = (int *)kmalloc(10 * sizeof(int));
++  printf("Address obtained: %d\n", b);
++  
++  while(i<10) {
++    b[i] = i*2;
++    i++;
++  }
++  i=0;
++
++  while(i<10) {
++    printf("b[%d] = %d\n",i, b[i]);
++    i++;
++  }
++
++  printf("Address of b: %d\n", b);
++  printf("Navigating used list...\n");
++  print_heap_list (kheap->used_list);
++  free (b);
++}
++
++void do_fault()
++{
++  int *prova;
++
++  printf ("Genero un pagefault scrivendo 10 nella locazione 0xa0000000...\n");
++  prova = (int *)0xa0000000;
++  *prova = 10;
++
++  printf ("Contenuto della locazione 0xa0000000 dopo l'intervento dell'handler: %d\n", *prova);
++}
++
++void uname()
++{
++  if (!(strcmp(argv[1], "-a")) || !(strcmp(argv[1], "--all")))
++    printf("%s %s.%s%s #1 CEST 2009 %s\n", NAME, VERSION, PATCHLEVEL, EXTRAVERSION, cpu_vendor);
++  else if (!(strcmp(argv[1], "-r")) || !(strcmp(argv[1], "--rev")))
++    printf("%s.%s%s\n", VERSION, PATCHLEVEL, EXTRAVERSION);
++  else if (!(strcmp(argv[1], "-h") ) || !(strcmp(argv[1], "--help")))
++    uname_help();
++  else if (!(strcmp(argv[1], "-i")) || !(strcmp(argv[1], "--info")))
++    uname_info();
++  else
++    printf("%s. For more info about this tool, please do 'uname --help'\n",NAME);
++}
++
++void uname_help() 
++{
++  printf("Uname function allow you to see the kernel and system information.\n");
++  printf("Function avaibles:\n");
++  printf("1) '-a'   - Kernel version and processor type\n"
++  	 "2) '-r'   - Only the kernel version\n"
++  	 "3) '-i'   - All info of system and kernel\n");	
++}
++
++void uname_info()
++{
++  printf("\n:==========: :System info: :==========:\n\n");
++	
++  // Kernel info
++  printf( "Version: '%s'\n"
++	  "Patchlevel: '%s'\n"
++	  "Extraversion: '%s'\n"
++	  "Name: '%s'\n"
++	  "Revision: '%s'\n",VERSION,PATCHLEVEL,EXTRAVERSION,NAME,REV_NUM);
++
++  // CPU Info
++  _kputs (LNG_CPU);
++  _kcolor (4);
++  _kgoto (61, _kgetline());
++  _kputs (cpu_vendor);
++  _kcolor(7);
++  printf("\n");
++
++  // Memory RAM Info
++  printf("Memory RAM: ");
++  _kgoto(60, _kgetline());
++  printf(" %d Kb\n", get_memsize()/1024);
++
++  // Memory free RAM Info
++  printf(LNG_FREERAM);
++  _kgoto(60, _kgetline());
++  printf(" %d Kb\n", get_numpages());
++  
++  printf("\n");
++
++  // Bitmap Info
++  printf("Number bitmap's elements: ");
++  _kgoto(60, _kgetline());
++  printf(" %d", get_bmpelements());
++  _kgoto(60, _kgetline());
++
++  // Mem_area Info
++  printf("\nSize of mem_area: ");
++  _kgoto(60, _kgetline());	
++  printf(" %d\n", sizeof(mem_area));
++
++  // Page Dir Info
++  printf("Page Dir Entry n.0 is: ");
++  _kgoto(60, _kgetline());
++  printf(" %d\n", get_pagedir_entry(0));
++        
++  // Page Table Info
++  printf("Page Table Entry n.4 in Page dir 0 is: ");
++  _kgoto(60, _kgetline());	
++  printf(" %d\n", get_pagetable_entry(0,4));
++
++  printf("\n:==========: :===========: :==========:\n\n");
++}
++
++void printmem(void)
++{
++  print_heap_list(kheap->used_list);
++}
++
++void credits(void)
++{
++  _kcolor('\011');
++  _kputs("DreamOS Credits\n\n");                
++  _kputs("Main Developers:\n");
++  _kcolor('\012');
++   printf("Shainer - Lisa\n"
++          "Finarfin - Ivan\n\n\n"            
++         );
++
++  _kcolor('\011');
++  _kputs("Contributors:\n");
++  _kcolor('\012');
++  _kputs("Osiris\n"
++         "Celeron\n"
++	 "Hamcha\n"
++         "m0nt0\n"
++         "and many others (3 or 4 :P)\n\n");
++  _kcolor('\007');
++}
++
++void sleep_cmd(void)
++{
++  int s;
++
++  if (argv[1]) {
++    s = atoi(argv[1]);
++    if (s != -1)
++      sleep (s);
++  } else printf ("Missing operand\n");
++}
++
++void cpuid(void)
++{
++  struct cpuinfo_generic *sinfo = get_cpuid();
++
++  printf ("----- CPUID Information -----\n");
++  printf ("Vendor: %s\n", sinfo->cpu_vendor);
++  printf ("Type: %s\n", sinfo->cpu_type);
++  free (sinfo);
++}
++
++void answer(void)
++{
++  printf("42\n");
++}
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-01-25 17:52:26 UTC (rev 58)
++++ trunk/shell/shell.c	2009-01-28 20:07:11 UTC (rev 59)
+@@ -1,54 +1,13 @@
+-/***************************************************************************
+- *            shell.c
+- *
+- *  Sun Apr  1 00:16:03 2007
+- *  Copyright  2007  Osiris
+- *  Email	jeek69 [at] katamail dot com
+- ****************************************************************************/
++#include <commands.h>
+ 
++#define NUM_COM 14
++
+ /*
+- *  This program is free software; you can redistribute it and/or modify
+- *  it under the terms of the GNU General Public License as published by
+- *  the Free Software Foundation; either version 2 of the License, or
+- *  (at your option) any later version.
+- *
+- *  This program is distributed in the hope that it will be useful,
+- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- *  GNU General Public License for more details.
+- *
+- *  You should have received a copy of the GNU General Public License
+- *  along with this program; if not, write to the Free Software
+- *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ * Inserisce gli argomenti di un comando in un array di stringhe
++ * argc = numero degli argomenti
++ * argv[0] = nome del comando
++ * argv[n] = opzioni successive
+  */
+-
+-
+-#include <multiboot.h>
+-#include <kernel.h>
+-#include <stddef.h>
+-#include <video.h>
+-#include <pic8259.h>
+-#include <8253.h>
+-#include <gdt.h>
+-#include <idt.h>
+-#include <cpuid.h>
+-#include <stdio.h>
+-#include <string.h>
+-#include <fismem.h>
+-#include <io.h>
+-#include <keyboard.h>
+-#include <paging.h>
+-#include <use.h>
+-#include <shell.h>
+-#include <kheap.h>
+-#include <version.h>
+-#include <cpuid.h>
+-#include <clock.h>
+-    
+-extern heap_t *kheap;
+-int argc;
+-char **argv;
+-
+ void options(char *com)
+ {
+   int i=0;
+@@ -60,7 +19,7 @@
+     while (*com != ' ') {
+       *(argv[argc] + i) = *com++;
+       i++;
+-    } 
++    }
+     *(argv[argc] + i) = '\0';
+     argc++;
+     i=0;
+@@ -68,333 +27,54 @@
+   argv[argc] = '\0';
+ }
+ 
++/* corpo della shell */
+ void shell()
+ {
+-	char cmd[256];
+-	char string[256];
+-	char *user = kmalloc(24);
+-	memset(user, 0, strlen(user));
++  char cmd[256];
++  char *user = kmalloc(24);
++  char *commands[NUM_COM+1] = { "help", "clear", "poweroff", "kmalloc", "do_fault", "aalogo", "uname", "printmem", "credits", "sleep", "cpuid", "date", "echo", "answer", NULL };
++  void (*routines[NUM_COM])(void) = { help, _kclear, poweroff, kmalloc_try, do_fault, aalogo, uname, printmem, credits, sleep_cmd, cpuid, date, echo, answer };
++  int i;
+ 
+-	printf(LNG_USER);
+-	scanf ("%23s",user);
++  memset(user, 0, strlen(user));
++  printf(LNG_USER);
++  scanf ("%23s",user);
+ 
+-	while (!strlen(user))
+-	{		
+-			printf(LNG_USER);
+-			scanf ("%s",user);
+-			printf(LNG_USER_R);
+-	}
++  while (!strlen(user)) {		
++    printf(LNG_USER);
++    scanf ("%23s",user);
++    printf(LNG_USER_R);
++  }
++  *(user + strlen(user)) = '\0';
+ 	
+-	_kclear();
+-	aalogo();
+-	printf("\n\n\n\n");
++  _kclear();
++  aalogo();
++  printf("\n\n\n\n");
++  argc=1;
+ 
+-        shell_mess = strlen (user) + 3;
+-        argc=1;
+-
+-	for (;;)
+-	{
+-	    printf("%s~# ",user);
+-	    scanf("%254s",cmd);
++  for (;;)
++  {
++    printf("%s~# ",user);
++    scanf("%254s",cmd);
+         
+-            options (cmd);
++    options (cmd);
++    if (strlen(argv[0]) == 0)
++      goto end;
+ 
+-		if (strcmp(argv[0], "help") == 0)
+-		{
+-			
+-			printf("Available commands:\n");
+-			help();
+-		}
++    for (i=NUM_COM; i>=0; --i) {
++      if(strcmp(argv[0], commands[i]) == 0) {
++        (*routines[i])();
++        break;
++      }
++    }
++    if (i<0)
++      printf(LNG_UNKNOWN_CMD " %s\n", argv[0]);
+ 
+-		else if (strcmp(argv[0], "echo") == 0)
+-		{
+-			int c;
+-
+-			for (c=1; c<argc; c++)
+-			  printf ("%s ", argv[c]);
+-			printf ("\n");
+-		}
+-
+-		else if (strcmp(argv[0], "poweroff") == 0)
+-		{
+-			printf("Poweroff..\n");
+-			poweroff();
+-		}
+-		
+-		else if (strcmp(argv[0], "clear") == 0)
+-		{
+-			_kclear();
+-		}
+-
+-		else if (strcmp (argv[0], "uname") == 0)
+-		{
+-			/*if (argv[2] != " ")
+-			{
+-				memmove(argv[2], argv[2]+6, strlen(argv[2]));
+-			}*/
+-
+-			if (!(_kstrncmp(argv[1], "-a", 2)) || !(_kstrncmp(argv[1], "--all", 5)))
+-       		{
+-				printf("%s %s.%s.%s%s #1 beta CEST 2008 %s\n",NAME,VERSION,PATCHLEVEL,REV_NUM,EXTRAVERSION,cpu_vendor);
+-			}
+-
+-			else if (!(_kstrncmp(argv[1], "-r", 2)) || !(_kstrncmp(argv[1], "--rev", 5)))
+-       		{
+-			 	printf("%s.%s.%s%s\n",VERSION,PATCHLEVEL,REV_NUM,EXTRAVERSION);
+-			}
+-
+-			else if (!(_kstrncmp(argv[1], "-h", 2) ) || !(_kstrncmp(argv[1], "--help", 6)))
+-       		{
+-			 	uname_help();
+-			}
+-				
+-			else if (!(_kstrncmp(argv[1], "-i", 2)) || !(_kstrncmp(argv[1], "--info", 6)))
+-			{
+-				info();
+-			}
+-
+-			if (!(_kstrncmp(argv[1], '\0', 1)))
+-			{
+-				printf("%s\n"
+-				       "For more info about this tool, please do 'uname --help'\n",NAME);
+-			}
+-
+-
+-		}
+-
+-		else if (strcmp(argv[0], "cpuid") == 0)
+-		{
+-			struct cpuinfo_generic *sinfo = get_cpuid();
+-
+-			printf ("----- CPUID Information -----\n");
+-			printf ("Vendor: %s\n", sinfo->cpu_vendor);
+-			printf ("Type: %s\n", sinfo->cpu_type);
+-			free (sinfo);
+-		}
+-
+-		else if (strcmp(argv[0], "answer") == 0)
+-      		{
+-          		  printf("42\n");			  
+-			  outportb('4',0xe9);
+-        	}
+-		else if (strcmp(argv[0], "sleep") == 0)
+-		{
+-			int s;
+-
+-			if (argv[1]) {
+-			  s = atoi(argv[1]);
+-			  if (s != -1)
+-			    sleep (s);
+-		 	} else printf ("Missing operand\n");
+-		}
+-
+-        else if (strcmp(argv[0], "kmalloc") == 0)
+-        {
+-            printf("kmalloc try: ...\n");
+-            int *b;
+-            b = (int*) kmalloc(10*sizeof(int));
+-	    printf("Address obtained: %d\n", b);
+-            int i = 0;
+-            while(i<10){
+-                b[i] = i*2;
+-                i++;
+-            }
+-            i=0;
+-            while(i<10) {
+-                printf("b[%d] = %d\n",i, b[i]);
+-                i++;
+-            }
+-            printf("Address of a: %d\n", b);
+-	  printf("Navigating used list...\n");
+-          print_heap_list (kheap->used_list);
+-            free (b);
+-
+-        }
+-
+-        else if (strcmp(argv[0], "do_fault") == 0)
+-    	{  
+-             printf ("Genero un pagefault scrivendo 10 nella locazione 0xa0000000...\n");
+-             int *prova;
+-             prova = (int*)0xa0000000;
+-             *prova = 10;
+-              printf ("Contenuto della locazione 0xa0000000 dopo l'intervento dell'handler: %d\n", *prova);
+-        }
+-
+-        /*else if (!(_kstrncmp(cmd,"try_heap",8))){
+-            try_alloc();
+-        }
+-        
+-        else if (!(_kstrncmp(cmd,"free",4))) {
+-          unsigned int ptr = 425548;
+-          free((unsigned int*)ptr);
+-          ptr = 437836;
+-          free((unsigned int*)ptr);
+-          ptr=446028;
+-          free((unsigned int*)ptr);
+-          printf("Navigating used list...\n");
+-          print_heap_list (kheap->used_list);
+-          printf("Navigating free list...\n");
+-          print_heap_list (kheap->free_list);
+-          printf("Navigating free nodes...\n");
+-          print_heap_list (kheap->free_nodes);
+-        }*/
+-
+-        else if (strcmp(argv[0], "printmem") == 0) print_heap_list(kheap->used_list);        
+-	else if (strcmp(argv[0], "date") == 0) date();                
+-        else if (strcmp(argv[0], "aalogo") == 0) 
+-		aalogo();
+-        
+-        else if (strcmp(argv[0], "credits") == 0)
+-            {
+-                _kcolor('\011');
+-                _kputs("DreamOS Credits\n\n");                
+-                _kputs("Main Developers:\n");
+-                _kcolor('\012');
+-                printf("Shainer - Lisa\n"
+-                    "Finarfin - Ivan\n\n\n"            
+-                );
+-                _kcolor('\011');
+-                _kputs("Contributors:\n");
+-                _kcolor('\012');
+-                _kputs("Osiris\n"
+-                    "Celeron\n"
+-		    "Hamcha\n"
+-                    "m0nt0\n"
+-                    "and many others (3 or 4 :P)\n\n");
+-                _kcolor('\007');
+-            }
+-        else if (strlen(cmd)>0)
+-	    {
+-            printf(LNG_UNKNOWN_CMD " %s\n", argv[0]);            
+-        }
+-
+-	memset(string+5, 0, strlen(string));
+-	memset(cmd, 0, strlen(cmd));
+-
+-        for (--argc; argc>=0; argc--) {
+-	  free (argv[argc]);
+-        }
+-
+-	}
++    end:
++    memset (cmd, 0, strlen(cmd));
++    for (--argc; argc>=0; argc--) {
++      free (argv[argc]);
++    }
++  }
+ }
+ 
+-void aalogo() {
+-_kcolor (4);
+-printf("\t\t ____           _____          _____ _____\n");
+-printf("\t\t|    \\ ___ ___ |  _  | _______|     |   __|\n");
+-printf("\t\t|  |  |  _| -_|| |_| ||       |  |  |__   |\n");
+-printf("\t\t|____/|_| |___||_| |_||_|\134_/|_|_____|_____|\n");
+-_kcolor (6);
+-printf("\t\tRevision: \"%s\"\n",REV_NUM);
+-_kcolor(7);
+-logo();
+-}
+-
+-void logo()
+-{
+-	_kcolor (5);
+-	printf("\n");
+-	printf("\t\t\t The Dream Operating System \n"
+-	       "\t\t           v0.01%s pre-alpha      \n\n"
+-	  "\t\t\t\t Welcome to DreamOS\n"
+-	  "\t\t Where dreams don't become Reality and remain dreams. \n"
+-	              "\t\t\tR.I.P - Rest in peace with dreamos ^_^        \n",REV_NUM);
+-	
+-	printf("\n\n\n\n");
+-	_kcolor(7);
+-}
+-
+-void uname_help() 
+-{
+-	//_kcolor (5);
+-	printf("Uname function allow you to see the kernel and system information.\n");
+-	printf("Function avaibles:\n");
+-	//_kcolor (2);
+-	printf("1) '-a'   - Kernel version and processor type\n"
+-  	       "2) '-r'   - Only the kernel version\n"
+-  	       "3) '-i'   - All info of system and kernel\n");	
+-	_kcolor (7);
+-}
+-
+-void help()
+-{
+-	printf("help      - See the 'help' list to learn the DreamOS commands now available\n"
+-           "clear     - Clear the screen\n"
+-	   "poweroff  - Turn off the machine\n"
+-           "kmalloc   - Test a basic kmalloc function\n"
+-           "do_fault  - Test a page_fault\n"
+-           "aalogo    - Show an ascii art logo\n"
+-           "uname     - Print kernel version, try uname --help for more info\n"
+-           "printmem  - Print used locations of memory\n"
+-           "credits   - Show DreamOS credits\n"
+-	   "sleep     - pause DreamOS for a particular number of seconds\n"
+-	   "cpuid     - Show cpu identification informations\n"
+-	   "date      - Show date and time\n"
+-	   "echo      - Print some lines of text\n");
+-}
+-
+-void poweroff()
+-{
+-	/*asm(	"movl %0, %%eax\n"
+-		"int $0xff\n"
+-		: : "g"(1)); // valore di enum*/
+-    asm("sti");
+-    printf("E' ora possibile spegnere il computer.\n");
+-    while(1);
+-}
+-
+-void info()
+-{
+-	printf("\n:==========: :System info: :==========:\n\n");
+-	
+-	// Kernel info
+-	printf( "Version: '%s'\n"
+-		"Patchlevel: '%s'\n"
+-		"Extraversion: '%s'\n"
+-		"Name: '%s'\n"
+-		"Revision: '%s'\n",VERSION,PATCHLEVEL,EXTRAVERSION,NAME,REV_NUM);
+-
+-	// CPU Info
+-	_kputs (LNG_CPU);
+-        _kcolor (4);
+-        _kgoto (61, _kgetline());
+-        _kputs (cpu_vendor);
+-        _kcolor(7);
+-	printf("\n");
+-
+-	// Memory RAM Info
+-        printf("Memory RAM: ");
+-	_kgoto(60, _kgetline());
+-	printf(" %d Kb\n", get_memsize()/1024);
+-
+-	// Memory free RAM Info
+-	printf(LNG_FREERAM);
+-        _kgoto(60, _kgetline());
+-        printf(" %d Kb\n", get_numpages());
+-  
+-	printf("\n");
+-
+-	// Bitmap Info
+-        printf("Number bitmap's elements: ");
+-	_kgoto(60, _kgetline());
+-	printf(" %d", get_bmpelements());
+-        _kgoto(60, _kgetline());
+-
+-	// Mem_area Info
+-        printf("\nSize of mem_area: ");
+-	_kgoto(60, _kgetline());	
+-	printf(" %d\n", sizeof(mem_area));
+-
+-	// Page Dir Info
+-        printf("Page Dir Entry n.0 is: ");
+-	_kgoto(60, _kgetline());
+-	printf(" %d\n", get_pagedir_entry(0));
+-        
+-	// Page Table Info
+-	printf("Page Table Entry n.4 in Page dir 0 is: ");
+-	_kgoto(60, _kgetline());	
+-	printf(" %d\n", get_pagetable_entry(0,4));
+-
+-	printf("\n:==========: :===========: :==========:\n\n");
+-}
+-
+
+
+
+From shainer at mail.berlios.de  Sat Jan 31 00:23:51 2009
+From: shainer at mail.berlios.de (shainer at BerliOS)
+Date: Sat, 31 Jan 2009 00:23:51 +0100
+Subject: [Dreamos-dev] r60 - in trunk: . include/libc io libc shell
+Message-ID: <200901302323.n0UNNpi1006783@sheep.berlios.de>
+
+Author: shainer
+Date: 2009-01-31 00:23:49 +0100 (Sat, 31 Jan 2009)
+New Revision: 60
+
+Added:
+   trunk/include/libc/stdarg.h
+Modified:
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/include/libc/string.h
+   trunk/io/video.c
+   trunk/libc/stdio.c
+   trunk/libc/string.c
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+Log:
+Aggiunta libreria stdarg.h in include/libc
+Introdotta la funzione strcpy in string.c
+Corretto bug della shell per cui un comando preceduto da spazi non veniva riconosciuto.
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2009-01-28 20:07:11 UTC (rev 59)
++++ trunk/Makefile	2009-01-30 23:23:49 UTC (rev 60)
+@@ -7,7 +7,7 @@
+ PATCHLEVEL = 1
+ EXTRAVERSION = -pepper
+ 
+-CFLAGS = -nostdlib -fomit-frame-pointer -fno-builtin -fno-stack-protector -Wall -march=i686 -m32 -I./include -I./include/io -I./include/drivers -I./include/libc -I./include/processore -I./include/hardware -I./include/mem -I./include/system -I./include/shell -I./include/misc
++CFLAGS = -nostdlib -nostdinc -fomit-frame-pointer -fno-builtin -fno-stack-protector -Wall -march=i686 -m32 -I./include -I./include/io -I./include/drivers -I./include/libc -I./include/processore -I./include/hardware -I./include/mem -I./include/system -I./include/shell -I./include/misc
+ 
+ OBJ = kernel.o io/video.o drivers/keyboard.o libc/ctype.o libc/string.o io/io.o libc/stdio.o hardware/cpuid.o hardware/keyboard.o processore/gdt.o processore/idt.o processore/handlers.o hardware/pic8259.o mem/fismem.o mem/paging.o mem/kheap.o misc/clock.o misc/bitops.o misc/ordered_list.o system/syscall.o hardware/8253.o shell/shell.o shell/commands.o
+ 
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Added: trunk/include/libc/stdarg.h
+===================================================================
+--- trunk/include/libc/stdarg.h	2009-01-28 20:07:11 UTC (rev 59)
++++ trunk/include/libc/stdarg.h	2009-01-30 23:23:49 UTC (rev 60)
+@@ -0,0 +1,20 @@
++#ifndef LIBCSTDARGH
++#define	LIBCSTDARGH
++
++typedef char *va_list;
++
++#define	STACKITEM	int
++
++#define	VA_SIZE(TYPE)					\
++	((sizeof(TYPE) + sizeof(STACKITEM) - 1)	\
++		& ~(sizeof(STACKITEM) - 1))
++
++#define	va_start(AP, LASTARG)	\
++	(AP=((va_list)&(LASTARG) + VA_SIZE(LASTARG)))
++
++#define va_end(AP)
++
++#define va_arg(AP, TYPE)	\
++	(AP += VA_SIZE(TYPE), *((TYPE *)(AP - VA_SIZE(TYPE))))
++
++#endif
+
+Modified: trunk/include/libc/string.h
+===================================================================
+--- trunk/include/libc/string.h	2009-01-28 20:07:11 UTC (rev 59)
++++ trunk/include/libc/string.h	2009-01-30 23:23:49 UTC (rev 60)
+@@ -38,5 +38,6 @@
+ char *strstr (const char *, const char *);
+ char *strtok (char *, const char *);
+ char *strncat (char *, const char *, size_t);
++char *strcpy (char *, const char *);
+ 
+ #endif
+
+Modified: trunk/io/video.c
+===================================================================
+--- trunk/io/video.c	2009-01-28 20:07:11 UTC (rev 59)
++++ trunk/io/video.c	2009-01-30 23:23:49 UTC (rev 60)
+@@ -310,7 +310,7 @@
+ 
+ /** @author Lisa
+   * @version 1.0
+-  * @param  buffer (char*) La stringa che conterr? il numero
++  * @param  buffer (char*) La stringa che contiene il numero
+   * @param  num Il numero da convertire (intero)
+   * @param  base la base numerica in cui convertire (per ora 0, 16,10)
+   *
+
+Modified: trunk/libc/stdio.c
+===================================================================
+--- trunk/libc/stdio.c	2009-01-28 20:07:11 UTC (rev 59)
++++ trunk/libc/stdio.c	2009-01-30 23:23:49 UTC (rev 60)
+@@ -93,7 +93,6 @@
+     va_start (ap, format);
+ 
+     while (*format) {
+-
+         /* % marks a specific */
+ 	if (*format == '%') {
+ 	    format++;
+@@ -162,6 +161,7 @@
+ 	len++;
+ 	for (i=0; i<255; i++)
+             current[i] = 0;
++        cur_p = 0;
+     }
+     va_end (ap); // end of arguments
+     return len;
+
+Modified: trunk/libc/string.c
+===================================================================
+--- trunk/libc/string.c	2009-01-28 20:07:11 UTC (rev 59)
++++ trunk/libc/string.c	2009-01-30 23:23:49 UTC (rev 60)
+@@ -39,6 +39,17 @@
+     return dest;
+ }
+ 
++char *strcpy (char *dest, const char *src)
++{
++  int i;
++
++  for (i=0; src[i]; i++)
++    *(dest+i) = *(src+i);
++  dest[i] = '\0';
++
++  return dest;
++}
++
+ /*
+  * Return the number of a string's characters
+  */
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-01-28 20:07:11 UTC (rev 59)
++++ trunk/shell/commands.c	2009-01-30 23:23:49 UTC (rev 60)
+@@ -229,3 +229,4 @@
+ {
+   printf("42\n");
+ }
++
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-01-28 20:07:11 UTC (rev 59)
++++ trunk/shell/shell.c	2009-01-30 23:23:49 UTC (rev 60)
+@@ -31,10 +31,11 @@
+ void shell()
+ {
+   char cmd[256];
++  char *cmd_ptr;
+   char *user = kmalloc(24);
+   char *commands[NUM_COM+1] = { "help", "clear", "poweroff", "kmalloc", "do_fault", "aalogo", "uname", "printmem", "credits", "sleep", "cpuid", "date", "echo", "answer", NULL };
+   void (*routines[NUM_COM])(void) = { help, _kclear, poweroff, kmalloc_try, do_fault, aalogo, uname, printmem, credits, sleep_cmd, cpuid, date, echo, answer };
+-  int i;
++  int i=0;
+ 
+   memset(user, 0, strlen(user));
+   printf(LNG_USER);
+@@ -45,7 +46,6 @@
+     scanf ("%23s",user);
+     printf(LNG_USER_R);
+   }
+-  *(user + strlen(user)) = '\0';
+ 	
+   _kclear();
+   aalogo();
+@@ -57,7 +57,10 @@
+     printf("%s~# ",user);
+     scanf("%254s",cmd);
+         
+-    options (cmd);
++    /* elimina eventuali spazi all'inizio del comando */
++    for (i=0, cmd_ptr = cmd; cmd[i] == ' '; i++, cmd_ptr++);
++    
++    options (cmd_ptr);
+     if (strlen(argv[0]) == 0)
+       goto end;
+ 
+
+
+

@@ -1,0 +1,195 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r43 - in trunk: . include mem
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-January/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r43%20-%20in%20trunk%3A%20.%20include%20mem&In-Reply-To=%3C200901032228.n03MS00K003762%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   
+   <LINK REL="Next"  HREF="000044.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r43 - in trunk: . include mem</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r43%20-%20in%20trunk%3A%20.%20include%20mem&In-Reply-To=%3C200901032228.n03MS00K003762%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r43 - in trunk: . include mem">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sat Jan  3 23:28:00 CET 2009</I>
+    <P><UL>
+        
+        <LI>Next message: <A HREF="000044.html">[Dreamos-dev] r44 - in trunk: . hardware include include/hardware	libc mem shell system
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#43">[ date ]</a>
+              <a href="thread.html#43">[ thread ]</a>
+              <a href="subject.html#43">[ subject ]</a>
+              <a href="author.html#43">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-01-03 23:27:59 +0100 (Sat, 03 Jan 2009)
+New Revision: 43
+
+Modified:
+   trunk/include/version.h
+   trunk/kernel.c
+   trunk/mem/kheap.c
+   trunk/mem/paging.c
+Log:
+Eliminate stampe di prova.
+Le stampe di debug sono state rese visibili solo se viene definito DEBUG 
+Sistemato layout di alcune stampe
+Pulizia del codice
+
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2008-12-30 20:38:10 UTC (rev 42)
++++ trunk/include/version.h	2009-01-03 22:27:59 UTC (rev 43)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL &quot;0&quot;
+ #define EXTRAVERSION &quot;-dreamos&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r41&quot;
++#define REV_NUM &quot;-r42&quot;
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2008-12-30 20:38:10 UTC (rev 42)
++++ trunk/kernel.c	2009-01-03 22:27:59 UTC (rev 43)
+@@ -83,8 +83,7 @@
+     init_IRQ();
+     asm(&quot;sti&quot;);
+     _kprintOK();   
+-    init_paging();
+-    printf(&quot;End: %x\n&quot;, end);
++    init_paging();    
+     printf(LNG_PIT8253);
+     configure_PIT ();
+     _kprintOK();    
+@@ -95,8 +94,7 @@
+     printf(&quot;----\n&quot;);
+     printf(&quot;Loading the shell&quot;);
+     _kprintOK();
+-		printf(&quot;[+] End: %d \n&quot;
+-		       &quot;[+] Address: 0x%x\n&quot;, end, &amp;end);		   	        
++		printf(&quot;[+] Address: 0x%x\n&quot;, &amp;end);		   	        
+ 		printf(&quot;\n\n&quot;);
+ 		shell();
+ 
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2008-12-30 20:38:10 UTC (rev 42)
++++ trunk/mem/kheap.c	2009-01-03 22:27:59 UTC (rev 43)
+@@ -92,8 +92,8 @@
+     new_heap-&gt;free_list = first_node;
+     new_heap-&gt;used_list = NULL;
+     new_heap-&gt;free_nodes = NULL;
+-    printf(&quot;First heap created...\n&quot;);   
+-    printf(&quot;Size: %d - Tot mem: %d - Start address: %x\n&quot;, (new_heap-&gt;free_list)-&gt;size, tot_mem, new_heap);    
++    printf(&quot;\tFirst heap created...\n&quot;);   
++    printf(&quot;\tSize: %d - Tot mem: %d - Start address: %x\n&quot;, (new_heap-&gt;free_list)-&gt;size, tot_mem, new_heap);    
+     return (heap_t*) new_heap;
+ }
+     
+@@ -165,7 +165,7 @@
+    #ifdef DEBUG
+    printf(&quot;Prev_node: %d \n&quot;, prev_node-&gt;start_address);
+    #endif
+-   return (void *)new_node;
++   return (void *)new_node-&gt;start_address;
+ }
+ 
+ /**
+@@ -180,7 +180,9 @@
+     if(kheap-&gt;free_nodes!=NULL){      
+       new_address = kheap-&gt;free_nodes;
+       kheap-&gt;free_nodes = new_address-&gt;next;
++      #ifdef DEBUG
+       printf(&quot;riciclo un nodo\n&quot;);
++      #endif
+       return new_address;
+     }
+     else {
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2008-12-30 20:38:10 UTC (rev 42)
++++ trunk/mem/paging.c	2009-01-03 22:27:59 UTC (rev 43)
+@@ -42,7 +42,7 @@
+ 
+ void init_paging(){
+     int i;
+-    printf(&quot;Abilito Paging: In lavorazione....&quot;);
++    printf(&quot;Abilito Paging: &quot;);
+     _kprintOK();    
+     current_page_dir = create_pageDir();
+     #ifdef DEBUG
+@@ -233,24 +233,33 @@
+     if ((ecode &amp; 0b0011) == 2 || (ecode &amp; 0b0011) == 0) {
+     pdir = BITRANGE (fault_addr, 22, 31);
+     ptable = BITRANGE (fault_addr, 12, 21);
++    #ifdef DEBUG
+     printf (&quot;PD entry num: %d, PT entry num: %d, Indirizzo: %d\n&quot;, ptable, pdir, fault_addr);
+-
++    #endif
+  	  /* Mappatura della pagedir se non presente */
+ 	pd_entry = get_pagedir_entry (pdir);
++	#ifdef DEBUG
+ 	printf (&quot;Entry corrente della pagedir: %d\n&quot;, pd_entry);
++	#endif
+     if (pd_entry == 0) {
+ 	    new_pt = create_pageTable();
+         set_pagedir_entry_ric (pdir, new_pt, PD_PRESENT|SUPERVISOR|WRITE, 0);
++	    #ifdef DEBUG
+ 	    printf (&quot;Nuova entry dopo la mappatura: %d\n&quot;, get_pagedir_entry (pdir));
++	    #endif
+     }
+ 
+ 	/* Mappatura della pagetable se non presente */
+ 	pt_entry = get_pagetable_entry (pdir, ptable);
++	#ifdef DEBUG
+ 	printf (&quot;Entry corrente della pagetable: %d\n&quot;, pt_entry);
++	#endif
+ 	if (pt_entry == 0) {
+ 	    new_p = request_pages (1, ADD_LIST);
+ 	    set_pagetable_entry_ric (pdir, ptable, new_p, PD_PRESENT|SUPERVISOR|WRITE, 0);
++	    #ifdef DEBUG
+ 	    printf (&quot;Nuova entry dopo la mappatura: %d\n&quot;, get_pagetable_entry (pdir, ptable));
++	    #endif
+ 	  }
+ 	}        
+     return;
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	
+	<LI>Next message: <A HREF="000044.html">[Dreamos-dev] r44 - in trunk: . hardware include include/hardware	libc mem shell system
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#43">[ date ]</a>
+              <a href="thread.html#43">[ thread ]</a>
+              <a href="subject.html#43">[ subject ]</a>
+              <a href="author.html#43">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

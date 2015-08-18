@@ -1,0 +1,213 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r235 - in trunk: . fs include/fs include/shell io	shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-April/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r235%20-%20in%20trunk%3A%20.%20fs%20include/fs%20include/shell%20io%0A%09shell&In-Reply-To=%3C201004202105.o3KL5Gke022037%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000237.html">
+   <LINK REL="Next"  HREF="000239.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r235 - in trunk: . fs include/fs include/shell io	shell</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r235%20-%20in%20trunk%3A%20.%20fs%20include/fs%20include/shell%20io%0A%09shell&In-Reply-To=%3C201004202105.o3KL5Gke022037%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r235 - in trunk: . fs include/fs include/shell io	shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Tue Apr 20 23:05:16 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000237.html">[Dreamos-dev] r234 - in trunk: . fs mem shell
+</A></li>
+        <LI>Next message: <A HREF="000239.html">[Dreamos-dev] r236 - in trunk: . fs include/io io
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#238">[ date ]</a>
+              <a href="thread.html#238">[ thread ]</a>
+              <a href="subject.html#238">[ subject ]</a>
+              <a href="author.html#238">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-04-20 23:05:05 +0200 (Tue, 20 Apr 2010)
+New Revision: 235
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/initrd.c
+   trunk/fs/unistd.c
+   trunk/fs/vfs.c
+   trunk/include/fs/initrd.h
+   trunk/include/shell/shell.h
+   trunk/io/video.c
+   trunk/shell/testing.c
+Log:
+Aggiunta initfs_write. e inserita nel mountpoint del filesystem. 
+
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-04-18 21:39:02 UTC (rev 234)
++++ trunk/fs/initrd.c	2010-04-20 21:05:05 UTC (rev 235)
+@@ -174,6 +174,10 @@
+ 	else return 0;
+ }
+ 
++ssize_t initrd_write(int fildes, const void *buf, size_t nbyte){
++	printf(&quot;Please wait, im writing the world...\n&quot;);
++}
++
+ int initrd_close(int fildes){
+ 	ird_descriptors[fildes].file_descriptor = -1;
+ 	ird_descriptors[fildes].cur_pos = 0;
+
+Modified: trunk/fs/unistd.c
+===================================================================
+--- trunk/fs/unistd.c	2010-04-18 21:39:02 UTC (rev 234)
++++ trunk/fs/unistd.c	2010-04-20 21:05:05 UTC (rev 235)
+@@ -37,9 +37,19 @@
+ }
+ 
+ ssize_t write(int fildes, const void *buf, size_t nbyte){
+-	if(fd_list[fildes].flags_mask&amp;O_RDWR) printf(&quot;allright, let's go\n&quot;);
+-	printf(&quot;placeholder for write, coming soon,\n stay tuned\n&quot;);
+-	printf(&quot;Oh i received something: %s\n&quot;, buf);
++	int mp_id = 0;
++	int fs_fd = 0;
++	mp_id = fd_list[fildes].mountpoint_id;
++	fs_fd = fd_list[fildes].fs_spec_id;
++	if(fd_list[fildes].flags_mask&amp;O_RDWR) {		
++		printf(&quot;allright, let's go\n&quot;);
++		printf(&quot;placeholder for write, coming soon,\n stay tuned\n&quot;);
++		printf(&quot;Oh i received something: %s\n&quot;, buf);
++		if((ssize_t*)mountpoint_list[fd_list[fildes].mountpoint_id].operations.write!=NULL)
++			mountpoint_list[fd_list[fildes].mountpoint_id].operations.write(fs_fd, buf, nbyte);
++		else return -1;
++	}
++	else return -1;
+ 	return 0;
+ }
+ 
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2010-04-18 21:39:02 UTC (rev 234)
++++ trunk/fs/vfs.c	2010-04-20 21:05:05 UTC (rev 235)
+@@ -69,6 +69,7 @@
+  	mountpoint_list[0].operations.open = &amp;initfs_open;
+  	mountpoint_list[0].operations.close = &amp;initrd_close;
+  	mountpoint_list[0].operations.read = &amp;initfs_read;
++ 	mountpoint_list[0].operations.write = &amp;initrd_write;
+  	mountpoint_list[0].stat_op.stat = initrd_stat;
+  	//mountpoint_list[0].operations = kmalloc(sizeof(struct super_node_operations));
+ 
+
+Modified: trunk/include/fs/initrd.h
+===================================================================
+--- trunk/include/fs/initrd.h	2010-04-18 21:39:02 UTC (rev 234)
++++ trunk/include/fs/initrd.h	2010-04-20 21:05:05 UTC (rev 235)
+@@ -66,6 +66,7 @@
+ struct dirent *initrd_readdir(DIR *);
+ int initfs_open(const char *, int, ...);
+ ssize_t initfs_read(int, char *, size_t);
+-int initrd_stat(char* path, struct stat *buf);
++int initrd_stat(char*, struct stat*);
++ssize_t initrd_write(int, const void*, size_t);
+ int initrd_close(int);
+ #endif
+
+Modified: trunk/include/shell/shell.h
+===================================================================
+--- trunk/include/shell/shell.h	2010-04-18 21:39:02 UTC (rev 234)
++++ trunk/include/shell/shell.h	2010-04-20 21:05:05 UTC (rev 235)
+@@ -38,7 +38,7 @@
+ };
+ 
+ //extern char cur_path[256];
+-//extern struct cmd shell_cmd[NUM_COM];
++extern struct cmd shell_cmd[NUM_COM];
+ typedef struct user_env userenv_t;
+ extern userenv_t current_user;
+ void shell_init();
+
+Modified: trunk/io/video.c
+===================================================================
+--- trunk/io/video.c	2010-04-18 21:39:02 UTC (rev 234)
++++ trunk/io/video.c	2010-04-20 21:05:05 UTC (rev 235)
+@@ -302,12 +302,15 @@
+      _kntohex (buffer, num);
+   else {
+     if (num == 0)
+-      *p++ = 48;
+-
++      *p++ = '0';
++	else if(num&lt;0) {
++		num=(~num)+1;
++		*p++='-';
++	}
+     while(num &gt; 0)
+     {
+       mod = num % base;
+-      *p++ = mod + 48;
++      *p++ = mod + '0';
+       num = num / base;
+     }
+ 
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-04-18 21:39:02 UTC (rev 234)
++++ trunk/shell/testing.c	2010-04-20 21:05:05 UTC (rev 235)
+@@ -166,6 +166,7 @@
+ 
+ void try_syscall(){
+ 	int i;
++	int var = -1;
+ 	printf(&quot;Trying sysputch:\n&quot;);	
+     for(i='A';i&lt;='Z';i++) {
+ 		asm(
+@@ -175,6 +176,7 @@
+ 			: : &quot;g&quot;(i)	
+ 		);	
+ 	}
++	printf(&quot;And before ending try to print a -1: %d\n&quot;, var);
+ 	printf(&quot;\n&quot;);
+ }
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000237.html">[Dreamos-dev] r234 - in trunk: . fs mem shell
+</A></li>
+	<LI>Next message: <A HREF="000239.html">[Dreamos-dev] r236 - in trunk: . fs include/io io
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#238">[ date ]</a>
+              <a href="thread.html#238">[ thread ]</a>
+              <a href="subject.html#238">[ subject ]</a>
+              <a href="author.html#238">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

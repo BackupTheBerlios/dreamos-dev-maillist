@@ -1,0 +1,110 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r297 - in trunk: . mem
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-September/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r297%20-%20in%20trunk%3A%20.%20mem&In-Reply-To=%3C20100924133730.74643480FCB%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000299.html">
+   
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r297 - in trunk: . mem</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r297%20-%20in%20trunk%3A%20.%20mem&In-Reply-To=%3C20100924133730.74643480FCB%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r297 - in trunk: . mem">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Fri Sep 24 15:37:30 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000299.html">[Dreamos-dev] r296 - trunk/include/drivers
+</A></li>
+        
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#300">[ date ]</a>
+              <a href="thread.html#300">[ thread ]</a>
+              <a href="subject.html#300">[ subject ]</a>
+              <a href="author.html#300">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-09-24 15:37:30 +0200 (Fri, 24 Sep 2010)
+New Revision: 297
+
+Modified:
+   trunk/dreamos.img
+   trunk/mem/heap.c
+Log:
+Sostituito placement_address con address_cur.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-09-21 13:04:16 UTC (rev 296)
++++ trunk/mem/heap.c	2010-09-24 13:37:30 UTC (rev 297)
+@@ -24,14 +24,16 @@
+ #include &lt;heap.h&gt;
+ #include &lt;stdio.h&gt;
+ #include &lt;ordered_array.h&gt;
++#include &lt;kheap.h&gt;
+ 
+ extern unsigned int end;
++extern unsigned int address_cur;
+ new_heap_t *n_heap;
+ unsigned int placement_address=(unsigned int) &end;
+ 
+ 
+ void init_newmem(){
+-	
++	placement_address = address_cur;
+ 	n_heap = (new_heap_t*)new_heap(HEAP_START_ADDRESS, HEAP_INDEX_SIZE);
+ }
+ 
+@@ -57,9 +59,9 @@
+ unsigned int new_malloc(unsigned int size){
+ 	if(n_heap==0) {
+ 		unsigned int tmp;
+-		printf(&quot;No heap defined starting from: %d and %x...\n&quot;, &amp;end, placement_address);
+-		tmp = placement_address; 
+-		placement_address = placement_address+size;
++		printf(&quot;No heap defined starting from: %d and %x...\n&quot;, &amp;end, address_cur);
++		tmp = address_cur; 
++		address_cur = address_cur+size;
+ 		printf(&quot;New address: %x\n&quot;, tmp);
+ 		return tmp;
+ 	}
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000299.html">[Dreamos-dev] r296 - trunk/include/drivers
+</A></li>
+	
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#300">[ date ]</a>
+              <a href="thread.html#300">[ thread ]</a>
+              <a href="subject.html#300">[ subject ]</a>
+              <a href="author.html#300">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

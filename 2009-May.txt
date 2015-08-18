@@ -1,0 +1,466 @@
+From finarfin at mail.berlios.de  Sun May 24 19:18:56 2009
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun, 24 May 2009 19:18:56 +0200
+Subject: [Dreamos-dev] r83 - in trunk: . include include/io include/libc
+	include/misc io libc misc
+Message-ID: <200905241718.n4OHIuik007350@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-05-24 19:18:39 +0200 (Sun, 24 May 2009)
+New Revision: 83
+
+Modified:
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/include/io/io.h
+   trunk/include/libc/stddef.h
+   trunk/include/misc/debug.h
+   trunk/include/version.h
+   trunk/io/io.c
+   trunk/kernel.c
+   trunk/libc/string.c
+   trunk/misc/debug.c
+Log:
+Corretta strcpy.
+Applicazione patch varie. 
+Aggiornamento Makefile.
+Aggiornamento informazioni di versione
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2009-04-25 16:48:26 UTC (rev 82)
++++ trunk/Makefile	2009-05-24 17:18:39 UTC (rev 83)
+@@ -4,10 +4,28 @@
+ 
+ NAME = DreamOS
+ VERSION = 0
+-PATCHLEVEL = 1.1
++PATCHLEVEL = 1.2
+ EXTRAVERSION = -trunk
+ 
+-CFLAGS = -nostdlib -nostdinc -fomit-frame-pointer -fno-builtin -fno-stack-protector -Wall -march=i686 -m32 -I./include -I./include/io -I./include/drivers -I./include/libc -I./include/processore -I./include/hardware -I./include/mem -I./include/system -I./include/shell -I./include/misc
++CFLAGS = -nostdlib\
++	 -nostdinc\
++	 -fomit-frame-pointer\
++     -fno-builtin\
++	 -fno-stack-protector\
++	 -Wall\
++	 -march=i686\
++     -m32\
++	 -I./include\
++	 -I./include/io\
++	 -I./include/drivers\
++     -I./include/libc\
++	 -I./include/processore\
++	 -I./include/hardware\
++	 -I./include/mem\
++	 -I./include/system\
++	 -I./include/shell\
++	 -I./include/misc\
++	 -DBOCHS_DEBUG
+ 
+ OBJ = kernel.o\
+       io/video.o\
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/io/io.h
+===================================================================
+--- trunk/include/io/io.h	2009-04-25 16:48:26 UTC (rev 82)
++++ trunk/include/io/io.h	2009-05-24 17:18:39 UTC (rev 83)
+@@ -25,8 +25,11 @@
+  
+ #ifndef _IO_H
+ #define _IO_H
++
++#define sti() __asm__ __volatile__ ("sti");
++#define cli() __asm__ __volatile__ ("cli");
+  
+-unsigned char inportb (int);
+-void outportb (int, int);
++inline unsigned char inportb (int);
++inline void outportb (int, int);
+  
+ #endif
+
+Modified: trunk/include/libc/stddef.h
+===================================================================
+--- trunk/include/libc/stddef.h	2009-04-25 16:48:26 UTC (rev 82)
++++ trunk/include/libc/stddef.h	2009-05-24 17:18:39 UTC (rev 83)
+@@ -25,8 +25,16 @@
+ #ifndef __STDDEF__H
+ #define __STDDEF__H
+ 
+-#define NULL 0
++#ifndef NULL
++#define NULL ((void*)0)
++#endif
+ 
++#ifndef EOF
++#define EOF (-1)
++#endif
++
++#define BUFSIZ 512
++
+ #define KERNEL_SIZE 0x200
+ 
+ typedef unsigned int size_t;
+
+Modified: trunk/include/misc/debug.h
+===================================================================
+--- trunk/include/misc/debug.h	2009-04-25 16:48:26 UTC (rev 82)
++++ trunk/include/misc/debug.h	2009-05-24 17:18:39 UTC (rev 83)
+@@ -70,5 +70,5 @@
+ #define REGISTER_TRACE_DISABLE	0x8AE4
+ 
+ void dbg_bochs_print( const unsigned char * );
+-inline void dbg_bochs_send_cmd( const int port, const int cmd );
++static inline void dbg_bochs_send_cmd( const int, const int );
+ #endif /* ! _DEBUG_H */
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-04-25 16:48:26 UTC (rev 82)
++++ trunk/include/version.h	2009-05-24 17:18:39 UTC (rev 83)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "1.2"
+ #define EXTRAVERSION "-trunk"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r78"
++#define REV_NUM "-r82"
+
+Modified: trunk/io/io.c
+===================================================================
+--- trunk/io/io.c	2009-04-25 16:48:26 UTC (rev 82)
++++ trunk/io/io.c	2009-05-24 17:18:39 UTC (rev 83)
+@@ -25,14 +25,14 @@
+ 
+ #include <io.h>
+ 
+-unsigned char inportb (int portnum)
++inline unsigned char inportb (int portnum)
+ {
+   unsigned char data=0;
+-  asm("inb %%dx, %%al" : "=a" (data) : "d" (portnum));
++  __asm__ __volatile__ ("inb %%dx, %%al" : "=a" (data) : "d" (portnum));
+   return data;
+ }
+ 
+-void outportb (int data, int portnum)
++inline void outportb (int data, int portnum)
+ {
+-  asm("outb %%al, %%dx" :: "a" (data),"d" (portnum));
++  __asm__ __volatile__ ("outb %%al, %%dx" :: "a" (data),"d" (portnum));
+ }
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2009-04-25 16:48:26 UTC (rev 82)
++++ trunk/kernel.c	2009-05-24 17:18:39 UTC (rev 83)
+@@ -101,9 +101,9 @@
+     _kprintOK();
+ 		printf("[+] Address: 0x%x\n", &end);		   	        
+ 		printf("\n\n");
+-		#ifdef BOCHS_DEBUG
++#ifdef BOCHS_DEBUG
+ 		dbg_bochs_print("DreamOS Debug\n");
+-		#endif
++#endif
+ 		shell();
+ 
+     return 0;
+
+Modified: trunk/libc/string.c
+===================================================================
+--- trunk/libc/string.c	2009-04-25 16:48:26 UTC (rev 82)
++++ trunk/libc/string.c	2009-05-24 17:18:39 UTC (rev 83)
+@@ -40,13 +40,15 @@
+     return dest;
+ }
+ 
+-char *strcpy(char *dest, register const char *src)
++char *strcpy (char *dest, const char *src)
+ {
+-	register char *s = dest;
+-	while (*s++ = *src++)
+-		/* nothing */ ;
++  int i;
+ 
+-	return dest;
++  for (i=0; src[i]; i++)
++    *(dest+i) = *(src+i);
++  dest[i] = '\0';
++
++  return dest;
+ }
+ 
+ /*
+
+Modified: trunk/misc/debug.c
+===================================================================
+--- trunk/misc/debug.c	2009-04-25 16:48:26 UTC (rev 82)
++++ trunk/misc/debug.c	2009-05-24 17:18:39 UTC (rev 83)
+@@ -42,7 +42,7 @@
+ /**
+  *  Send cmd to bochs port
+  */
+-inline void dbg_bochs_send_cmd( const int port, const int cmd )
++static inline void dbg_bochs_send_cmd( const int port, const int cmd )
+ {
+-    outportb(port, cmd);
++    outportb(cmd, port);
+ }
+
+
+
+From shainer at mail.berlios.de  Tue May 26 21:32:23 2009
+From: shainer at mail.berlios.de (shainer at BerliOS)
+Date: Tue, 26 May 2009 21:32:23 +0200
+Subject: [Dreamos-dev] r84 - in trunk: . include shell
+Message-ID: <200905261932.n4QJWNU9022848@sheep.berlios.de>
+
+Author: shainer
+Date: 2009-05-26 21:32:22 +0200 (Tue, 26 May 2009)
+New Revision: 84
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/version.h
+   trunk/shell/shell.c
+Log:
+Apportata modifica secondaria all'organizzazione dei comandi nella shell
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-05-24 17:18:39 UTC (rev 83)
++++ trunk/include/version.h	2009-05-26 19:32:22 UTC (rev 84)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "1.2"
+ #define EXTRAVERSION "-trunk"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r82"
++#define REV_NUM "-r83"
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-05-24 17:18:39 UTC (rev 83)
++++ trunk/shell/shell.c	2009-05-26 19:32:22 UTC (rev 84)
+@@ -41,6 +41,11 @@
+ 
+ #define NUM_COM 14
+ 
++struct cmd {
++	const char cmdname[CMD_LEN];
++	void (*h_func)(void);
++};
++
+ /*
+  * Inserisce gli argomenti di un comando in un array di stringhe
+  * argc = numero degli argomenti
+@@ -73,29 +78,22 @@
+   char *cmd_ptr;
+   char *user = kmalloc(USER_LEN);
+ 
+-  const char *commands[NUM_COM + 1] = { 
+-      "help", "clear", "poweroff", "kmalloc", "do_fault", 
+-      "aalogo", "uname", "printmem", "credits", "sleep", 
+-      "cpuid", "date", "echo", "answer", NULL 
+-      };
++  static struct cmd shell_cmd[NUM_COM] = {
++	{ "aalogo",   aalogo      },
++	{ "clear",    _kclear     },
++	{ "poweroff", poweroff    },
++	{ "kmalloc",  kmalloc_try },
++	{ "do_fault", do_fault    },
++	{ "uname",    uname_cmd   },
++	{ "printmem", printmem    },
++	{ "credits",  credits     },
++	{ "sleep",    sleep       },
++	{ "cpuid",    cpuid 	  },
++	{ "date",     date 	  },
++	{ "echo",     echo 	  },
++	{ "help",     help	  },
++        };
+ 
+-  void (*routines[NUM_COM])(void) = { 
+-      help, 
+-      _kclear, 
+-      poweroff, 
+-      kmalloc_try, 
+-      do_fault, 
+-      aalogo, 
+-      uname_cmd, 
+-      printmem, 
+-      credits, 
+-      sleep_cmd, 
+-      cpuid, 
+-      date, 	
+-      echo,
+-      answer 
+-      };
+-
+   int i = 0;
+ 
+   memset(user, '\0', USER_LEN);
+@@ -124,8 +122,8 @@
+         goto end;
+ 
+     for (i = NUM_COM; i >= 0; --i) {
+-        if(strcmp(argv[0], commands[i]) == NULL) {
+-            (*routines[i])();
++        if(strcmp(argv[0], shell_cmd[i].cmdname) == NULL) {
++            (*shell_cmd[i].h_func)();
+             break;
+         }
+     }
+
+
+
+From finarfin at mail.berlios.de  Sun May 31 09:06:50 2009
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun, 31 May 2009 09:06:50 +0200
+Subject: [Dreamos-dev] r85 - in trunk: . include io mem
+Message-ID: <200905310706.n4V76oQb003371@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-05-31 09:06:46 +0200 (Sun, 31 May 2009)
+New Revision: 85
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/version.h
+   trunk/io/video.c
+   trunk/kernel.c
+   trunk/mem/paging.c
+Log:
+Correzione alcuni problemi scrolling, by vinc94 
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-05-26 19:32:22 UTC (rev 84)
++++ trunk/include/version.h	2009-05-31 07:06:46 UTC (rev 85)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "1.2"
+ #define EXTRAVERSION "-trunk"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r83"
++#define REV_NUM "-r85"
+
+Modified: trunk/io/video.c
+===================================================================
+--- trunk/io/video.c	2009-05-26 19:32:22 UTC (rev 84)
++++ trunk/io/video.c	2009-05-31 07:06:46 UTC (rev 85)
+@@ -40,13 +40,15 @@
+ int is_scrolled=0;
+ int is_shifted_once=0;
+ unsigned int last_tab=0;
++int last_x=0, last_y=0;
+ 
+ void _kputc(char c)
+ {
+     /* Print a character on the screen*/
+-  _kshiftAll();
++  if (last_x && last_y) _kscrolldown ();
+   *VIDEO_PTR++ = c;
+   *VIDEO_PTR++ = VIDEO_CLR;
++  _kshiftAll();
+   _ksetcursauto();
+ }
+ 
+@@ -351,6 +353,9 @@
+     }
+   }
+   is_scrolled=1;
++  last_x = _kgetcolumn ();
++  last_y = _kgetline ();
++  _kgoto (_SCR_W, _SCR_H);
+ }
+ 
+ /*
+@@ -373,6 +378,10 @@
+     for (x=0; x<_SCR_W*2; x++)
+       *ptr++ = downbuffer[y][x];
+   }
++  is_scrolled=0;
++  _kgoto (last_x, last_y);
++  last_x=0;
++  last_y=0;
+ }
+ 
+ /* EOF */
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2009-05-26 19:32:22 UTC (rev 84)
++++ trunk/kernel.c	2009-05-31 07:06:46 UTC (rev 85)
+@@ -48,7 +48,7 @@
+ multiboot_info_t *boot_informations;
+ asmlinkage void _start(struct multiboot_info *boot_info)
+ {
+-     boot_informations = boot_info;    
++    boot_informations = boot_info;    
+ 	main_loop(boot_info);
+ 	while(1);
+ }
+@@ -72,12 +72,10 @@
+ 
+     outportb(0xFF, MASTER_PORT_1);
+     outportb(0xFF, SLAVE_PORT_1);
+-    _kputs(LNG_IDT);    
+-    //outportb(0xE9, 'c');
++    _kputs(LNG_IDT);        
+     asm("cli");   
+     init_idt();
+     _kprintOK();   
+-    //calcola_memoria(); 
+     set_memorysize((boot_info->mem_upper+boot_info->mem_lower)*1024);
+     init_mem();    
+     _kputs(LNG_PIC8259);
+@@ -102,7 +100,7 @@
+ 		printf("[+] Address: 0x%x\n", &end);		   	        
+ 		printf("\n\n");
+ #ifdef BOCHS_DEBUG
+-		dbg_bochs_print("DreamOS Debug\n");
++		dbg_bochs_print("DreamOS Debug String for Bochs\n");
+ #endif
+ 		shell();
+ 
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2009-05-26 19:32:22 UTC (rev 84)
++++ trunk/mem/paging.c	2009-05-31 07:06:46 UTC (rev 85)
+@@ -42,6 +42,7 @@
+ 
+ void init_paging(){
+     int i;
++    int apic_location;
+     printf(LNG_PAGING);
+     _kprintOK();    
+     current_page_dir = create_pageDir();
+@@ -68,7 +69,9 @@
+         if(i<10) printf("cpt: %d\n", current_page_table[i]);
+         #endif
+         i++;
+-    }        
++    }
++    apic_location = request_pages(1, NOT_ADD_LIST);       
++            
+     load_pdbr((unsigned int)current_page_dir);
+     kheap = make_heap(tot_mem - ((unsigned int) &end));
+ }
+
+
+

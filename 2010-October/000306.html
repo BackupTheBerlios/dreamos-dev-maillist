@@ -1,0 +1,302 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r303 - in trunk: . boot hardware include/mem mem misc	shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-October/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r303%20-%20in%20trunk%3A%20.%20boot%20hardware%20include/mem%20mem%20misc%0A%09shell&In-Reply-To=%3C20101016204144.A2F5648114D%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000305.html">
+   <LINK REL="Next"  HREF="000307.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r303 - in trunk: . boot hardware include/mem mem misc	shell</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r303%20-%20in%20trunk%3A%20.%20boot%20hardware%20include/mem%20mem%20misc%0A%09shell&In-Reply-To=%3C20101016204144.A2F5648114D%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r303 - in trunk: . boot hardware include/mem mem misc	shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sat Oct 16 22:41:44 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000305.html">[Dreamos-dev] r302 - in trunk: . boot mem
+</A></li>
+        <LI>Next message: <A HREF="000307.html">[Dreamos-dev] r304 - in trunk: . boot include/mem mem misc
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#306">[ date ]</a>
+              <a href="thread.html#306">[ thread ]</a>
+              <a href="subject.html#306">[ subject ]</a>
+              <a href="author.html#306">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-10-16 22:41:44 +0200 (Sat, 16 Oct 2010)
+New Revision: 303
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/hardware/cpuid.c
+   trunk/include/mem/heap.h
+   trunk/kernel.c
+   trunk/mem/heap.c
+   trunk/misc/ordered_array.c
+   trunk/shell/testing.c
+Log:
+La new_malloc e' buggata. Va corretta. 
+Aggiunti commenti. 
+Eliminata chiamata a new_heap nel comando try_newheap di tester.
+
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/hardware/cpuid.c
+===================================================================
+--- trunk/hardware/cpuid.c	2010-10-12 20:43:40 UTC (rev 302)
++++ trunk/hardware/cpuid.c	2010-10-16 20:41:44 UTC (rev 303)
+@@ -39,7 +39,7 @@
+   cpuid_write_vendor (sh_info, ereg);
+ 
+   ereg-&gt;eax = 1;
+-  ereg-&gt;ebx = ereg-&gt;ecx = ereg-&gt;edx = 0;
++  ereg-&gt;ebx = ereg-&gt;ecx = ereg-&gt;edx = 0;    
+   cpuid_write_proctype (sh_info, ereg);
+ 
+   free (ereg);
+@@ -70,8 +70,8 @@
+   cpu_vendor[9] = (char)((regs-&gt;ecx &amp; 0x0000FF00)&gt;&gt;8);
+   cpu_vendor[10] = (char)((regs-&gt;ecx &amp; 0x00FF0000)&gt;&gt;16);
+   cpu_vendor[11] = (char)((regs-&gt;ecx &amp; 0xFF000000)&gt;&gt;24);
+-  cpu_vendor[12] = '\0';
+-  s-&gt;cpu_vendor = cpu_vendor;
++  cpu_vendor[12] = '\0';  
++  s-&gt;cpu_vendor = cpu_vendor;  
+ }
+ 
+ /*
+@@ -90,6 +90,7 @@
+   call_cpuid (regs);
+ 
+   type = cpuid_get_byte (regs-&gt;eax, 0xB, 0x3);
++
+   switch (type)
+   {
+     case 0:
+@@ -108,7 +109,7 @@
+     s-&gt;cpu_type = &quot;(Intel reserved bit)&quot;;
+     break;
+   }
+-
++    
+   familyID = cpuid_get_byte(regs-&gt;eax, 0x7, 0xE);
+   s-&gt;cpu_family = familyID;
+   if (familyID == 0x0F)
+@@ -120,11 +121,10 @@
+     ext_model = cpuid_get_byte (regs-&gt;eax, 0xF, 0xE);
+     s-&gt;cpu_model += (ext_model&lt;&lt;4);
+   }
++  s-&gt;apic_id = cpuid_get_byte (regs-&gt;ebx, 0x17, 0xFF);  
+ 
+-  s-&gt;apic_id = cpuid_get_byte (regs-&gt;ebx, 0x17, 0xFF);
+   cpuid_feature_ecx (s, regs-&gt;ecx);
+   cpuid_feature_edx (s, regs-&gt;edx);
+-
+   /* Get brand string to identify the processor */
+   if (familyID &gt;= 0x0F &amp;&amp; model &gt;= 0x03)
+     s-&gt;brand_string = cpuid_brand_string (regs);
+
+Modified: trunk/include/mem/heap.h
+===================================================================
+--- trunk/include/mem/heap.h	2010-10-12 20:43:40 UTC (rev 302)
++++ trunk/include/mem/heap.h	2010-10-16 20:41:44 UTC (rev 303)
+@@ -61,7 +61,7 @@
+ 
+ new_heap_t *new_heap(unsigned int, unsigned int);
+ 
+-void *new_alloc(unsigned int, unsigned short int, new_heap_t);
++void *new_alloc(unsigned int, unsigned short int, new_heap_t*);
+ void new_free();
+ void init_newmem();
+ 
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2010-10-12 20:43:40 UTC (rev 302)
++++ trunk/kernel.c	2010-10-16 20:41:44 UTC (rev 303)
+@@ -55,6 +55,7 @@
+ multiboot_info_t *boot_informations;
+ char *module_start;
+ unsigned int module_end;
++extern new_heap_t* n_heap;
+ asmlinkage void _start(struct multiboot_info *boot_info)
+ {
+     boot_informations = boot_info;    
+@@ -100,16 +101,13 @@
+     init_newmem();     
+     _kprintOK();    	
+     printf(&quot;Memory (upper) amount-&gt; %d Mb \n&quot;, boot_info-&gt;mem_upper/1024);
+-    printf(&quot;Memory (lower) amount-&gt; %d kb \n&quot;, boot_info-&gt;mem_lower);
+-
++    printf(&quot;Memory (lower) amount-&gt; %d kb \n&quot;, boot_info-&gt;mem_lower);	
+     /* Alloc and fill CPUID structure */
+-    sinfo = kmalloc(sizeof(struct cpuinfo_generic));
+-    get_cpuid (sinfo);
+-        
++    sinfo = kmalloc(sizeof(struct cpuinfo_generic));    
++    get_cpuid (sinfo);        
+     vfs_init();
+     initfs_init();      
+-	if(boot_info-&gt;mods_count &gt; 0) printf(&quot;Found n. %d Modules\n&quot;, boot_info-&gt;mods_count);		
+-	//printf(&quot;Address of module: 0x%x - 0x%x\n&quot;, *((unsigned int*)boot_info-&gt;mods_addr),module_end-(unsigned int) module_start);
++	if(boot_info-&gt;mods_count &gt; 0) printf(&quot;Found n. %d Modules\n&quot;, boot_info-&gt;mods_count);			
+     printf(&quot;\n&quot;);
+     printf(&quot;----\n&quot;);
+     //set_shadow(DISABLED);
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2010-10-12 20:43:40 UTC (rev 302)
++++ trunk/mem/heap.c	2010-10-16 20:41:44 UTC (rev 303)
+@@ -29,12 +29,11 @@
+ extern unsigned int end;
+ extern unsigned int address_cur;
+ new_heap_t *n_heap;
+-//unsigned int placement_address=(unsigned int) &end;
+ 
+ 
+ void init_newmem(){
+-	//placement_address = address_cur;	
+ 	n_heap = (new_heap_t*)new_heap(HEAP_START_ADDRESS, HEAP_INDEX_SIZE);
++	//printf(&quot;Start_address: %u End Address: %u\n&quot;, n_heap-&gt;start_address, n_heap-&gt;end_address);		
+ }
+ 
+ static short int header_t_less_than(void *a,void *b){
+@@ -42,17 +41,17 @@
+ }
+ 
+ new_heap_t *new_heap(unsigned int start, unsigned int size){
+-	new_heap_t* t_heap =(new_heap_t*) new_malloc(sizeof(new_heap_t));	
++	new_heap_t* t_heap =(new_heap_t*) kmalloc(sizeof(new_heap_t));	
+ 	if(start%0x1000 == 0){		
+-		header_t *first_hole = (header_t*)start;
++		header_t *first_hole = (header_t*)start;		
++		t_heap-&gt;index = new_array((void*)start,size, &amp;header_t_less_than);
+ 		t_heap-&gt;start_address = start;
+-		t_heap-&gt;end_address = start + size;	
+-		t_heap-&gt;index = new_array((void*)start,size, &amp;header_t_less_than);
+-		printf(&quot;Start_address: %u End Address: %u\n&quot;, n_heap-&gt;start_address, n_heap-&gt;end_address);		
+-		printf(&quot;Making first Hole\n&quot;);		
++		t_heap-&gt;end_address = start + size;			
++		//printf(&quot;Making first Hole\n&quot;);	
++		//This should be inserted into the ordered array.	
+ 		first_hole-&gt;size = t_heap-&gt;end_address - start;
+ 		first_hole-&gt;magic = HEAP_MAGIC;
+-		first_hole-&gt;is_hole = 1; /*TRUE*/
++		first_hole-&gt;is_hole = 1; /*TRUE*/			
+ 		return t_heap;
+ 	}
+ 	else printf(&quot;ERROR\n&quot;);
+@@ -61,6 +60,7 @@
+ 
+ unsigned int new_malloc(unsigned int size){
+ 	if(n_heap==0) {
++		//I have no heap defined, i continue to use address_cur.
+ 		unsigned int tmp;
+ 		printf(&quot;No heap defined starting from: %d and %x...\n&quot;, &amp;end, address_cur);
+ 		tmp = address_cur; 
+@@ -69,9 +69,16 @@
+ 		return tmp;
+ 	}
+ 	else {
++		//If i have a heap, then i have vm management enabled, and i can call alloc...
++		void* new_address = new_alloc(size, 1, n_heap);
+ 		printf(&quot;Heap defined\n&quot;);
+ 		printf(&quot;Start Address: %u End Address: %u\n&quot;, n_heap-&gt;start_address, n_heap-&gt;end_address);
++		if(n_heap-&gt;start_address==0) printf(&quot;erroso\n&quot;);
+ 		return 0;
+ 	}
+ 	return 0;
+ }
++
++void *new_alloc(unsigned int size, unsigned short int p_aligned, new_heap_t *t_heap){
++	printf(&quot;Step by step\n&quot;);
++}
+
+Modified: trunk/misc/ordered_array.c
+===================================================================
+--- trunk/misc/ordered_array.c	2010-10-12 20:43:40 UTC (rev 302)
++++ trunk/misc/ordered_array.c	2010-10-16 20:41:44 UTC (rev 303)
+@@ -55,11 +55,11 @@
+     /* Questa parte e' memsettbile dopo che sara' fatta */
+     printf(&quot;SizeMax: %d\n&quot;, tmp_array.size_max);
+     i=0;    
+-    while(i &lt; tmp_array.size_max){
++    /*while(i &lt; tmp_array.size_max){
+ 		tmp_array.array[i] = 0x0;
+ 		i++;
+-	}
+-    //memset(tmp_array.array, 0, tmp_array.size_max);
++	}*/
++    memset(tmp_array.array, 0, tmp_array.size_max);
+     return tmp_array;
+ }
+ 
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-10-12 20:43:40 UTC (rev 302)
++++ trunk/shell/testing.c	2010-10-16 20:41:44 UTC (rev 303)
+@@ -100,11 +100,11 @@
+ }
+ 
+ void try_newheap(){
+-	printf(&quot;Testing the new heap (in development)\n&quot;);
+-	printf(&quot;First step: testing a new heap...\n&quot;);
+-	new_heap(HEAP_START_ADDRESS, HEAP_START_SIZE);
++	//printf(&quot;Testing the new heap (in development)\n&quot;);
++	//printf(&quot;First step: testing a new heap...\n&quot;);
++	//new_heap(HEAP_START_ADDRESS, HEAP_START_SIZE);
+ 	printf(&quot;Second step: trying new_malloc...\n&quot;);
+-	new_malloc(sizeof(new_heap_t));
++	new_malloc(sizeof(new_heap_t));	
+ 	printf(&quot;DONE\n&quot;);
+ }
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000305.html">[Dreamos-dev] r302 - in trunk: . boot mem
+</A></li>
+	<LI>Next message: <A HREF="000307.html">[Dreamos-dev] r304 - in trunk: . boot include/mem mem misc
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#306">[ date ]</a>
+              <a href="thread.html#306">[ thread ]</a>
+              <a href="subject.html#306">[ subject ]</a>
+              <a href="author.html#306">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

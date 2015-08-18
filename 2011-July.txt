@@ -1,0 +1,1257 @@
+From finarfin at mail.berlios.de  Mon Jul  4 21:20:44 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Mon,  4 Jul 2011 21:20:44 +0200
+Subject: [Dreamos-dev] r376 - in trunk: . boot include/tasks tasks
+Message-ID: <20110704192045.3F239483382@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-07-04 21:20:44 +0200 (Mon, 04 Jul 2011)
+New Revision: 376
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/include/tasks/task.h
+   trunk/tasks/task.c
+Log:
+Working on multitasking.
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/tasks/task.h
+===================================================================
+--- trunk/include/tasks/task.h	2011-06-27 21:42:40 UTC (rev 375)
++++ trunk/include/tasks/task.h	2011-07-04 19:20:44 UTC (rev 376)
+@@ -39,6 +39,10 @@
+ } task_state;
+ 
+ typedef struct {
++		unsigned int eax;
++} task_register_t;
++
++typedef struct {
+ 	pid_t pid;	
+ 	char *name;
+ 	task_state state;
+
+Modified: trunk/tasks/task.c
+===================================================================
+--- trunk/tasks/task.c	2011-06-27 21:42:40 UTC (rev 375)
++++ trunk/tasks/task.c	2011-07-04 19:20:44 UTC (rev 376)
+@@ -28,7 +28,13 @@
+ task_t task_list[MAX_TASKS];
+ 
+ void tasks_init(){	
+-	current_pid = 0;
++	current_pid = 0;	
++	int i=0;
++	while(i<MAX_TASKS){
++		task_list[i].pid = 0;
++		task_list[i].pdir = 0x0;
++		i++;
++	}
+ 	printf("Init Tasks");	
+ 	//_kprintOk();
+ 	return;
+
+
+
+From finarfin at mail.berlios.de  Mon Jul  4 22:48:43 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Mon,  4 Jul 2011 22:48:43 +0200
+Subject: [Dreamos-dev] r377 - in trunk: . include/tasks tasks
+Message-ID: <20110704204843.68335483382@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-07-04 22:48:43 +0200 (Mon, 04 Jul 2011)
+New Revision: 377
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/tasks/task.h
+   trunk/tasks/task.c
+Log:
+Added request_pid function
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/tasks/task.h
+===================================================================
+--- trunk/include/tasks/task.h	2011-07-04 19:20:44 UTC (rev 376)
++++ trunk/include/tasks/task.h	2011-07-04 20:48:43 UTC (rev 377)
+@@ -42,6 +42,9 @@
+ 		unsigned int eax;
+ } task_register_t;
+ 
++/*!  \struct task_t
++     \brief Main Task Structure
++ */
+ typedef struct {
+ 	pid_t pid;	
+ 	char *name;
+@@ -58,4 +61,6 @@
+ void tasks_init();
+ void new_task();
+ 
++unsigned int request_pid();
++
+ #endif
+
+Modified: trunk/tasks/task.c
+===================================================================
+--- trunk/tasks/task.c	2011-07-04 19:20:44 UTC (rev 376)
++++ trunk/tasks/task.c	2011-07-04 20:48:43 UTC (rev 377)
+@@ -40,6 +40,10 @@
+ 	return;
+ }
+ 
++unsigned int request_pid(){
++	return current_pid++;
++}
++
+ void new_task(){
+ 	
+ }
+
+
+
+From finarfin at mail.berlios.de  Tue Jul  5 23:34:49 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Tue,  5 Jul 2011 23:34:49 +0200
+Subject: [Dreamos-dev] r378 - in trunk: . boot fs include include/lng tasks
+Message-ID: <20110705213450.41ED5483388@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-07-05 23:34:49 +0200 (Tue, 05 Jul 2011)
+New Revision: 378
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/fs/vfs.c
+   trunk/include/lng/en.h
+   trunk/include/lng/it.h
+   trunk/include/use.h
+   trunk/kernel.c
+   trunk/tasks/task.c
+Log:
+Updated en.h and it.h 
+Tasks_init now it is called during booting procedure. 
+Added _kprintOK at the end of vfs_init
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2011-07-04 20:48:43 UTC (rev 377)
++++ trunk/fs/vfs.c	2011-07-05 21:34:49 UTC (rev 378)
+@@ -108,7 +108,7 @@
+ 		fd_list[j].offset = 0;
+ 		j++;
+ 	}
+-
++	_kprintOK();
+ }
+ 
+ int get_mountpoint_id(char *path){
+
+Modified: trunk/include/lng/en.h
+===================================================================
+--- trunk/include/lng/en.h	2011-07-04 20:48:43 UTC (rev 377)
++++ trunk/include/lng/en.h	2011-07-05 21:34:49 UTC (rev 378)
+@@ -38,7 +38,7 @@
+ #define LNG_MOUSE_RIGHT  "\n[+] Mouse driver: right key pressed!"
+ #define LNG_MOUSE_LEFT  "\n[+] Mouse driver: left key pressed!"
+ #define LNG_WELCOME "\t\t.: Welcome to DreamOS :.\n\n"
+-#define LNG_VFS "\nPreparing VFS\n"
++#define LNG_VFS "\nPreparing VFS"
+ 
+ // DATE ME NOE!
+ // MONTHS
+
+Modified: trunk/include/lng/it.h
+===================================================================
+--- trunk/include/lng/it.h	2011-07-04 20:48:43 UTC (rev 377)
++++ trunk/include/lng/it.h	2011-07-05 21:34:49 UTC (rev 378)
+@@ -39,7 +39,7 @@
+ #define LNG_MOUSE_RIGHT "\n[+] Mouse driver: rilevato tasto destro premuto!"
+ #define LNG_MOUSE_LEFT "\n[+] Mouse driver: rilevato tasto sinistro premuto!"
+ #define LNG_WELCOME "\t\t.: Benvenuto in DreamOS :.\n\n"
+-#define LNG_VFS "\nInizializzo VFS\n"
++#define LNG_VFS "\nInizializzo VFS"
+ 
+ // DATE ME NOE!
+ // MESI: sereno variabile in tutto il nord Italia
+
+Modified: trunk/include/use.h
+===================================================================
+--- trunk/include/use.h	2011-07-04 20:48:43 UTC (rev 377)
++++ trunk/include/use.h	2011-07-05 21:34:49 UTC (rev 378)
+@@ -31,7 +31,7 @@
+ #define LNG_SHELL "Carico la shell"
+ #define LNG_USER "[?] Inserisci il nome utente: "
+ #define LNG_USER_R "[x] Per favore, inserisci il nome utente :)\n"
+-#define LNG_PWD "[?] Per favore, inserisci la password: "
++#define LNG_PWD "[?] Per favore, inserisci la password "
+ #define LNG_UNKNOWN_CMD "Comando sconosciuto:"
+ #define LNG_MOUSE_SETUP "Inizializzo il driver del mouse.."
+ #define LNG_MOUSE_REMOVE "Disattivo il driver del mouse.."
+@@ -39,7 +39,7 @@
+ #define LNG_MOUSE_RIGHT "\n[+] Mouse driver: rilevato tasto destro premuto!"
+ #define LNG_MOUSE_LEFT "\n[+] Mouse driver: rilevato tasto sinistro premuto!"
+ #define LNG_WELCOME "\t\t.: Benvenuto in DreamOS :.\n\n"
+-#define LNG_VFS "\nInizializzo VFS\n"
++#define LNG_VFS "\nInizializzo VFS"
+ 
+ // DATE ME NOE!
+ // MESI: sereno variabile in tutto il nord Italia
+@@ -70,6 +70,4 @@
+ #define LNG_TIMESTAMP2 " del "
+ #define LNG_TIMESTAMP3 " di "
+ 
+-#define LNG_TEST "Username provided\n"
+-
+ #endif
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2011-07-04 20:48:43 UTC (rev 377)
++++ trunk/kernel.c	2011-07-05 21:34:49 UTC (rev 378)
+@@ -43,10 +43,8 @@
+ #include <kheap.h>
+ #include <vfs.h>
+ #include <initrd.h>
+-#ifdef LATEST
+-#include <heap.h>
+-#endif
+ #include <keyboard.h>
++#include <task.h>
+ 
+ #ifdef BOCHS_DEBUG
+ #include <debug.h>
+@@ -99,16 +97,8 @@
+     init_mem();       
+     asm("sti");
+     _kprintOK();   
+-    init_paging();
+-    #ifdef LATEST
+-    init_newmem();
+-	#endif
+-    /*
+-    init_newmem();     
+-    try_newheap();
+-    while(1);            
+-    */
+-    _kprintOK();    	
++    init_paging();    
++    _kprintOK();    	   
+     printf("Memory (upper) amount-> %d Mb \n", boot_info->mem_upper/1024);
+     printf("Memory (lower) amount-> %d kb \n", boot_info->mem_lower);	
+     /** Alloc and fill CPUID structure */
+@@ -116,11 +106,11 @@
+     get_cpuid (sinfo);        
+     vfs_init();
+     initfs_init();      
+-	if(boot_info->mods_count > 0) printf("Found n. %d Modules\n", boot_info->mods_count);			
++	if(boot_info->mods_count > 0) printf("Found n. %d Modules\n", boot_info->mods_count);				
+     printf("\n");
+-    printf("----\n");
+-    //set_shadow(DISABLED);
+-    //printf("The shadow: %d\n", get_shadow());
++    tasks_init();
++    _kprintOK();
++    printf("----\n");    
+     printf(LNG_SHELL);    
+     _kprintOK();
+ 		printf("[+] Address: 0x%x\n", &end);		   	        
+
+Modified: trunk/tasks/task.c
+===================================================================
+--- trunk/tasks/task.c	2011-07-04 20:48:43 UTC (rev 377)
++++ trunk/tasks/task.c	2011-07-05 21:34:49 UTC (rev 378)
+@@ -27,7 +27,7 @@
+ pid_t current_pid; 
+ task_t task_list[MAX_TASKS];
+ 
+-void tasks_init(){	
++void tasks_init(){		
+ 	current_pid = 0;	
+ 	int i=0;
+ 	while(i<MAX_TASKS){
+
+
+
+From finarfin at mail.berlios.de  Thu Jul  7 23:29:56 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Thu,  7 Jul 2011 23:29:56 +0200
+Subject: [Dreamos-dev] r379 - in trunk: include/tasks tasks
+Message-ID: <20110707212957.01030481532@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-07-07 23:29:56 +0200 (Thu, 07 Jul 2011)
+New Revision: 379
+
+Modified:
+   trunk/include/tasks/task.h
+   trunk/tasks/task.c
+Log:
+Added task_register_t
+Refined task_t
+
+
+Modified: trunk/include/tasks/task.h
+===================================================================
+--- trunk/include/tasks/task.h	2011-07-05 21:34:49 UTC (rev 378)
++++ trunk/include/tasks/task.h	2011-07-07 21:29:56 UTC (rev 379)
+@@ -38,8 +38,19 @@
+ 	SLEEPING
+ } task_state;
+ 
+-typedef struct {
+-		unsigned int eax;
++typedef struct {	
++        unsigned int edi;   //+0
++        unsigned int esi;   //+1
++        unsigned int ebp;  //+2
++        unsigned int null;  //+3
++        unsigned int ebx;  //+4
++        unsigned int edx;  //+5
++        unsigned int ecx;  //+6
++        unsigned int eax;  //+7
++        unsigned int eip;  //+8
++        unsigned int cs;   //+9
++        unsigned int eflags;  //+10
++        unsigned int fine;    		
+ } task_register_t;
+ 
+ /*!  \struct task_t
+@@ -48,7 +59,9 @@
+ typedef struct {
+ 	pid_t pid;	
+ 	char *name;
++	void (*start_function)();
+ 	task_state state;
++	task_register_t *registers;
+ 	unsigned int eip;
+ 	unsigned int esp;
+ 	unsigned int pdir;
+@@ -59,7 +72,7 @@
+ extern pid_t current_pid;
+ 
+ void tasks_init();
+-void new_task();
++void new_task(char*, void (*start_function)());
+ 
+ unsigned int request_pid();
+ 
+
+Modified: trunk/tasks/task.c
+===================================================================
+--- trunk/tasks/task.c	2011-07-05 21:34:49 UTC (rev 378)
++++ trunk/tasks/task.c	2011-07-07 21:29:56 UTC (rev 379)
+@@ -44,7 +44,7 @@
+ 	return current_pid++;
+ }
+ 
+-void new_task(){
+-	
++void new_task(char *task_name, void (*start_function)()){
++	return;
+ }
+ 
+
+
+
+From finarfin at mail.berlios.de  Mon Jul 11 23:20:33 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Mon, 11 Jul 2011 23:20:33 +0200
+Subject: [Dreamos-dev] r380 - in trunk: . tasks
+Message-ID: <20110711212033.85FAB4813CD@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-07-11 23:20:33 +0200 (Mon, 11 Jul 2011)
+New Revision: 380
+
+Modified:
+   trunk/dreamos.img
+   trunk/tasks/task.c
+Log:
+Completed task_init function. 
+
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/tasks/task.c
+===================================================================
+--- trunk/tasks/task.c	2011-07-07 21:29:56 UTC (rev 379)
++++ trunk/tasks/task.c	2011-07-11 21:20:33 UTC (rev 380)
+@@ -23,6 +23,7 @@
+   
+ #include <task.h>
+ #include <stdio.h>
++#include <stddef.h>
+ 
+ pid_t current_pid; 
+ task_t task_list[MAX_TASKS];
+@@ -33,6 +34,11 @@
+ 	while(i<MAX_TASKS){
+ 		task_list[i].pid = 0;
+ 		task_list[i].pdir = 0x0;
++		task_list[i].state = DEAD;
++		task_list[i].start_function = NULL;
++		task_list[i].esp = 0x0;
++		task_list[i].pdir = 0x0;
++		task_list[i].ptable = 0x0;
+ 		i++;
+ 	}
+ 	printf("Init Tasks");	
+@@ -45,6 +51,7 @@
+ }
+ 
+ void new_task(char *task_name, void (*start_function)()){
++	unsigned int new_pid = request_pid();
+ 	return;
+ }
+ 
+
+
+
+From finarfin at mail.berlios.de  Wed Jul 13 23:13:28 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Wed, 13 Jul 2011 23:13:28 +0200
+Subject: [Dreamos-dev] r381 - in trunk: . boot include/processore
+	include/tasks processore tasks
+Message-ID: <20110713211328.A2069481467@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-07-13 23:13:28 +0200 (Wed, 13 Jul 2011)
+New Revision: 381
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/include/processore/handlers.h
+   trunk/include/tasks/task.h
+   trunk/processore/handlers.c
+   trunk/tasks/task.c
+Log:
+Added an argument to _irqhandler, it will be used to store esp register 
+value. 
+Core tasks function development.
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/processore/handlers.h
+===================================================================
+--- trunk/include/processore/handlers.h	2011-07-11 21:20:33 UTC (rev 380)
++++ trunk/include/processore/handlers.h	2011-07-13 21:13:28 UTC (rev 381)
+@@ -96,7 +96,10 @@
+ #define IRQ(n)\
+     __asm__("INT_"#n":"\
+             SAVE_CONTEXT\
++            "movl %esp, %eax;"\
++			"pushl %eax;"\
+             "call _irqinterrupt;"\
++            "popl %eax;"\
+             RESTORE\
+             "iret;")
+ 
+
+Modified: trunk/include/tasks/task.h
+===================================================================
+--- trunk/include/tasks/task.h	2011-07-11 21:20:33 UTC (rev 380)
++++ trunk/include/tasks/task.h	2011-07-13 21:13:28 UTC (rev 381)
+@@ -50,7 +50,7 @@
+         unsigned int eip;  //+8
+         unsigned int cs;   //+9
+         unsigned int eflags;  //+10
+-        unsigned int fine;    		
++        unsigned int end;    		
+ } task_register_t;
+ 
+ /*!  \struct task_t
+@@ -73,6 +73,7 @@
+ 
+ void tasks_init();
+ void new_task(char*, void (*start_function)());
++void add_task(unsigned int, task_t);
+ 
+ unsigned int request_pid();
+ 
+
+Modified: trunk/processore/handlers.c
+===================================================================
+--- trunk/processore/handlers.c	2011-07-11 21:20:33 UTC (rev 380)
++++ trunk/processore/handlers.c	2011-07-13 21:13:28 UTC (rev 381)
+@@ -159,7 +159,7 @@
+   }
+ }
+ 
+-void _irqinterrupt(){
++void _irqinterrupt(unsigned int *esp){
+     int irqn;
+     irqn = get_current_irq();  
+     IRQ_s* tmpHandler; 
+
+Modified: trunk/tasks/task.c
+===================================================================
+--- trunk/tasks/task.c	2011-07-11 21:20:33 UTC (rev 380)
++++ trunk/tasks/task.c	2011-07-13 21:13:28 UTC (rev 381)
+@@ -24,6 +24,7 @@
+ #include <task.h>
+ #include <stdio.h>
+ #include <stddef.h>
++#include <string.h>
+ 
+ pid_t current_pid; 
+ task_t task_list[MAX_TASKS];
+@@ -45,13 +46,19 @@
+ 	//_kprintOk();
+ 	return;
+ }
+-
++/**TODO: add pid number check*/
+ unsigned int request_pid(){
+ 	return current_pid++;
+ }
+ 
+ void new_task(char *task_name, void (*start_function)()){
++	asm("cli");
++	task_t new_task;
+ 	unsigned int new_pid = request_pid();
++	strcpy(new_task.name, task_name);
++	new_task.pid = new_pid;			
++	new_task.eip = (unsigned int)start_function;	
++	asm("sti");
+ 	return;
+ }
+ 
+
+
+
+From finarfin at mail.berlios.de  Thu Jul 14 23:16:14 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Thu, 14 Jul 2011 23:16:14 +0200
+Subject: [Dreamos-dev] r382 - in trunk: . boot include/shell include/tasks
+	shell tasks
+Message-ID: <20110714211614.51459481490@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-07-14 23:16:13 +0200 (Thu, 14 Jul 2011)
+New Revision: 382
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/include/shell/commands.h
+   trunk/include/shell/testing.h
+   trunk/include/tasks/task.h
+   trunk/shell/commands.c
+   trunk/shell/testing.c
+   trunk/tasks/task.c
+Log:
+started some test functions for task creation. 
+Added some comments. 
+
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/shell/commands.h
+===================================================================
+--- trunk/include/shell/commands.h	2011-07-13 21:13:28 UTC (rev 381)
++++ trunk/include/shell/commands.h	2011-07-14 21:16:13 UTC (rev 382)
+@@ -25,7 +25,7 @@
+ 
+ #include <shell.h>
+ #include <kheap.h>
+-#define MAX_TEST 13
++#define MAX_TEST 14
+ 
+ extern int argc;
+ extern char **argv;
+
+Modified: trunk/include/shell/testing.h
+===================================================================
+--- trunk/include/shell/testing.h	2011-07-13 21:13:28 UTC (rev 381)
++++ trunk/include/shell/testing.h	2011-07-14 21:16:13 UTC (rev 382)
+@@ -33,5 +33,6 @@
+ void try_shadow();
+ void try_newheap();
+ void try_mapaddress();
++void try_tasksetup();
+ 
+ #endif
+
+Modified: trunk/include/tasks/task.h
+===================================================================
+--- trunk/include/tasks/task.h	2011-07-13 21:13:28 UTC (rev 381)
++++ trunk/include/tasks/task.h	2011-07-14 21:16:13 UTC (rev 382)
+@@ -26,6 +26,7 @@
+ #define _TASK__H
+ 
+ #define MAX_TASKS 10
++#define STACK_SIZE 0x1000 //Dimensione dello stack
+ 
+ typedef unsigned int pid_t;
+ 
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2011-07-13 21:13:28 UTC (rev 381)
++++ trunk/shell/commands.c	2011-07-14 21:16:13 UTC (rev 382)
+@@ -526,6 +526,7 @@
+ 					{ "try_check", try_check},
+ 					{ "try_shadow", try_shadow},
+ 					{ "try_mapaddress", try_mapaddress},
++					{ "try_tasksetup", try_tasksetup},
+ 					#ifdef LATEST
+ 					{ "try_newheap", try_newheap},
+ 					#endif
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2011-07-13 21:13:28 UTC (rev 381)
++++ trunk/shell/testing.c	2011-07-14 21:16:13 UTC (rev 382)
+@@ -262,3 +262,8 @@
+ 	//map_kernel();
+ 	return;
+ }
++
++void try_tasksetup(){
++	printf("Testing task creation functions:\n");
++	return;
++}
+
+Modified: trunk/tasks/task.c
+===================================================================
+--- trunk/tasks/task.c	2011-07-13 21:13:28 UTC (rev 381)
++++ trunk/tasks/task.c	2011-07-14 21:16:13 UTC (rev 382)
+@@ -25,6 +25,7 @@
+ #include <stdio.h>
+ #include <stddef.h>
+ #include <string.h>
++#include <kheap.h>
+ 
+ pid_t current_pid; 
+ task_t task_list[MAX_TASKS];
+@@ -58,6 +59,8 @@
+ 	strcpy(new_task.name, task_name);
+ 	new_task.pid = new_pid;			
+ 	new_task.eip = (unsigned int)start_function;	
++	new_task.esp = (unsigned int) kmalloc(STACK_SIZE) + STACK_SIZE - 100;
++	
+ 	asm("sti");
+ 	return;
+ }
+
+
+
+From finarfin at mail.berlios.de  Sat Jul 16 00:04:52 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sat, 16 Jul 2011 00:04:52 +0200
+Subject: [Dreamos-dev] r383 - in trunk: . boot include/tasks shell tasks
+Message-ID: <20110715220452.EC0C148146F@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-07-16 00:04:52 +0200 (Sat, 16 Jul 2011)
+New Revision: 383
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/include/tasks/task.h
+   trunk/shell/commands.c
+   trunk/shell/testing.c
+   trunk/tasks/task.c
+   trunk/tasks/task_utils.c
+Log:
+Added functions:
+	add_task
+	get_task
+Started test function: try_tasksetup
+Modified some prototypes
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/tasks/task.h
+===================================================================
+--- trunk/include/tasks/task.h	2011-07-14 21:16:13 UTC (rev 382)
++++ trunk/include/tasks/task.h	2011-07-15 22:04:52 UTC (rev 383)
+@@ -27,7 +27,7 @@
+ 
+ #define MAX_TASKS 10
+ #define STACK_SIZE 0x1000 //Dimensione dello stack
+-
++#define NAME_LENGTH 30 //Task name length
+ typedef unsigned int pid_t;
+ 
+ /*!  \enum task_state
+@@ -59,7 +59,7 @@
+  */
+ typedef struct {
+ 	pid_t pid;	
+-	char *name;
++	char name[NAME_LENGTH];
+ 	void (*start_function)();
+ 	task_state state;
+ 	task_register_t *registers;
+@@ -73,9 +73,10 @@
+ extern pid_t current_pid;
+ 
+ void tasks_init();
+-void new_task(char*, void (*start_function)());
+-void add_task(unsigned int, task_t);
++void add_task(pid_t, task_t*);
++task_t get_task(pid_t);
+ 
++pid_t new_task(char*, void (*start_function)());
+ unsigned int request_pid();
+ 
+ #endif
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2011-07-14 21:16:13 UTC (rev 382)
++++ trunk/shell/commands.c	2011-07-15 22:04:52 UTC (rev 383)
+@@ -527,9 +527,6 @@
+ 					{ "try_shadow", try_shadow},
+ 					{ "try_mapaddress", try_mapaddress},
+ 					{ "try_tasksetup", try_tasksetup},
+-					#ifdef LATEST
+-					{ "try_newheap", try_newheap},
+-					#endif
+ 					{ "--help", help_tester },
+ 					};
+ 	if (argc != 2) {
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2011-07-14 21:16:13 UTC (rev 382)
++++ trunk/shell/testing.c	2011-07-15 22:04:52 UTC (rev 383)
+@@ -30,9 +30,7 @@
+ #include <unistd.h>
+ #include <user_shell.h>
+ #include <task_utils.h>
+-#ifdef LATEST
+-#include <heap.h>
+-#endif
++#include <task.h>
+ 
+ //multiboot_info_t *boot_informations;
+ char *module_start;
+@@ -264,6 +262,13 @@
+ }
+ 
+ void try_tasksetup(){
++	unsigned int task_pid;
++	task_t _task;
+ 	printf("Testing task creation functions:\n");
++	task_pid = new_task("test", try_tasksetup);
++	printf("Pid Obtained: %d\n", task_pid);
++	_task = get_task(task_pid);
++	printf("Task state: %d\n", _task.state);
++	printf(" ----name:: %s\n", _task.name);
+ 	return;
+ }
+
+Modified: trunk/tasks/task.c
+===================================================================
+--- trunk/tasks/task.c	2011-07-14 21:16:13 UTC (rev 382)
++++ trunk/tasks/task.c	2011-07-15 22:04:52 UTC (rev 383)
+@@ -52,16 +52,36 @@
+ 	return current_pid++;
+ }
+ 
+-void new_task(char *task_name, void (*start_function)()){
++/**
++ * That function add a task to the current task list 
++ * @author Ivan Gualandri
++ * @version 1.0
++ */
++void add_task(pid_t pid, task_t* cur_task){
++	task_list[pid] = *cur_task;
++}
++
++/**
++ * Retrieve  the task given the pid
++ * @author Ivan Gualandri
++ * @version 1.0
++ * @param pid task pid
++ */
++task_t get_task(pid_t pid){
++	return task_list[pid];	
++}
++
++pid_t new_task(char *task_name, void (*start_function)()){
+ 	asm("cli");
+ 	task_t new_task;
+-	unsigned int new_pid = request_pid();
++	unsigned int new_pid = request_pid();	
+ 	strcpy(new_task.name, task_name);
+ 	new_task.pid = new_pid;			
+ 	new_task.eip = (unsigned int)start_function;	
+ 	new_task.esp = (unsigned int) kmalloc(STACK_SIZE) + STACK_SIZE - 100;
+-	
++	new_task.state = READY;
++	add_task(new_task.pid, &new_task);
+ 	asm("sti");
+-	return;
++	return new_pid;
+ }
+ 
+
+Modified: trunk/tasks/task_utils.c
+===================================================================
+--- trunk/tasks/task_utils.c	2011-07-14 21:16:13 UTC (rev 382)
++++ trunk/tasks/task_utils.c	2011-07-15 22:04:52 UTC (rev 383)
+@@ -40,6 +40,7 @@
+ 	unsigned int *pagetable;
+ 	unsigned int i=0;	
+ 	unsigned int j=0;
++	/** Request physical space for pagedir and pagetable*/ 	
+ 	pagedir = create_pageDir();
+ 	pagetable = create_pageTable();	
+ 	//set_pagedir_entry_ric(1023, fis_address, PD_PRESENT|SUPERVISOR, 0);
+
+
+
+From finarfin at mail.berlios.de  Sun Jul 17 23:33:41 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun, 17 Jul 2011 23:33:41 +0200
+Subject: [Dreamos-dev] r384 - in trunk: . boot include/shell shell tasks
+Message-ID: <20110717213342.069FF481517@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-07-17 23:33:41 +0200 (Sun, 17 Jul 2011)
+New Revision: 384
+
+Modified:
+   trunk/Makefile
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/include/shell/testing.h
+   trunk/shell/testing.c
+   trunk/tasks/task.c
+Log:
+added function new_tss
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2011-07-15 22:04:52 UTC (rev 383)
++++ trunk/Makefile	2011-07-17 21:33:41 UTC (rev 384)
+@@ -30,6 +30,7 @@
+ 	 -I./include/fs\
+ 	 -I./include/sys \
+ 	 -I./include/tasks\
++	 -I./include/tasks/tss\
+ 	 -DBOCHS_DEBUG\
+ 	 -D$(MEMORY)
+ 
+@@ -67,7 +68,8 @@
+       sys/dirent.o\
+       sys/stat.o\
+       tasks/task_utils.o\
+-      tasks/task.o
++      tasks/task.o\
++      tasks/tss/tss.o
+ #mem/heap.o\
+ #misc/ordered_array.o
+ dreamos.img: bl.img kernel.bin
+@@ -118,6 +120,7 @@
+ sys/stat.o: sys/stat.c
+ tasks/task_utils.o: tasks/task_utils.c
+ tasks/task.o: tasks/task_utils.c
++tasks/tss/tss.o: tasks/tss/tss.c
+ utils:
+ 	make -f utils/Makefile
+ 	
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/shell/testing.h
+===================================================================
+--- trunk/include/shell/testing.h	2011-07-15 22:04:52 UTC (rev 383)
++++ trunk/include/shell/testing.h	2011-07-17 21:33:41 UTC (rev 384)
+@@ -35,4 +35,6 @@
+ void try_mapaddress();
+ void try_tasksetup();
+ 
++void task_test();
++
+ #endif
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2011-07-15 22:04:52 UTC (rev 383)
++++ trunk/shell/testing.c	2011-07-17 21:33:41 UTC (rev 384)
+@@ -265,10 +265,16 @@
+ 	unsigned int task_pid;
+ 	task_t _task;
+ 	printf("Testing task creation functions:\n");
+-	task_pid = new_task("test", try_tasksetup);
++	task_pid = new_task("test", task_test);	
+ 	printf("Pid Obtained: %d\n", task_pid);
+ 	_task = get_task(task_pid);
+ 	printf("Task state: %d\n", _task.state);
+ 	printf(" ----name:: %s\n", _task.name);
++	printf("Calling start function...\n");
++	_task.start_function();
+ 	return;
+ }
++
++void task_test(){
++	printf("Hi, i'm a freshly created task!!!\n");
++}
+
+Modified: trunk/tasks/task.c
+===================================================================
+--- trunk/tasks/task.c	2011-07-15 22:04:52 UTC (rev 383)
++++ trunk/tasks/task.c	2011-07-17 21:33:41 UTC (rev 384)
+@@ -26,6 +26,7 @@
+ #include <stddef.h>
+ #include <string.h>
+ #include <kheap.h>
++#include <tss.h>
+ 
+ pid_t current_pid; 
+ task_t task_list[MAX_TASKS];
+@@ -76,10 +77,13 @@
+ 	task_t new_task;
+ 	unsigned int new_pid = request_pid();	
+ 	strcpy(new_task.name, task_name);
++	new_task.start_function = start_function;
+ 	new_task.pid = new_pid;			
+ 	new_task.eip = (unsigned int)start_function;	
+ 	new_task.esp = (unsigned int) kmalloc(STACK_SIZE) + STACK_SIZE - 100;
+ 	new_task.state = READY;
++	new_task.registers = (task_register_t*)new_task.esp;
++	new_tss(new_task.registers, start_function);
+ 	add_task(new_task.pid, &new_task);
+ 	asm("sti");
+ 	return new_pid;
+
+
+
+From finarfin at mail.berlios.de  Tue Jul 19 23:10:55 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Tue, 19 Jul 2011 23:10:55 +0200
+Subject: [Dreamos-dev] r385 - in trunk: . boot include/tasks shell tasks
+Message-ID: <20110719211055.AFB9948151B@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-07-19 23:10:55 +0200 (Tue, 19 Jul 2011)
+New Revision: 385
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/include/tasks/task_utils.h
+   trunk/shell/testing.c
+   trunk/tasks/task.c
+   trunk/tasks/task_utils.c
+Log:
+Proseguita inizializzazione di un nuovo task. 
+Aggiunta struttura dati table_address_t che contiene gli indirizzi di 
+pagedir e pagetable.
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/tasks/task_utils.h
+===================================================================
+--- trunk/include/tasks/task_utils.h	2011-07-17 21:33:41 UTC (rev 384)
++++ trunk/include/tasks/task_utils.h	2011-07-19 21:10:55 UTC (rev 385)
+@@ -25,6 +25,10 @@
+  #ifndef TASK_UT_H
+  #define TASK_UT_H
+  
+- unsigned int map_kernel();
++ typedef struct {
++	 unsigned int page_dir;
++	 unsigned int page_table;
++ } table_address_t;
++ table_address_t map_kernel();
+  
+  #endif
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2011-07-17 21:33:41 UTC (rev 384)
++++ trunk/shell/testing.c	2011-07-19 21:10:55 UTC (rev 385)
+@@ -270,7 +270,7 @@
+ 	_task = get_task(task_pid);
+ 	printf("Task state: %d\n", _task.state);
+ 	printf(" ----name:: %s\n", _task.name);
+-	printf("Calling start function...\n");
++	printf("Calling start function...\n");	
+ 	_task.start_function();
+ 	return;
+ }
+
+Modified: trunk/tasks/task.c
+===================================================================
+--- trunk/tasks/task.c	2011-07-17 21:33:41 UTC (rev 384)
++++ trunk/tasks/task.c	2011-07-19 21:10:55 UTC (rev 385)
+@@ -27,6 +27,7 @@
+ #include <string.h>
+ #include <kheap.h>
+ #include <tss.h>
++#include <task_utils.h>
+ 
+ pid_t current_pid; 
+ task_t task_list[MAX_TASKS];
+@@ -72,9 +73,17 @@
+ 	return task_list[pid];	
+ }
+ 
++/**
++ * Create a new task 
++ * @author Ivan Gualandri
++ * @version 1.0
++ * @param task_name The name of the task
++ * @param start_function the entry point of the task.
++ */
+ pid_t new_task(char *task_name, void (*start_function)()){
+ 	asm("cli");
+ 	task_t new_task;
++	table_address_t local_table;
+ 	unsigned int new_pid = request_pid();	
+ 	strcpy(new_task.name, task_name);
+ 	new_task.start_function = start_function;
+@@ -84,7 +93,10 @@
+ 	new_task.state = READY;
+ 	new_task.registers = (task_register_t*)new_task.esp;
+ 	new_tss(new_task.registers, start_function);
+-	add_task(new_task.pid, &new_task);
++	local_table = map_kernel();
++	new_task.pdir = local_table.page_dir;
++	new_task.ptable = local_table.page_table;
++	add_task(new_task.pid, &new_task);	
+ 	asm("sti");
+ 	return new_pid;
+ }
+
+Modified: trunk/tasks/task_utils.c
+===================================================================
+--- trunk/tasks/task_utils.c	2011-07-17 21:33:41 UTC (rev 384)
++++ trunk/tasks/task_utils.c	2011-07-19 21:10:55 UTC (rev 385)
+@@ -33,7 +33,8 @@
+    * @author Ivan Gualandri
+    * @version 1.0 
+    */
+-unsigned int map_kernel(){
++table_address_t map_kernel(){
++	table_address_t logicmemory_root;
+ 	unsigned int *logic_pd_address = kmalloc(8*4096);
+ 	unsigned int *logic_pt_address = kmalloc(8*4096);
+ 	unsigned int *pagedir;
+@@ -48,18 +49,20 @@
+ 	new_pd_node->size = 8 * 4096;*/
+ 	while(i < 8){
+ 		map_address(pagedir, logic_pd_address);
+-		map_address(pagetable, logic_pt_address);
++		map_address(pagetable, logic_pt_address);		
+ 		pagedir+=4096;
+ 		pagetable+=4096;
+ 		i++;
+-	}
++	}	
+ 	//set_pagedir_entry_ric(0, (unsigned int)current_page_table, PD_PRESENT|SUPERVISOR|WRITE,0);    
+ 	while(j<PD_LIMIT){
+ 		pagedir[j] = 0x0;
+ 		pagetable[j] = (j*0x1000&0xFFFFF0)|PD_PRESENT|SUPERVISOR|WRITE|0;
+ 		j++;
+-	}	
++	}
+ 	pagedir[0] = ((unsigned int)pagetable&0xFFFFF000)|PD_PRESENT|SUPERVISOR|WRITE|0;
+ 	pagedir[1023] = ((unsigned int)pagedir&0xFFFFF000)|PD_PRESENT|SUPERVISOR|0;	
+-	return 0;
++	logicmemory_root.page_dir = (unsigned int) pagedir;
++	logicmemory_root.page_table = (unsigned int) pagetable;
++	return logicmemory_root;
+ }
+
+
+
+From finarfin at mail.berlios.de  Wed Jul 27 23:17:51 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Wed, 27 Jul 2011 23:17:51 +0200
+Subject: [Dreamos-dev] r386 - in trunk: . include/tasks tasks tasks/tss
+Message-ID: <20110727211752.2834C480E5B@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-07-27 23:17:51 +0200 (Wed, 27 Jul 2011)
+New Revision: 386
+
+Added:
+   trunk/tasks/tss/
+   trunk/tasks/tss/tss.c
+Modified:
+   trunk/dreamos.img
+   trunk/include/tasks/task.h
+   trunk/include/tasks/task_utils.h
+Log:
+Added tss.c file.
+Updated tss structure
+Updated task_utils.h
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/tasks/task.h
+===================================================================
+--- trunk/include/tasks/task.h	2011-07-19 21:10:55 UTC (rev 385)
++++ trunk/include/tasks/task.h	2011-07-27 21:17:51 UTC (rev 386)
+@@ -28,6 +28,7 @@
+ #define MAX_TASKS 10
+ #define STACK_SIZE 0x1000 //Dimensione dello stack
+ #define NAME_LENGTH 30 //Task name length
++
+ typedef unsigned int pid_t;
+ 
+ /*!  \enum task_state
+@@ -43,14 +44,17 @@
+         unsigned int edi;   //+0
+         unsigned int esi;   //+1
+         unsigned int ebp;  //+2
+-        unsigned int null;  //+3
++        unsigned int esp;  //+3 (could be null)
+         unsigned int ebx;  //+4
+         unsigned int edx;  //+5
+         unsigned int ecx;  //+6
+         unsigned int eax;  //+7
+-        unsigned int eip;  //+8
+-        unsigned int cs;   //+9
+-        unsigned int eflags;  //+10
++        unsigned int ds;	//+9
++        unsigned int es;    //+10
++        unsigned int fs;    //+11
++        unsigned int eip;  //+12
++        unsigned int cs;   //+13
++        unsigned int eflags;  //+14
+         unsigned int end;    		
+ } task_register_t;
+ 
+
+Modified: trunk/include/tasks/task_utils.h
+===================================================================
+--- trunk/include/tasks/task_utils.h	2011-07-19 21:10:55 UTC (rev 385)
++++ trunk/include/tasks/task_utils.h	2011-07-27 21:17:51 UTC (rev 386)
+@@ -29,6 +29,7 @@
+ 	 unsigned int page_dir;
+ 	 unsigned int page_table;
+  } table_address_t;
++ 
+  table_address_t map_kernel();
+  
+  #endif
+
+Added: trunk/tasks/tss/tss.c
+===================================================================
+--- trunk/tasks/tss/tss.c	                        (rev 0)
++++ trunk/tasks/tss/tss.c	2011-07-27 21:17:51 UTC (rev 386)
+@@ -0,0 +1,45 @@
++/*
++ * Dreamos
++ * tss.c
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++ 
++ /*
++  * Autore Ivan Gualandri
++  * Prima versione: 20/06/2011
++  */
++  
++
++#include <tss.h>
++#include <task.h>
++#include <stddef.h>
++
++void new_tss(task_register_t* tss, void (*func)()){
++    tss->eax=0;
++    tss->esp=NULL;
++    tss->ebx=0;
++    tss->ecx=0;
++    tss->edx=0;
++    tss->edi =0;
++    tss->esi =0;
++    tss->cs = 8;
++    tss->ds = 0x10;
++    tss->es = 0x10;
++    tss->fs = 0x10;
++    tss->eip = (unsigned)func;
++    tss->eflags = 0x202;
++    //tss->fine = (unsigned)end; //per metterci il suicide	
++	return;
++}
+
+
+

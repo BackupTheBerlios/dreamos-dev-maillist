@@ -1,0 +1,415 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r128 - in trunk: . include include/libc include/shell	io libc shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-September/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r128%20-%20in%20trunk%3A%20.%20include%20include/libc%20include/shell%0A%09io%20libc%20shell&In-Reply-To=%3C200909080920.n889KNrm013351%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000129.html">
+   <LINK REL="Next"  HREF="000131.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r128 - in trunk: . include include/libc include/shell	io libc shell</H1>
+    <B>osiris_h4ck at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r128%20-%20in%20trunk%3A%20.%20include%20include/libc%20include/shell%0A%09io%20libc%20shell&In-Reply-To=%3C200909080920.n889KNrm013351%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r128 - in trunk: . include include/libc include/shell	io libc shell">osiris_h4ck at mail.berlios.de
+       </A><BR>
+    <I>Tue Sep  8 11:20:23 CEST 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000129.html">[Dreamos-dev] r127 - in trunk: . fs include/fs sys
+</A></li>
+        <LI>Next message: <A HREF="000131.html">[Dreamos-dev] r129 - in trunk: . libc
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#130">[ date ]</a>
+              <a href="thread.html#130">[ thread ]</a>
+              <a href="subject.html#130">[ subject ]</a>
+              <a href="author.html#130">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: osiris_h4ck
+Date: 2009-09-08 11:20:21 +0200 (Tue, 08 Sep 2009)
+New Revision: 128
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/libc/stdio.h
+   trunk/include/shell/commands.h
+   trunk/include/version.h
+   trunk/io/video.c
+   trunk/libc/stdio.c
+   trunk/libc/string.c
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+Log:
+- Effettuate varie modifiche a librerie
+- Preparato sostituto a putchar e putc ma in fase di completamento percio' sotto commento
+- Riscritta funzione strtok() che e' possibile testare nella shell con il comando 'test'
+
+
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/libc/stdio.h
+===================================================================
+--- trunk/include/libc/stdio.h	2009-09-07 19:14:08 UTC (rev 127)
++++ trunk/include/libc/stdio.h	2009-09-08 09:20:21 UTC (rev 128)
+@@ -28,7 +28,7 @@
+ 
+ #define MAX_DIGITS_IN_INTEGER 11
+ 
+-void putchar (char);
++void putchar (char ch);
+ int atoi (const char *);
+ int printf (const char *, ...);
+ int puts (char *s);
+
+Modified: trunk/include/shell/commands.h
+===================================================================
+--- trunk/include/shell/commands.h	2009-09-07 19:14:08 UTC (rev 127)
++++ trunk/include/shell/commands.h	2009-09-08 09:20:21 UTC (rev 128)
+@@ -49,5 +49,5 @@
+ void ls();
+ void cd();
+ void whoami();
+-void try_strcpy();
++void test();
+ #endif
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-09-07 19:14:08 UTC (rev 127)
++++ trunk/include/version.h	2009-09-08 09:20:21 UTC (rev 128)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL &quot;2.0&quot;
+ #define EXTRAVERSION &quot;-trunk&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r124&quot;
++#define REV_NUM &quot;-r127&quot;
+
+Modified: trunk/io/video.c
+===================================================================
+--- trunk/io/video.c	2009-09-07 19:14:08 UTC (rev 127)
++++ trunk/io/video.c	2009-09-08 09:20:21 UTC (rev 128)
+@@ -50,6 +50,21 @@
+   *VIDEO_PTR++ = VIDEO_CLR;
+   _kshiftAll();
+   _ksetcursauto();
++/*
++  while(c != 0) {
++	if ( c=='\n' )
++		_knewline();
++	else if ( c=='\t' )
++		_ktab();
++	//else if(c=='\033')
++	//	_kcolor(++c);	NON STAMPA CORRETTAMENTE I COLORI
++	else if( c=='\b' )
++		_kbackspace();
++	else if ( c=='\r' )
++		_kminline();
++	c++;
++  }
++*/
+ }
+ 
+ void _kputs(char *s)
+
+Modified: trunk/libc/stdio.c
+===================================================================
+--- trunk/libc/stdio.c	2009-09-07 19:14:08 UTC (rev 127)
++++ trunk/libc/stdio.c	2009-09-08 09:20:21 UTC (rev 128)
+@@ -36,10 +36,7 @@
+ #define LEFT 1
+ #define RIGHT 0
+ 
+-char *VIDEO_MEMZ = (char*) 0xb8000,
+-	 *VIDEO_PTRZ = (char*) 0xb8000,
+-	 VIDEO_CLRZ = 0x7;
+-	 
++char *VIDEO_RAM = (char*) 0xb8000, *VIDEO_PTRZ = (char*) 0xb8000, VIDEO_CLRZ = 0x7;
+ int last_Xz=0, last_Yz=0;
+ 
+ /* 
+@@ -63,17 +60,18 @@
+ /*
+  * Print a character
+  */
++
+ void putchar (char ch)
+ {
+-   /*asm (&quot;movl $0x0, %%eax\n&quot;
+-	&quot;int $80\n\t&quot;
+-	:: &quot;b&quot; (ch));*/
+ 	char s[2];
+ 	s[0] = ch;
+ 	s[1] = '\0';
+ 	_kputs(s);
++	//_kputc(ch); 
++
+ }
+ 
++
+ /*
+  * Convert a string to an integer
+  */
+
+Modified: trunk/libc/string.c
+===================================================================
+--- trunk/libc/string.c	2009-09-07 19:14:08 UTC (rev 127)
++++ trunk/libc/string.c	2009-09-08 09:20:21 UTC (rev 128)
+@@ -203,44 +203,49 @@
+  * If str is NULL, the scanning will continue for the previous string
+  * It can be bettered
+  */
+-char *strtok (char *str, const char *delim)
++
++char *strtok(char *s, const char *delim)
+ {
+-    int dim = strlen(delim);
+-    static char *token;
+-    char *point, *start;
+-    char *p;
+-    int i=0;
+- 
+-    if (str!=NULL)
+-	token = str;
++  const char *spanp;
++  int c, sc;
++  char *tok;
++  static char *last;
+ 
+-    start = token; // save the beginning of the string
+-    if ((point = strstr(start, delim)))
+-    {
+-        /* it takes &quot;token&quot; just first the delimitator */
+-	while (token != point)
+-	  token++;
+ 
+-        /* p will contains all the chars until the delimitator */
+-	while (start != point)
+-          p[i++] = *start++;
+-        p[i] = 0;
++  if (s == NULL &amp;&amp; (s = last) == NULL)
++    return (NULL);
+ 
+-        token += dim; // delete the delimitator, otherwise it will come up in the next call
+-        return p;
+-    }
++ cont:
++  c = *s++;
++  for (spanp = delim; (sc = *spanp++) != 0;) {
++    if (c == sc)
++      goto cont;
++  }
+ 
+-    /* The last token, if there is no final delimitator */
+-    if (token) {
+-      do {
+-       p[i] = token[i];
+-      } while (token[i++]);
+-      p[i] = 0;
+-      return p;
+-    }
+-    return NULL;
++  if (c == 0) {             
++    last = NULL;
++    return (NULL);
++  }
++  tok = s - 1;
++
++  for (;;) {
++    c = *s++;
++    spanp = delim;
++    do {
++      if ((sc = *spanp++) == c) {
++        if (c == 0)
++          s = NULL;
++        else
++          s[-1] = 0;
++        last = s;
++        return (tok);
++      }
++    } while (sc != 0);
++  }
++
+ }
+ 
++
+ /*
+  * Concatenate n characters of src to dest
+  */
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-09-07 19:14:08 UTC (rev 127)
++++ trunk/shell/commands.c	2009-09-08 09:20:21 UTC (rev 128)
+@@ -57,40 +57,38 @@
+ void help()
+ {
+   printf (&quot;Available commands:\n&quot;);
+-  printf(&quot;help       - See the 'help' list to learn the DreamOS commands now available\n&quot;
+-         &quot;clear      - Clear the screen\n&quot;
+-		 &quot;poweroff   - Turn off the machine\n&quot;
+-         &quot;kmalloc    - Test a basic kmalloc function\n&quot;
+-         &quot;do_fault   - Test a page_fault\n&quot;
+-         &quot;aalogo     - Show an ascii art logo\n&quot;
+-         &quot;uname      - Print kernel version, try uname --help for more info\n&quot;
+-         &quot;printmem   - Print used locations of memory\n&quot;
+-         &quot;credits    - Show DreamOS credits\n&quot;
+-	 	 &quot;sleep      - pause DreamOS for a particular number of seconds\n&quot;
+-	 	 &quot;cpuid      - Show cpu identification informations\n&quot;
+-	 	 &quot;date       - Show date and time\n&quot;
+-	  	 &quot;echo       - Print some lines of text\n&quot;
+-	 	 &quot;drv_load   - Tool to load and kill drivers\n&quot;
+-		 &quot;ls         - Tool for listing dir - not complete-\n&quot;
+-		 &quot;cd         - Change dir - not complete-\n&quot;
+-		 &quot;try_strcpy - Try strcpy function\n&quot;
+-		 &quot;whoami     - Show the current user name\n&quot;);
++  printf(
++	&quot;help          - See the 'help' list to learn the DreamOS commands now available\n&quot;
++	&quot;clear         - Clear the screen\n&quot;
++	&quot;poweroff      - Turn off the machine\n&quot;
++	&quot;kmalloc       - Test a basic kmalloc function\n&quot;
++	&quot;do_fault      - Test a page_fault\n&quot;
++	&quot;aalogo        - Show an ascii art logo\n&quot;
++	&quot;uname         - Print kernel version, try uname --help for more info\n&quot;
++	&quot;printmem      - Print used locations of memory\n&quot;
++	&quot;credits       - Show DreamOS credits\n&quot;
++	&quot;sleep         - pause DreamOS for a particular number of seconds\n&quot;
++	&quot;cpuid         - Show cpu identification informations\n&quot;
++	&quot;date          - Show date and time\n&quot;
++	&quot;echo          - Print some lines of text\n&quot;
++	&quot;drv_load      - Tool to load and kill drivers\n&quot;
++	&quot;ls            - Tool for listing dir - not complete-\n&quot;
++	&quot;cd            - Change dir - not complete-\n&quot;
++	&quot;whoami        - Show the current user name\n&quot;
++	&quot;test          - Try some functions, now 'strtok'\n&quot;
++	);
+ }
+ 
+ void echo()
+ {
+-    /*int c;
+-    for (c = 1; c &lt; argc; c++)
+-        printf (&quot;%s &quot;, argv[c]);
+-    printf (&quot;\n&quot;);*/
+     if ( argc == 1 ) {
+          printf(&quot;&quot;);
+     } else {
+ 		while ( --argc &gt; 0 ) {
+ 		printf(&quot;%s &quot;,*++argv);
+-        }
+-   }
+-   printf(&quot;\n&quot;);
++		}
++	}
++    printf(&quot;\n&quot;);
+ }
+ 
+ void poweroff()
+@@ -168,9 +166,9 @@
+ {
+   printf(&quot;Uname function allow you to see the kernel and system information.\n&quot;);
+   printf(&quot;Function avaibles:\n&quot;);
+-  printf(&quot;1) '-a'   - Kernel version and processor type\n&quot;
+-  	 &quot;2) '-r'   - Only the kernel version\n&quot;
+-  	 &quot;3) '-i'   - All info of system and kernel\n&quot;);	
++  printf(&quot;1) -a   - Kernel version and processor type\n&quot;
++  	   &quot;2) -r   - Only the kernel version\n&quot;
++	   &quot;3) -i   - All info of system and kernel\n&quot;);	
+ }
+ 
+ void uname_info()
+@@ -178,11 +176,11 @@
+   printf(&quot;\n:==========: :System info: :==========:\n\n&quot;);
+ 	
+   // Kernel info
+-  printf( &quot;Version: '%s'\n&quot;
+-	  &quot;Patchlevel: '%s'\n&quot;
+-	  &quot;Extraversion: '%s'\n&quot;
+-	  &quot;Name: '%s'\n&quot;
+-	  &quot;Revision: '%s'\n&quot;,VERSION,PATCHLEVEL,EXTRAVERSION,NAME,REV_NUM);
++  printf( &quot;Version: %s\n&quot;
++	  &quot;Patchlevel: %s\n&quot;
++	  &quot;Extraversion: %s\n&quot;
++	  &quot;Name: %s\n&quot;
++	  &quot;Revision: %s\n&quot;,VERSION,PATCHLEVEL,EXTRAVERSION,NAME,REV_NUM);
+ 
+   // CPU Info
+   _kputs (LNG_CPU);
+@@ -243,7 +241,7 @@
+   _kcolor('\011');
+   _kputs(&quot;Developers:\n&quot;);
+   _kcolor('\012');
+-  _kputs(&quot;Osiris - Diego Stamigni \n\n&quot;);
++  _kputs(&quot;Lord Osiris - Diego Stamigni \n\n&quot;);
+   _kcolor('\011');
+   _kputs(&quot;Contributors:\n&quot;);
+   _kcolor('\012');
+@@ -448,3 +446,17 @@
+ void whoami(){
+ 	printf(&quot;%s\n&quot;, current_user.username);
+ }
++
++void test(){
++	char *s = &quot;Hello World&quot;;
++	char *p;
++	
++	printf(&quot;Stringa completa: %s\n&quot;
++		 &quot;Stringa spezzata: \n&quot; ,s);
++	
++	p = strtok(s, &quot; &quot;);
++	while (p != NULL) {
++		printf(&quot;%s\n&quot;, p);
++		p = strtok(NULL, &quot; &quot;);
++	}
++}
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-09-07 19:14:08 UTC (rev 127)
++++ trunk/shell/shell.c	2009-09-08 09:20:21 UTC (rev 128)
+@@ -93,6 +93,7 @@
+ 	{ &quot;ls&quot;,       ls},
+ 	{ &quot;cd&quot;,       cd},
+ 	{ &quot;whoami&quot;,   whoami},
++	{ &quot;test&quot;, test},
+         };
+ 
+   int i = 0;
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000129.html">[Dreamos-dev] r127 - in trunk: . fs include/fs sys
+</A></li>
+	<LI>Next message: <A HREF="000131.html">[Dreamos-dev] r129 - in trunk: . libc
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#130">[ date ]</a>
+              <a href="thread.html#130">[ thread ]</a>
+              <a href="subject.html#130">[ subject ]</a>
+              <a href="author.html#130">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

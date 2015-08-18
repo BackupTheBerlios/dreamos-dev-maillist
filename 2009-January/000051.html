@@ -1,0 +1,184 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r51 - in trunk: . hardware include include/hardware	shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-January/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r51%20-%20in%20trunk%3A%20.%20hardware%20include%20include/hardware%0A%09shell&In-Reply-To=%3C200901201722.n0KHMJDQ022309%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000050.html">
+   <LINK REL="Next"  HREF="000052.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r51 - in trunk: . hardware include include/hardware	shell</H1>
+    <B>shainer at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r51%20-%20in%20trunk%3A%20.%20hardware%20include%20include/hardware%0A%09shell&In-Reply-To=%3C200901201722.n0KHMJDQ022309%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r51 - in trunk: . hardware include include/hardware	shell">shainer at mail.berlios.de
+       </A><BR>
+    <I>Tue Jan 20 18:22:19 CET 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000050.html">[Dreamos-dev] r50 - in trunk: . include/libc libc shell
+</A></li>
+        <LI>Next message: <A HREF="000052.html">[Dreamos-dev] r52 - /
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#51">[ date ]</a>
+              <a href="thread.html#51">[ thread ]</a>
+              <a href="subject.html#51">[ subject ]</a>
+              <a href="author.html#51">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: shainer
+Date: 2009-01-20 18:22:18 +0100 (Tue, 20 Jan 2009)
+New Revision: 51
+
+Modified:
+   trunk/bl.img
+   trunk/dreamos.img
+   trunk/hardware/cpuid.c
+   trunk/include/hardware/cpuid.h
+   trunk/include/version.h
+   trunk/shell/shell.c
+Log:
+Corretto un bug della cpuid che generava #GPE sulle ultime versioni di Bochs o su macchina reale.
+
+
+Modified: trunk/bl.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/hardware/cpuid.c
+===================================================================
+--- trunk/hardware/cpuid.c	2009-01-19 21:40:18 UTC (rev 50)
++++ trunk/hardware/cpuid.c	2009-01-20 17:22:18 UTC (rev 51)
+@@ -24,12 +24,12 @@
+ 
+ 
+ #include &lt;cpuid.h&gt;
++#include &lt;kheap.h&gt;
+ 
+-struct cpuinfo_generic *get_cpuid()
++struct cpuinfo_generic *get_cpuid(void)
+ {
+     int eax, ebx, ecx, edx;
+-    struct cpuinfo_generic *info;
+-
++    struct cpuinfo_generic *sh_info = kmalloc(sizeof(struct cpuinfo_generic));
+     /* First call with EAX==0 */
+     asm (&quot;xorl %%eax, %%eax\n\t&quot;
+ 	 &quot;cpuid\n\t&quot;
+@@ -49,7 +49,7 @@
+   cpu_vendor[10] = (char)((ecx &amp; 0x00FF0000)&gt;&gt;16);
+   cpu_vendor[11] = (char)((ecx &amp; 0xFF000000)&gt;&gt;24);
+   cpu_vendor[12] = '\0';
+-  info-&gt;cpu_vendor = cpu_vendor;
++  sh_info-&gt;cpu_vendor = cpu_vendor;
+ 
+   eax = ebx = ecx = edx = 0;
+ 
+@@ -79,19 +79,17 @@
+   /* Processor type */
+   switch (eax) {
+   case 0:
+-      info-&gt;cpu_type = &quot;Others&quot;;
++      sh_info-&gt;cpu_type = &quot;Others&quot;;
+       break;
+   case 1:
+-      info-&gt;cpu_type = &quot;Original OEM Processor&quot;;
++      sh_info-&gt;cpu_type = &quot;Original OEM Processor&quot;;
+       break;
+   case 2:
+-      info-&gt;cpu_type = &quot;Intel Dual Core&quot;;
++      sh_info-&gt;cpu_type = &quot;Intel Dual Core&quot;;
+       break;
+   case 3:
+-      info-&gt;cpu_type = &quot;Intel Overdrive&quot;;
++      sh_info-&gt;cpu_type = &quot;Intel Overdrive&quot;;
+   }
+ 
+-  
+-
+-  return info;
++  return sh_info;
+ }
+
+Modified: trunk/include/hardware/cpuid.h
+===================================================================
+--- trunk/include/hardware/cpuid.h	2009-01-19 21:40:18 UTC (rev 50)
++++ trunk/include/hardware/cpuid.h	2009-01-20 17:22:18 UTC (rev 51)
+@@ -60,6 +60,6 @@
+ 
+ char cpu_vendor[12]; // This will contain the main string
+ /* Have a look into cpuid.c for this procedure */
+-struct cpuinfo_generic *get_cpuid ();
++struct cpuinfo_generic * get_cpuid (void);
+ 
+ #endif
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-01-19 21:40:18 UTC (rev 50)
++++ trunk/include/version.h	2009-01-20 17:22:18 UTC (rev 51)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL &quot;0&quot;
+ #define EXTRAVERSION &quot;-dreamos&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r48&quot;
++#define REV_NUM &quot;-r49&quot;
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-01-19 21:40:18 UTC (rev 50)
++++ trunk/shell/shell.c	2009-01-20 17:22:18 UTC (rev 51)
+@@ -164,11 +164,12 @@
+ 
+ 		else if (strcmp(argv[0], &quot;cpuid&quot;) == 0)
+ 		{
+-			struct cpuinfo_generic *sh_info = get_cpuid();
++			struct cpuinfo_generic *sinfo = get_cpuid();
+ 
+ 			printf (&quot;----- CPUID Information -----\n&quot;);
+-			printf (&quot;Vendor: %s\n&quot;, sh_info-&gt;cpu_vendor);
+-			printf (&quot;Type: %s\n&quot;, sh_info-&gt;cpu_type);
++			printf (&quot;Vendor: %s\n&quot;, sinfo-&gt;cpu_vendor);
++			printf (&quot;Type: %s\n&quot;, sinfo-&gt;cpu_type);
++			free (sinfo);
+ 		}
+ 
+ 		else if (strcmp(argv[0], &quot;answer&quot;) == 0)
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000050.html">[Dreamos-dev] r50 - in trunk: . include/libc libc shell
+</A></li>
+	<LI>Next message: <A HREF="000052.html">[Dreamos-dev] r52 - /
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#51">[ date ]</a>
+              <a href="thread.html#51">[ thread ]</a>
+              <a href="subject.html#51">[ subject ]</a>
+              <a href="author.html#51">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

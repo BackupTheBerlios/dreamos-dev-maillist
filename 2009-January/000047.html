@@ -1,0 +1,550 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r47 - in trunk: . hardware include include/misc mem	misc processore shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-January/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r47%20-%20in%20trunk%3A%20.%20hardware%20include%20include/misc%20mem%0A%09misc%20processore%20shell&In-Reply-To=%3C200901172348.n0HNmeWu022531%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000046.html">
+   <LINK REL="Next"  HREF="000048.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r47 - in trunk: . hardware include include/misc mem	misc processore shell</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r47%20-%20in%20trunk%3A%20.%20hardware%20include%20include/misc%20mem%0A%09misc%20processore%20shell&In-Reply-To=%3C200901172348.n0HNmeWu022531%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r47 - in trunk: . hardware include include/misc mem	misc processore shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun Jan 18 00:48:40 CET 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000046.html">[Dreamos-dev] r46 - in trunk: . libc processore shell
+</A></li>
+        <LI>Next message: <A HREF="000048.html">[Dreamos-dev] r48 - in trunk: . libc processore shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#47">[ date ]</a>
+              <a href="thread.html#47">[ thread ]</a>
+              <a href="subject.html#47">[ subject ]</a>
+              <a href="author.html#47">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-01-18 00:48:29 +0100 (Sun, 18 Jan 2009)
+New Revision: 47
+
+Added:
+   trunk/include/misc/bitops.h
+   trunk/include/misc/clock.h
+   trunk/misc/bitops.c
+   trunk/misc/clock.c
+Modified:
+   trunk/.bochsrc
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/hardware/pic8259.c
+   trunk/include/version.h
+   trunk/mem/kheap.c
+   trunk/processore/handlers.c
+   trunk/shell/shell.c
+Log:
+Corretto bug in bochs. E' stata modificata la funzione get_current_irq.
+Corretto bug che se si premeva piu volte invio si generava un irq non gestibile.
+Aggiunti files bitops.h bitops.c clock.h e clock.c
+Aggiunto comando date
+Piccole correzioni alla free.
+Aggiornato makefile.
+In bochs aggiunta sincronizzazione con il clock del pc, e linea commentata per usare la gui di bochs.
+
+
+
+Modified: trunk/.bochsrc
+===================================================================
+--- trunk/.bochsrc	2009-01-15 23:20:44 UTC (rev 46)
++++ trunk/.bochsrc	2009-01-17 23:48:29 UTC (rev 47)
+@@ -60,8 +60,8 @@
+ #display_library: term
+ #display_library: win32, options=&quot;legacyF12&quot; # use F12 to toggle mouse
+ #display_library: wx
++#display_library: x, options=&quot;gui_debug&quot;
+ display_library: x
+-
+ #=======================================================================
+ # ROMIMAGE:
+ # The ROM BIOS controls what the PC does when it first powers on.
+@@ -306,8 +306,8 @@
+ # Default value are sync=none, time0=local
+ #=======================================================================
+ #clock: sync=none, time0=local
++clock: sync=realtime, time0=local
+ 
+-
+ #=======================================================================
+ # FLOPPY_BOOTSIG_CHECK: disabled=[0|1]
+ # Enables or disables the 0xaa55 signature check on boot floppies
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2009-01-15 23:20:44 UTC (rev 46)
++++ trunk/Makefile	2009-01-17 23:48:29 UTC (rev 47)
+@@ -9,7 +9,7 @@
+ 
+ CFLAGS = -nostdlib -fomit-frame-pointer -fno-builtin -fno-stack-protector -Wall -march=i686 -m32 -I./include -I./include/io -I./include/drivers -I./include/libc -I./include/processore -I./include/hardware -I./include/mem -I./include/system -I./include/shell -I./include/misc
+ 
+-OBJ = kernel.o io/video.o drivers/keyboard.o libc/ctype.o libc/string.o io/io.o libc/stdio.o hardware/cpuid.o hardware/keyboard.o processore/gdt.o processore/idt.o processore/handlers.o hardware/pic8259.o mem/fismem.o mem/paging.o mem/kheap.o misc/ordered_array.o misc/ordered_list.o system/syscall.o hardware/8253.o shell/shell.o
++OBJ = kernel.o io/video.o drivers/keyboard.o libc/ctype.o libc/string.o io/io.o libc/stdio.o hardware/cpuid.o hardware/keyboard.o processore/gdt.o processore/idt.o processore/handlers.o hardware/pic8259.o mem/fismem.o mem/paging.o mem/kheap.o misc/clock.o misc/ordered_array.o misc/bitops.o misc/ordered_list.o system/syscall.o hardware/8253.o shell/shell.o
+ 
+ dreamos.img: bl.img kernel.bin
+ 	mv kernel.bin dreamos.img
+@@ -35,8 +35,10 @@
+ mem/fismem.o: mem/fismem.c
+ mem/paging.o: mem/paging.c
+ mem/kheap.o: mem/kheap.c
++misc/clock.o: misc/clock.c
+ misc/ordered_array.o: misc/ordered_array.c
+ misc/ordered_list.o: misc/ordered_list.c
++misc/bitops.o: misc/bitops.c
+ drivers/keyboard.o: drivers/keyboard.c
+ system/syscall.o: system/syscall.c
+ hardware/8253.o: hardware/8253.c
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/hardware/pic8259.c
+===================================================================
+--- trunk/hardware/pic8259.c	2009-01-15 23:20:44 UTC (rev 46)
++++ trunk/hardware/pic8259.c	2009-01-17 23:48:29 UTC (rev 47)
+@@ -27,6 +27,7 @@
+ #include &lt;keyboard.h&gt;
+ #include &lt;fismem.h&gt;
+ #include &lt;8253.h&gt;
++#include &lt;bitops.h&gt;
+ 
+ IRQ_s *shareHandler[16];
+ // IRQ_s shareHandler[16];
+@@ -183,7 +184,12 @@
+     outportb(GET_IRR_STATUS, MASTER_PORT);
+     cur_irq = inportb(MASTER_PORT);
+ //     if(cur_irq!=1) printf(&quot;%d\n&quot;, cur_irq);
+-    return cur_irq;
++    if(cur_irq == 0) {
++      outportb(GET_IRR_STATUS, SLAVE_PORT);
++      cur_irq = inportb(SLAVE_PORT);
++    }
++//     printf(&quot;%d\n&quot;, find_first_bit(cur_irq));
++    return find_first_bit(cur_irq);
+ }
+ 
+ /** This Function add an IRQ Handler to the givent irq number
+
+Added: trunk/include/misc/bitops.h
+===================================================================
+--- trunk/include/misc/bitops.h	2009-01-15 23:20:44 UTC (rev 46)
++++ trunk/include/misc/bitops.h	2009-01-17 23:48:29 UTC (rev 47)
+@@ -0,0 +1,24 @@
++/*
++ * Dreamos
++ * bitops.h
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++#ifndef __BITOPS_H
++#define __BITOPS_H
++
++int find_first_bit(unsigned short int);
++
++#endif
+\ No newline at end of file
+
+Added: trunk/include/misc/clock.h
+===================================================================
+--- trunk/include/misc/clock.h	2009-01-15 23:20:44 UTC (rev 46)
++++ trunk/include/misc/clock.h	2009-01-17 23:48:29 UTC (rev 47)
+@@ -0,0 +1,48 @@
++/***************************************************************************
++ *            cloch.h
++ *
++ *  Sat Mar 31 07:47:17 2007
++ *  Copyright  2007  Alessandro Lopez - Ivan Gualandri
++ *  Email
++ ****************************************************************************/
++
++/*
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2 of the License, or
++ *  (at your option) any later version.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++#ifndef __CLOCK_H
++#define __CLOCK_H
++
++#define SECOND_RTC 0x00
++#define MINUTE_RTC 0x02
++#define HOUR_RTC 0x04
++#define DAY_W_RTC 0x06
++#define DAY_M_RTC 0x07
++#define MONTH_RTC 0x08
++#define YEAR_RTC 0x09
++
++int get_second();
++int get_hour();
++int get_minute();
++int get_second();
++int get_day_m();
++int get_month();
++int get_year();
++int get_day_w();
++char* get_month_lng();
++void date();
++
++
++#endif
+\ No newline at end of file
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-01-15 23:20:44 UTC (rev 46)
++++ trunk/include/version.h	2009-01-17 23:48:29 UTC (rev 47)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL &quot;0&quot;
+ #define EXTRAVERSION &quot;-dreamos&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r44&quot;
++#define REV_NUM &quot;-r46&quot;
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2009-01-15 23:20:44 UTC (rev 46)
++++ trunk/mem/kheap.c	2009-01-17 23:48:29 UTC (rev 47)
+@@ -211,8 +211,8 @@
+ //   heap_node_t *free = kheap-&gt;free_list;
+   heap_node_t *n2;
+ 
+-  if ((unsigned int)location % 4 != 0)
+-    printf (&quot;Indirizzo non allineato a 4kb\n&quot;);
++  if ((unsigned int)location % 4 != 0) return -1;
++//     printf (&quot;Indirizzo non allineato a 4kb\n&quot;);
+ 
+   while (busy) {
+     if (busy-&gt;start_address == (unsigned int)location) {
+@@ -269,8 +269,8 @@
+     busy = (heap_node_t*)busy-&gt;next;
+   }
+ 
+-  if (!busy)
+-    printf (&quot;Address not found in list\n&quot;);
++  if (!busy) return -1;
++//     printf (&quot;Address not found in list\n&quot;);
+ }
+ 
+ /**
+
+Added: trunk/misc/bitops.c
+===================================================================
+--- trunk/misc/bitops.c	2009-01-15 23:20:44 UTC (rev 46)
++++ trunk/misc/bitops.c	2009-01-17 23:48:29 UTC (rev 47)
+@@ -0,0 +1,28 @@
++/*
++ * Dreamos
++ * bitops.c
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++#include &lt;video.h&gt;
++#include &lt;bitops.h&gt;
++
++int find_first_bit(unsigned short int irq_mask)
++{
++   int i=0;
++   if (irq_mask==0) return 0;
++   for (i=0; i&lt;8;i++) if ((1&lt;&lt;i)&amp;irq_mask) break;
++       return i;
++}
+\ No newline at end of file
+
+Added: trunk/misc/clock.c
+===================================================================
+--- trunk/misc/clock.c	2009-01-15 23:20:44 UTC (rev 46)
++++ trunk/misc/clock.c	2009-01-17 23:48:29 UTC (rev 47)
+@@ -0,0 +1,125 @@
++/***************************************************************************
++ *            cloch.c
++ *
++ *  Sat Mar 31 07:47:17 2007
++ *  Copyright  2007  Alessandro Lopez - Ivan Gualandri
++ *  Email
++ ****************************************************************************/
++
++/*
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2 of the License, or
++ *  (at your option) any later version.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++#include &lt;clock.h&gt;
++#include &lt;stdio.h&gt;
++
++int get_second()
++{
++  outportb(SECOND_RTC,0x70);
++  int c = inportb(0x71);
++  return c;
++}
++
++int get_minute()
++{
++  outportb(MINUTE_RTC,0x70);
++  int c = inportb(0x71);
++  return c;
++}
++
++int get_hour()
++{
++  outportb(HOUR_RTC,0x70);
++  int c = inportb(0x71);
++  return c;
++}
++
++int get_day_w()
++{
++  outportb(DAY_W_RTC,0x70);
++  int c = inportb(0x71);
++  return c;
++}
++
++int get_day_m()
++{
++  outportb(DAY_M_RTC,0x70);
++  int c = inportb(0x71);
++  return c;
++}
++
++int get_month()
++{
++  outportb(MONTH_RTC,0x70);
++  int c = inportb(0x71);
++  return c;
++}
++
++int get_year()
++{
++  outportb(YEAR_RTC,0x70);
++  int c = inportb(0x71);
++  return c;
++}
++
++char* get_month_lng()
++{
++  int c;
++  c = get_month();
++  switch(c) {
++    case 1:
++      return &quot;Gennaio&quot;;
++      break;
++    case 2:
++      return &quot;Febbraio&quot;;
++      break;
++    case 3:
++      return &quot;Marzo&quot;;
++      break;
++    case 4:
++      return &quot;Aprile&quot;;
++      break;
++    case 5:
++      return &quot;Maggio&quot;;      
++    case 6:
++      return &quot;Giugno&quot;;      
++      break;
++    case 7:
++      return &quot;Luglio&quot;;     
++      break;
++    case 8:
++      return &quot;Agosto&quot;;  
++      break;
++    case 9:
++      return &quot;Settembre&quot;;
++      break;
++    case 10:
++      return &quot;Ottobre&quot;;
++      break;
++    case 11:
++      return &quot;Novembre&quot;;
++      break;
++    case 12:
++      return &quot;Dicembre&quot;;     
++      break;
++  }
++  return &quot;&quot;;
++}
++		
++void date()
++{
++	asm(&quot;cli&quot;);	
++	printf(&quot;Ora: %02x:%02x:%02x - %02x - %s - %02x\n&quot;,get_hour(),get_minute(),get_second(),get_day_m(),get_month_lng(),0x2000+get_year());	
++	asm(&quot;sti&quot;);
++}
+\ No newline at end of file
+
+Modified: trunk/processore/handlers.c
+===================================================================
+--- trunk/processore/handlers.c	2009-01-15 23:20:44 UTC (rev 46)
++++ trunk/processore/handlers.c	2009-01-17 23:48:29 UTC (rev 47)
+@@ -101,29 +101,31 @@
+     int irqn;
+     irqn = get_current_irq();  
+     IRQ_s* tmpHandler; 
+-    if(irqn&gt;0) {
+-      switch(irqn){
+-	case 1: 
+-	  PIT_handler();
+-	  break;
+-	case 2:
+-	  keyboard_isr();
+-	  break;
+-      }
+-//         tmpHandler = shareHandler[irqn-1];
+-//         tmpHandler-&gt;IRQ_func();
+-//         #ifdef DEBUG
+-//         printf(&quot;2 - IRQ_func: %d, %d\n&quot;, tmpHandler-&gt;IRQ_func, tmpHandler);
+-//         #endif
+-//         while(tmpHandler-&gt;next!=NULL) {
+-//             tmpHandler = tmpHandler-&gt;next;                           
+-//             #ifdef DEBUG
+-//             printf(&quot;1 - IRQ_func (_prova): %d, %d\n&quot;, tmpHandler-&gt;IRQ_func, tmpHandler);
+-//             #endif
+-//             tmpHandler-&gt;IRQ_func();
+-//         }
++    if(irqn&gt;=0) {
++//       switch(irqn){
++// 	case 1: 
++// 	  PIT_handler();
++// 	  break;
++// 	case 2:
++// 	  keyboard_isr();
++// 	  break;
++//       }
++         tmpHandler = shareHandler[irqn];
++	 if(tmpHandler!=0) {
++	    tmpHandler-&gt;IRQ_func();
++	    #ifdef DEBUG
++	    printf(&quot;2 - IRQ_func: %d, %d\n&quot;, tmpHandler-&gt;IRQ_func, tmpHandler);
++	    #endif
++	    while(tmpHandler-&gt;next!=NULL) {
++	      tmpHandler = tmpHandler-&gt;next;                           
++	      #ifdef DEBUG
++	      printf(&quot;1 - IRQ_func (_prova): %d, %d\n&quot;, tmpHandler-&gt;IRQ_func, tmpHandler);
++	      #endif
++	      if(tmpHandler!=0) tmpHandler-&gt;IRQ_func();
++	    }
++	  } else printf(&quot;irqn: %d\n&quot;, irqn);
+     }
+-//  else printf(&quot;IRQ N: %d E' arrivato qualcosa che non so gestire &quot;, irqn);
++    else printf(&quot;IRQ N: %d E' arrivato qualcosa che non so gestire &quot;, irqn);
+     if(irqn&lt;=8) outportb(0x20, MASTER_PORT);
+     else if(irqn&lt;=16){
+       outportb(0x20, SLAVE_PORT);
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-01-15 23:20:44 UTC (rev 46)
++++ trunk/shell/shell.c	2009-01-17 23:48:29 UTC (rev 47)
+@@ -171,6 +171,7 @@
+ 		else if (!(_kstrncmp(cmd, &quot;answer&quot;,6)))
+       		{
+           		  printf(&quot;42\n&quot;);			  
++			  outportb('4',0xe9);
+         	}
+ 		else if (!(_kstrncmp(cmd, &quot;sleep&quot;, 5)))
+ 		{
+@@ -235,6 +236,7 @@
+         }*/
+ 
+         else if (!(_kstrncmp(cmd,&quot;printmem&quot;,8))) print_heap_list(kheap-&gt;used_list);        
++	else if (!(_kstrncmp(cmd,&quot;date&quot;,4))) date();                
+         else if (!(_kstrncmp(cmd,&quot;aalogo&quot;,6))) 
+ 		aalogo();
+         
+@@ -322,6 +324,7 @@
+            &quot;credits   - Show DreamOS credits\n&quot;
+ 	   &quot;sleep     - pause DreamOS for a particular number of seconds\n&quot;
+ 	   &quot;cpuid     - Show cpu identification informations\n&quot;
++	   &quot;date      - Show date and time\n&quot;
+ 	       &quot;echo      - Print some lines of text\n&quot;);
+ }
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000046.html">[Dreamos-dev] r46 - in trunk: . libc processore shell
+</A></li>
+	<LI>Next message: <A HREF="000048.html">[Dreamos-dev] r48 - in trunk: . libc processore shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#47">[ date ]</a>
+              <a href="thread.html#47">[ thread ]</a>
+              <a href="subject.html#47">[ subject ]</a>
+              <a href="author.html#47">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

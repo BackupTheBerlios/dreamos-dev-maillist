@@ -1,0 +1,123 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r215 - in trunk: . shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-March/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r215%20-%20in%20trunk%3A%20.%20shell&In-Reply-To=%3C201003182203.o2IM3OAO018066%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000217.html">
+   <LINK REL="Next"  HREF="000219.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r215 - in trunk: . shell</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r215%20-%20in%20trunk%3A%20.%20shell&In-Reply-To=%3C201003182203.o2IM3OAO018066%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r215 - in trunk: . shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Thu Mar 18 23:03:24 CET 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000217.html">[Dreamos-dev] r214 - in trunk: . fs include/fs shell utils
+</A></li>
+        <LI>Next message: <A HREF="000219.html">[Dreamos-dev] r216 - in trunk: . files fs include/shell libc shell	system
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#218">[ date ]</a>
+              <a href="thread.html#218">[ thread ]</a>
+              <a href="subject.html#218">[ subject ]</a>
+              <a href="author.html#218">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-03-18 23:03:20 +0100 (Thu, 18 Mar 2010)
+New Revision: 215
+
+Modified:
+   trunk/dreamos.img
+   trunk/shell/shell.c
+Log:
+Una prima versione della history funzionante.
+Anche se ancora buggata.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2010-03-17 10:45:35 UTC (rev 214)
++++ trunk/shell/shell.c	2010-03-18 22:03:20 UTC (rev 215)
+@@ -43,6 +43,9 @@
+ userenv_t current_user;
+ int argc;
+ char **argv;
++int hst_flag;
++char cmd[CMD_LEN];
++
+ /*
+  * Inserisce gli argomenti di un comando in un array di stringhe
+  * argc = numero degli argomenti
+@@ -74,7 +77,7 @@
+ /* corpo della shell */
+ void shell()
+ {
+-  char cmd[CMD_LEN];
++  
+   char *cmd_ptr;
+  
+   static struct cmd shell_cmd[NUM_COM] = {
+@@ -99,7 +102,7 @@
+   };
+ 
+   int i = 0;
+-
++  hst_flag = 0;
+   memset(cmd, '\0', CMD_LEN);
+   memset(current_user.username, '\0', USER_LEN);
+   memset(current_user.cur_path, '\0', CURPATH_LEN);  
+@@ -196,6 +199,12 @@
+ 
+     if( (sc_uparrow = inportb (0x60) ) == KEY_UPARROW ) {
+    		printf(&quot;%s&quot;, lastcmd[count]); 
++   		int cmdclean = 0;
++		while(cmdclean&lt;CMD_LEN){
++			cmd[cmdclean] = '\0';
++			cmdclean++;
++		}	
++   		strcpy(cmd, lastcmd[count]);
+ 	}
+        
+ }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000217.html">[Dreamos-dev] r214 - in trunk: . fs include/fs shell utils
+</A></li>
+	<LI>Next message: <A HREF="000219.html">[Dreamos-dev] r216 - in trunk: . files fs include/shell libc shell	system
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#218">[ date ]</a>
+              <a href="thread.html#218">[ thread ]</a>
+              <a href="subject.html#218">[ subject ]</a>
+              <a href="author.html#218">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

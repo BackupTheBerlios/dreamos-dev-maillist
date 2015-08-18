@@ -1,0 +1,157 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r361 - in trunk: . boot include/mem tasks
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2011-May/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r361%20-%20in%20trunk%3A%20.%20boot%20include/mem%20tasks&In-Reply-To=%3C20110510191858.8FF98481270%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000363.html">
+   <LINK REL="Next"  HREF="000365.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r361 - in trunk: . boot include/mem tasks</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r361%20-%20in%20trunk%3A%20.%20boot%20include/mem%20tasks&In-Reply-To=%3C20110510191858.8FF98481270%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r361 - in trunk: . boot include/mem tasks">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Tue May 10 21:18:58 CEST 2011</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000363.html">[Dreamos-dev] r360 - in trunk: . include include/mem include/tasks	mem tasks
+</A></li>
+        <LI>Next message: <A HREF="000365.html">[Dreamos-dev] r362 - in trunk: include/mem mem tasks
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#364">[ date ]</a>
+              <a href="thread.html#364">[ thread ]</a>
+              <a href="subject.html#364">[ subject ]</a>
+              <a href="author.html#364">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2011-05-10 21:18:58 +0200 (Tue, 10 May 2011)
+New Revision: 361
+
+Modified:
+   trunk/Makefile
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/include/mem/paging.h
+   trunk/tasks/task_utils.c
+Log:
+Aggiunta allocazione logica indirizzi relativi alla nuova pagedir
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2011-05-08 21:28:02 UTC (rev 360)
++++ trunk/Makefile	2011-05-10 19:18:58 UTC (rev 361)
+@@ -29,6 +29,7 @@
+ 	 -I./include/misc\
+ 	 -I./include/fs\
+ 	 -I./include/sys \
++	 -I./include/tasks\
+ 	 -DBOCHS_DEBUG\
+ 	 -D$(MEMORY)
+ 
+@@ -64,7 +65,8 @@
+       shell/user_shell.o\
+       sys/utsname.o\
+       sys/dirent.o\
+-      sys/stat.o
++      sys/stat.o\
++      tasks/task_utils.o
+ #mem/heap.o\
+ #misc/ordered_array.o
+ dreamos.img: bl.img kernel.bin
+@@ -113,7 +115,7 @@
+ sys/utsname.o: sys/utsname.c
+ sys/dirent.o: sys/dirent.c
+ sys/stat.o: sys/stat.c
+-
++tasks/task_utils.o: tasks/task_utils.c
+ utils:
+ 	make -f utils/Makefile
+ 	
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/mem/paging.h
+===================================================================
+--- trunk/include/mem/paging.h	2011-05-08 21:28:02 UTC (rev 360)
++++ trunk/include/mem/paging.h	2011-05-10 19:18:58 UTC (rev 361)
+@@ -78,7 +78,7 @@
+ unsigned int get_phys_address(unsigned int);
+ 
+ void load_pdbr(unsigned int);
+-void map_kernel(pde_t);
++//void map_kernel(pde_t);
+ void page_fault_handler(int);
+ void free_logical_page(unsigned int);
+ 
+
+Modified: trunk/tasks/task_utils.c
+===================================================================
+--- trunk/tasks/task_utils.c	2011-05-08 21:28:02 UTC (rev 360)
++++ trunk/tasks/task_utils.c	2011-05-10 19:18:58 UTC (rev 361)
+@@ -25,6 +25,8 @@
+ #include &lt;task_utils.h&gt;
+ #include &lt;fismem.h&gt;
+ #include &lt;paging.h&gt;
++#include &lt;kheap.h&gt;
++#include &lt;ordered_list.h&gt;
+ 
+ /**
+    * Make a copy of the kernel into a new pagedir/pagetable
+@@ -32,10 +34,13 @@
+    * @version 1.0 
+    */
+ unsigned int map_kernel(){
++	heap_node_t* new_pd_node = alloc_node();
+ 	unsigned int *pagedir;
+ 	unsigned int *pagetable;
+ 	pagedir = create_pageDir();
+ 	pagetable = create_pageTable();
++	new_pd_node-&gt;start_address = (heap_node_t*) pagedir;
++	new_pd_node-&gt;size = 8 * 4096;
+ 	
+ 	//set_pagedir_entry_ric(0, (unsigned int)current_page_table, PD_PRESENT|SUPERVISOR|WRITE,0);    
+ 	
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000363.html">[Dreamos-dev] r360 - in trunk: . include include/mem include/tasks	mem tasks
+</A></li>
+	<LI>Next message: <A HREF="000365.html">[Dreamos-dev] r362 - in trunk: include/mem mem tasks
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#364">[ date ]</a>
+              <a href="thread.html#364">[ thread ]</a>
+              <a href="subject.html#364">[ subject ]</a>
+              <a href="author.html#364">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

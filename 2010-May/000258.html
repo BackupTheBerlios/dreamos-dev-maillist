@@ -1,0 +1,123 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r255 - in trunk: . include/shell shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-May/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r255%20-%20in%20trunk%3A%20.%20include/shell%20shell&In-Reply-To=%3C201005302124.o4ULOobl023468%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000257.html">
+   
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r255 - in trunk: . include/shell shell</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r255%20-%20in%20trunk%3A%20.%20include/shell%20shell&In-Reply-To=%3C201005302124.o4ULOobl023468%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r255 - in trunk: . include/shell shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun May 30 23:24:50 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000257.html">[Dreamos-dev] r254 - in trunk: . shell
+</A></li>
+        
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#258">[ date ]</a>
+              <a href="thread.html#258">[ thread ]</a>
+              <a href="subject.html#258">[ subject ]</a>
+              <a href="author.html#258">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-05-30 23:24:46 +0200 (Sun, 30 May 2010)
+New Revision: 255
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/shell/commands.h
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+Log:
+Creata funzione e comando newfile per la creazione di un nuovo file.
+Da terminare.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/shell/commands.h
+===================================================================
+--- trunk/include/shell/commands.h	2010-05-28 22:22:03 UTC (rev 254)
++++ trunk/include/shell/commands.h	2010-05-30 21:24:46 UTC (rev 255)
+@@ -54,6 +54,7 @@
+ void tester();
+ void pwd();	
+ void more();
++void newfile();
+ 
+ struct devel {
+ 	const char cmd_testname[CMD_LEN];
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-05-28 22:22:03 UTC (rev 254)
++++ trunk/shell/commands.c	2010-05-30 21:24:46 UTC (rev 255)
+@@ -541,3 +541,14 @@
+ void pwd(){
+ 	printf(&quot;%s\n&quot;, current_user.cur_path );
+ }
++
++void newfile(){
++	if(argc!=2){
++		printf(&quot;Bad usage. Try newfile --help for more informations\n&quot;);
++	}
++	else {
++		if(strcmp(argv[1], &quot;--help&quot;)==0) {
++			printf(&quot;newfile FILENAME - Make a new file, and prompt for it's content\n&quot;);
++		}
++	}
++}
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2010-05-28 22:22:03 UTC (rev 254)
++++ trunk/shell/shell.c	2010-05-30 21:24:46 UTC (rev 255)
+@@ -116,6 +116,7 @@
+ 	{ &quot;tester&quot;, tester},	
+ 	{ &quot;pwd&quot;, pwd},
+ 	{ &quot;more&quot;, more},
++	{ &quot;newfile&quot;, newfile}
+   };
+ 
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000257.html">[Dreamos-dev] r254 - in trunk: . shell
+</A></li>
+	
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#258">[ date ]</a>
+              <a href="thread.html#258">[ thread ]</a>
+              <a href="subject.html#258">[ subject ]</a>
+              <a href="author.html#258">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

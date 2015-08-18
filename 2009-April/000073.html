@@ -1,0 +1,258 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r72 - in trunk: . hardware include include/hardware	include/mem libc mem shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-April/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r72%20-%20in%20trunk%3A%20.%20hardware%20include%20include/hardware%0A%09include/mem%20libc%20mem%20shell&In-Reply-To=%3C200904132115.n3DLFhDH026412%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000072.html">
+   <LINK REL="Next"  HREF="000074.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r72 - in trunk: . hardware include include/hardware	include/mem libc mem shell</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r72%20-%20in%20trunk%3A%20.%20hardware%20include%20include/hardware%0A%09include/mem%20libc%20mem%20shell&In-Reply-To=%3C200904132115.n3DLFhDH026412%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r72 - in trunk: . hardware include include/hardware	include/mem libc mem shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Mon Apr 13 23:15:43 CEST 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000072.html">[Dreamos-dev] r71 - in trunk: . include/libc libc
+</A></li>
+        <LI>Next message: <A HREF="000074.html">[Dreamos-dev] r73 - in trunk: . misc
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#73">[ date ]</a>
+              <a href="thread.html#73">[ thread ]</a>
+              <a href="subject.html#73">[ subject ]</a>
+              <a href="author.html#73">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-04-13 23:15:36 +0200 (Mon, 13 Apr 2009)
+New Revision: 72
+
+Removed:
+   trunk/TODO
+Modified:
+   trunk/dreamos.img
+   trunk/hardware/8253.c
+   trunk/include/hardware/8253.h
+   trunk/include/mem/kheap.h
+   trunk/include/version.h
+   trunk/libc/stdio.c
+   trunk/mem/kheap.c
+   trunk/mem/paging.c
+   trunk/shell/commands.c
+   trunk/start.sh
+Log:
+Levato parametro start da make_heap
+Disabilitato \t in gets.
+Eliminato file TODO (consultare la sezione task sul progetto)
+Ricalibrato il PIT, ora sleep e' piu precisa
+Risolto bug #14839  relativo al comando nn riconosciuto
+Reinserita stampa numero rev alla schermata di avvio.
+
+
+
+Deleted: trunk/TODO
+===================================================================
+--- trunk/TODO	2009-04-13 09:18:02 UTC (rev 71)
++++ trunk/TODO	2009-04-13 21:15:36 UTC (rev 72)
+@@ -1,19 +0,0 @@
+-Dreamos Rebuild:
+-Nella alloc fare il contrllo prima della funzione free_nodes.
+-
+-PROGETTI IMMEDIATI
+-- Revisionare stampa esadecimale. Funzione _kprinthex
+-- Implementare syscall handler (controllare/terminare)
+-- Le routine di gestione degli irq, devono controllare se effettivamente esiste un IRQ per il device che controllano, in caso affermativo proseguono, in caso negativo si fermano.
+-- MMU
+-- Funzioni sullo stato registri EFLAGS e CR*
+-- RIVEDERE PRINTF - Forse non stampa i numeri troppo lunghi - problema degli unsigned int.
+-- Todo rivedere quali sono le eccezioni che hanno un error code e sostituire le relative EXCEPTION(xx) con EXCEPTION_EC(xx)
+-- Fare una mega pulizia del codice
+-- Eliminare il maggior numero di messaggi di errore dalla compilazione
+-- bitmasks per interpretare errori del pagefault.
+-- Rivedere il comando info della shell, probabilmente stampa alcune informazioni sbagliate
+-
+-
+-PROGETTI A LUNGO TERMINE:
+-- Implementazione di un migliore scrolling
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/hardware/8253.c
+===================================================================
+--- trunk/hardware/8253.c	2009-04-13 09:18:02 UTC (rev 71)
++++ trunk/hardware/8253.c	2009-04-13 21:15:36 UTC (rev 72)
+@@ -15,9 +15,10 @@
+  * along with this program; if not, write to the Free Software
+  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
++
++#include &lt;8253.h&gt;
+ #include &lt;io.h&gt;
+ #include &lt;stdio.h&gt;
+-#include &lt;8253.h&gt;
+ #include &lt;pic8259.h&gt;
+ 
+ static unsigned int ticks;
+@@ -36,7 +37,7 @@
+ 
+ void configure_PIT ()
+ {
+-    int divisor = 65535;
++    int divisor = PIT_DIVISOR;
+ 
+     asm (&quot;cli&quot;);
+     ticks = seconds = 0;
+
+Modified: trunk/include/hardware/8253.h
+===================================================================
+--- trunk/include/hardware/8253.h	2009-04-13 09:18:02 UTC (rev 71)
++++ trunk/include/hardware/8253.h	2009-04-13 21:15:36 UTC (rev 72)
+@@ -21,6 +21,7 @@
+ 
+ #define PIT_COMREG 0x43
+ #define PIT_DATAREG0 0x40
++#define PIT_DIVISOR 11931
+ 
+ void PIT_handler ();
+ void configure_PIT ();
+
+Modified: trunk/include/mem/kheap.h
+===================================================================
+--- trunk/include/mem/kheap.h	2009-04-13 09:18:02 UTC (rev 71)
++++ trunk/include/mem/kheap.h	2009-04-13 21:15:36 UTC (rev 72)
+@@ -47,7 +47,7 @@
+     unsigned int max_size; /** &lt; Massima memoria allocabile */
+ } heap_t;
+ 
+-heap_t* make_heap(unsigned int, unsigned int);
++heap_t* make_heap(unsigned int);
+ void* kmalloc(unsigned int);
+ void kfree(unsigned int);
+ void try_alloc();
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-04-13 09:18:02 UTC (rev 71)
++++ trunk/include/version.h	2009-04-13 21:15:36 UTC (rev 72)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL &quot;1.1&quot;
+ #define EXTRAVERSION &quot;-trunk&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r70&quot;
++#define REV_NUM &quot;-r72&quot;
+
+Modified: trunk/libc/stdio.c
+===================================================================
+--- trunk/libc/stdio.c	2009-04-13 09:18:02 UTC (rev 71)
++++ trunk/libc/stdio.c	2009-04-13 21:15:36 UTC (rev 72)
+@@ -183,8 +183,12 @@
+ 	c = getchar();
+ 	if (c=='\n') // tasto invio
+ 	    break;
+-	else if (c=='\b' &amp;&amp; count&gt;0) //backspace
+-            count--;
++	else if (c=='\b') //backspace
++	{
++	    if (count&gt;0)
++                count--;
++	}
++	else if (c=='\t'); //tab momentaneamente non implementato
+ 	else
+ 	    str[count++] = c;
+     } while (count&lt;255);
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2009-04-13 09:18:02 UTC (rev 71)
++++ trunk/mem/kheap.c	2009-04-13 21:15:36 UTC (rev 72)
+@@ -78,7 +78,7 @@
+   * @param size Heap maximum size
+   * @return Pointer to a new heap
+   */
+-heap_t* make_heap(unsigned int start, unsigned int size)
++heap_t* make_heap(unsigned int size)
+ {
+     heap_t* new_heap;
+     heap_node_t* first_node;
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2009-04-13 09:18:02 UTC (rev 71)
++++ trunk/mem/paging.c	2009-04-13 21:15:36 UTC (rev 72)
+@@ -70,7 +70,7 @@
+         i++;
+     }        
+     load_pdbr((unsigned int)current_page_dir);
+-    kheap = make_heap(10,tot_mem - ((unsigned int) &amp;end));
++    kheap = make_heap(tot_mem - ((unsigned int) &amp;end));
+ }
+ 
+ /**
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-04-13 09:18:02 UTC (rev 71)
++++ trunk/shell/commands.c	2009-04-13 21:15:36 UTC (rev 72)
+@@ -39,10 +39,10 @@
+   _kcolor (5);
+   printf(&quot;\n&quot;);
+   printf(&quot;\t\t\t The Dream Operating System \n&quot;
+-	 &quot;\t\t           v%s.%s%s      \n\n&quot;
++	 &quot;\t\t           v%s.%s%s %s      \n\n&quot;
+ 	 &quot;\t\t\t\t Welcome to DreamOS\n&quot;
+ 	 &quot;\t\t Where dreams don't become Reality and remain dreams. \n&quot;
+-	 &quot;\t\t\tR.I.P - Rest in peace with dreamos ^_^        \n&quot;,VERSION, PATCHLEVEL, EXTRAVERSION);
++	 &quot;\t\t\tR.I.P - Rest in peace with dreamos ^_^        \n&quot;,VERSION, PATCHLEVEL, EXTRAVERSION, REV_NUM	);
+ 	
+   printf(&quot;\n\n\n\n&quot;);
+   _kcolor(7);
+
+Modified: trunk/start.sh
+===================================================================
+--- trunk/start.sh	2009-04-13 09:18:02 UTC (rev 71)
++++ trunk/start.sh	2009-04-13 21:15:36 UTC (rev 72)
+@@ -1,4 +1,4 @@
+-#!/bin/sh
++#!/bin/bash
+ # This script is more important to do a right compilation..
+ # 
+ # Coded by Osiris
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000072.html">[Dreamos-dev] r71 - in trunk: . include/libc libc
+</A></li>
+	<LI>Next message: <A HREF="000074.html">[Dreamos-dev] r73 - in trunk: . misc
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#73">[ date ]</a>
+              <a href="thread.html#73">[ thread ]</a>
+              <a href="subject.html#73">[ subject ]</a>
+              <a href="author.html#73">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

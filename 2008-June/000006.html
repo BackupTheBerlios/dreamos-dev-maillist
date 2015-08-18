@@ -1,0 +1,140 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] Osservazioni
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2008-June/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20Osservazioni&In-Reply-To=%3C5dd86e320806071118n3cf5eae0n6fe58fa3d3e8b988%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000005.html">
+   <LINK REL="Next"  HREF="000007.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] Osservazioni</H1>
+    <B>Ivan Gualandri</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20Osservazioni&In-Reply-To=%3C5dd86e320806071118n3cf5eae0n6fe58fa3d3e8b988%40mail.gmail.com%3E"
+       TITLE="[Dreamos-dev] Osservazioni">ivan.gualandri at gmail.com
+       </A><BR>
+    <I>Sat Jun  7 20:18:38 CEST 2008</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000005.html">[Dreamos-dev] Osservazioni
+</A></li>
+        <LI>Next message: <A HREF="000007.html">[Dreamos-dev] r7 - in trunk: . include/shell shell system
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6">[ date ]</a>
+              <a href="thread.html#6">[ thread ]</a>
+              <a href="subject.html#6">[ subject ]</a>
+              <a href="author.html#6">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Eheh io dalla mia qualche risposta te la do :D
+
+On Sat, Jun 7, 2008 at 9:28 AM, Pietro m0nt0 Montorfano
+&lt;<A HREF="https://lists.berlios.de/mailman/listinfo/dreamos-dev">monto84 at gmail.com</A>&gt; wrote:
+&gt;<i> Ciao a tutti,
+</I>&gt;<i> so di sicuro che passer&#242; per rompipalle e mi spiace se &#232; cosi, ma oggi
+</I>&gt;<i> ho fatto un checkout per vedere come andava il dreamos e mi piacerebbe
+</I>&gt;<i> codare un po, ho visto per&#242; alcune cose che riporto qui, sono delle
+</I>&gt;<i> opinioni personali e so che avete fatto tutto da 0, c'ero quando tutto
+</I>&gt;<i> era 0 :D comunque non voglio offendere o giudicare male il vostro
+</I>&gt;<i> lavoro, anzi, complimentissimi!!
+</I>In realta' siamo pesantemente offesi :P (e ancora devo iniziare a leggerla)
+
+&gt;<i>
+</I>&gt;<i> * doc da mettere in txt e non in pdf, i pdf li mettiamo sul sito, magari
+</I>&gt;<i> li traduco in inglese anche che non si sa mai possono essere utili
+</I>per questo non ci sono problemi lato mio
+
+&gt;<i> * includere nei .h almeno un pelo di commento su che cosa fanno le
+</I>&gt;<i> routine in quel file, ovvero per capire cosa fa keyboard.c in hardware e
+</I>&gt;<i> in drivers va letto il codice, se mettessimo una riga sotto il nome del
+</I>&gt;<i> file prima della gpl con scritto di cosa si occupa quella porzione di
+</I>&gt;<i> codice &#232; meglio
+</I>
+in realta stiamo tentando di documentare il codice con doxygen, anche
+se ancora non e'
+stata distribuita la doc generata. Cmq io i commenti cerco di
+inserirli nei files c.
+
+&gt;<i> * rinominare processore in inglese
+</I>si puo' fare
+
+&gt;<i> * libc non so come fare ma secondo me sarebbe meglio appoggiarsi alle
+</I>&gt;<i> glibc dato che son gi&#224; fatte e sicuro sono efficenti e prive di bug, mi
+</I>&gt;<i> documento su come magari rendere un os compatibile con quelle
+</I>ma tanto la libc e' uno standard e quindi se usiamo la nostra in
+teoria accettera
+programmi scritti con altre libc, cmq si puo' fare, ma come dicevo non
+ne sappiamo molto
+
+&gt;<i> * cosa ne dite rivedere l'alberatura e magari stendere delle
+</I>&gt;<i> &quot;specifiche&quot;, delle regole per come chiamare i files e come metterli insieme
+</I>&gt;<i> /boot           tutto quello che ha a che fare con il bootloader
+</I>&gt;<i> /doc            i documenti vari (se diventano tanti pensare ad un'alberatura
+</I>&gt;<i> anche qui)
+</I>&gt;<i> /include        tutti gli header
+</I>&gt;<i> /drivers        tutto ci&#242; che riguarda i moduli per l'hardware, suddiviso in
+</I>&gt;<i> sottodirectory
+</I>&gt;<i> /drivers/cpu    quello che riguarda la cpu
+</I>&gt;<i> /drivers/keyboard       quello che riguarda la tastiera
+</I>&gt;<i> /drivers/video  quello che riguarda il video
+</I>&gt;<i> /drivers/...    cosi via
+</I>&gt;<i> /system         tutto ci&#242; che riguarda il sistema, ovvero il kernel principale
+</I>&gt;<i> /system/mem     gestione della memoria
+</I>&gt;<i> /system/syscall gestione delle chiamate di sistema
+</I>&gt;<i> /opt            tutto ci&#242; che &#232; opzionale e serve al test / debug
+</I>&gt;<i>                shell
+</I>suona interessante
+
+&gt;<i> la gestione degli irq non saprei come o dove metterla. Facendo in questo
+</I>&gt;<i> modo si ottiene una struttura scalabile e facilmente mantenibile senza
+</I>&gt;<i> contare che per andare a pescare il file che ci interessa ci si arriva
+</I>&gt;<i> in modo abbastanza intuitivo. comunque con una documentazione anche su
+</I>&gt;<i> questo si capisce come fare il tutto.
+</I>la gestione degli irq e' un misto cmq la parte del pic 8259 potrebbe
+andare dentro drivers.
+
+&gt;<i> Che ne dite?
+</I>Non malaccio le varie idee, mo ragioniamo un po' su come sistemare il tutto :D
+
+&gt;<i> Ciao!
+</I>&gt;<i>
+</I>&gt;<i> Pietro
+</I>Ciao, Ivan :O
+
+
+
+-- 
+&quot;elen sila lumenn omentielvo&quot;
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000005.html">[Dreamos-dev] Osservazioni
+</A></li>
+	<LI>Next message: <A HREF="000007.html">[Dreamos-dev] r7 - in trunk: . include/shell shell system
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6">[ date ]</a>
+              <a href="thread.html#6">[ thread ]</a>
+              <a href="subject.html#6">[ subject ]</a>
+              <a href="author.html#6">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

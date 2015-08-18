@@ -1,0 +1,3394 @@
+From finarfin at mail.berlios.de  Sun Apr  4 12:54:59 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun, 4 Apr 2010 12:54:59 +0200
+Subject: [Dreamos-dev] r219 - in trunk: . boot fs include/shell shell
+Message-ID: <201004041054.o34AsxHn029199@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-04-04 12:53:35 +0200 (Sun, 04 Apr 2010)
+New Revision: 219
+
+Added:
+   trunk/boot/grub.img
+Removed:
+   trunk/boot/grub.img
+Modified:
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/fs/vfs.c
+   trunk/include/shell/testing.h
+   trunk/initfs
+   trunk/shell/commands.c
+   trunk/shell/testing.c
+Log:
+Aggiunto comando di test: tester show_fd
+Modificato gestione file descriptors. 
+
+
+
+Deleted: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Added: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+
+Property changes on: trunk/boot/grub.img
+___________________________________________________________________
+Name: svn:executable
+   + *
+Name: svn:mime-type
+   + application/octet-stream
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2010-03-30 21:42:22 UTC (rev 218)
++++ trunk/fs/fcntl.c	2010-04-04 10:53:35 UTC (rev 219)
+@@ -44,14 +44,16 @@
+ 	va_list ap;
+ 	va_start(ap, oflags);
+ 	ret_fd = 0;	
+-	while(ret_fd < _SC_OPEN_MAX){
++	/*while(ret_fd < _SC_OPEN_MAX){
+ 		//if(fd_list[ret_fd].mountpoint_id == -1) printf("%d ", ret_fd);		
+ 		ret_fd++;
+-	}
++	}*/
+ 	prova = va_arg(ap, int);
+-	if(cur_fd == _SC_OPEN_MAX) cur_fd = 0;
+-		//printf("No more file descriptors available\n");
++	cur_fd=0;
++	if(cur_fd == _SC_OPEN_MAX) cur_fd = 0;			
++
+ 	while(fd_list[cur_fd].mountpoint_id != -1 && cur_fd < _SC_OPEN_MAX){
++		//printf("%d %d\n", cur_fd, fd_list[cur_fd].mountpoint_id);		
+ 		cur_fd++;
+ 	}
+ 	if(cur_fd == _SC_OPEN_MAX) {
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2010-03-30 21:42:22 UTC (rev 218)
++++ trunk/fs/vfs.c	2010-04-04 10:53:35 UTC (rev 219)
+@@ -41,13 +41,6 @@
+ 	cur_fd=0;
+ 	
+ 	printf(LNG_VFS); 	
+-
+-	while (j < _SC_OPEN_MAX){
+-		fd_list[j].fs_spec_id = -1;
+-		fd_list[j].mountpoint_id = -1;
+-		fd_list[j].offset = 0;
+-		j++;
+-	}
+  	
+  	while(i<MAX_MOUNTPOINT) {
+  		strcpy(mountpoint_list[i].mountpoint,"");
+@@ -100,6 +93,13 @@
+  	mountpoint_list[3].dev_id = 0;
+  	mountpoint_list[3].start_address = 0;
+  	//mountpoint_list[3].operations = kmalloc(sizeof(struct super_node_operations));
++ 	
++ 		while (j < _SC_OPEN_MAX){
++		fd_list[j].fs_spec_id = -1;
++		fd_list[j].mountpoint_id = -1;
++		fd_list[j].offset = 0;
++		j++;
++	}
+ 
+ }
+ 
+
+Modified: trunk/include/shell/testing.h
+===================================================================
+--- trunk/include/shell/testing.h	2010-03-30 21:42:22 UTC (rev 218)
++++ trunk/include/shell/testing.h	2010-04-04 10:53:35 UTC (rev 219)
+@@ -27,5 +27,6 @@
+ void try_open();
+ void try_fsinit();
+ void try_syscall();
++void show_fd();
+ 
+ #endif
+
+Modified: trunk/initfs
+===================================================================
+(Binary files differ)
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-03-30 21:42:22 UTC (rev 218)
++++ trunk/shell/commands.c	2010-04-04 10:53:35 UTC (rev 219)
+@@ -489,6 +489,7 @@
+ 					{ "try_module", try_module },
+ 					{ "try_open", try_open},					
+ 					{ "try_syscall", try_syscall},
++					{ "show_fd", show_fd},
+ 					{ "--help", help_tester },
+ 					};
+ 	if (argc != 2) {
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-03-30 21:42:22 UTC (rev 218)
++++ trunk/shell/testing.c	2010-04-04 10:53:35 UTC (rev 219)
+@@ -27,9 +27,11 @@
+ #include <kernel.h>
+ #include <fcntl.h>
+ #include <initrd.h>
++#include <unistd.h>
+ 
+ //multiboot_info_t *boot_informations;
+ char *module_start;
++file_descriptor_t fd_list[_SC_OPEN_MAX];
+ 
+ void try_strtok()
+ {
+@@ -170,3 +172,13 @@
+ 	}
+ 	printf("\n");
+ }
++
++void show_fd(){
++	int i=0;
++	while(i < _SC_OPEN_MAX){
++		if(fd_list[i].mountpoint_id == -1) printf("-1\n");
++		else printf("+%d\n", fd_list[i].mountpoint_id);
++		i++;
++	}
++	printf("\n");
++}
+
+
+
+From finarfin at mail.berlios.de  Mon Apr  5 00:38:28 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Mon, 5 Apr 2010 00:38:28 +0200
+Subject: [Dreamos-dev] r220 - in trunk: . fs include/fs include/shell
+	include/sys shell sys
+Message-ID: <201004042238.o34McSod008752@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-04-05 00:23:53 +0200 (Mon, 05 Apr 2010)
+New Revision: 220
+
+Added:
+   trunk/include/sys/stat.h
+   trunk/sys/stat.c
+Modified:
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/fs/initrd.c
+   trunk/fs/vfs.c
+   trunk/include/fs/initrd.h
+   trunk/include/fs/vfs.h
+   trunk/include/shell/testing.h
+   trunk/include/sys/types.h
+   trunk/shell/commands.c
+   trunk/shell/testing.c
+Log:
+Iniziata a scriver libreria stat (sys/stat.h)
+Aggiunto comando tester test_stat
+Aggiornato Makefile
+
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2010-04-04 10:53:35 UTC (rev 219)
++++ trunk/Makefile	2010-04-04 22:23:53 UTC (rev 220)
+@@ -61,7 +61,8 @@
+       shell/commands.o\
+       shell/testing.o\
+       sys/utsname.o\
+-      sys/dirent.o
++      sys/dirent.o\
++      sys/stat.o
+ 
+ dreamos.img: bl.img kernel.bin
+ 	mv kernel.bin dreamos.img
+@@ -104,6 +105,7 @@
+ shell/commands.o: shell/commands.c
+ sys/utsname.o: sys/utsname.c
+ sys/dirent.o: sys/dirent.c
++sys/stat.o: sys/stat.c
+ 
+ utils:
+ 	make -f utils/Makefile
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-04-04 10:53:35 UTC (rev 219)
++++ trunk/fs/initrd.c	2010-04-04 22:23:53 UTC (rev 220)
+@@ -24,6 +24,7 @@
+ #include <string.h>
+ #include <vfs.h>
+ #include <kheap.h>
++#include <sys/stat.h>
+ 
+ char *module_start;
+ initrd_t *fs_specs;
+@@ -137,6 +138,11 @@
+ 	return nbyte;
+ }
+ 
++int initrd_stat(char* path, struct stat *buf){
++	printf("Initrd stat function\n");
++	return 0;
++}
++
+ int initrd_close(int fildes){
+ 	ird_descriptors[fildes].file_descriptor = -1;
+ 	ird_descriptors[fildes].cur_pos = 0;
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2010-04-04 10:53:35 UTC (rev 219)
++++ trunk/fs/vfs.c	2010-04-04 22:23:53 UTC (rev 220)
+@@ -54,6 +54,7 @@
+ 		mountpoint_list[i].operations.close = NULL;
+ 		mountpoint_list[i].operations.read = NULL;
+ 		mountpoint_list[i].operations.write = NULL;
++		mountpoint_list[i].stat_op.stat = NULL;
+  		i++;
+ 	}
+ 	
+@@ -68,6 +69,7 @@
+  	mountpoint_list[0].operations.open = &initfs_open;
+  	mountpoint_list[0].operations.close = &initrd_close;
+  	mountpoint_list[0].operations.read = &initfs_read;
++ 	mountpoint_list[0].stat_op.stat = initrd_stat;
+  	//mountpoint_list[0].operations = kmalloc(sizeof(struct super_node_operations));
+ 
+ 	strcpy(mountpoint_list[1].mountpoint,"/dev"); 	
+
+Modified: trunk/include/fs/initrd.h
+===================================================================
+--- trunk/include/fs/initrd.h	2010-04-04 10:53:35 UTC (rev 219)
++++ trunk/include/fs/initrd.h	2010-04-04 22:23:53 UTC (rev 220)
+@@ -21,6 +21,7 @@
+ 
+ #include <dirent.h>
+ #include <unistd.h>
++#include <sys/stat.h>
+ 
+ #define FILENAME_LENGTH 64
+ #define MAX_FILES 32
+@@ -65,5 +66,6 @@
+ struct dirent *initrd_readdir(DIR *);
+ int initfs_open(const char *, int, ...);
+ ssize_t initfs_read(int, char *, size_t);
++int initrd_stat(char* path, struct stat *buf);
+ int initrd_close(int);
+ #endif
+
+Modified: trunk/include/fs/vfs.h
+===================================================================
+--- trunk/include/fs/vfs.h	2010-04-04 10:53:35 UTC (rev 219)
++++ trunk/include/fs/vfs.h	2010-04-04 22:23:53 UTC (rev 220)
+@@ -22,6 +22,7 @@
+ #include <stddef.h>
+ #include <unistd.h>
+ #include <use.h>
++#include <sys/stat.h>
+ 
+ #define MAX_MOUNTPOINT 10
+ #define MAX_FD _SC_OPEN_MAX
+@@ -45,6 +46,10 @@
+ 	int (*write)(int, void*, size_t);
+ };
+ 
++struct stat_operations{
++	int (*stat)(char*, struct stat*);
++};
++
+ /*!  \struct mountpoint_t
+      \brief Struttura dati che contiene le informazioni sui files system montati
+  */
+@@ -57,10 +62,11 @@
+ 		int dev_id; /**< Device ID*/		
+ 		struct super_node_operations operations;
+ 		struct directory_operations dir_op;
++		struct stat_operations stat_op;
+ };
+ 
+ /*!  \struct file_descriptor
+-     \brief Struttura dati che le informazioni su di un file aperto
++     \brief Struttura dati che contiene le informazioni su di un file aperto
+  */
+ 
+ struct file_descriptor {
+
+Modified: trunk/include/shell/testing.h
+===================================================================
+--- trunk/include/shell/testing.h	2010-04-04 10:53:35 UTC (rev 219)
++++ trunk/include/shell/testing.h	2010-04-04 22:23:53 UTC (rev 220)
+@@ -28,5 +28,6 @@
+ void try_fsinit();
+ void try_syscall();
+ void show_fd();
++void test_stat();
+ 
+ #endif
+
+Added: trunk/include/sys/stat.h
+===================================================================
+--- trunk/include/sys/stat.h	2010-04-04 10:53:35 UTC (rev 219)
++++ trunk/include/sys/stat.h	2010-04-04 22:23:53 UTC (rev 220)
+@@ -0,0 +1,37 @@
++/*
++ * Dreamos
++ * stat.h
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++#ifndef _STAT_H
++#define _STAT_H
++
++#include <sys/types.h>
++
++/*!  \struct struct stat
++     \brief Struttura dati che contine le informazioni su di un file
++ */
++struct stat {
++	dev_t     st_dev; /**< device id del file*/
++	
++	uid_t     st_uid; /**< user id del file*/	
++	gid_t     st_gid; /**< group id del file*/
++};
++
++
++int stat(const char *, struct stat *);
++
++#endif
+
+Modified: trunk/include/sys/types.h
+===================================================================
+--- trunk/include/sys/types.h	2010-04-04 10:53:35 UTC (rev 219)
++++ trunk/include/sys/types.h	2010-04-04 22:23:53 UTC (rev 220)
+@@ -21,6 +21,8 @@
+ 
+ typedef unsigned int ino_t;
+ typedef unsigned int dev_t;
++typedef unsigned int uid_t;
++typedef unsigned int gid_t;
+ 
+ typedef unsigned int mode_t;
+ typedef int ssize_t;
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-04-04 10:53:35 UTC (rev 219)
++++ trunk/shell/commands.c	2010-04-04 22:23:53 UTC (rev 220)
+@@ -490,6 +490,7 @@
+ 					{ "try_open", try_open},					
+ 					{ "try_syscall", try_syscall},
+ 					{ "show_fd", show_fd},
++					{ "test_stat", test_stat},
+ 					{ "--help", help_tester },
+ 					};
+ 	if (argc != 2) {
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-04-04 10:53:35 UTC (rev 219)
++++ trunk/shell/testing.c	2010-04-04 22:23:53 UTC (rev 220)
+@@ -182,3 +182,12 @@
+ 	}
+ 	printf("\n");
+ }
++
++void test_stat(){
++	struct stat *stats;
++	printf("Testing stat functions\n");
++	stats = (struct stat*) kmalloc(sizeof(struct stat));
++	stat("/README", stats);
++	printf("%d\n", stats->st_dev);	
++	free(stats);	
++}
+
+Added: trunk/sys/stat.c
+===================================================================
+--- trunk/sys/stat.c	2010-04-04 10:53:35 UTC (rev 219)
++++ trunk/sys/stat.c	2010-04-04 22:23:53 UTC (rev 220)
+@@ -0,0 +1,35 @@
++/*
++ * Dreamos
++ * stat.c
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++#include <vfs.h>
++#include <stdio.h>
++#include <sys/stat.h>
++
++struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
++
++int stat(const char *path, struct stat *buf){
++	int mp_id;
++	mp_id = 0;
++	mp_id = get_mountpoint_id((char*) path);	
++	printf("%d\n", mp_id);
++	buf->st_dev = mp_id;
++	if(mountpoint_list[mp_id].stat_op.stat!=NULL) mountpoint_list[mp_id].stat_op.stat((char*)path, buf);
++	else printf("Null\n");
++	return 0;
++}
++
+
+
+
+From finarfin at mail.berlios.de  Tue Apr  6 23:23:32 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Tue, 6 Apr 2010 23:23:32 +0200
+Subject: [Dreamos-dev] r221 - in trunk: . fs sys
+Message-ID: <201004062123.o36LNWH4024615@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-04-06 23:23:24 +0200 (Tue, 06 Apr 2010)
+New Revision: 221
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/fs/initrd.c
+   trunk/fs/vfs.c
+   trunk/sys/stat.c
+Log:
+Aggiunti alcuni commenti nel formato doxygen
+Continuana funzone stat (da terminare)
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2010-04-04 22:23:53 UTC (rev 220)
++++ trunk/fs/fcntl.c	2010-04-06 21:23:24 UTC (rev 221)
+@@ -44,10 +44,7 @@
+ 	va_list ap;
+ 	va_start(ap, oflags);
+ 	ret_fd = 0;	
+-	/*while(ret_fd < _SC_OPEN_MAX){
+-		//if(fd_list[ret_fd].mountpoint_id == -1) printf("%d ", ret_fd);		
+-		ret_fd++;
+-	}*/
++	
+ 	prova = va_arg(ap, int);
+ 	cur_fd=0;
+ 	if(cur_fd == _SC_OPEN_MAX) cur_fd = 0;			
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-04-04 22:23:53 UTC (rev 220)
++++ trunk/fs/initrd.c	2010-04-06 21:23:24 UTC (rev 221)
+@@ -140,6 +140,7 @@
+ 
+ int initrd_stat(char* path, struct stat *buf){
+ 	printf("Initrd stat function\n");
++	buf->st_uid = 33;	
+ 	return 0;
+ }
+ 
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2010-04-04 22:23:53 UTC (rev 220)
++++ trunk/fs/vfs.c	2010-04-06 21:23:24 UTC (rev 221)
+@@ -120,6 +120,14 @@
+                return last;
+ }
+ 
++/**
++  * @author Ivan Gualandri
++  * @param int mountpoint_id id del punto di mountpoint del file
++  * @param char* path percorso del file da aprire
++  *
++  * Dato un path viene estratto il percorso relativo, escluso il mountpoint.
++  * @return path senza la parte relativa al mountpoint.
++  */
+ char *get_rel_path(int mountpoint_id, const char* path){
+ 	int rel_size = 0;
+ 	int j=0;
+@@ -138,6 +146,14 @@
+ 	return tmp_path;
+ }
+ 
++/**
++  * @author Ivan Gualandri
++  * @param char* path percorso del file da aprire  
++  *
++  * Dato un path ne estrae il percorso assoluto (a partire da quello corrente)
++  * @return Path assoluto
++  * @todo Inserire gestione flags
++  */
+ char *get_abs_path(char *path){
+ 		if(path[0]!='/') {
+ 		char abspath[CURPATH_LEN];
+
+Modified: trunk/sys/stat.c
+===================================================================
+--- trunk/sys/stat.c	2010-04-04 22:23:53 UTC (rev 220)
++++ trunk/sys/stat.c	2010-04-06 21:23:24 UTC (rev 221)
+@@ -28,8 +28,13 @@
+ 	mp_id = get_mountpoint_id((char*) path);	
+ 	printf("%d\n", mp_id);
+ 	buf->st_dev = mp_id;
+-	if(mountpoint_list[mp_id].stat_op.stat!=NULL) mountpoint_list[mp_id].stat_op.stat((char*)path, buf);
++	if(mountpoint_list[mp_id].stat_op.stat!=NULL) {
++		path = get_rel_path(mp_id, path);
++		printf("Absolute path: %s\n", path);
++		mountpoint_list[mp_id].stat_op.stat((char*)path, buf);	
++	}
+ 	else printf("Null\n");
++	printf("%d\n", buf->st_uid);
+ 	return 0;
+ }
+ 
+
+
+
+From finarfin at mail.berlios.de  Thu Apr  8 00:18:09 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Thu, 8 Apr 2010 00:18:09 +0200
+Subject: [Dreamos-dev] r222 - in trunk: . fs include/sys shell sys
+Message-ID: <201004072218.o37MI9t0015817@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-04-08 00:17:54 +0200 (Thu, 08 Apr 2010)
+New Revision: 222
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/initrd.c
+   trunk/include/sys/stat.h
+   trunk/include/sys/types.h
+   trunk/shell/commands.c
+   trunk/shell/testing.c
+   trunk/sys/stat.c
+Log:
+Aggiunti altri valori a struct stat. 
+Aggiornato comando test_stat in tester
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-04-06 21:23:24 UTC (rev 221)
++++ trunk/fs/initrd.c	2010-04-07 22:17:54 UTC (rev 222)
+@@ -139,8 +139,21 @@
+ }
+ 
+ int initrd_stat(char* path, struct stat *buf){
+-	printf("Initrd stat function\n");
+-	buf->st_uid = 33;	
++	int i;
++	initrd_file_t *module_var;
++	module_var = fs_headers;
++	i=0;
++	while(i<MAX_INITRD_DESCRIPTORS){
++		if(!strcmp(path, module_var[i].fileName)) {
++			printf("Found\n");		
++			buf->st_uid = module_var[i].uid;
++			buf->st_size = module_var[i].length;
++			break;
++		}
++		i++;
++	}
++	printf("Initrd stat function\n");	
++	//buf->st_uid = 33;	
+ 	return 0;
+ }
+ 
+
+Modified: trunk/include/sys/stat.h
+===================================================================
+--- trunk/include/sys/stat.h	2010-04-06 21:23:24 UTC (rev 221)
++++ trunk/include/sys/stat.h	2010-04-07 22:17:54 UTC (rev 222)
+@@ -29,6 +29,8 @@
+ 	
+ 	uid_t     st_uid; /**< user id del file*/	
+ 	gid_t     st_gid; /**< group id del file*/
++	
++	off_t	  st_size; /**< Dimensione del file */
+ };
+ 
+ 
+
+Modified: trunk/include/sys/types.h
+===================================================================
+--- trunk/include/sys/types.h	2010-04-06 21:23:24 UTC (rev 221)
++++ trunk/include/sys/types.h	2010-04-07 22:17:54 UTC (rev 222)
+@@ -23,6 +23,7 @@
+ typedef unsigned int dev_t;
+ typedef unsigned int uid_t;
+ typedef unsigned int gid_t;
++typedef unsigned int off_t;
+ 
+ typedef unsigned int mode_t;
+ typedef int ssize_t;
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-04-06 21:23:24 UTC (rev 221)
++++ trunk/shell/commands.c	2010-04-07 22:17:54 UTC (rev 222)
+@@ -24,6 +24,7 @@
+ #include <vfs.h>
+ #include <testing.h>
+ #include <fcntl.h>
++#include <stat.h>
+ 
+ struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
+ userenv_t current_user;
+@@ -356,16 +357,16 @@
+ 
+ void ls() {
+ 	int i=0, j=0;
+-	//int flag = 0;
++	int flag = 0;
+ 	DIR *dirp;
+ 	while ( strcmp(mountpoint_list[i].mountpoint, "") ) {
+          	j++;
+ 		i++;
+ 	}
+-	i = 0;	
+-	//if(if argc > 1 && strcmp(argv[1], "-l") == 0) flag =1;
++	i = 0;		
+ 	dirp = opendir(current_user.cur_path);
+ 	if(dirp!=NULL){
++		if(argc > 1 && strcmp(argv[1], "-l") == 0) flag =1;
+ 		/*while(i<j){
+ 			if(strcmp(mountpoint_list[i].mountpoint, current_user.cur_path)){
+ 				
+@@ -374,7 +375,8 @@
+ 		}*/
+ 		struct dirent* cur_dir_entry;
+ 		cur_dir_entry = readdir(dirp);		
+-		while(cur_dir_entry!=NULL){			
++		while(cur_dir_entry!=NULL){
++			//struct stat 			
+ 			if(cur_dir_entry->d_type == FS_MOUNTPOINT) _kcolor(BRIGHT_GREEN);
+ 			printf("%s\n", cur_dir_entry->d_name);
+ 			_kcolor(WHITE);			
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-04-06 21:23:24 UTC (rev 221)
++++ trunk/shell/testing.c	2010-04-07 22:17:54 UTC (rev 222)
+@@ -188,6 +188,8 @@
+ 	printf("Testing stat functions\n");
+ 	stats = (struct stat*) kmalloc(sizeof(struct stat));
+ 	stat("/README", stats);
+-	printf("%d\n", stats->st_dev);	
++	printf("Device_id: %d\n", stats->st_dev);	
++	printf("Size: %d\n", stats->st_size);
++	printf("Uid: %d\n", stats->st_uid);
+ 	free(stats);	
+ }
+
+Modified: trunk/sys/stat.c
+===================================================================
+--- trunk/sys/stat.c	2010-04-06 21:23:24 UTC (rev 221)
++++ trunk/sys/stat.c	2010-04-07 22:17:54 UTC (rev 222)
+@@ -25,16 +25,17 @@
+ int stat(const char *path, struct stat *buf){
+ 	int mp_id;
+ 	mp_id = 0;
+-	mp_id = get_mountpoint_id((char*) path);	
+-	printf("%d\n", mp_id);
++	mp_id = get_mountpoint_id((char*) path);
++	if(path[0] == '/');
++	//printf("%d\n", mp_id);
+ 	buf->st_dev = mp_id;
+ 	if(mountpoint_list[mp_id].stat_op.stat!=NULL) {
+ 		path = get_rel_path(mp_id, path);
+-		printf("Absolute path: %s\n", path);
++		//printf("Absolute path: %s\n", path);
+ 		mountpoint_list[mp_id].stat_op.stat((char*)path, buf);	
+ 	}
+ 	else printf("Null\n");
+-	printf("%d\n", buf->st_uid);
++	//printf("%d\n", buf->st_uid);
+ 	return 0;
+ }
+ 
+
+
+
+From finarfin at mail.berlios.de  Thu Apr  8 16:40:47 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Thu, 8 Apr 2010 16:40:47 +0200
+Subject: [Dreamos-dev] r223 - in trunk: . fs include/fs shell sys
+Message-ID: <201004081440.o38EelUv023305@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-04-08 16:40:39 +0200 (Thu, 08 Apr 2010)
+New Revision: 223
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/fs/vfs.c
+   trunk/include/fs/vfs.h
+   trunk/shell/testing.c
+   trunk/sys/dirent.c
+   trunk/sys/stat.c
+Log:
+fixati alcuni problemi da get_abs_path
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2010-04-07 22:17:54 UTC (rev 222)
++++ trunk/fs/fcntl.c	2010-04-08 14:40:39 UTC (rev 223)
+@@ -41,6 +41,7 @@
+ 	int prova;
+ 	int mpid;
+ 	int ret_fd;
++	int error = 0;
+ 	va_list ap;
+ 	va_start(ap, oflags);
+ 	ret_fd = 0;	
+@@ -57,7 +58,7 @@
+ 		printf("No more file descriptors available\n");
+ 		return -1;
+ 	}
+-	path=get_abs_path((char*) path);
++	error = get_abs_path((char*) path);
+     mpid = get_mountpoint_id((char*) path);		
+ 	//printf("Cur_fd: %d\n",cur_fd);
+ 	if(mpid >-1) {
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2010-04-07 22:17:54 UTC (rev 222)
++++ trunk/fs/vfs.c	2010-04-08 14:40:39 UTC (rev 223)
+@@ -151,10 +151,9 @@
+   * @param char* path percorso del file da aprire  
+   *
+   * Dato un path ne estrae il percorso assoluto (a partire da quello corrente)
+-  * @return Path assoluto
+-  * @todo Inserire gestione flags
++  * @return Path assoluto  
+   */
+-char *get_abs_path(char *path){
++int get_abs_path(char *path){
+ 		if(path[0]!='/') {
+ 		char abspath[CURPATH_LEN];
+ 		int abs_size = 0;
+@@ -166,8 +165,10 @@
+ 		else {
+ 			strncat(abspath, "/", strlen(path));
+ 			strncat(abspath, path, strlen(path));
+-		}			
+-		return abspath;
++		}
++		//printf("abspath: %s\n", abspath);
++		strcpy(path, abspath);				
++		return strlen(path);
+ 	}
+-	else return path;
++	else return 0;
+ }
+
+Modified: trunk/include/fs/vfs.h
+===================================================================
+--- trunk/include/fs/vfs.h	2010-04-07 22:17:54 UTC (rev 222)
++++ trunk/include/fs/vfs.h	2010-04-08 14:40:39 UTC (rev 223)
+@@ -90,7 +90,7 @@
+ int open_dir(char *);
+ int read (int, void*, size_t);
+ int write (int, void*, size_t);
+-char *get_abs_path(char *);
++int get_abs_path(char *);
+ void vfs_init();
+ 
+ #endif
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-04-07 22:17:54 UTC (rev 222)
++++ trunk/shell/testing.c	2010-04-08 14:40:39 UTC (rev 223)
+@@ -187,7 +187,7 @@
+ 	struct stat *stats;
+ 	printf("Testing stat functions\n");
+ 	stats = (struct stat*) kmalloc(sizeof(struct stat));
+-	stat("/README", stats);
++	stat("README", stats);
+ 	printf("Device_id: %d\n", stats->st_dev);	
+ 	printf("Size: %d\n", stats->st_size);
+ 	printf("Uid: %d\n", stats->st_uid);
+
+Modified: trunk/sys/dirent.c
+===================================================================
+--- trunk/sys/dirent.c	2010-04-07 22:17:54 UTC (rev 222)
++++ trunk/sys/dirent.c	2010-04-08 14:40:39 UTC (rev 223)
+@@ -35,9 +35,11 @@
+   */
+ DIR *opendir(const char *path){
+ 	int mpoint_id = 0;
++	int error = 0;
++	//char tmp_path[CURPATH_LEN];
+ 	char* rel_path;	
+ 	DIR* pdir;
+-	path=get_abs_path((char*)path);
++	error=get_abs_path((char*)path);
+ 	//printf("%s\n", path);
+ 	mpoint_id = get_mountpoint_id((char*)path);
+ 	rel_path = get_rel_path(mpoint_id, path);	
+
+Modified: trunk/sys/stat.c
+===================================================================
+--- trunk/sys/stat.c	2010-04-07 22:17:54 UTC (rev 222)
++++ trunk/sys/stat.c	2010-04-08 14:40:39 UTC (rev 223)
+@@ -18,15 +18,30 @@
+ 
+ #include <vfs.h>
+ #include <stdio.h>
++#include <shell.h>
++#include <stdio.h>
++#include <string.h>
+ #include <sys/stat.h>
+ 
+ struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
+ 
+ int stat(const char *path, struct stat *buf){
++	char tmp_path[CURPATH_LEN];	
+ 	int mp_id;
+ 	mp_id = 0;
++	strcpy(tmp_path, path);
++	printf("Tmp Path: %s\n", tmp_path);
++	if(path[0] != '/'){		
++		get_abs_path((char*) tmp_path);		
++		printf("Path: %s\n", tmp_path);
++		printf("Arg Path: %s\n", path);
++	}
++	
+ 	mp_id = get_mountpoint_id((char*) path);
+-	if(path[0] == '/');
++	if(mp_id == -1) {
++		printf("No file\n");
++		return -1;
++	}
+ 	//printf("%d\n", mp_id);
+ 	buf->st_dev = mp_id;
+ 	if(mountpoint_list[mp_id].stat_op.stat!=NULL) {
+@@ -34,7 +49,7 @@
+ 		//printf("Absolute path: %s\n", path);
+ 		mountpoint_list[mp_id].stat_op.stat((char*)path, buf);	
+ 	}
+-	else printf("Null\n");
++	//else printf("Null\n");
+ 	//printf("%d\n", buf->st_uid);
+ 	return 0;
+ }
+
+
+
+From finarfin at mail.berlios.de  Fri Apr  9 00:21:56 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Fri, 9 Apr 2010 00:21:56 +0200
+Subject: [Dreamos-dev] r224 - in trunk: . fs shell sys
+Message-ID: <201004082221.o38MLuKL005647@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-04-09 00:21:47 +0200 (Fri, 09 Apr 2010)
+New Revision: 224
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/initrd.c
+   trunk/shell/commands.c
+   trunk/sys/stat.c
+Log:
+Aggiunta opzione -l per l'ls in un filesystem esistente. 
+In stat(...) eliminate stampe di debug.
+Corretti ancora alcuni errori sulla gestione dei path in queste 
+funzioni.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-04-08 14:40:39 UTC (rev 223)
++++ trunk/fs/initrd.c	2010-04-08 22:21:47 UTC (rev 224)
+@@ -143,16 +143,17 @@
+ 	initrd_file_t *module_var;
+ 	module_var = fs_headers;
+ 	i=0;
+-	while(i<MAX_INITRD_DESCRIPTORS){
++	//printf("Path: %s\n", path);
++	while(i<MAX_INITRD_DESCRIPTORS){	
+ 		if(!strcmp(path, module_var[i].fileName)) {
+-			printf("Found\n");		
++			//printf("Found\n");		
+ 			buf->st_uid = module_var[i].uid;
+ 			buf->st_size = module_var[i].length;
+ 			break;
+ 		}
+ 		i++;
+ 	}
+-	printf("Initrd stat function\n");	
++	//printf("Initrd stat function\n");	
+ 	//buf->st_uid = 33;	
+ 	return 0;
+ }
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-04-08 14:40:39 UTC (rev 223)
++++ trunk/shell/commands.c	2010-04-08 22:21:47 UTC (rev 224)
+@@ -378,6 +378,11 @@
+ 		while(cur_dir_entry!=NULL){
+ 			//struct stat 			
+ 			if(cur_dir_entry->d_type == FS_MOUNTPOINT) _kcolor(BRIGHT_GREEN);
++			if(flag==1){
++				struct stat tmp_stat;
++				stat(cur_dir_entry->d_name, &tmp_stat);
++				printf("uid=%d(%s) - size:  %d ", tmp_stat.st_uid, "root", tmp_stat.st_size);
++			}
+ 			printf("%s\n", cur_dir_entry->d_name);
+ 			_kcolor(WHITE);			
+ 			cur_dir_entry = readdir(dirp);
+
+Modified: trunk/sys/stat.c
+===================================================================
+--- trunk/sys/stat.c	2010-04-08 14:40:39 UTC (rev 223)
++++ trunk/sys/stat.c	2010-04-08 22:21:47 UTC (rev 224)
+@@ -30,14 +30,14 @@
+ 	int mp_id;
+ 	mp_id = 0;
+ 	strcpy(tmp_path, path);
+-	printf("Tmp Path: %s\n", tmp_path);
++	//printf("Tmp Path: %s\n", tmp_path);
+ 	if(path[0] != '/'){		
+ 		get_abs_path((char*) tmp_path);		
+-		printf("Path: %s\n", tmp_path);
+-		printf("Arg Path: %s\n", path);
++		//printf("Path: %s\n", tmp_path);
++		//printf("Arg Path: %s\n", path);
+ 	}
+ 	
+-	mp_id = get_mountpoint_id((char*) path);
++	mp_id = get_mountpoint_id((char*) tmp_path);
+ 	if(mp_id == -1) {
+ 		printf("No file\n");
+ 		return -1;
+@@ -45,7 +45,7 @@
+ 	//printf("%d\n", mp_id);
+ 	buf->st_dev = mp_id;
+ 	if(mountpoint_list[mp_id].stat_op.stat!=NULL) {
+-		path = get_rel_path(mp_id, path);
++		if(path[0]=='/')path = get_rel_path(mp_id, path);
+ 		//printf("Absolute path: %s\n", path);
+ 		mountpoint_list[mp_id].stat_op.stat((char*)path, buf);	
+ 	}
+
+
+
+From finarfin at mail.berlios.de  Sat Apr 10 01:16:55 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sat, 10 Apr 2010 01:16:55 +0200
+Subject: [Dreamos-dev] r225 - in trunk: . fs shell
+Message-ID: <201004092316.o39NGtu5026754@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-04-10 01:16:50 +0200 (Sat, 10 Apr 2010)
+New Revision: 225
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/initrd.c
+   trunk/shell/commands.c
+Log:
+Fixato errore in ciclo di initrd_stat
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-04-08 22:21:47 UTC (rev 224)
++++ trunk/fs/initrd.c	2010-04-09 23:16:50 UTC (rev 225)
+@@ -142,11 +142,9 @@
+ 	int i;
+ 	initrd_file_t *module_var;
+ 	module_var = fs_headers;
+-	i=0;
+-	//printf("Path: %s\n", path);
+-	while(i<MAX_INITRD_DESCRIPTORS){	
+-		if(!strcmp(path, module_var[i].fileName)) {
+-			//printf("Found\n");		
++	i=0;	
++	while(i<MAX_FILES){			
++		if(!strcmp(path, module_var[i].fileName)) {			
+ 			buf->st_uid = module_var[i].uid;
+ 			buf->st_size = module_var[i].length;
+ 			break;
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-04-08 22:21:47 UTC (rev 224)
++++ trunk/shell/commands.c	2010-04-09 23:16:50 UTC (rev 225)
+@@ -380,8 +380,8 @@
+ 			if(cur_dir_entry->d_type == FS_MOUNTPOINT) _kcolor(BRIGHT_GREEN);
+ 			if(flag==1){
+ 				struct stat tmp_stat;
+-				stat(cur_dir_entry->d_name, &tmp_stat);
+-				printf("uid=%d(%s) - size:  %d ", tmp_stat.st_uid, "root", tmp_stat.st_size);
++				if(stat(cur_dir_entry->d_name, &tmp_stat)!=-1)
++					printf("uid=%d(%s) - size:  %d ", tmp_stat.st_uid, "root", tmp_stat.st_size);
+ 			}
+ 			printf("%s\n", cur_dir_entry->d_name);
+ 			_kcolor(WHITE);			
+
+
+
+From finarfin at mail.berlios.de  Wed Apr 14 00:19:15 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Wed, 14 Apr 2010 00:19:15 +0200
+Subject: [Dreamos-dev] r226 - in trunk: . fs include/fs include/sys shell sys
+Message-ID: <201004132219.o3DMJF7i013864@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-04-14 00:19:07 +0200 (Wed, 14 Apr 2010)
+New Revision: 226
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/initrd.c
+   trunk/fs/unistd.c
+   trunk/include/fs/vfs.h
+   trunk/include/sys/unistd.h
+   trunk/shell/commands.c
+   trunk/sys/stat.c
+Log:
+Aggiunto proptotipo di funzione write.
+Corretto bug #17083 su problema di cd.
+Sistemati alcuni valori di ritorno di stat.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-04-09 23:16:50 UTC (rev 225)
++++ trunk/fs/initrd.c	2010-04-13 22:19:07 UTC (rev 226)
+@@ -153,7 +153,8 @@
+ 	}
+ 	//printf("Initrd stat function\n");	
+ 	//buf->st_uid = 33;	
+-	return 0;
++	if(i==MAX_FILES) return -1;
++	else return 0;
+ }
+ 
+ int initrd_close(int fildes){
+
+Modified: trunk/fs/unistd.c
+===================================================================
+--- trunk/fs/unistd.c	2010-04-09 23:16:50 UTC (rev 225)
++++ trunk/fs/unistd.c	2010-04-13 22:19:07 UTC (rev 226)
+@@ -37,6 +37,11 @@
+ 	return 0;
+ }
+ 
++ssize_t write(int fildes, const void *buf, size_t nbyte){
++	printf("placeholder for write, coming soon,\n stay tuned\n");
++	return 0;
++}
++
+ int close(int fildes){
+ 	int mp_id;
+ 	int fs_fd;
+
+Modified: trunk/include/fs/vfs.h
+===================================================================
+--- trunk/include/fs/vfs.h	2010-04-09 23:16:50 UTC (rev 225)
++++ trunk/include/fs/vfs.h	2010-04-13 22:19:07 UTC (rev 226)
+@@ -88,8 +88,8 @@
+ int get_mountpoint_id(char *);
+ char* get_rel_path(int, const char*);
+ int open_dir(char *);
+-int read (int, void*, size_t);
+-int write (int, void*, size_t);
++//int read (int, void*, size_t);
++//int write (int, void*, size_t);
+ int get_abs_path(char *);
+ void vfs_init();
+ 
+
+Modified: trunk/include/sys/unistd.h
+===================================================================
+--- trunk/include/sys/unistd.h	2010-04-09 23:16:50 UTC (rev 225)
++++ trunk/include/sys/unistd.h	2010-04-13 22:19:07 UTC (rev 226)
+@@ -25,6 +25,9 @@
+ #define _SC_OPEN_MAX 4
+ 
+ ssize_t read(int , void *, size_t);
++ssize_t write(int fildes, const void *buf, size_t nbyte);
+ int close(int);
+ 
++
++
+ #endif
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-04-09 23:16:50 UTC (rev 225)
++++ trunk/shell/commands.c	2010-04-13 22:19:07 UTC (rev 226)
+@@ -454,6 +454,7 @@
+ 		}
+ 		else {			
+ 			int abs_size = 0;			
++			abs_size = strlen(current_user.cur_path);
+ 			strcpy(abspath, current_user.cur_path);
+ 			if(abspath[abs_size-1] == '/')
+ 				strncat(abspath, argv[1], strlen(argv[1]));
+
+Modified: trunk/sys/stat.c
+===================================================================
+--- trunk/sys/stat.c	2010-04-09 23:16:50 UTC (rev 225)
++++ trunk/sys/stat.c	2010-04-13 22:19:07 UTC (rev 226)
+@@ -39,7 +39,7 @@
+ 	
+ 	mp_id = get_mountpoint_id((char*) tmp_path);
+ 	if(mp_id == -1) {
+-		printf("No file\n");
++		//printf("No file\n");
+ 		return -1;
+ 	}
+ 	//printf("%d\n", mp_id);
+
+
+
+From finarfin at mail.berlios.de  Thu Apr 15 00:05:23 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Thu, 15 Apr 2010 00:05:23 +0200
+Subject: [Dreamos-dev] r227 - in trunk: . fs include/fs shell
+Message-ID: <201004142205.o3EM5NTa002340@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-04-15 00:05:08 +0200 (Thu, 15 Apr 2010)
+New Revision: 227
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/include/fs/fcntl.h
+   trunk/shell/commands.c
+   trunk/shell/testing.c
+Log:
+Aggiunto valore O_CREAT per la open.
+Aggiunta funzione di test try_ocreat, per  testare la creazione di un 
+file (da completare).
+Eliminato comando try_module
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2010-04-13 22:19:07 UTC (rev 226)
++++ trunk/fs/fcntl.c	2010-04-14 22:05:08 UTC (rev 227)
+@@ -49,6 +49,10 @@
+ 	prova = va_arg(ap, int);
+ 	cur_fd=0;
+ 	if(cur_fd == _SC_OPEN_MAX) cur_fd = 0;			
++	if(oflags&O_CREAT) {
++		printf("O_CREAT Flag\n");
++		return -1;
++	}
+ 
+ 	while(fd_list[cur_fd].mountpoint_id != -1 && cur_fd < _SC_OPEN_MAX){
+ 		//printf("%d %d\n", cur_fd, fd_list[cur_fd].mountpoint_id);		
+
+Modified: trunk/include/fs/fcntl.h
+===================================================================
+--- trunk/include/fs/fcntl.h	2010-04-13 22:19:07 UTC (rev 226)
++++ trunk/include/fs/fcntl.h	2010-04-14 22:05:08 UTC (rev 227)
+@@ -25,6 +25,9 @@
+ #define O_WRONLY    00000001
+ #define O_RDWR      00000002
+ 
++#define O_CREAT		00000004
++
++
+ int  creat(const char *, mode_t);
+ int  fcntl(int, int, ...);
+ int  open(const char *, int, ...);
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-04-13 22:19:07 UTC (rev 226)
++++ trunk/shell/commands.c	2010-04-14 22:05:08 UTC (rev 227)
+@@ -494,7 +494,7 @@
+ 					{ "try_strtok", try_strtok },
+ 					{ "do_fault", do_fault },
+ 					{ "try_printmem", try_printmem },
+-					{ "try_module", try_module },
++					{ "try_ocreat", try_fsinit },
+ 					{ "try_open", try_open},					
+ 					{ "try_syscall", try_syscall},
+ 					{ "show_fd", show_fd},
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-04-13 22:19:07 UTC (rev 226)
++++ trunk/shell/testing.c	2010-04-14 22:05:08 UTC (rev 227)
+@@ -156,7 +156,8 @@
+ }
+ 
+ void try_fsinit(){
+-	printf("Number of files present: %d\n", initfs_init());
++	//printf("Number of files present: %d\n", initfs_init());
++	open("pippo", O_RDWR|O_CREAT);
+ }
+ 
+ void try_syscall(){
+
+
+
+From finarfin at mail.berlios.de  Fri Apr 16 23:34:46 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Fri, 16 Apr 2010 23:34:46 +0200
+Subject: [Dreamos-dev] r228 - in trunk: . fs include/shell shell
+Message-ID: <201004162134.o3GLYkXW030728@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-04-16 23:34:38 +0200 (Fri, 16 Apr 2010)
+New Revision: 228
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/fs/initrd.c
+   trunk/fs/vfs.c
+   trunk/include/shell/testing.h
+   trunk/shell/commands.c
+   trunk/shell/testing.c
+Log:
+In open ora path non viene piu modificata come variabile durante la 
+funzione.
+Ora il parametro o_creat crea un file nel filesystem, se possibile.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2010-04-14 22:05:08 UTC (rev 227)
++++ trunk/fs/fcntl.c	2010-04-16 21:34:38 UTC (rev 228)
+@@ -42,17 +42,16 @@
+ 	int mpid;
+ 	int ret_fd;
+ 	int error = 0;
++	char *newpath;
+ 	va_list ap;
+ 	va_start(ap, oflags);
+ 	ret_fd = 0;	
+-	
++	//printf("Path: %s\n", path);	
+ 	prova = va_arg(ap, int);
++	newpath = kmalloc(CURPATH_LEN * sizeof(char));
++	memset(newpath, '\0', CURPATH_LEN);
+ 	cur_fd=0;
+ 	if(cur_fd == _SC_OPEN_MAX) cur_fd = 0;			
+-	if(oflags&O_CREAT) {
+-		printf("O_CREAT Flag\n");
+-		return -1;
+-	}
+ 
+ 	while(fd_list[cur_fd].mountpoint_id != -1 && cur_fd < _SC_OPEN_MAX){
+ 		//printf("%d %d\n", cur_fd, fd_list[cur_fd].mountpoint_id);		
+@@ -62,19 +61,21 @@
+ 		printf("No more file descriptors available\n");
+ 		return -1;
+ 	}
+-	error = get_abs_path((char*) path);
+-    mpid = get_mountpoint_id((char*) path);		
++	strcpy(newpath, path);	
++	error = get_abs_path((char*) newpath);
++	//printf("After get_abs: %s %s\n", newpath, current_user.cur_path);
++    mpid = get_mountpoint_id((char*) newpath);		
+ 	//printf("Cur_fd: %d\n",cur_fd);
+ 	if(mpid >-1) {
+ 		fd_list[cur_fd].mountpoint_id = mpid;				
+-		path = get_rel_path(mpid, path);		
++		newpath = get_rel_path(mpid, (char *)newpath);		
+ 	} else {
+ 		printf("That path doesn't exist\n");
+ 		va_end(ap);
+ 		return -1;
+ 	}
+ 	if( mpid > -1 && mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open != NULL){
+-			fd_list[cur_fd].fs_spec_id = (int) mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open(path, oflags);
++			fd_list[cur_fd].fs_spec_id = (int) mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open(newpath, oflags);
+ 		if(fd_list[cur_fd].fs_spec_id == -1){
+ 			printf("No file's Found\n");
+ 			va_end(ap);
+@@ -91,7 +92,7 @@
+ 	fd_list[cur_fd].flags_mask = oflags;
+ 	ret_fd = cur_fd;
+ 	cur_fd++;
+-	free((void*)path);
++	free(newpath);
+ 	return ret_fd;
+ }
+ 
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-04-14 22:05:08 UTC (rev 227)
++++ trunk/fs/initrd.c	2010-04-16 21:34:38 UTC (rev 228)
+@@ -24,6 +24,7 @@
+ #include <string.h>
+ #include <vfs.h>
+ #include <kheap.h>
++#include <fcntl.h>
+ #include <sys/stat.h>
+ 
+ char *module_start;
+@@ -101,8 +102,22 @@
+ 		while(ird_descriptors[i].file_descriptor!=-1 && i < MAX_INITRD_DESCRIPTORS) i++;			
+ 		cur_irdfd = i;
+ 	}
+-	while (j < fs_specs->nfiles) {
+-		if(!strcmp(path, module_var[j].fileName)){
++	if(flags&O_CREAT) {
++		printf("O_CREAT Flag\n");
++		if(fs_specs->nfiles < MAX_FILES ){			
++			module_var[fs_specs->nfiles].magic=0xBF;
++			strcpy(module_var[fs_specs->nfiles].fileName, path);
++			module_var[fs_specs->nfiles].file_type = FS_FILE;
++			module_var[fs_specs->nfiles].uid = 1;
++			module_var[fs_specs->nfiles].offset = 0;
++			fs_specs->nfiles++;
++			return cur_irdfd++; 
++		}
++		return -1;
++	}
++	else {
++		while (j < fs_specs->nfiles) {
++			if(!strcmp(path, module_var[j].fileName)){
+ 				if(module_var[j].file_type == FS_DIRECTORY || module_var[j].file_type == FS_MOUNTPOINT)
+ 					return -1;
+ 				ird_descriptors[cur_irdfd].file_descriptor	= j;
+@@ -111,8 +126,9 @@
+ 				//printf("ret_fd: %d --- %d\n", cur_irdfd, j);
+ 				ird_descriptors[cur_irdfd].cur_pos = 0;
+ 				return cur_irdfd++; 
++			}
++			j++;
+ 		}
+-		j++;
+ 	}
+ 	return -1;	
+ }
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2010-04-14 22:05:08 UTC (rev 227)
++++ trunk/fs/vfs.c	2010-04-16 21:34:38 UTC (rev 228)
+@@ -151,14 +151,15 @@
+   * @param char* path percorso del file da aprire  
+   *
+   * Dato un path ne estrae il percorso assoluto (a partire da quello corrente)
+-  * @return Path assoluto  
++  * @return error code  
+   */
+ int get_abs_path(char *path){
+-		if(path[0]!='/') {
++		if(path[0]!='/') {			
+ 		char abspath[CURPATH_LEN];
+ 		int abs_size = 0;
+-		abs_size = strlen(current_user.cur_path);
++		abs_size = strlen(current_user.cur_path);		
+ 		memset(abspath, '\0', CURPATH_LEN);
++		//printf("Abs: %s\n", abspath);
+ 		strcpy(abspath, current_user.cur_path);
+ 		if(abspath[abs_size-1] == '/')
+ 			strncat(abspath, path, strlen(path));
+
+Modified: trunk/include/shell/testing.h
+===================================================================
+--- trunk/include/shell/testing.h	2010-04-14 22:05:08 UTC (rev 227)
++++ trunk/include/shell/testing.h	2010-04-16 21:34:38 UTC (rev 228)
+@@ -25,7 +25,7 @@
+ void help_tester();
+ void try_module();
+ void try_open();
+-void try_fsinit();
++void try_ocreat();
+ void try_syscall();
+ void show_fd();
+ void test_stat();
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-04-14 22:05:08 UTC (rev 227)
++++ trunk/shell/commands.c	2010-04-16 21:34:38 UTC (rev 228)
+@@ -494,7 +494,7 @@
+ 					{ "try_strtok", try_strtok },
+ 					{ "do_fault", do_fault },
+ 					{ "try_printmem", try_printmem },
+-					{ "try_ocreat", try_fsinit },
++					{ "try_ocreat", try_ocreat },
+ 					{ "try_open", try_open},					
+ 					{ "try_syscall", try_syscall},
+ 					{ "show_fd", show_fd},
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-04-14 22:05:08 UTC (rev 227)
++++ trunk/shell/testing.c	2010-04-16 21:34:38 UTC (rev 228)
+@@ -155,7 +155,7 @@
+ 	printf("\n");
+ }
+ 
+-void try_fsinit(){
++void try_ocreat(){
+ 	//printf("Number of files present: %d\n", initfs_init());
+ 	open("pippo", O_RDWR|O_CREAT);
+ }
+
+
+
+From dt- at mail.berlios.de  Sat Apr 17 00:40:04 2010
+From: dt- at mail.berlios.de (dt- at mail.berlios.de)
+Date: Sat, 17 Apr 2010 00:40:04 +0200
+Subject: [Dreamos-dev] r229 - in trunk: include/shell shell
+Message-ID: <201004162240.o3GMe4Jw008663@sheep.berlios.de>
+
+Author: dt-
+Date: 2010-04-17 00:39:34 +0200 (Sat, 17 Apr 2010)
+New Revision: 229
+
+Modified:
+   trunk/include/shell/shell.h
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+Log:
+
+
+Modified: trunk/include/shell/shell.h
+===================================================================
+--- trunk/include/shell/shell.h	2010-04-16 21:34:38 UTC (rev 228)
++++ trunk/include/shell/shell.h	2010-04-16 22:39:34 UTC (rev 229)
+@@ -20,13 +20,16 @@
+ 
+ #define USER_LEN 24
+ #define CMD_LEN 256
++#define DESC_LEN 256
+ #define CURPATH_LEN 256
+ #define NUM_COM 30
++#define DEF_COM 18
+ 
+ 
+ struct cmd {
+ 	const char cmdname[CMD_LEN];
+ 	void (*h_func)(void);
++	const char cmddesc[DESC_LEN];
+ };
+ 
+ struct user_env {
+@@ -35,6 +38,7 @@
+ };
+ 
+ //extern char cur_path[256];
++struct cmd shell_cmd[NUM_COM];
+ typedef struct user_env userenv_t;
+ extern userenv_t current_user;
+ void shell(void);
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-04-16 21:34:38 UTC (rev 228)
++++ trunk/shell/commands.c	2010-04-16 22:39:34 UTC (rev 229)
+@@ -60,25 +60,12 @@
+ void help()
+ {
+   printf ("Available commands:\n");
+-  printf(
+-	"help          - See the 'help' list to learn the DreamOS commands now available\n"
+-	"clear         - Clear the screen\n"
+-	"poweroff      - Turn off the machine\n"
+-	"aalogo        - Show an ascii art logo\n"
+-	"uname         - Print kernel version, try uname --help for more info\n"
+-	"credits       - Show DreamOS credits\n"
+-	"sleep         - pause DreamOS for a particular number of seconds\n"
+-	"cpuid         - Show cpu identification informations\n"
+-	"date          - Show date and time\n"
+-	"echo          - Print some lines of text\n"
+-	"drv_load      - Tool to load and kill drivers\n"
+-	"ls            - Tool for listing dir - not complete-\n"
+-	"cd            - Change dir - not complete-\n"
+-	"whoami        - Show the current user name\n"
+-	"tester        - Try some functions, 'tester --help' for more info'\n"
+-	"pwd           - Print current working directory\n"
+-	"more		   - read content of a file\n"
+-	);
++  int i=0;
++  while(i<DEF_COM)
++  {
++	printf("%s   %s\n", shell_cmd[i].cmdname, shell_cmd[i].cmddesc);
++	i++;
++  }
+ }
+ 
+ void echo()
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2010-04-16 21:34:38 UTC (rev 228)
++++ trunk/shell/shell.c	2010-04-16 22:39:34 UTC (rev 229)
+@@ -45,7 +45,26 @@
+ char **argv;
+ int hst_flag;
+ char cmd[CMD_LEN];
+-
++struct cmd shell_cmd[NUM_COM] = {
++ { "aalogo",   aalogo,    "  Show an ascii art logo" },
++ { "clear",    _kclear,   "   Clear the screen" },
++ { "poweroff", poweroff,  "Turn off the machine" },
++ { "uname",    uname_cmd, "   Print kernel version, try uname --help for more info" },
++ { "credits",  credits,   " Show DreamOS credits" },
++ { "sleep",    sleep_cmd, "   Pause DreamOS for a particular number of seconds" },
++ { "cpuid",    cpuid, 	  "   Show cpu identification informations" },
++ { "date",     date, 	  "    Show date and time" },
++ { "echo",     echo, 	  "    Print some lines of text" },
++ { "help",     help,	  "    See the 'help' list to learn the DreamOS commands now available" },
++ { "answer",   answer,    "  42" },
++ { "drv_load", drv_load,  "Tool to load and kill drivers" },
++ { "ls",       ls,        "      Tool for listing dir - not complete-" },
++ { "cd",       cd,        "      Change dir - not complete-" },
++ { "whoami",   whoami,    "  Show the current user name" },
++ { "tester",   tester,    "  Try some functions, 'tester --help' for more info'" },	
++ { "pwd",      pwd,       "     Print current working directory" },
++ { "more",     more,      "    Read content of a file" },
++};
+ /*
+  * Inserisce gli argomenti di un comando in un array di stringhe
+  * argc = numero degli argomenti
+@@ -80,27 +99,8 @@
+   
+   char *cmd_ptr;
+  
+-  static struct cmd shell_cmd[NUM_COM] = {
+-	{ "aalogo",   aalogo      },
+-	{ "clear",    _kclear     },
+-	{ "poweroff", poweroff    },
+-	{ "uname",    uname_cmd   },
+-	{ "credits",  credits     },
+-	{ "sleep",    sleep_cmd   },
+-	{ "cpuid",    cpuid 	  },
+-	{ "date",     date 	  },
+-	{ "echo",     echo 	  },
+-	{ "help",     help	  },
+-	{ "answer",   answer  },
+-	{ "drv_load", drv_load},
+-	{ "ls",       ls},
+-	{ "cd",       cd},
+-	{ "whoami",   whoami},
+-	{ "tester", tester},	
+-	{ "pwd", pwd},
+-	{ "more", more},
+-  };
+ 
++
+   int i = 0;
+   hst_flag = 0;
+   memset(cmd, '\0', CMD_LEN);
+
+
+
+From finarfin at mail.berlios.de  Sat Apr 17 19:12:14 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sat, 17 Apr 2010 19:12:14 +0200
+Subject: [Dreamos-dev] r230 - in trunk: . fs include include/shell shell
+Message-ID: <201004171712.o3HHCEZL002728@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-04-17 19:12:07 +0200 (Sat, 17 Apr 2010)
+New Revision: 230
+
+Modified:
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/fs/initrd.c
+   trunk/include/shell/shell.h
+   trunk/include/version.h
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+Log:
+rolback di shell.h shell.c e commands.c 
+Le nuove modifiche bloccano il sistema, nell'attesa di trovare una 
+soluzione si lascia shell_cmd locale. 
+Il problema causato dalla resa di shell_cmd globale, non dipende da 
+quest'ultima, sembra essere legato a problemi di gestione di memoria.
+Per maggiori informazioni: http://bugzilla.dreamos.org/show_bug.cgi?id=3
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2010-04-16 22:39:34 UTC (rev 229)
++++ trunk/Makefile	2010-04-17 17:12:07 UTC (rev 230)
+@@ -33,6 +33,7 @@
+ 
+ OBJ = kernel.o\
+       io/video.o\
++      shell/shell.o\
+       drivers/keyboard.o\
+       drivers/mouse.o\
+ 	  fs/vfs.o\
+@@ -57,7 +58,6 @@
+       misc/debug.o \
+       system/syscall.o\
+       hardware/8253.o\
+-      shell/shell.o\
+       shell/commands.o\
+       shell/testing.o\
+       sys/utsname.o\
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-04-16 22:39:34 UTC (rev 229)
++++ trunk/fs/initrd.c	2010-04-17 17:12:07 UTC (rev 230)
+@@ -47,8 +47,9 @@
+ 		i++;
+ 	}
+ 	cur_irdfd = 0;
++	printf("Number of files present: %d\n", fs_specs->nfiles);		
+ 	return fs_specs->nfiles;
+-	//printf("Number of files present: %d\n", fs_specs->nfiles);		
++	
+ }
+ 
+ DIR *initfs_opendir(const char *path){
+
+Modified: trunk/include/shell/shell.h
+===================================================================
+--- trunk/include/shell/shell.h	2010-04-16 22:39:34 UTC (rev 229)
++++ trunk/include/shell/shell.h	2010-04-17 17:12:07 UTC (rev 230)
+@@ -27,9 +27,9 @@
+ 
+ 
+ struct cmd {
+-	const char cmdname[CMD_LEN];
++	char cmdname[CMD_LEN];
+ 	void (*h_func)(void);
+-	const char cmddesc[DESC_LEN];
++	char cmddesc[DESC_LEN];
+ };
+ 
+ struct user_env {
+@@ -38,9 +38,10 @@
+ };
+ 
+ //extern char cur_path[256];
+-struct cmd shell_cmd[NUM_COM];
++//extern struct cmd shell_cmd[NUM_COM];
+ typedef struct user_env userenv_t;
+ extern userenv_t current_user;
++void shell_init();
+ void shell(void);
+ void history (char *);
+ void history_start(void);
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2010-04-16 22:39:34 UTC (rev 229)
++++ trunk/include/version.h	2010-04-17 17:12:07 UTC (rev 230)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "2.0"
+ #define EXTRAVERSION "-trunk"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r206"
++#define REV_NUM "-r229"
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-04-16 22:39:34 UTC (rev 229)
++++ trunk/shell/commands.c	2010-04-17 17:12:07 UTC (rev 230)
+@@ -57,17 +57,41 @@
+   _kcolor(WHITE);
+ }
+ 
+-void help()
++/*void help()
+ {
+   printf ("Available commands:\n");
+   int i=0;
+-  while(i<DEF_COM)
++  while(i<5)
+   {
+ 	printf("%s   %s\n", shell_cmd[i].cmdname, shell_cmd[i].cmddesc);
+ 	i++;
+   }
++}*/
++void help()
++{
++  printf ("Available commands:\n");
++  printf(
++	"help          - See the 'help' list to learn the DreamOS commands now available\n"
++	"clear         - Clear the screen\n"
++	"poweroff      - Turn off the machine\n"
++	"aalogo        - Show an ascii art logo\n"
++	"uname         - Print kernel version, try uname --help for more info\n"
++	"credits       - Show DreamOS credits\n"
++	"sleep         - pause DreamOS for a particular number of seconds\n"
++	"cpuid         - Show cpu identification informations\n"
++	"date          - Show date and time\n"
++	"echo          - Print some lines of text\n"
++	"drv_load      - Tool to load and kill drivers\n"
++	"ls            - Tool for listing dir - not complete-\n"
++	"cd            - Change dir - not complete-\n"
++	"whoami        - Show the current user name\n"
++	"tester        - Try some functions, 'tester --help' for more info'\n"
++	"pwd           - Print current working directory\n"
++	"more		   - read content of a file\n"
++	);
+ }
+ 
++
+ void echo()
+ {
+ 	int i = argc;
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2010-04-16 22:39:34 UTC (rev 229)
++++ trunk/shell/shell.c	2010-04-17 17:12:07 UTC (rev 230)
+@@ -45,7 +45,7 @@
+ char **argv;
+ int hst_flag;
+ char cmd[CMD_LEN];
+-struct cmd shell_cmd[NUM_COM] = {
++/*struct cmd shell_cmd[NUM_COM] = {
+  { "aalogo",   aalogo,    "  Show an ascii art logo" },
+  { "clear",    _kclear,   "   Clear the screen" },
+  { "poweroff", poweroff,  "Turn off the machine" },
+@@ -64,7 +64,7 @@
+  { "tester",   tester,    "  Try some functions, 'tester --help' for more info'" },	
+  { "pwd",      pwd,       "     Print current working directory" },
+  { "more",     more,      "    Read content of a file" },
+-};
++};*/
+ /*
+  * Inserisce gli argomenti di un comando in un array di stringhe
+  * argc = numero degli argomenti
+@@ -99,6 +99,26 @@
+   
+   char *cmd_ptr;
+  
++  static struct cmd shell_cmd[NUM_COM] = {
++	{ "aalogo",   aalogo      },
++	{ "clear",    _kclear     },
++	{ "poweroff", poweroff    },
++	{ "uname",    uname_cmd   },
++	{ "credits",  credits     },
++	{ "sleep",    sleep_cmd   },
++	{ "cpuid",    cpuid 	  },
++	{ "date",     date 	  },
++	{ "echo",     echo 	  },
++	{ "help",     help	  },
++	{ "answer",   answer  },
++	{ "drv_load", drv_load},
++	{ "ls",       ls},
++	{ "cd",       cd},
++	{ "whoami",   whoami},
++	{ "tester", tester},	
++	{ "pwd", pwd},
++	{ "more", more},
++  };
+ 
+ 
+   int i = 0;
+
+
+
+From finarfin at mail.berlios.de  Sat Apr 17 23:13:28 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sat, 17 Apr 2010 23:13:28 +0200
+Subject: [Dreamos-dev] r231 - in trunk: . fs hardware include include/mem
+	include/processore mem processore shell sys
+Message-ID: <201004172113.o3HLDSJu023858@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-04-17 23:13:18 +0200 (Sat, 17 Apr 2010)
+New Revision: 231
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/fs/unistd.c
+   trunk/hardware/pic8259.c
+   trunk/include/kernel.h
+   trunk/include/mem/kheap.h
+   trunk/include/mem/paging.h
+   trunk/include/processore/handlers.h
+   trunk/mem/kheap.c
+   trunk/mem/paging.c
+   trunk/processore/handlers.c
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+   trunk/sys/dirent.c
+   trunk/sys/stat.c
+Log:
+Ridefinite correttamente tutte le variabili globali individuate.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2010-04-17 17:12:07 UTC (rev 230)
++++ trunk/fs/fcntl.c	2010-04-17 21:13:18 UTC (rev 231)
+@@ -25,9 +25,6 @@
+ #include <shell.h>
+ 
+ int cur_fd;
+-file_descriptor_t fd_list[_SC_OPEN_MAX];
+-struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
+-userenv_t current_user;
+ 
+ /**
+   * @author Ivan Gualandri
+
+Modified: trunk/fs/unistd.c
+===================================================================
+--- trunk/fs/unistd.c	2010-04-17 17:12:07 UTC (rev 230)
++++ trunk/fs/unistd.c	2010-04-17 21:13:18 UTC (rev 231)
+@@ -21,7 +21,6 @@
+ #include <fcntl.h>
+ #include <vfs.h>
+ 
+-struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
+ file_descriptor_t fd_list[_SC_OPEN_MAX];
+ 
+ ssize_t read(int fildes, void *buf, size_t nbyte){
+
+Modified: trunk/hardware/pic8259.c
+===================================================================
+--- trunk/hardware/pic8259.c	2010-04-17 17:12:07 UTC (rev 230)
++++ trunk/hardware/pic8259.c	2010-04-17 21:13:18 UTC (rev 231)
+@@ -29,7 +29,7 @@
+ #include <8253.h>
+ #include <bitops.h>
+ 
+-IRQ_s *shareHandler[IRQ_NUM];
++//IRQ_s *shareHandler[IRQ_NUM];
+ // IRQ_s shareHandler[16];
+ // IRQ_s *tmpHandler;
+ byte master_cur_mask;
+
+Modified: trunk/include/kernel.h
+===================================================================
+--- trunk/include/kernel.h	2010-04-17 17:12:07 UTC (rev 230)
++++ trunk/include/kernel.h	2010-04-17 21:13:18 UTC (rev 231)
+@@ -30,9 +30,9 @@
+ 
+ extern multiboot_info_t *boot_informations;
+ //extern char *module_start;
++extern char *module_start;
+ extern unsigned int module_end;
+ asmlinkage void _start(struct multiboot_info*);
+-extern char *module_start;
+ int main_loop(struct multiboot_info*);
+ 
+ #define DREAMOS_VER "DreamOS ver 0.2.0 - trunk"
+
+Modified: trunk/include/mem/kheap.h
+===================================================================
+--- trunk/include/mem/kheap.h	2010-04-17 17:12:07 UTC (rev 230)
++++ trunk/include/mem/kheap.h	2010-04-17 21:13:18 UTC (rev 231)
+@@ -47,6 +47,8 @@
+     unsigned int max_size; /** < Massima memoria allocabile */
+ } heap_t;
+ 
++extern heap_t *kheap;
++
+ heap_t* make_heap(unsigned int);
+ void* kmalloc(unsigned int);
+ void kfree(unsigned int);
+
+Modified: trunk/include/mem/paging.h
+===================================================================
+--- trunk/include/mem/paging.h	2010-04-17 17:12:07 UTC (rev 230)
++++ trunk/include/mem/paging.h	2010-04-17 21:13:18 UTC (rev 231)
+@@ -25,6 +25,7 @@
+ #ifndef PAGING_H
+ #define PAGING_H
+ 
++#include <stddef.h>
+ #define PD_LIMIT 0x400
+ #define PT_LIMIT 0x400
+ 
+@@ -61,6 +62,8 @@
+ 
+ extern unsigned int *current_page_dir;
+ extern unsigned int *current_page_table;
++extern unsigned int end;
++extern size_t tot_mem;
+ void init_paging();
+ unsigned int* create_pageDir();
+ unsigned int* create_pageTable();
+
+Modified: trunk/include/processore/handlers.h
+===================================================================
+--- trunk/include/processore/handlers.h	2010-04-17 17:12:07 UTC (rev 230)
++++ trunk/include/processore/handlers.h	2010-04-17 21:13:18 UTC (rev 231)
+@@ -121,7 +121,7 @@
+          popl %ecx;\
+          popl %eax;"       
+ 
+-extern IRQ_s *shareHandler[16];
++extern IRQ_s *shareHandler[IRQ_NUM];
+ 
+ extern void (*IntTable[IDT_SIZE])();
+ void init_funcTable();
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2010-04-17 17:12:07 UTC (rev 230)
++++ trunk/mem/kheap.c	2010-04-17 21:13:18 UTC (rev 231)
+@@ -32,14 +32,10 @@
+ #define KHEAP_LIST_ADDRESS 0xC0000000
+ 
+ // #define DEBUG 1
+-extern unsigned int end;
+-extern size_t tot_mem;
+ heap_t *kheap;
+ heap_t *kheap_tmp;
+ unsigned int address_cur = (unsigned int) &end;
+ unsigned int node_address;
+-char *module_start;
+-unsigned int module_end;
+ 
+ void* kmalloc(unsigned int size)
+ {
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2010-04-17 17:12:07 UTC (rev 230)
++++ trunk/mem/paging.c	2010-04-17 21:13:18 UTC (rev 231)
+@@ -36,9 +36,8 @@
+ 
+ unsigned int *current_page_dir;
+ unsigned int *current_page_table;
+-extern size_t tot_mem;
+-extern unsigned int end;
+-extern heap_t *kheap;
++size_t tot_mem;
++unsigned int end;
+ 
+ void init_paging(){
+     int i;
+
+Modified: trunk/processore/handlers.c
+===================================================================
+--- trunk/processore/handlers.c	2010-04-17 17:12:07 UTC (rev 230)
++++ trunk/processore/handlers.c	2010-04-17 21:13:18 UTC (rev 231)
+@@ -33,7 +33,7 @@
+ 
+ // #define DEBUG 1
+ void (*IntTable[IDT_SIZE])();
+-IRQ_s *shareHandler[16];
++IRQ_s *shareHandler[IRQ_NUM];
+ 
+ /** @author Ivan Gualandri
+  *  @return none
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-04-17 17:12:07 UTC (rev 230)
++++ trunk/shell/commands.c	2010-04-17 21:13:18 UTC (rev 231)
+@@ -26,8 +26,8 @@
+ #include <fcntl.h>
+ #include <stat.h>
+ 
+-struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
+-userenv_t current_user;
++int argc;
++char **argv;
+ 
+ void aalogo()
+ {
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2010-04-17 17:12:07 UTC (rev 230)
++++ trunk/shell/shell.c	2010-04-17 21:13:18 UTC (rev 231)
+@@ -41,8 +41,6 @@
+ 
+ #define NUM_COM 30
+ userenv_t current_user;
+-int argc;
+-char **argv;
+ int hst_flag;
+ char cmd[CMD_LEN];
+ /*struct cmd shell_cmd[NUM_COM] = {
+
+Modified: trunk/sys/dirent.c
+===================================================================
+--- trunk/sys/dirent.c	2010-04-17 17:12:07 UTC (rev 230)
++++ trunk/sys/dirent.c	2010-04-17 21:13:18 UTC (rev 231)
+@@ -24,8 +24,6 @@
+ #include <kheap.h>
+ #include <shell.h>
+ 
+-struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
+-userenv_t current_user;
+ /**
+   * @author Ivan Gualandri
+   * @param char* path percorso del file da aprire
+
+Modified: trunk/sys/stat.c
+===================================================================
+--- trunk/sys/stat.c	2010-04-17 17:12:07 UTC (rev 230)
++++ trunk/sys/stat.c	2010-04-17 21:13:18 UTC (rev 231)
+@@ -23,7 +23,7 @@
+ #include <string.h>
+ #include <sys/stat.h>
+ 
+-struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
++//struct mountpoint_t mountpoint_list[MAX_MOUNTPOINT];
+ 
+ int stat(const char *path, struct stat *buf){
+ 	char tmp_path[CURPATH_LEN];	
+
+
+
+From finarfin at mail.berlios.de  Sun Apr 18 16:35:47 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun, 18 Apr 2010 16:35:47 +0200
+Subject: [Dreamos-dev] r232 - in trunk: . hardware mem processore
+Message-ID: <201004181435.o3IEZlXf009771@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-04-18 16:35:39 +0200 (Sun, 18 Apr 2010)
+New Revision: 232
+
+Modified:
+   trunk/dreamos.img
+   trunk/hardware/8253.c
+   trunk/kernel.c
+   trunk/mem/fismem.c
+   trunk/mem/kheap.c
+   trunk/mem/paging.c
+   trunk/processore/handlers.c
+Log:
+Sistemazione alcune chiamate a funzione. 
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/hardware/8253.c
+===================================================================
+--- trunk/hardware/8253.c	2010-04-17 21:13:18 UTC (rev 231)
++++ trunk/hardware/8253.c	2010-04-18 14:35:39 UTC (rev 232)
+@@ -43,9 +43,8 @@
+     ticks = seconds = 0;
+     outportb (PIT_COMREG,0x37);
+     outportb (PIT_DATAREG0,divisor & 0xFF);
+-    outportb (PIT_DATAREG0,divisor >> 8);
++    outportb (PIT_DATAREG0,divisor >> 8);    
+     asm ("sti");
+-
+ }
+ 
+ unsigned int sleep (unsigned int secs)
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2010-04-17 21:13:18 UTC (rev 231)
++++ trunk/kernel.c	2010-04-18 14:35:39 UTC (rev 232)
+@@ -84,16 +84,18 @@
+     _kputs(LNG_IDT);        
+     asm("cli");   
+     init_idt();
+-    _kprintOK();   
++    _kprintOK();  
++    _kputs(LNG_PIC8259);
++    init_IRQ();   
++    _kprintOK();            	
++    printf(LNG_PIT8253);
++    configure_PIT ();   
++    //_kprintOK();   
+     set_memorysize((boot_info->mem_upper+boot_info->mem_lower)*1024);
+-    init_mem();    
+-    _kputs(LNG_PIC8259);
+-    init_IRQ();    
++    init_mem();        
+     asm("sti");
+     _kprintOK();   
+     init_paging();    
+-    printf(LNG_PIT8253);
+-    configure_PIT ();
+     _kprintOK();    	
+     printf("Memory (upper) amount-> %d kb \n", boot_info->mem_upper);
+     printf("Memory (lower) amount-> %d kb \n", boot_info->mem_lower);
+
+Modified: trunk/mem/fismem.c
+===================================================================
+--- trunk/mem/fismem.c	2010-04-17 21:13:18 UTC (rev 231)
++++ trunk/mem/fismem.c	2010-04-18 14:35:39 UTC (rev 232)
+@@ -44,12 +44,12 @@
+ //     int remainder=0;
+     mem_info = mem_info_root;
+     while(i<BITMAP_SIZE){
+-        if(i<16)mem_bitmap.mem_map[i] = 0xFFFFFFFF;
++        if(i<32)mem_bitmap.mem_map[i] = 0xFFFFFFFF;
+         else mem_bitmap.mem_map[i] = 0x00000000;
+         i++;
+     }
+-	mem_bitmap.mem_map[0xf7f0] = 0x00000001;
+-	mem_bitmap.mem_map[0x7f60] = 0x00000001;
++	//mem_bitmap.mem_map[0xf7f0] = 0x00000001;
++	//mem_bitmap.mem_map[0x7f60] = 0x00000001;
+     i=0;    
+     bmp_elements = (tot_mem/4096)/32;    
+     //     printf("bmp_elements: %d\n", bmp_elements);
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2010-04-17 21:13:18 UTC (rev 231)
++++ trunk/mem/kheap.c	2010-04-18 14:35:39 UTC (rev 232)
+@@ -85,12 +85,13 @@
+ 	heap_node_t* module_node;
+ 
+     new_heap = (heap_t*)KHEAP_LIST_ADDRESS;
+-    node_address = KHEAP_LIST_ADDRESS + sizeof(heap_t);
++    node_address = KHEAP_LIST_ADDRESS + sizeof(heap_t);        
+ //     new_heap = (heap_t*)kmalloc(sizeof(heap_t));
+ //     first_node = (heap_node_t*)alloc_node();
+-    first_node = (heap_node_t*)node_address;
+-    node_address = node_address + sizeof(heap_node_t);
++    first_node = (heap_node_t*)node_address;    
++    node_address = node_address + sizeof(heap_node_t);    
+     first_node->start_address = (unsigned int)&end;
++    //printf("Test\n");
+     first_node->size = size;
+     first_node->next = NULL;
+ 
+@@ -98,7 +99,7 @@
+     new_heap->max_size = tot_mem-(unsigned int) &end;
+     new_heap->free_list = first_node;
+     new_heap->used_list = NULL;
+-    new_heap->free_nodes = NULL;
++    new_heap->free_nodes = NULL;    
+     printf("  First heap created...\n");   
+     printf("  Size: %d "
+ 	   "  Tot mem: %d\n", (new_heap->free_list)->size, tot_mem);	    
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2010-04-17 21:13:18 UTC (rev 231)
++++ trunk/mem/paging.c	2010-04-18 14:35:39 UTC (rev 232)
+@@ -36,6 +36,8 @@
+ 
+ unsigned int *current_page_dir;
+ unsigned int *current_page_table;
++unsigned int *second_pagedir;
++unsigned int *second_pagetable;
+ size_t tot_mem;
+ unsigned int end;
+ 
+@@ -45,16 +47,19 @@
+     printf(LNG_PAGING);
+     _kprintOK();    
+ 	//apic_location = create_pageTable();
+-    current_page_dir = create_pageDir();
++    current_page_dir = create_pageDir();  
++    second_pagedir = create_pageDir();  
++    //second_pagetable = create_pageTable();
+     #ifdef DEBUG
+     printf("Pd baseAddress: %d\n", (unsigned int) current_page_dir);
+     #endif
+     i=0;    
+     while(i<PD_LIMIT){
+         current_page_dir[i] = 0x00000000;
++        second_pagedir[i] = 0x00000000;
+         i++;
+-    }
+-    set_pagedir_entry(1023, (unsigned int)current_page_dir, PD_PRESENT|SUPERVISOR, 0);
++    }    
++    set_pagedir_entry(1023, (unsigned int)current_page_dir, PD_PRESENT|SUPERVISOR, 0);    
+     current_page_table=create_pageTable();
+     i=0;
+     while(i<PT_LIMIT){
+@@ -62,21 +67,22 @@
+         i++;
+     }
+     set_pagedir_entry(0, (unsigned int)current_page_table, PD_PRESENT|SUPERVISOR|WRITE,0);    
++    set_pagedir_entry(1, (unsigned int)second_pagetable, PD_PRESENT|SUPERVISOR|WRITE,0);    
+     i=0;
+     while(i<PT_LIMIT){
+-        set_pagetable_entry(i,i*0x1000,SUPERVISOR|PD_PRESENT|WRITE,0);
++        set_pagetable_entry(i,i*0x1000,SUPERVISOR|PD_PRESENT|WRITE,0);        
+         #ifdef DEBUG
+         if(i<10) printf("cpt: %d\n", current_page_table[i]);
+         #endif
+         i++;
+-    }
++    }   
+     //apic_location = request_pages(1, NOT_ADD_LIST);	
+ 	//set_pagedir_entry(1019, (unsigned int) apic_location, PD_PRESENT|SUPERVISOR, 0);	
+            
+     load_pdbr((unsigned int)current_page_dir);
+ 	//set_pagetable_entry_ric(1019, 512 ,0xFEE00000, SUPERVISOR|PD_PRESENT|WRITE, 0);
+-	//set_pagetable_entry_ric(1019, 0 ,0xFEC00000, SUPERVISOR|PD_PRESENT|WRITE, 0);
+-    kheap = make_heap(tot_mem - ((unsigned int) &end));
++	//set_pagetable_entry_ric(1019, 0 ,0xFEC00000, SUPERVISOR|PD_PRESENT|WRITE, 0);	
++    kheap = make_heap(tot_mem - ((unsigned int) &end));    
+ }
+ 
+ /**
+@@ -229,10 +235,11 @@
+     unsigned int pd_entry, pt_entry;
+     unsigned int *new_pt;
+ 	void *new_p;
+-
++    //printf("Test\n");
+         /* Ricava l'indirizzo che ha causato l'eccezione */
+     asm ("movl %%cr2, %0":"=r" (fault_addr));
+-
++	//printf("Fault addr: %d\n", fault_addr); 
++	//while(1);
+     if ((ecode & PF_MASK) == 2 || (ecode & PF_MASK) == 0) {
+     pdir = BITRANGE (fault_addr, 22, 31);
+     ptable = BITRANGE (fault_addr, 12, 21);
+
+Modified: trunk/processore/handlers.c
+===================================================================
+--- trunk/processore/handlers.c	2010-04-17 21:13:18 UTC (rev 231)
++++ trunk/processore/handlers.c	2010-04-18 14:35:39 UTC (rev 232)
+@@ -163,15 +163,17 @@
+     int irqn;
+     irqn = get_current_irq();  
+     IRQ_s* tmpHandler; 
+-    if(irqn>=0) {
++    if(irqn>=0) {		
+ 		/*if(irqn==2) {
+ 			outportb(SLAVE_PORT,GET_IRR_STATUS);
+ 			irqn = inportb(SLAVE_PORT);
+ 			irqn = 8 + find_first_bit(irqn);			
+ 		}*/
+         tmpHandler = shareHandler[irqn];		
++        //printf("Test %d\n", irqn);
++		//while(1);
+ 		if(tmpHandler!=0) {
+-	    	tmpHandler->IRQ_func();
++	    	tmpHandler->IRQ_func();	    	
+ 	    	#ifdef DEBUG
+ 	    		printf("2 - IRQ_func: %d, %d\n", tmpHandler->IRQ_func, tmpHandler);
+ 	    	#endif
+
+
+
+From finarfin at mail.berlios.de  Sun Apr 18 19:43:53 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun, 18 Apr 2010 19:43:53 +0200
+Subject: [Dreamos-dev] r233 - in trunk: . mem
+Message-ID: <201004181743.o3IHhrCr028686@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-04-18 19:43:48 +0200 (Sun, 18 Apr 2010)
+New Revision: 233
+
+Modified:
+   trunk/dreamos.img
+   trunk/mem/fismem.c
+   trunk/mem/paging.c
+Log:
+Modifiche minori
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/mem/fismem.c
+===================================================================
+--- trunk/mem/fismem.c	2010-04-18 14:35:39 UTC (rev 232)
++++ trunk/mem/fismem.c	2010-04-18 17:43:48 UTC (rev 233)
+@@ -44,7 +44,7 @@
+ //     int remainder=0;
+     mem_info = mem_info_root;
+     while(i<BITMAP_SIZE){
+-        if(i<32)mem_bitmap.mem_map[i] = 0xFFFFFFFF;
++        if(i<64)mem_bitmap.mem_map[i] = 0xFFFFFFFF;
+         else mem_bitmap.mem_map[i] = 0x00000000;
+         i++;
+     }
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2010-04-18 14:35:39 UTC (rev 232)
++++ trunk/mem/paging.c	2010-04-18 17:43:48 UTC (rev 233)
+@@ -36,38 +36,40 @@
+ 
+ unsigned int *current_page_dir;
+ unsigned int *current_page_table;
+-unsigned int *second_pagedir;
++//unsigned int *third_pagetable;
+ unsigned int *second_pagetable;
+ size_t tot_mem;
+ unsigned int end;
+ 
+ void init_paging(){
+-    int i;
+-    //unsigned int apic_location;
++    int i;    
+     printf(LNG_PAGING);
+-    _kprintOK();    
+-	//apic_location = create_pageTable();
++    _kprintOK();    	
+     current_page_dir = create_pageDir();  
+-    second_pagedir = create_pageDir();  
+-    //second_pagetable = create_pageTable();
++    second_pagetable = create_pageTable();      
++    //third_pagetable = create_pageTable();      
+     #ifdef DEBUG
+     printf("Pd baseAddress: %d\n", (unsigned int) current_page_dir);
+     #endif
+     i=0;    
+     while(i<PD_LIMIT){
+-        current_page_dir[i] = 0x00000000;
+-        second_pagedir[i] = 0x00000000;
++        current_page_dir[i] = 0x00000000;        
+         i++;
+     }    
+     set_pagedir_entry(1023, (unsigned int)current_page_dir, PD_PRESENT|SUPERVISOR, 0);    
+     current_page_table=create_pageTable();
++    second_pagetable = create_pageTable();
++    //third_pagetable = create_pageTable();
+     i=0;
+     while(i<PT_LIMIT){
+         current_page_table[i] = 0x00000000;
++        second_pagetable[i] = 0x00000000;
++        //third_pagetable[i] = 0x00000000;
+         i++;
+     }
+     set_pagedir_entry(0, (unsigned int)current_page_table, PD_PRESENT|SUPERVISOR|WRITE,0);    
+     set_pagedir_entry(1, (unsigned int)second_pagetable, PD_PRESENT|SUPERVISOR|WRITE,0);    
++    //set_pagedir_entry(2, (unsigned int)third_pagetable, PD_PRESENT|SUPERVISOR|WRITE,0);    
+     i=0;
+     while(i<PT_LIMIT){
+         set_pagetable_entry(i,i*0x1000,SUPERVISOR|PD_PRESENT|WRITE,0);        
+
+
+
+From finarfin at mail.berlios.de  Sun Apr 18 23:39:08 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun, 18 Apr 2010 23:39:08 +0200
+Subject: [Dreamos-dev] r234 - in trunk: . fs mem shell
+Message-ID: <201004182139.o3ILd8EV015422@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-04-18 23:39:02 +0200 (Sun, 18 Apr 2010)
+New Revision: 234
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/unistd.c
+   trunk/mem/fismem.c
+   trunk/shell/testing.c
+Log:
+Corretto valore in init_mem. 
+In write aggiunto controll se il flag O_RDWR e' alzato. 
+tester try_ocreat ora chiama anche write.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/unistd.c
+===================================================================
+--- trunk/fs/unistd.c	2010-04-18 17:43:48 UTC (rev 233)
++++ trunk/fs/unistd.c	2010-04-18 21:39:02 UTC (rev 234)
+@@ -21,7 +21,7 @@
+ #include <fcntl.h>
+ #include <vfs.h>
+ 
+-file_descriptor_t fd_list[_SC_OPEN_MAX];
++//file_descriptor_t fd_list[_SC_OPEN_MAX];
+ 
+ ssize_t read(int fildes, void *buf, size_t nbyte){
+ 	int mp_id = 0;
+@@ -37,7 +37,9 @@
+ }
+ 
+ ssize_t write(int fildes, const void *buf, size_t nbyte){
++	if(fd_list[fildes].flags_mask&O_RDWR) printf("allright, let's go\n");
+ 	printf("placeholder for write, coming soon,\n stay tuned\n");
++	printf("Oh i received something: %s\n", buf);
+ 	return 0;
+ }
+ 
+
+Modified: trunk/mem/fismem.c
+===================================================================
+--- trunk/mem/fismem.c	2010-04-18 17:43:48 UTC (rev 233)
++++ trunk/mem/fismem.c	2010-04-18 21:39:02 UTC (rev 234)
+@@ -44,7 +44,7 @@
+ //     int remainder=0;
+     mem_info = mem_info_root;
+     while(i<BITMAP_SIZE){
+-        if(i<64)mem_bitmap.mem_map[i] = 0xFFFFFFFF;
++        if(i<32)mem_bitmap.mem_map[i] = 0xFFFFFFFF;
+         else mem_bitmap.mem_map[i] = 0x00000000;
+         i++;
+     }
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-04-18 17:43:48 UTC (rev 233)
++++ trunk/shell/testing.c	2010-04-18 21:39:02 UTC (rev 234)
+@@ -156,8 +156,12 @@
+ }
+ 
+ void try_ocreat(){
++	int fd=0;
+ 	//printf("Number of files present: %d\n", initfs_init());
+-	open("pippo", O_RDWR|O_CREAT);
++	fd = open("pippo", O_RDWR|O_CREAT);	
++	if(fd>=0) write(fd, "buffo buffer", sizeof("buffo buffer"));
++	else printf("Error?\n");
++	close(fd);	
+ }
+ 
+ void try_syscall(){
+
+
+
+From finarfin at mail.berlios.de  Tue Apr 20 23:05:16 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Tue, 20 Apr 2010 23:05:16 +0200
+Subject: [Dreamos-dev] r235 - in trunk: . fs include/fs include/shell io
+	shell
+Message-ID: <201004202105.o3KL5Gke022037@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-04-20 23:05:05 +0200 (Tue, 20 Apr 2010)
+New Revision: 235
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/initrd.c
+   trunk/fs/unistd.c
+   trunk/fs/vfs.c
+   trunk/include/fs/initrd.h
+   trunk/include/shell/shell.h
+   trunk/io/video.c
+   trunk/shell/testing.c
+Log:
+Aggiunta initfs_write. e inserita nel mountpoint del filesystem. 
+
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-04-18 21:39:02 UTC (rev 234)
++++ trunk/fs/initrd.c	2010-04-20 21:05:05 UTC (rev 235)
+@@ -174,6 +174,10 @@
+ 	else return 0;
+ }
+ 
++ssize_t initrd_write(int fildes, const void *buf, size_t nbyte){
++	printf("Please wait, im writing the world...\n");
++}
++
+ int initrd_close(int fildes){
+ 	ird_descriptors[fildes].file_descriptor = -1;
+ 	ird_descriptors[fildes].cur_pos = 0;
+
+Modified: trunk/fs/unistd.c
+===================================================================
+--- trunk/fs/unistd.c	2010-04-18 21:39:02 UTC (rev 234)
++++ trunk/fs/unistd.c	2010-04-20 21:05:05 UTC (rev 235)
+@@ -37,9 +37,19 @@
+ }
+ 
+ ssize_t write(int fildes, const void *buf, size_t nbyte){
+-	if(fd_list[fildes].flags_mask&O_RDWR) printf("allright, let's go\n");
+-	printf("placeholder for write, coming soon,\n stay tuned\n");
+-	printf("Oh i received something: %s\n", buf);
++	int mp_id = 0;
++	int fs_fd = 0;
++	mp_id = fd_list[fildes].mountpoint_id;
++	fs_fd = fd_list[fildes].fs_spec_id;
++	if(fd_list[fildes].flags_mask&O_RDWR) {		
++		printf("allright, let's go\n");
++		printf("placeholder for write, coming soon,\n stay tuned\n");
++		printf("Oh i received something: %s\n", buf);
++		if((ssize_t*)mountpoint_list[fd_list[fildes].mountpoint_id].operations.write!=NULL)
++			mountpoint_list[fd_list[fildes].mountpoint_id].operations.write(fs_fd, buf, nbyte);
++		else return -1;
++	}
++	else return -1;
+ 	return 0;
+ }
+ 
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2010-04-18 21:39:02 UTC (rev 234)
++++ trunk/fs/vfs.c	2010-04-20 21:05:05 UTC (rev 235)
+@@ -69,6 +69,7 @@
+  	mountpoint_list[0].operations.open = &initfs_open;
+  	mountpoint_list[0].operations.close = &initrd_close;
+  	mountpoint_list[0].operations.read = &initfs_read;
++ 	mountpoint_list[0].operations.write = &initrd_write;
+  	mountpoint_list[0].stat_op.stat = initrd_stat;
+  	//mountpoint_list[0].operations = kmalloc(sizeof(struct super_node_operations));
+ 
+
+Modified: trunk/include/fs/initrd.h
+===================================================================
+--- trunk/include/fs/initrd.h	2010-04-18 21:39:02 UTC (rev 234)
++++ trunk/include/fs/initrd.h	2010-04-20 21:05:05 UTC (rev 235)
+@@ -66,6 +66,7 @@
+ struct dirent *initrd_readdir(DIR *);
+ int initfs_open(const char *, int, ...);
+ ssize_t initfs_read(int, char *, size_t);
+-int initrd_stat(char* path, struct stat *buf);
++int initrd_stat(char*, struct stat*);
++ssize_t initrd_write(int, const void*, size_t);
+ int initrd_close(int);
+ #endif
+
+Modified: trunk/include/shell/shell.h
+===================================================================
+--- trunk/include/shell/shell.h	2010-04-18 21:39:02 UTC (rev 234)
++++ trunk/include/shell/shell.h	2010-04-20 21:05:05 UTC (rev 235)
+@@ -38,7 +38,7 @@
+ };
+ 
+ //extern char cur_path[256];
+-//extern struct cmd shell_cmd[NUM_COM];
++extern struct cmd shell_cmd[NUM_COM];
+ typedef struct user_env userenv_t;
+ extern userenv_t current_user;
+ void shell_init();
+
+Modified: trunk/io/video.c
+===================================================================
+--- trunk/io/video.c	2010-04-18 21:39:02 UTC (rev 234)
++++ trunk/io/video.c	2010-04-20 21:05:05 UTC (rev 235)
+@@ -302,12 +302,15 @@
+      _kntohex (buffer, num);
+   else {
+     if (num == 0)
+-      *p++ = 48;
+-
++      *p++ = '0';
++	else if(num<0) {
++		num=(~num)+1;
++		*p++='-';
++	}
+     while(num > 0)
+     {
+       mod = num % base;
+-      *p++ = mod + 48;
++      *p++ = mod + '0';
+       num = num / base;
+     }
+ 
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-04-18 21:39:02 UTC (rev 234)
++++ trunk/shell/testing.c	2010-04-20 21:05:05 UTC (rev 235)
+@@ -166,6 +166,7 @@
+ 
+ void try_syscall(){
+ 	int i;
++	int var = -1;
+ 	printf("Trying sysputch:\n");	
+     for(i='A';i<='Z';i++) {
+ 		asm(
+@@ -175,6 +176,7 @@
+ 			: : "g"(i)	
+ 		);	
+ 	}
++	printf("And before ending try to print a -1: %d\n", var);
+ 	printf("\n");
+ }
+ 
+
+
+
+From finarfin at mail.berlios.de  Wed Apr 21 19:34:09 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Wed, 21 Apr 2010 19:34:09 +0200
+Subject: [Dreamos-dev] r236 - in trunk: . fs include/io io
+Message-ID: <201004211734.o3LHY9Xh013679@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-04-21 19:34:02 +0200 (Wed, 21 Apr 2010)
+New Revision: 236
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/unistd.c
+   trunk/include/io/video.h
+   trunk/io/video.c
+Log:
+Ora la printf puo' stampare anche i numeri negativi.
+Andra sistemata ancora la kntos ma ora almeno i numeri negativi sono 
+visualizzabili
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/unistd.c
+===================================================================
+--- trunk/fs/unistd.c	2010-04-20 21:05:05 UTC (rev 235)
++++ trunk/fs/unistd.c	2010-04-21 17:34:02 UTC (rev 236)
+@@ -47,6 +47,7 @@
+ 		printf("Oh i received something: %s\n", buf);
+ 		if((ssize_t*)mountpoint_list[fd_list[fildes].mountpoint_id].operations.write!=NULL)
+ 			mountpoint_list[fd_list[fildes].mountpoint_id].operations.write(fs_fd, buf, nbyte);
++		else printf("Give Me a pen and i'll write you the world\n");
+ 		else return -1;
+ 	}
+ 	else return -1;
+
+Modified: trunk/include/io/video.h
+===================================================================
+--- trunk/include/io/video.h	2010-04-20 21:05:05 UTC (rev 235)
++++ trunk/include/io/video.h	2010-04-21 17:34:02 UTC (rev 236)
+@@ -48,7 +48,7 @@
+ 
+ #define OK_POS 70
+ 
+-void _kntos(char*,unsigned int, int);
++void _kntos(char*,int, int);
+ void _kputc(char);
+ void _kcolor(char);
+ void _kputs(char *);
+
+Modified: trunk/io/video.c
+===================================================================
+--- trunk/io/video.c	2010-04-20 21:05:05 UTC (rev 235)
++++ trunk/io/video.c	2010-04-21 17:34:02 UTC (rev 236)
+@@ -291,9 +291,10 @@
+   *
+   * Move the number "num" into a string
+   */
+-void _kntos(char *buffer,unsigned int num, int base)
++void _kntos(char *buffer,int num, int base)
+ {
+   int mod;
++  //int numval;
+   char *p, *pbase;
+ 
+   p = pbase = buffer;
+@@ -303,9 +304,10 @@
+   else {
+     if (num == 0)
+       *p++ = '0';
+-	else if(num<0) {
++	else if(num<0) {		
+ 		num=(~num)+1;
+ 		*p++='-';
++		*pbase++;
+ 	}
+     while(num > 0)
+     {
+
+
+
+From finarfin at mail.berlios.de  Wed Apr 21 23:37:24 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Wed, 21 Apr 2010 23:37:24 +0200
+Subject: [Dreamos-dev] r237 - in trunk: . fs include/fs shell utils
+Message-ID: <201004212137.o3LLbOo9003640@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-04-21 23:37:16 +0200 (Wed, 21 Apr 2010)
+New Revision: 237
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/initrd.c
+   trunk/fs/unistd.c
+   trunk/include/fs/initrd.h
+   trunk/shell/testing.c
+   trunk/utils/initfscp.c
+Log:
+Continuata bozza di write. Ora se si chiama tester try_ocreat, 
+viene creato un file pippo con dentro la stringa "buffo buffer".
+
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-04-21 17:34:02 UTC (rev 236)
++++ trunk/fs/initrd.c	2010-04-21 21:37:16 UTC (rev 237)
+@@ -31,6 +31,7 @@
+ initrd_t *fs_specs;
+ initrd_file_t* fs_headers;
+ initrd_fd ird_descriptors[MAX_INITRD_DESCRIPTORS];
++unsigned int fs_end;
+ unsigned int cur_irdfd;
+ 
+ void dummy(){
+@@ -39,6 +40,7 @@
+ 
+ int initfs_init(){	
+ 	int i=0;
++	fs_end = 0;
+ 	fs_specs = (initrd_t *) module_start;
+ 	fs_headers = (initrd_file_t *)(module_start + sizeof(initrd_t));
+ 	while (i<MAX_INITRD_DESCRIPTORS) {
+@@ -47,7 +49,9 @@
+ 		i++;
+ 	}
+ 	cur_irdfd = 0;
+-	printf("Number of files present: %d\n", fs_specs->nfiles);		
++	printf("Number of files present: %d\n", fs_specs->nfiles);
++	fs_end = fs_headers[(fs_specs->nfiles)-1].offset + fs_headers[(fs_specs->nfiles)-1].length;
++	printf("Fs_end: %d\n", fs_end);
+ 	return fs_specs->nfiles;
+ 	
+ }
+@@ -110,7 +114,10 @@
+ 			strcpy(module_var[fs_specs->nfiles].fileName, path);
+ 			module_var[fs_specs->nfiles].file_type = FS_FILE;
+ 			module_var[fs_specs->nfiles].uid = 1;
+-			module_var[fs_specs->nfiles].offset = 0;
++			module_var[fs_specs->nfiles].offset = ++fs_end;
++			module_var[fs_specs->nfiles].length = 0;
++			ird_descriptors[cur_irdfd].file_descriptor	= fs_specs->nfiles;
++			ird_descriptors[cur_irdfd].cur_pos = 0;
+ 			fs_specs->nfiles++;
+ 			return cur_irdfd++; 
+ 		}
+@@ -175,7 +182,22 @@
+ }
+ 
+ ssize_t initrd_write(int fildes, const void *buf, size_t nbyte){
++	char *file_start;
++	char *appoggio;
++	appoggio = (char *) kmalloc(strlen(buf)*sizeof(char));
++	strcpy(appoggio, buf);
++	unsigned int lfd = 0;
++	int i = 0;
++	lfd = ird_descriptors[fildes].file_descriptor;
+ 	printf("Please wait, im writing the world...\n");
++	printf("And the world begun with those words: %s and his mark his: %d\n", appoggio, lfd);
++	file_start = (char *) (module_start	+ fs_headers[lfd].offset);
++	while(i<=nbyte) {	
++		file_start[i] = appoggio[i];	
++		i++;
++	} 
++	fs_headers[lfd].length = i;
++	//fs_headers[ird_descriptors.fildes].
+ }
+ 
+ int initrd_close(int fildes){
+@@ -183,3 +205,4 @@
+ 	ird_descriptors[fildes].cur_pos = 0;
+ 	return 0;
+ }
++
+
+Modified: trunk/fs/unistd.c
+===================================================================
+--- trunk/fs/unistd.c	2010-04-21 17:34:02 UTC (rev 236)
++++ trunk/fs/unistd.c	2010-04-21 21:37:16 UTC (rev 237)
+@@ -47,7 +47,7 @@
+ 		printf("Oh i received something: %s\n", buf);
+ 		if((ssize_t*)mountpoint_list[fd_list[fildes].mountpoint_id].operations.write!=NULL)
+ 			mountpoint_list[fd_list[fildes].mountpoint_id].operations.write(fs_fd, buf, nbyte);
+-		else printf("Give Me a pen and i'll write you the world\n");
++		//else printf("Give Me a pen and i'll write you the world\n");
+ 		else return -1;
+ 	}
+ 	else return -1;
+
+Modified: trunk/include/fs/initrd.h
+===================================================================
+--- trunk/include/fs/initrd.h	2010-04-21 17:34:02 UTC (rev 236)
++++ trunk/include/fs/initrd.h	2010-04-21 21:37:16 UTC (rev 237)
+@@ -60,6 +60,8 @@
+ 
+ extern initrd_t* fs_specs;
+ extern initrd_file_t* fs_headers;
++extern unsigned int fs_end;
++
+ void dummy();
+ int initfs_init();
+ DIR *initfs_opendir(const char *);
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-04-21 17:34:02 UTC (rev 236)
++++ trunk/shell/testing.c	2010-04-21 21:37:16 UTC (rev 237)
+@@ -159,7 +159,7 @@
+ 	int fd=0;
+ 	//printf("Number of files present: %d\n", initfs_init());
+ 	fd = open("pippo", O_RDWR|O_CREAT);	
+-	if(fd>=0) write(fd, "buffo buffer", sizeof("buffo buffer"));
++	if(fd>=0) write(fd, "buffo buffer", strlen("buffo buffer"));
+ 	else printf("Error?\n");
+ 	close(fd);	
+ }
+
+Modified: trunk/utils/initfscp.c
+===================================================================
+--- trunk/utils/initfscp.c	2010-04-21 17:34:02 UTC (rev 236)
++++ trunk/utils/initfscp.c	2010-04-21 21:37:16 UTC (rev 237)
+@@ -44,7 +44,7 @@
+ 			printf("Size of headers: %ld %ld\n\n", sizeof(struct initrd_file_t)*32, sizeof(initrd_file_t));
+ 			printf("Clearing headers structures ");
+ 			offset = sizeof(struct initrd_file_t) * 32 + sizeof(int);
+-			
++			/*Pulizia delle strutture dati*/
+ 			for (i=0; i<MAX_FILES; i++){
+ 				headers[i].magic = 0xBF;
+ 				strcpy(headers[i].fileName, "");
+
+
+
+From finarfin at mail.berlios.de  Thu Apr 22 23:04:12 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Thu, 22 Apr 2010 23:04:12 +0200
+Subject: [Dreamos-dev] r238 - in trunk: . fs
+Message-ID: <201004222104.o3ML4CvR004576@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-04-22 23:04:07 +0200 (Thu, 22 Apr 2010)
+New Revision: 238
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/initrd.c
+   trunk/kernel.c
+Log:
+Ora la open prima di creare un file (con il flag O_CREAT) controlla se 
+questo gia esiste.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-04-21 21:37:16 UTC (rev 237)
++++ trunk/fs/initrd.c	2010-04-22 21:04:07 UTC (rev 238)
+@@ -107,7 +107,21 @@
+ 		while(ird_descriptors[i].file_descriptor!=-1 && i < MAX_INITRD_DESCRIPTORS) i++;			
+ 		cur_irdfd = i;
+ 	}
+-	if(flags&O_CREAT) {
++	else {
++		while (j < fs_specs->nfiles) {
++			if(!strcmp(path, module_var[j].fileName)){
++				if(module_var[j].file_type == FS_DIRECTORY || module_var[j].file_type == FS_MOUNTPOINT)
++					return -1;
++				ird_descriptors[cur_irdfd].file_descriptor	= j;
++				//printf("%s Found. Size: %d FS fd val: %d - ID File val: %d\n", path, module_var[j].length, cur_irdfd, ird_descriptors[cur_irdfd].file_descriptor);
++				ret_fd = cur_irdfd;				
++				//printf("ret_fd: %d --- %d\n", cur_irdfd, j);
++				ird_descriptors[cur_irdfd].cur_pos = 0;
++				return cur_irdfd++; 
++			}
++			j++;
++		}
++		if(flags&O_CREAT) {
+ 		printf("O_CREAT Flag\n");
+ 		if(fs_specs->nfiles < MAX_FILES ){			
+ 			module_var[fs_specs->nfiles].magic=0xBF;
+@@ -123,20 +137,6 @@
+ 		}
+ 		return -1;
+ 	}
+-	else {
+-		while (j < fs_specs->nfiles) {
+-			if(!strcmp(path, module_var[j].fileName)){
+-				if(module_var[j].file_type == FS_DIRECTORY || module_var[j].file_type == FS_MOUNTPOINT)
+-					return -1;
+-				ird_descriptors[cur_irdfd].file_descriptor	= j;
+-				//printf("%s Found. Size: %d FS fd val: %d - ID File val: %d\n", path, module_var[j].length, cur_irdfd, ird_descriptors[cur_irdfd].file_descriptor);
+-				ret_fd = cur_irdfd;				
+-				//printf("ret_fd: %d --- %d\n", cur_irdfd, j);
+-				ird_descriptors[cur_irdfd].cur_pos = 0;
+-				return cur_irdfd++; 
+-			}
+-			j++;
+-		}
+ 	}
+ 	return -1;	
+ }
+@@ -191,12 +191,14 @@
+ 	lfd = ird_descriptors[fildes].file_descriptor;
+ 	printf("Please wait, im writing the world...\n");
+ 	printf("And the world begun with those words: %s and his mark his: %d\n", appoggio, lfd);
+-	file_start = (char *) (module_start	+ fs_headers[lfd].offset);
++	file_start = (char *) (module_start	+ fs_headers[lfd].offset);	
+ 	while(i<=nbyte) {	
+ 		file_start[i] = appoggio[i];	
+ 		i++;
+ 	} 
+ 	fs_headers[lfd].length = i;
++	free(appoggio);
++	return i;
+ 	//fs_headers[ird_descriptors.fildes].
+ }
+ 
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2010-04-21 21:37:16 UTC (rev 237)
++++ trunk/kernel.c	2010-04-22 21:04:07 UTC (rev 238)
+@@ -107,7 +107,7 @@
+     vfs_init();
+     initfs_init();
+ 	if(boot_info->mods_count > 0) printf("Found n. %d Modules\n", boot_info->mods_count);		
+-	printf("Address of module: 0x%x - 0x%d\n", *((unsigned int*)boot_info->mods_addr),module_end-(unsigned int) module_start);
++	printf("Address of module: 0x%x - 0x%x\n", *((unsigned int*)boot_info->mods_addr),module_end-(unsigned int) module_start);
+     printf("\n");
+     printf("----\n");
+     printf(LNG_SHELL);    
+
+
+
+From finarfin at mail.berlios.de  Sun Apr 25 23:42:21 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun, 25 Apr 2010 23:42:21 +0200
+Subject: [Dreamos-dev] r239 - in trunk: . fs include/fs shell
+Message-ID: <201004252142.o3PLgL9W022173@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-04-25 23:42:13 +0200 (Sun, 25 Apr 2010)
+New Revision: 239
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/initrd.c
+   trunk/include/fs/fcntl.h
+   trunk/shell/testing.c
+Log:
+Ora la printf puo' stampare anche i numeri negativi.
+Andra sistemata ancora la kntos ma ora almeno i numeri negativi sono 
+visualizzabili
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-04-22 21:04:07 UTC (rev 238)
++++ trunk/fs/initrd.c	2010-04-25 21:42:13 UTC (rev 239)
+@@ -122,22 +122,24 @@
+ 			j++;
+ 		}
+ 		if(flags&O_CREAT) {
+-		printf("O_CREAT Flag\n");
+-		if(fs_specs->nfiles < MAX_FILES ){			
+-			module_var[fs_specs->nfiles].magic=0xBF;
+-			strcpy(module_var[fs_specs->nfiles].fileName, path);
+-			module_var[fs_specs->nfiles].file_type = FS_FILE;
+-			module_var[fs_specs->nfiles].uid = 1;
+-			module_var[fs_specs->nfiles].offset = ++fs_end;
+-			module_var[fs_specs->nfiles].length = 0;
+-			ird_descriptors[cur_irdfd].file_descriptor	= fs_specs->nfiles;
+-			ird_descriptors[cur_irdfd].cur_pos = 0;
+-			fs_specs->nfiles++;
+-			return cur_irdfd++; 
++			printf("O_CREAT Flag\n");
++			if(fs_specs->nfiles < MAX_FILES ){			
++				module_var[fs_specs->nfiles].magic=0xBF;
++				strcpy(module_var[fs_specs->nfiles].fileName, path);
++				module_var[fs_specs->nfiles].file_type = FS_FILE;
++				module_var[fs_specs->nfiles].uid = 1;
++				module_var[fs_specs->nfiles].offset = ++fs_end;
++				module_var[fs_specs->nfiles].length = 0;
++				ird_descriptors[cur_irdfd].file_descriptor	= fs_specs->nfiles;
++				ird_descriptors[cur_irdfd].cur_pos = 0;
++				fs_specs->nfiles++;
++				if(flags&O_APPEND) printf("Appendiamoci\n");
++				else printf("Pero' non ci appendiamo\n");
++				return cur_irdfd++; 
++			}
++			return -1;
+ 		}
+-		return -1;
+ 	}
+-	}
+ 	return -1;	
+ }
+ 
+
+Modified: trunk/include/fs/fcntl.h
+===================================================================
+--- trunk/include/fs/fcntl.h	2010-04-22 21:04:07 UTC (rev 238)
++++ trunk/include/fs/fcntl.h	2010-04-25 21:42:13 UTC (rev 239)
+@@ -21,11 +21,12 @@
+ 
+ #include <sys/types.h>
+ 
+-#define O_RDONLY	00000000
+-#define O_WRONLY    00000001
+-#define O_RDWR      00000002
++#define O_RDONLY	0x00
++#define O_WRONLY    0x01
++#define O_RDWR      0x02
+ 
+-#define O_CREAT		00000004
++#define O_CREAT		0x04
++#define O_APPEND	0x08
+ 
+ 
+ int  creat(const char *, mode_t);
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-04-22 21:04:07 UTC (rev 238)
++++ trunk/shell/testing.c	2010-04-25 21:42:13 UTC (rev 239)
+@@ -158,7 +158,7 @@
+ void try_ocreat(){
+ 	int fd=0;
+ 	//printf("Number of files present: %d\n", initfs_init());
+-	fd = open("pippo", O_RDWR|O_CREAT);	
++	fd = open("pippo", O_RDWR|O_CREAT|O_APPEND);	
+ 	if(fd>=0) write(fd, "buffo buffer", strlen("buffo buffer"));
+ 	else printf("Error?\n");
+ 	close(fd);	
+
+
+
+From finarfin at mail.berlios.de  Mon Apr 26 19:30:00 2010
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Mon, 26 Apr 2010 19:30:00 +0200
+Subject: [Dreamos-dev] r240 - in trunk: . fs include/io io libc shell sys
+Message-ID: <201004261730.o3QHU0h2018563@sheep.berlios.de>
+
+Author: finarfin
+Date: 2010-04-26 19:29:40 +0200 (Mon, 26 Apr 2010)
+New Revision: 240
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/initrd.c
+   trunk/fs/unistd.c
+   trunk/fs/vfs.c
+   trunk/include/io/video.h
+   trunk/io/video.c
+   trunk/libc/stdio.c
+   trunk/shell/commands.c
+   trunk/sys/dirent.c
+Log:
+Modificata write per poter scrivere anche nel caso di O_APPEND.
+Corretto bug in get_rel_path (ancora da migliorare, ma funzionante)
+Aggiunta funzione _knntost per i numeri negativi, mentre _kntos rimane 
+per quelli positivi. 
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-04-25 21:42:13 UTC (rev 239)
++++ trunk/fs/initrd.c	2010-04-26 17:29:40 UTC (rev 240)
+@@ -117,6 +117,11 @@
+ 				ret_fd = cur_irdfd;				
+ 				//printf("ret_fd: %d --- %d\n", cur_irdfd, j);
+ 				ird_descriptors[cur_irdfd].cur_pos = 0;
++				if(flags&O_APPEND) {
++					printf("Appendiamoci\n");
++					ird_descriptors[cur_irdfd].cur_pos = module_var[j].length;
++				}
++				//else printf("Pero' non ci appendiamo\n");
+ 				return cur_irdfd++; 
+ 			}
+ 			j++;
+@@ -132,9 +137,7 @@
+ 				module_var[fs_specs->nfiles].length = 0;
+ 				ird_descriptors[cur_irdfd].file_descriptor	= fs_specs->nfiles;
+ 				ird_descriptors[cur_irdfd].cur_pos = 0;
+-				fs_specs->nfiles++;
+-				if(flags&O_APPEND) printf("Appendiamoci\n");
+-				else printf("Pero' non ci appendiamo\n");
++				fs_specs->nfiles++;				
+ 				return cur_irdfd++; 
+ 			}
+ 			return -1;
+@@ -193,12 +196,12 @@
+ 	lfd = ird_descriptors[fildes].file_descriptor;
+ 	printf("Please wait, im writing the world...\n");
+ 	printf("And the world begun with those words: %s and his mark his: %d\n", appoggio, lfd);
+-	file_start = (char *) (module_start	+ fs_headers[lfd].offset);	
++	file_start = (char *) (module_start	+ fs_headers[lfd].offset + ird_descriptors[fildes].cur_pos);	
+ 	while(i<=nbyte) {	
+ 		file_start[i] = appoggio[i];	
+ 		i++;
+ 	} 
+-	fs_headers[lfd].length = i;
++	fs_headers[lfd].length = fs_headers[lfd].length+i;
+ 	free(appoggio);
+ 	return i;
+ 	//fs_headers[ird_descriptors.fildes].
+
+Modified: trunk/fs/unistd.c
+===================================================================
+--- trunk/fs/unistd.c	2010-04-25 21:42:13 UTC (rev 239)
++++ trunk/fs/unistd.c	2010-04-26 17:29:40 UTC (rev 240)
+@@ -48,7 +48,10 @@
+ 		if((ssize_t*)mountpoint_list[fd_list[fildes].mountpoint_id].operations.write!=NULL)
+ 			mountpoint_list[fd_list[fildes].mountpoint_id].operations.write(fs_fd, buf, nbyte);
+ 		//else printf("Give Me a pen and i'll write you the world\n");
+-		else return -1;
++		else {
++			printf("Give Me a pen and i'll write you the world\n");
++			return -1;
++		}
+ 	}
+ 	else return -1;
+ 	return 0;
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2010-04-25 21:42:13 UTC (rev 239)
++++ trunk/fs/vfs.c	2010-04-26 17:29:40 UTC (rev 240)
+@@ -134,6 +134,7 @@
+ 	int j=0;
+ 	char *tmp_path;
+ 	rel_size = strlen(path) - strlen(mountpoint_list[mountpoint_id].mountpoint);	
++	//printf("rel_size: %d mp_id: %d\n", rel_size, mountpoint_id);
+ 	if(rel_size>0){		
+ 		int mp_size= 0;
+ 		tmp_path = kmalloc(rel_size * sizeof(char));		
+@@ -143,7 +144,9 @@
+ 			j++;
+ 		}
+ 		tmp_path[j]='\0';
+-	}	
++	} 
++	else strcpy(tmp_path, path);
++	//printf("Tmp path: %s\n", tmp_path);
+ 	return tmp_path;
+ }
+ 
+
+Modified: trunk/include/io/video.h
+===================================================================
+--- trunk/include/io/video.h	2010-04-25 21:42:13 UTC (rev 239)
++++ trunk/include/io/video.h	2010-04-26 17:29:40 UTC (rev 240)
+@@ -48,7 +48,7 @@
+ 
+ #define OK_POS 70
+ 
+-void _kntos(char*,int, int);
++void _kntos(char*, unsigned int, int);
+ void _kputc(char);
+ void _kcolor(char);
+ void _kputs(char *);
+@@ -68,7 +68,7 @@
+ void _kscrollup();
+ void _kscrolldown();
+ void _kntohex (char *, unsigned int);
+-
++void _knntos(char *, int, int );
+ unsigned short shell_mess_col, shell_mess_line;
+ 
+ #endif /* _VIDEO_H */
+
+Modified: trunk/io/video.c
+===================================================================
+--- trunk/io/video.c	2010-04-25 21:42:13 UTC (rev 239)
++++ trunk/io/video.c	2010-04-26 17:29:40 UTC (rev 240)
+@@ -283,6 +283,36 @@
+ }
+ 
+ 
++void _knntos(char *buffer, int num, int base){
++	int mod;
++  //int numval;
++  char *p, *pbase;
++
++  p = pbase = buffer;
++    
++	if(num<0) {		
++		num=(~num)+1;
++		*p++='-';
++		*pbase++;
++	}
++    while(num > 0)
++    {
++      mod = num % base;
++      *p++ = mod + '0';
++      num = num / base;
++    }
++
++    *p-- = 0;
++    while(p > pbase)
++    {
++      char tmp;
++      tmp = *p;
++      *p = *pbase;
++      *pbase = tmp;
++    
++      p--; pbase++;
++    }
++}
+ /** @author Lisa
+   * @version 1.0
+   * @param  buffer (char*) La stringa che contiene il numero
+@@ -291,7 +321,7 @@
+   *
+   * Move the number "num" into a string
+   */
+-void _kntos(char *buffer,int num, int base)
++void _kntos(char *buffer, unsigned int num, int base)
+ {
+   int mod;
+   //int numval;
+
+Modified: trunk/libc/stdio.c
+===================================================================
+--- trunk/libc/stdio.c	2010-04-25 21:42:13 UTC (rev 239)
++++ trunk/libc/stdio.c	2010-04-26 17:29:40 UTC (rev 240)
+@@ -153,7 +153,9 @@
+             }
+             if (*format == 'd' || *format == 'i') {
+                 int varint = va_arg (ap, int);
+-                _kntos (cur_p, varint, 10);
++                if(varint >= 0)
++					_kntos (cur_p, varint, 10);
++				else _knntos (cur_p, varint, 10);
+             }
+             if (*format == 'u') {
+                 unsigned int uint = va_arg (ap, int);
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-04-25 21:42:13 UTC (rev 239)
++++ trunk/shell/commands.c	2010-04-26 17:29:40 UTC (rev 240)
+@@ -392,7 +392,7 @@
+ 			if(flag==1){
+ 				struct stat tmp_stat;
+ 				if(stat(cur_dir_entry->d_name, &tmp_stat)!=-1)
+-					printf("uid=%d(%s) - size:  %d ", tmp_stat.st_uid, "root", tmp_stat.st_size);
++					printf("uid=%d(%s) - size:  %d ", tmp_stat.st_uid, current_user.username, tmp_stat.st_size);
+ 			}
+ 			printf("%s\n", cur_dir_entry->d_name);
+ 			_kcolor(WHITE);			
+@@ -456,11 +456,12 @@
+ 		return;
+ 	} else {
+ 		int i=0;
+-		int rel_size = 0;
++		int rel_size = 0;		
+ 		memset(abspath, '\0', CURPATH_LEN);				
+ 		if(argv[1][0] == '/') {
+-			i = get_mountpoint_id(argv[1]);
++			i = get_mountpoint_id(argv[1]);		
+ 			strcpy(abspath, argv[1]);
++			//printf("abspath: %s\n", abspath);
+ 			dirp=opendir(argv[1]);
+ 		}
+ 		else {			
+
+Modified: trunk/sys/dirent.c
+===================================================================
+--- trunk/sys/dirent.c	2010-04-25 21:42:13 UTC (rev 239)
++++ trunk/sys/dirent.c	2010-04-26 17:29:40 UTC (rev 240)
+@@ -38,10 +38,11 @@
+ 	char* rel_path;	
+ 	DIR* pdir;
+ 	error=get_abs_path((char*)path);
++	//printf("AbsPath in opendir: %s len: %d\n", path, strlen(path));
+ 	//printf("%s\n", path);
+ 	mpoint_id = get_mountpoint_id((char*)path);
+-	rel_path = get_rel_path(mpoint_id, path);	
+-	//printf("%d - %s\n", mpoint_id, rel_path);
++	rel_path = get_rel_path(mpoint_id, path);		
++	//printf("Rel Path len%d - %s\n", strlen(rel_path), rel_path);
+ 	if(mountpoint_list[mpoint_id].dir_op.opendir_f!=NULL) {
+ 		pdir = mountpoint_list[mpoint_id].dir_op.opendir_f(rel_path);
+ 		pdir->handle = mpoint_id;
+
+
+

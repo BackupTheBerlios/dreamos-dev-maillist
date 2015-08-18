@@ -1,0 +1,210 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r237 - in trunk: . fs include/fs shell utils
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-April/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r237%20-%20in%20trunk%3A%20.%20fs%20include/fs%20shell%20utils&In-Reply-To=%3C201004212137.o3LLbOo9003640%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000239.html">
+   <LINK REL="Next"  HREF="000241.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r237 - in trunk: . fs include/fs shell utils</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r237%20-%20in%20trunk%3A%20.%20fs%20include/fs%20shell%20utils&In-Reply-To=%3C201004212137.o3LLbOo9003640%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r237 - in trunk: . fs include/fs shell utils">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Wed Apr 21 23:37:24 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000239.html">[Dreamos-dev] r236 - in trunk: . fs include/io io
+</A></li>
+        <LI>Next message: <A HREF="000241.html">[Dreamos-dev] r238 - in trunk: . fs
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#240">[ date ]</a>
+              <a href="thread.html#240">[ thread ]</a>
+              <a href="subject.html#240">[ subject ]</a>
+              <a href="author.html#240">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-04-21 23:37:16 +0200 (Wed, 21 Apr 2010)
+New Revision: 237
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/initrd.c
+   trunk/fs/unistd.c
+   trunk/include/fs/initrd.h
+   trunk/shell/testing.c
+   trunk/utils/initfscp.c
+Log:
+Continuata bozza di write. Ora se si chiama tester try_ocreat, 
+viene creato un file pippo con dentro la stringa &quot;buffo buffer&quot;.
+
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-04-21 17:34:02 UTC (rev 236)
++++ trunk/fs/initrd.c	2010-04-21 21:37:16 UTC (rev 237)
+@@ -31,6 +31,7 @@
+ initrd_t *fs_specs;
+ initrd_file_t* fs_headers;
+ initrd_fd ird_descriptors[MAX_INITRD_DESCRIPTORS];
++unsigned int fs_end;
+ unsigned int cur_irdfd;
+ 
+ void dummy(){
+@@ -39,6 +40,7 @@
+ 
+ int initfs_init(){	
+ 	int i=0;
++	fs_end = 0;
+ 	fs_specs = (initrd_t *) module_start;
+ 	fs_headers = (initrd_file_t *)(module_start + sizeof(initrd_t));
+ 	while (i&lt;MAX_INITRD_DESCRIPTORS) {
+@@ -47,7 +49,9 @@
+ 		i++;
+ 	}
+ 	cur_irdfd = 0;
+-	printf(&quot;Number of files present: %d\n&quot;, fs_specs-&gt;nfiles);		
++	printf(&quot;Number of files present: %d\n&quot;, fs_specs-&gt;nfiles);
++	fs_end = fs_headers[(fs_specs-&gt;nfiles)-1].offset + fs_headers[(fs_specs-&gt;nfiles)-1].length;
++	printf(&quot;Fs_end: %d\n&quot;, fs_end);
+ 	return fs_specs-&gt;nfiles;
+ 	
+ }
+@@ -110,7 +114,10 @@
+ 			strcpy(module_var[fs_specs-&gt;nfiles].fileName, path);
+ 			module_var[fs_specs-&gt;nfiles].file_type = FS_FILE;
+ 			module_var[fs_specs-&gt;nfiles].uid = 1;
+-			module_var[fs_specs-&gt;nfiles].offset = 0;
++			module_var[fs_specs-&gt;nfiles].offset = ++fs_end;
++			module_var[fs_specs-&gt;nfiles].length = 0;
++			ird_descriptors[cur_irdfd].file_descriptor	= fs_specs-&gt;nfiles;
++			ird_descriptors[cur_irdfd].cur_pos = 0;
+ 			fs_specs-&gt;nfiles++;
+ 			return cur_irdfd++; 
+ 		}
+@@ -175,7 +182,22 @@
+ }
+ 
+ ssize_t initrd_write(int fildes, const void *buf, size_t nbyte){
++	char *file_start;
++	char *appoggio;
++	appoggio = (char *) kmalloc(strlen(buf)*sizeof(char));
++	strcpy(appoggio, buf);
++	unsigned int lfd = 0;
++	int i = 0;
++	lfd = ird_descriptors[fildes].file_descriptor;
+ 	printf(&quot;Please wait, im writing the world...\n&quot;);
++	printf(&quot;And the world begun with those words: %s and his mark his: %d\n&quot;, appoggio, lfd);
++	file_start = (char *) (module_start	+ fs_headers[lfd].offset);
++	while(i&lt;=nbyte) {	
++		file_start[i] = appoggio[i];	
++		i++;
++	} 
++	fs_headers[lfd].length = i;
++	//fs_headers[ird_descriptors.fildes].
+ }
+ 
+ int initrd_close(int fildes){
+@@ -183,3 +205,4 @@
+ 	ird_descriptors[fildes].cur_pos = 0;
+ 	return 0;
+ }
++
+
+Modified: trunk/fs/unistd.c
+===================================================================
+--- trunk/fs/unistd.c	2010-04-21 17:34:02 UTC (rev 236)
++++ trunk/fs/unistd.c	2010-04-21 21:37:16 UTC (rev 237)
+@@ -47,7 +47,7 @@
+ 		printf(&quot;Oh i received something: %s\n&quot;, buf);
+ 		if((ssize_t*)mountpoint_list[fd_list[fildes].mountpoint_id].operations.write!=NULL)
+ 			mountpoint_list[fd_list[fildes].mountpoint_id].operations.write(fs_fd, buf, nbyte);
+-		else printf(&quot;Give Me a pen and i'll write you the world\n&quot;);
++		//else printf(&quot;Give Me a pen and i'll write you the world\n&quot;);
+ 		else return -1;
+ 	}
+ 	else return -1;
+
+Modified: trunk/include/fs/initrd.h
+===================================================================
+--- trunk/include/fs/initrd.h	2010-04-21 17:34:02 UTC (rev 236)
++++ trunk/include/fs/initrd.h	2010-04-21 21:37:16 UTC (rev 237)
+@@ -60,6 +60,8 @@
+ 
+ extern initrd_t* fs_specs;
+ extern initrd_file_t* fs_headers;
++extern unsigned int fs_end;
++
+ void dummy();
+ int initfs_init();
+ DIR *initfs_opendir(const char *);
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-04-21 17:34:02 UTC (rev 236)
++++ trunk/shell/testing.c	2010-04-21 21:37:16 UTC (rev 237)
+@@ -159,7 +159,7 @@
+ 	int fd=0;
+ 	//printf(&quot;Number of files present: %d\n&quot;, initfs_init());
+ 	fd = open(&quot;pippo&quot;, O_RDWR|O_CREAT);	
+-	if(fd&gt;=0) write(fd, &quot;buffo buffer&quot;, sizeof(&quot;buffo buffer&quot;));
++	if(fd&gt;=0) write(fd, &quot;buffo buffer&quot;, strlen(&quot;buffo buffer&quot;));
+ 	else printf(&quot;Error?\n&quot;);
+ 	close(fd);	
+ }
+
+Modified: trunk/utils/initfscp.c
+===================================================================
+--- trunk/utils/initfscp.c	2010-04-21 17:34:02 UTC (rev 236)
++++ trunk/utils/initfscp.c	2010-04-21 21:37:16 UTC (rev 237)
+@@ -44,7 +44,7 @@
+ 			printf(&quot;Size of headers: %ld %ld\n\n&quot;, sizeof(struct initrd_file_t)*32, sizeof(initrd_file_t));
+ 			printf(&quot;Clearing headers structures &quot;);
+ 			offset = sizeof(struct initrd_file_t) * 32 + sizeof(int);
+-			
++			/*Pulizia delle strutture dati*/
+ 			for (i=0; i&lt;MAX_FILES; i++){
+ 				headers[i].magic = 0xBF;
+ 				strcpy(headers[i].fileName, &quot;&quot;);
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000239.html">[Dreamos-dev] r236 - in trunk: . fs include/io io
+</A></li>
+	<LI>Next message: <A HREF="000241.html">[Dreamos-dev] r238 - in trunk: . fs
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#240">[ date ]</a>
+              <a href="thread.html#240">[ thread ]</a>
+              <a href="subject.html#240">[ subject ]</a>
+              <a href="author.html#240">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

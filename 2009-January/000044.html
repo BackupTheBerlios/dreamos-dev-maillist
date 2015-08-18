@@ -1,0 +1,383 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r44 - in trunk: . hardware include include/hardware	libc mem shell system
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-January/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r44%20-%20in%20trunk%3A%20.%20hardware%20include%20include/hardware%0A%09libc%20mem%20shell%20system&In-Reply-To=%3C200901061529.n06FTo7q017467%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000043.html">
+   <LINK REL="Next"  HREF="000045.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r44 - in trunk: . hardware include include/hardware	libc mem shell system</H1>
+    <B>shainer at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r44%20-%20in%20trunk%3A%20.%20hardware%20include%20include/hardware%0A%09libc%20mem%20shell%20system&In-Reply-To=%3C200901061529.n06FTo7q017467%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r44 - in trunk: . hardware include include/hardware	libc mem shell system">shainer at mail.berlios.de
+       </A><BR>
+    <I>Tue Jan  6 16:29:50 CET 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000043.html">[Dreamos-dev] r43 - in trunk: . include mem
+</A></li>
+        <LI>Next message: <A HREF="000045.html">[Dreamos-dev] r45 - in trunk: . include mem shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#44">[ date ]</a>
+              <a href="thread.html#44">[ thread ]</a>
+              <a href="subject.html#44">[ subject ]</a>
+              <a href="author.html#44">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: shainer
+Date: 2009-01-06 16:29:49 +0100 (Tue, 06 Jan 2009)
+New Revision: 44
+
+Modified:
+   trunk/bl.img
+   trunk/dreamos.img
+   trunk/hardware/cpuid.c
+   trunk/include/hardware/cpuid.h
+   trunk/include/version.h
+   trunk/libc/stdio.c
+   trunk/mem/kheap.c
+   trunk/shell/shell.c
+   trunk/system/syscall.c
+Log:
+Sistemati alcuni elementi della shell, free della memoria usata e vecchi comandi di test eliminati.
+Piccola modifica alla cpuid che adesso ritorna la struttura riempita.
+Cambiata la kmalloc in modo che chiami la alloc.
+Definizione di KHEAP_LIST_ADDRESS in kheap.c
+Aggiunta di printmem nell'output di help.
+
+
+Modified: trunk/bl.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/hardware/cpuid.c
+===================================================================
+--- trunk/hardware/cpuid.c	2009-01-03 22:27:59 UTC (rev 43)
++++ trunk/hardware/cpuid.c	2009-01-06 15:29:49 UTC (rev 44)
+@@ -25,7 +25,7 @@
+ 
+ #include &lt;cpuid.h&gt;
+ 
+-void get_cpuid()
++struct cpuinfo_generic *get_cpuid()
+ {
+     int eax, ebx, ecx, edx;
+     struct cpuinfo_generic *info;
+@@ -90,5 +90,8 @@
+   case 3:
+       info-&gt;cpu_type = &quot;Intel Overdrive&quot;;
+   }
+-  return;
++
++  
++
++  return info;
+ }
+
+Modified: trunk/include/hardware/cpuid.h
+===================================================================
+--- trunk/include/hardware/cpuid.h	2009-01-03 22:27:59 UTC (rev 43)
++++ trunk/include/hardware/cpuid.h	2009-01-06 15:29:49 UTC (rev 44)
+@@ -60,6 +60,6 @@
+ 
+ char cpu_vendor[12]; // This will contain the main string
+ /* Have a look into cpuid.c for this procedure */
+-void get_cpuid ();
++struct cpuinfo_generic *get_cpuid ();
+ 
+ #endif
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-01-03 22:27:59 UTC (rev 43)
++++ trunk/include/version.h	2009-01-06 15:29:49 UTC (rev 44)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL &quot;0&quot;
+ #define EXTRAVERSION &quot;-dreamos&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r42&quot;
++#define REV_NUM &quot;-r43&quot;
+
+Modified: trunk/libc/stdio.c
+===================================================================
+--- trunk/libc/stdio.c	2009-01-03 22:27:59 UTC (rev 43)
++++ trunk/libc/stdio.c	2009-01-06 15:29:49 UTC (rev 44)
+@@ -35,7 +35,6 @@
+ 
+ /*
+  * Print a character
+- * This is going to become a syscall to _kputc
+  */
+ void putchar (char ch)
+ {
+@@ -143,7 +142,7 @@
+ 		    _kbackspace();
+ 	    } else {
+ 	    for (i=1; i&lt;=width; i++)
+-		_kputs (&quot; &quot;);
++		putchar (' ');
+ 	    }
+             /* Print the argument converted to a string */
+ 
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2009-01-03 22:27:59 UTC (rev 43)
++++ trunk/mem/kheap.c	2009-01-06 15:29:49 UTC (rev 44)
+@@ -28,6 +28,7 @@
+ #include &lt;ordered_list.h&gt;
+ #include &lt;stddef.h&gt;
+ #include &lt;stdio.h&gt;
++#define KHEAP_LIST_ADDRESS 0xC0000000
+ 
+ // #define DEBUG 1
+ extern unsigned int end;
+@@ -38,11 +39,15 @@
+ 
+ void* kmalloc(unsigned int size)
+ {
+-    unsigned int temp;
+-    
+-    temp = address_cur;
+-    address_cur+=size;
+-    return (void *) temp;
++   unsigned int temp;
++   if(kheap!=0) {
++     return (void *) alloc(size, kheap);
++   }
++   else {            
++     temp = address_cur;
++     address_cur+=size;
++   }
++     return (void *) temp;
+ }
+ 
+ /* Test procedure (&quot;try_heap&quot; shell command&quot;) */
+@@ -77,8 +82,8 @@
+     heap_t* new_heap;
+     heap_node_t* first_node;
+ 
+-    new_heap = (heap_t*)0xC0000000;
+-    node_address = 0xC0000000 + sizeof(heap_t);
++    new_heap = (heap_t*)KHEAP_LIST_ADDRESS;
++    node_address = KHEAP_LIST_ADDRESS + sizeof(heap_t);
+ //     new_heap = (heap_t*)kmalloc(sizeof(heap_t));
+ //     first_node = (heap_node_t*)alloc_node();
+     first_node = (heap_node_t*)node_address;
+@@ -254,7 +259,7 @@
+         busy-&gt;size += n2-&gt;size;
+         busy-&gt;next = n2-&gt;next;
+ // 	insert_list (n2, &amp;(kheap-&gt;free_nodes));
+-	printf(&quot;Node_address: %d\n&quot;, n2);
++
+ 	free_node(n2);
+       }
+ 
+@@ -296,4 +301,4 @@
+     toadd-&gt;size = 0;    
+     toadd-&gt;next = kheap-&gt;free_nodes;
+     kheap-&gt;free_nodes = toadd;        
+-}
+\ No newline at end of file
++}
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-01-03 22:27:59 UTC (rev 43)
++++ trunk/shell/shell.c	2009-01-06 15:29:49 UTC (rev 44)
+@@ -42,6 +42,7 @@
+ #include &lt;shell.h&gt;
+ #include &lt;kheap.h&gt;
+ #include &lt;version.h&gt;
++#include &lt;cpuid.h&gt;
+     
+ extern heap_t *kheap;
+ int argc;
+@@ -158,6 +159,15 @@
+ 
+ 		}
+ 
++		else if (!(_kstrncmp(cmd, &quot;cpuid&quot;,5)))
++		{
++			struct cpuinfo_generic *sh_info = get_cpuid();
++
++			printf (&quot;----- CPUID Information -----\n&quot;);
++			printf (&quot;Vendor: %s\n&quot;, sh_info-&gt;cpu_vendor);
++			printf (&quot;Type: %s\n&quot;, sh_info-&gt;cpu_type);
++		}
++
+ 		else if (!(_kstrncmp(cmd,&quot;answer&quot;,6)))
+       		{
+           		  printf(&quot;42\n&quot;);			  
+@@ -179,6 +189,7 @@
+                 i++;
+             }
+             printf(&quot;Address of a: %d\n&quot;, b);
++            free (b);
+ 
+         }
+ 
+@@ -191,24 +202,25 @@
+               printf (&quot;Contenuto della locazione 0xa0000000 dopo l'intervento dell'handler: %d\n&quot;, *prova);
+         }
+ 
+-        else if (!(_kstrncmp(cmd,&quot;try_heap&quot;,8))){
++        /*else if (!(_kstrncmp(cmd,&quot;try_heap&quot;,8))){
+             try_alloc();
+         }
+         
+- 	    else if (!(_kstrncmp(cmd,&quot;free&quot;,4))) {
+-    	    unsigned int ptr = 425532;
+-	        free((unsigned int*)ptr);
+-	        ptr = 433724;
+- 	        free((unsigned int*)ptr);
+-            ptr=446012;
+-            free((unsigned int*)ptr);
+-            printf(&quot;Navigating used list...\n&quot;);
+-            print_heap_list (kheap-&gt;used_list);
+-            printf(&quot;Navigating free list...\n&quot;);
+-            print_heap_list (kheap-&gt;free_list);
+-	    printf(&quot;Navigati free nodes...\n&quot;);
+-            print_heap_list (kheap-&gt;free_nodes);
+-	    }
++        else if (!(_kstrncmp(cmd,&quot;free&quot;,4))) {
++          unsigned int ptr = 425548;
++          free((unsigned int*)ptr);
++          ptr = 437836;
++          free((unsigned int*)ptr);
++          ptr=446028;
++          free((unsigned int*)ptr);
++          printf(&quot;Navigating used list...\n&quot;);
++          print_heap_list (kheap-&gt;used_list);
++          printf(&quot;Navigating free list...\n&quot;);
++          print_heap_list (kheap-&gt;free_list);
++          printf(&quot;Navigating free nodes...\n&quot;);
++          print_heap_list (kheap-&gt;free_nodes);
++        }*/
++
+         else if (!(_kstrncmp(cmd,&quot;printmem&quot;,8))) print_heap_list(kheap-&gt;used_list);        
+         else if (!(_kstrncmp(cmd,&quot;aalogo&quot;,6))) 
+ 		aalogo();
+@@ -239,6 +251,10 @@
+ 	memset(string+5, 0, strlen(string));
+ 	memset(cmd, 0, strlen(cmd));
+ 
++        for (--argc; argc&gt;=0; argc--) {
++	  free (argv[argc]);
++        }
++
+ 	}
+ }
+ 
+@@ -284,14 +300,13 @@
+ {
+ 	printf(&quot;help      - See the 'help' list to learn the DreamOS command now avaible\n&quot;
+            &quot;clear     - Clear the screen\n&quot;
+-	       &quot;poweroff  - Turn off the machine\n&quot;
++	   &quot;poweroff  - Turn off the machine\n&quot;
+            &quot;kmalloc   - Test a basic kmalloc function\n&quot;
+            &quot;do_fault  - Test a page_fault\n&quot;
+            &quot;aalogo    - Show an ascii art logo\n&quot;
+            &quot;uname     - Print kernel version, try uname --help for more info\n&quot;
+-           &quot;try_heap  - Try heap mmu\n&quot;
+-           &quot;free      - Try free() with merge\n&quot;
+-           &quot;credits  - Show DreamOS credists\n&quot;
++           &quot;printmem  - Print used locations of memory\n&quot;
++           &quot;credits   - Show DreamOS credits\n&quot;
+ 	       &quot;echo      - Print some lines of text\n&quot;);
+ }
+ 
+
+Modified: trunk/system/syscall.c
+===================================================================
+--- trunk/system/syscall.c	2009-01-03 22:27:59 UTC (rev 43)
++++ trunk/system/syscall.c	2009-01-06 15:29:49 UTC (rev 44)
+@@ -26,8 +26,9 @@
+ #include &lt;syscall.h&gt;
+ #include &lt;stdio.h&gt;
+ #include &lt;video.h&gt;
++#include &lt;keyboard.h&gt;
+ 
+-void (*syscall_table[SYSCALL_NUMBER])(int *) = {sysputch};
++void (*syscall_table[SYSCALL_NUMBER])(int *) = {sysputch};  
+ 
+ void sysputch(int *args)
+ {
+@@ -35,12 +36,13 @@
+    s[0] = args[0];
+    s[1] = '\0';
+ 
+-    _kputs (s);
++   _kputs (s);
+ }
+ 
+-void syscall_init(){
++void syscall_init()
++{
+     int i=0;
+-    while(i&lt;SYSCALL_NUMBER){
++    while(i&lt;SYSCALL_NUMBER) {
+         syscall_table[i]=0;
+         i++;
+     }
+@@ -56,16 +58,19 @@
+      int ebx=0, ecx=0, edx=0;
+      int arguments[3] = {0,0,0};
+ 
++     asm (&quot;cli&quot;);
++
+      asm (&quot;movl %%eax, %0\n\t&quot;
+ 	  &quot;movl %%ebx, %1\n\t&quot;
+ 	  &quot;movl %%ecx, %2\n\t&quot;
+ 	  &quot;movl %%edx, %3\n\t&quot;
+ 	  : &quot;=r&quot; (eax), &quot;=r&quot; (ebx), &quot;=r&quot; (ecx), &quot;=r&quot; (edx));
+-
++     
+      arguments[0] = ebx;
+      arguments[1] = ecx;
+      arguments[2] = edx;
+          
+      (*syscall_table[eax])(arguments);
++     asm (&quot;sti&quot;);
+ }
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000043.html">[Dreamos-dev] r43 - in trunk: . include mem
+</A></li>
+	<LI>Next message: <A HREF="000045.html">[Dreamos-dev] r45 - in trunk: . include mem shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#44">[ date ]</a>
+              <a href="thread.html#44">[ thread ]</a>
+              <a href="subject.html#44">[ subject ]</a>
+              <a href="author.html#44">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

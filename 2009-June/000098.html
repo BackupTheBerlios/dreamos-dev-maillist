@@ -1,0 +1,271 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r96 - in trunk: . drivers include mem shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-June/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r96%20-%20in%20trunk%3A%20.%20drivers%20include%20mem%20shell&In-Reply-To=%3C200906212144.n5LLiBVn000256%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000097.html">
+   <LINK REL="Next"  HREF="000099.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r96 - in trunk: . drivers include mem shell</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r96%20-%20in%20trunk%3A%20.%20drivers%20include%20mem%20shell&In-Reply-To=%3C200906212144.n5LLiBVn000256%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r96 - in trunk: . drivers include mem shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun Jun 21 23:44:11 CEST 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000097.html">[Dreamos-dev] [Git]dreamos branch, master,	updated. bde943252c05877fa9e7e4cf87e6e10cf1821329
+</A></li>
+        <LI>Next message: <A HREF="000099.html">[Dreamos-dev] r97 - in trunk: . drivers hardware include/drivers io	processore shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#98">[ date ]</a>
+              <a href="thread.html#98">[ thread ]</a>
+              <a href="subject.html#98">[ subject ]</a>
+              <a href="author.html#98">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-06-21 23:44:10 +0200 (Sun, 21 Jun 2009)
+New Revision: 96
+
+Modified:
+   trunk/.bochsrc
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/drivers/mouse.c
+   trunk/include/kernel.h
+   trunk/include/version.h
+   trunk/mem/fismem.c
+   trunk/mem/kheap.c
+   trunk/mem/paging.c
+   trunk/shell/shell.c
+Log:
+Mappato indirizzo del pic 0xFEC00000 anche in memoria logica
+Segnato tale indirizzo come occupato sia a livello fisico che a livello 
+logico
+Modificato il num di vers in Makefile
+Quando si ferma il drv del mouse ora si inibisce anche quest'ultimo a 
+livello hardware
+
+
+
+Modified: trunk/.bochsrc
+===================================================================
+--- trunk/.bochsrc	2009-06-16 17:39:19 UTC (rev 95)
++++ trunk/.bochsrc	2009-06-21 21:44:10 UTC (rev 96)
+@@ -16,8 +16,8 @@
+ # NOTE: if you use the &quot;wx&quot; configuration interface, you must also use
+ # the &quot;wx&quot; display library.
+ #=======================================================================
+-config_interface: textconfig
+-#config_interface: wx
++#config_interface: textconfig
++config_interface: wx
+ 
+ #=======================================================================
+ # DISPLAY_LIBRARY
+@@ -59,7 +59,7 @@
+ #display_library: sdl, options=&quot;fullscreen&quot; # startup in fullscreen mode
+ #display_library: term
+ #display_library: win32, options=&quot;legacyF12&quot; # use F12 to toggle mouse
+-#display_library: wx
++display_library: wx
+ #display_library: x, options=&quot;gui_debug&quot;
+ #display_library: x
+ #=======================================================================
+@@ -541,7 +541,7 @@
+ #   mouse: enabled=1, type=serial
+ #   mouse: enabled=0
+ #=======================================================================
+-#mouse: enabled=1, type=ps2
++mouse: enabled=1, type=ps2
+ 
+ #=======================================================================
+ # private_colormap: Request that the GUI create and use it's own
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2009-06-16 17:39:19 UTC (rev 95)
++++ trunk/Makefile	2009-06-21 21:44:10 UTC (rev 96)
+@@ -4,7 +4,7 @@
+ 
+ NAME = DreamOS
+ VERSION = 0
+-PATCHLEVEL = 1.2
++PATCHLEVEL = 1.3
+ EXTRAVERSION = -trunk
+ 
+ CFLAGS = -nostdlib\
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/drivers/mouse.c
+===================================================================
+--- trunk/drivers/mouse.c	2009-06-16 17:39:19 UTC (rev 95)
++++ trunk/drivers/mouse.c	2009-06-21 21:44:10 UTC (rev 96)
+@@ -57,7 +57,9 @@
+ void mouse_dead()
+ {
+ 	printf(LNG_MOUSE_REMOVE);
+-	disable_IRQ(12);
++	disable_IRQ(MOUSE);
++	mouse_write(0xF5); 
++	mouse_read();
+ 	_kprintOK();
+ }
+ 
+
+Modified: trunk/include/kernel.h
+===================================================================
+--- trunk/include/kernel.h	2009-06-16 17:39:19 UTC (rev 95)
++++ trunk/include/kernel.h	2009-06-21 21:44:10 UTC (rev 96)
+@@ -29,7 +29,7 @@
+ asmlinkage void _start(struct multiboot_info*);
+ int main_loop(struct multiboot_info*);
+ 
+-#define DREAMOS_VER &quot;DreamOS ver 0.1.2 - trunk&quot;
++#define DREAMOS_VER &quot;DreamOS ver 0.1.3 - trunk&quot;
+ #define SITEURL &quot;www.dreamos.org&quot;
+ 
+ #endif
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-06-16 17:39:19 UTC (rev 95)
++++ trunk/include/version.h	2009-06-21 21:44:10 UTC (rev 96)
+@@ -21,7 +21,7 @@
+  */
+ 
+ #define VERSION &quot;0&quot;
+-#define PATCHLEVEL &quot;1.2&quot;
++#define PATCHLEVEL &quot;1.3&quot;
+ #define EXTRAVERSION &quot;-trunk&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r93&quot;
++#define REV_NUM &quot;-r95&quot;
+
+Modified: trunk/mem/fismem.c
+===================================================================
+--- trunk/mem/fismem.c	2009-06-16 17:39:19 UTC (rev 95)
++++ trunk/mem/fismem.c	2009-06-21 21:44:10 UTC (rev 96)
+@@ -48,6 +48,8 @@
+         else mem_bitmap.mem_map[i] = 0x00000000;
+         i++;
+     }
++	mem_bitmap.mem_map[0xf7f0] = 0x00000001;
++	mem_bitmap.mem_map[0x7f60] = 0x00000001;
+     i=0;    
+     bmp_elements = (tot_mem/4096)/32;    
+     //     printf(&quot;bmp_elements: %d\n&quot;, bmp_elements);
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2009-06-16 17:39:19 UTC (rev 95)
++++ trunk/mem/kheap.c	2009-06-21 21:44:10 UTC (rev 96)
+@@ -82,6 +82,7 @@
+ {
+     heap_t* new_heap;
+     heap_node_t* first_node;
++	heap_node_t* apic_node;
+ 
+     new_heap = (heap_t*)KHEAP_LIST_ADDRESS;
+     node_address = KHEAP_LIST_ADDRESS + sizeof(heap_t);
+@@ -101,8 +102,17 @@
+     printf(&quot;  First heap created...\n&quot;);   
+     printf(&quot;  Size: %d\n&quot;
+ 	   &quot;  Tot mem: %d\n&quot;
+-	   &quot;  Start address: %x\n&quot;, (new_heap-&gt;free_list)-&gt;size, tot_mem, new_heap);    
+-	set_pagetable_entry_ric(1019, 512 ,0xFEE00000, SUPERVISOR|PD_PRESENT|WRITE, 0);
++	   &quot;  Start address: %x\n&quot;, (new_heap-&gt;free_list)-&gt;size, tot_mem, new_heap);	    
++	apic_node = alloc_node();
++	apic_node-&gt;start_address = 0xFEC00000;
++	apic_node-&gt;size = 4096;
++	apic_node-&gt;next = NULL;
++	insert_list (apic_node, &amp;(new_heap-&gt;used_list));
++	apic_node = alloc_node();
++	apic_node-&gt;start_address = 0xFEE00000;
++	apic_node-&gt;size = 4096;
++	apic_node-&gt;next = NULL;
++	insert_list (apic_node, &amp;(new_heap-&gt;used_list));
+     return (heap_t*) new_heap;
+ }
+     
+@@ -296,7 +306,6 @@
+   * @version 1.0
+   * @param node Node in free_list or used_list to be freed 
+   */
+-
+ void free_node(heap_node_t* toadd){    
+     toadd-&gt;start_address = NULL;
+     toadd-&gt;size = 0;    
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2009-06-16 17:39:19 UTC (rev 95)
++++ trunk/mem/paging.c	2009-06-21 21:44:10 UTC (rev 96)
+@@ -72,9 +72,11 @@
+         i++;
+     }
+     //apic_location = request_pages(1, NOT_ADD_LIST);	
+-	set_pagedir_entry(1019, (unsigned int) apic_location,PD_PRESENT|SUPERVISOR, 0);	
+-            
++	set_pagedir_entry(1019, (unsigned int) apic_location, PD_PRESENT|SUPERVISOR, 0);	
++           
+     load_pdbr((unsigned int)current_page_dir);
++	set_pagetable_entry_ric(1019, 512 ,0xFEE00000, SUPERVISOR|PD_PRESENT|WRITE, 0);
++	set_pagetable_entry_ric(1019, 0 ,0xFEC00000, SUPERVISOR|PD_PRESENT|WRITE, 0);
+     kheap = make_heap(tot_mem - ((unsigned int) &amp;end));
+ }
+ 
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-06-16 17:39:19 UTC (rev 95)
++++ trunk/shell/shell.c	2009-06-21 21:44:10 UTC (rev 96)
+@@ -39,7 +39,7 @@
+ #include &lt;clock.h&gt;
+ #include &lt;sys/utsname.h&gt;
+ 
+-#define NUM_COM 15
++#define NUM_COM 16
+ 
+ struct cmd {
+ 	const char cmdname[CMD_LEN];
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000097.html">[Dreamos-dev] [Git]dreamos branch, master,	updated. bde943252c05877fa9e7e4cf87e6e10cf1821329
+</A></li>
+	<LI>Next message: <A HREF="000099.html">[Dreamos-dev] r97 - in trunk: . drivers hardware include/drivers io	processore shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#98">[ date ]</a>
+              <a href="thread.html#98">[ thread ]</a>
+              <a href="subject.html#98">[ subject ]</a>
+              <a href="author.html#98">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

@@ -1,0 +1,172 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r118 - in trunk: . fs shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-August/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r118%20-%20in%20trunk%3A%20.%20fs%20shell&In-Reply-To=%3C200908182110.n7ILAME7001608%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000119.html">
+   <LINK REL="Next"  HREF="000121.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r118 - in trunk: . fs shell</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r118%20-%20in%20trunk%3A%20.%20fs%20shell&In-Reply-To=%3C200908182110.n7ILAME7001608%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r118 - in trunk: . fs shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Tue Aug 18 23:10:22 CEST 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000119.html">[Dreamos-dev] r117 - in trunk: . fs include/fs shell
+</A></li>
+        <LI>Next message: <A HREF="000121.html">[Dreamos-dev] r119 - in trunk: . include
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#120">[ date ]</a>
+              <a href="thread.html#120">[ thread ]</a>
+              <a href="subject.html#120">[ subject ]</a>
+              <a href="author.html#120">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-08-18 23:10:21 +0200 (Tue, 18 Aug 2009)
+New Revision: 118
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/vfs.c
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+Log:
+Pulito codice di cd e get_rel_path
+Aumentata dimensione del buffer per gli argomenti della cli
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2009-08-10 22:04:36 UTC (rev 117)
++++ trunk/fs/vfs.c	2009-08-18 21:10:21 UTC (rev 118)
+@@ -16,6 +16,7 @@
+  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+  */
+  
++#include &lt;video.h&gt;
+ #include &lt;vfs.h&gt;
+ #include &lt;stdio.h&gt;
+ #include &lt;kheap.h&gt;
+@@ -89,21 +90,22 @@
+                return last;
+ }
+ 
+-char* get_rel_path(int mountpoint_id, char* path){
+-	char *tmp_path;
++char *get_rel_path(int mountpoint_id, char* path){
+ 	int rel_size = 0;
+ 	int j=0;
+-	rel_size = strlen(path) - strlen(mountpoint_list[mountpoint_id].mountpoint);
++	char *tmp_path;
++	rel_size = strlen(path) - strlen(mountpoint_list[mountpoint_id].mountpoint);	
+ 	if(rel_size&gt;0){		
+ 		int mp_size= 0;
+-		tmp_path = kmalloc(rel_size);		
+-		mp_size = strlen(mountpoint_list[mountpoint_id].mountpoint);
++		tmp_path = kmalloc(rel_size * sizeof(char));		
++		mp_size = strlen(mountpoint_list[mountpoint_id].mountpoint);		
+ 		while(j&lt;rel_size){			
+-			tmp_path[j] = path[mp_size + j];
++			tmp_path[j] = path[mp_size + j];			
++			_kputc(path[mp_size + j]);
+ 			j++;
+ 		}
+ 		tmp_path[j]='\0';
+-	}
+-	printf(&quot;Path: %s - %s- %d\n&quot;, path,tmp_path, rel_size);
++		printf(&quot;\n&quot;);
++	}	
+ 	return tmp_path;
+ }
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-08-10 22:04:36 UTC (rev 117)
++++ trunk/shell/commands.c	2009-08-18 21:10:21 UTC (rev 118)
+@@ -412,17 +412,17 @@
+ }
+ 
+ void cd(){
+-	char *relpath;
++	char *relpath;	
+ 	if(argc &gt; 2) printf(&quot;Too many arguments\n&quot;);
+ 	else if(argc &lt;2) printf(&quot;Too few arguments\n&quot;);
+ 	else {
+ 		int i=0;
+ 		int rel_size = 0;		
+ 		i = get_mountpoint_id(argv[1]);
+-		printf(&quot;path: %s\n&quot;, argv[1]);
++		//printf(&quot;path: %s\n&quot;, argv[1]);
+ 		rel_size = strlen(argv[1]) - strlen(mountpoint_list[i].mountpoint);
+ 		if(i == -1) printf(&quot;cd: %s: No such file or directory\n&quot;, argv[1]);
+-		else strcpy(current_user.cur_path, mountpoint_list[i].mountpoint);
++		else strcpy(current_user.cur_path, argv[1]);
+ 		if(rel_size &gt;0){
+ 			//int j=0;
+ 			//relpath = kmalloc(rel_size);
+@@ -432,7 +432,7 @@
+ 			//	j++;
+ 			//}			
+ 			//relpath[j] = '\0';
+-			printf(&quot;Relative path: %s %d\n&quot;,relpath, rel_size);
++			//printf(&quot;Relative path: %s %d\n&quot;,relpath, rel_size);
+ 		}
+ 	}
+ }
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-08-10 22:04:36 UTC (rev 117)
++++ trunk/shell/shell.c	2009-08-18 21:10:21 UTC (rev 118)
+@@ -55,7 +55,7 @@
+ 
+   for (; *com; com++)
+   {    
+-    argv[argc] = (char *)kmalloc(sizeof(char) * 10);
++    argv[argc] = (char *)kmalloc(sizeof(char) * 30);
+     while (*com != ' ') {
+       *(argv[argc] + i) = *com++;
+       i++;
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000119.html">[Dreamos-dev] r117 - in trunk: . fs include/fs shell
+</A></li>
+	<LI>Next message: <A HREF="000121.html">[Dreamos-dev] r119 - in trunk: . include
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#120">[ date ]</a>
+              <a href="thread.html#120">[ thread ]</a>
+              <a href="subject.html#120">[ subject ]</a>
+              <a href="author.html#120">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

@@ -1,0 +1,206 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r286 - in trunk: . include include/mem mem
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-August/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r286%20-%20in%20trunk%3A%20.%20include%20include/mem%20mem&In-Reply-To=%3C20100810081653.1CB174802F3%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000288.html">
+   <LINK REL="Next"  HREF="000290.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r286 - in trunk: . include include/mem mem</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r286%20-%20in%20trunk%3A%20.%20include%20include/mem%20mem&In-Reply-To=%3C20100810081653.1CB174802F3%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r286 - in trunk: . include include/mem mem">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Tue Aug 10 10:16:53 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000288.html">[Dreamos-dev] r285 - in trunk: . files fs hardware shell
+</A></li>
+        <LI>Next message: <A HREF="000290.html">[Dreamos-dev] r287 - in trunk: . include/mem include/misc misc
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#289">[ date ]</a>
+              <a href="thread.html#289">[ thread ]</a>
+              <a href="subject.html#289">[ subject ]</a>
+              <a href="author.html#289">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-08-10 10:16:52 +0200 (Tue, 10 Aug 2010)
+New Revision: 286
+
+Added:
+   trunk/include/mem/heap.h
+   trunk/mem/heap.c
+Modified:
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/include/kernel.h
+Log:
+Aggiunti file per nuova versione gestore memoria. 
+Aggiornato makefile
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2010-08-05 21:46:30 UTC (rev 285)
++++ trunk/Makefile	2010-08-10 08:16:52 UTC (rev 286)
+@@ -4,7 +4,7 @@
+ 
+ NAME = DreamOS
+ VERSION = 0
+-PATCHLEVEL = 2.1
++PATCHLEVEL = 3
+ EXTRAVERSION = -trunk
+ 
+ include Makefile.am
+@@ -52,6 +52,7 @@
+       mem/fismem.o\
+       mem/paging.o\
+       mem/kheap.o\
++      mem/heap.o\
+       misc/clock.o\
+       misc/bitops.o\
+       misc/ordered_list.o\
+@@ -94,6 +95,7 @@
+ mem/fismem.o: mem/fismem.c
+ mem/paging.o: mem/paging.c
+ mem/kheap.o: mem/kheap.c
++mem/heap.o: mem/heap.c
+ misc/clock.o: misc/clock.c
+ misc/ordered_list.o: misc/ordered_list.c
+ misc/bitops.o: misc/bitops.c
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/kernel.h
+===================================================================
+--- trunk/include/kernel.h	2010-08-05 21:46:30 UTC (rev 285)
++++ trunk/include/kernel.h	2010-08-10 08:16:52 UTC (rev 286)
+@@ -35,7 +35,7 @@
+ asmlinkage void _start(struct multiboot_info*);
+ int main_loop(struct multiboot_info*);
+ 
+-#define DREAMOS_VER &quot;DreamOS ver 0.2.1 - trunk&quot;
++#define DREAMOS_VER &quot;DreamOS ver 0.3 - trunk&quot;
+ #define SITEURL &quot;www.dreamos.org&quot;
+ 
+ #endif
+
+Added: trunk/include/mem/heap.h
+===================================================================
+--- trunk/include/mem/heap.h	                        (rev 0)
++++ trunk/include/mem/heap.h	2010-08-10 08:16:52 UTC (rev 286)
+@@ -0,0 +1,44 @@
++/***************************************************************************
++ *            heap.h
++ *
++ *  Sun 8 08 10 
++ *  Copyright  2010  Ivan Gualandri
++ *  Email <A HREF="https://lists.berlios.de/mailman/listinfo/dreamos-dev">finarfin at elenhost.org</A>
++ ****************************************************************************/
++/*
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2 of the License, or
++ *  (at your option) any later version.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++#ifndef __HEAP_H
++#define __HEAP_H
++
++/*! \struct header_t 
++    \brief Contiene le informazioni relative alle locazioni di memoria 
++ */
++typedef struct {
++	int magic; /*!&lt;For header identification*/
++	char is_hole /*!&lt;1 se si tratta di un hole 0 se si tratta di un block*/
++	int size;  /*!&lt;Total size of the block (including header and footer)*/
++} header_t;
++
++/*! \struct footer_t 
++    \brief Contiene altre informazioni relative alle locazioni di memoria 
++ */
++typedef struct {
++	int magic; /*!&lt;For footer identification */
++	header_t *header;/*!&lt; Pointer to the block header*/
++} footer_t;
++
++#endif
+
+Added: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	                        (rev 0)
++++ trunk/mem/heap.c	2010-08-10 08:16:52 UTC (rev 286)
+@@ -0,0 +1,25 @@
++/***************************************************************************
++ *            heap.c
++ *
++ *  Sun 8 08 10 
++ *  Copyright  2010  Ivan Gualandri
++ *  Email <A HREF="https://lists.berlios.de/mailman/listinfo/dreamos-dev">finarfin at elenhost.org</A>
++ ****************************************************************************/
++/*
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2 of the License, or
++ *  (at your option) any later version.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++void heap_init(){
++}
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000288.html">[Dreamos-dev] r285 - in trunk: . files fs hardware shell
+</A></li>
+	<LI>Next message: <A HREF="000290.html">[Dreamos-dev] r287 - in trunk: . include/mem include/misc misc
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#289">[ date ]</a>
+              <a href="thread.html#289">[ thread ]</a>
+              <a href="subject.html#289">[ subject ]</a>
+              <a href="author.html#289">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

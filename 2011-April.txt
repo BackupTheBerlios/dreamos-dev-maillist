@@ -1,0 +1,275 @@
+From finarfin at mail.berlios.de  Sun Apr  3 23:31:00 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun,  3 Apr 2011 23:31:00 +0200
+Subject: [Dreamos-dev] r356 - in trunk: . boot libc
+Message-ID: <20110403213100.AFC07480C90@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-04-03 23:31:00 +0200 (Sun, 03 Apr 2011)
+New Revision: 356
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/libc/stdio.c
+Log:
+Fixed gets. 
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/libc/stdio.c
+===================================================================
+--- trunk/libc/stdio.c	2011-03-16 20:16:07 UTC (rev 355)
++++ trunk/libc/stdio.c	2011-04-03 21:31:00 UTC (rev 356)
+@@ -211,14 +211,14 @@
+ 
+ char *gets ()
+ {
+-    char *str=0;
++    char str[255];
+     int c;
+     int count=0;
+     shell_mess_col = _kgetcolumn ();
+     shell_mess_line = _kgetline ();
+-
++	memset(str, '\0', 255);
+     do {
+-	c = getchar();
++	c = getchar();	
+ 	if (c=='\n') // tasto invio
+ 	    break;
+ 	else if (c=='\b') //backspace
+
+
+
+From finarfin at mail.berlios.de  Sun Apr 17 10:47:27 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun, 17 Apr 2011 10:47:27 +0200
+Subject: [Dreamos-dev] r357 - in trunk: . boot mem
+Message-ID: <20110417084727.553BD481468@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-04-17 10:47:26 +0200 (Sun, 17 Apr 2011)
+New Revision: 357
+
+Modified:
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/mem/heap.c
+Log:
+Bugfix in new_alloc
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/mem/heap.c
+===================================================================
+--- trunk/mem/heap.c	2011-04-03 21:31:00 UTC (rev 356)
++++ trunk/mem/heap.c	2011-04-17 08:47:26 UTC (rev 357)
+@@ -120,7 +120,7 @@
+ 		}
+ 		else {
+ 			/**We need to adjust the latest hole*/
+-			header_t* header = get_array(min_index, &t_heap->index);
++			header_t* header = get_array(latest_i, &t_heap->index);
+ 			header->size += new_len - old_len;
+ 			/**We need a new footer*/
+ 			footer_t* footer = (footer_t*) (header + header->size - sizeof(footer_t));
+
+
+
+From finarfin at mail.berlios.de  Sat Apr 23 21:19:49 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sat, 23 Apr 2011 21:19:49 +0200
+Subject: [Dreamos-dev] r358 - trunk
+Message-ID: <20110423191949.C520A4814C9@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-04-23 21:19:49 +0200 (Sat, 23 Apr 2011)
+New Revision: 358
+
+Modified:
+   trunk/Makefile
+Log:
+Fixed error.
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2011-04-17 08:47:26 UTC (rev 357)
++++ trunk/Makefile	2011-04-23 19:19:49 UTC (rev 358)
+@@ -100,7 +100,7 @@
+ mem/heap.o: mem/heap.c
+ misc/clock.o: misc/clock.c
+ misc/ordered_list.o: misc/ordered_list.c
+-misc/orderet_array.o: misc/ordered_array.c
++misc/ordered_array.o: misc/ordered_array.c
+ misc/bitops.o: misc/bitops.c
+ misc/debug.o: misc/debug.c
+ drivers/keyboard.o: drivers/keyboard.c
+
+
+
+From finarfin at mail.berlios.de  Sat Apr 23 23:00:16 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sat, 23 Apr 2011 23:00:16 +0200
+Subject: [Dreamos-dev] r359 - in trunk: . boot shell
+Message-ID: <20110423210016.CE8BC4814C9@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-04-23 23:00:16 +0200 (Sat, 23 Apr 2011)
+New Revision: 359
+
+Modified:
+   trunk/Makefile
+   trunk/boot/grub.img
+   trunk/dreamos.img
+   trunk/kernel.c
+   trunk/shell/commands.c
+   trunk/shell/testing.c
+Log:
+Iniziata rimozione componenti nuovo gestore memoria (abbandonato)
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2011-04-23 19:19:49 UTC (rev 358)
++++ trunk/Makefile	2011-04-23 21:00:16 UTC (rev 359)
+@@ -53,10 +53,8 @@
+       mem/fismem.o\
+       mem/paging.o\
+       mem/kheap.o\
+-      mem/heap.o\
+       misc/clock.o\
+       misc/bitops.o\
+-      misc/ordered_array.o\
+       misc/ordered_list.o\
+       misc/debug.o \
+       system/syscall.o\
+@@ -67,7 +65,8 @@
+       sys/utsname.o\
+       sys/dirent.o\
+       sys/stat.o
+-
++#mem/heap.o\
++#misc/ordered_array.o
+ dreamos.img: bl.img kernel.bin
+ 	mv kernel.bin dreamos.img
+ 
+@@ -97,10 +96,10 @@
+ mem/fismem.o: mem/fismem.c
+ mem/paging.o: mem/paging.c
+ mem/kheap.o: mem/kheap.c
+-mem/heap.o: mem/heap.c
++#mem/heap.o: mem/heap.c
+ misc/clock.o: misc/clock.c
+ misc/ordered_list.o: misc/ordered_list.c
+-misc/ordered_array.o: misc/ordered_array.c
++#misc/ordered_array.o: misc/ordered_array.c
+ misc/bitops.o: misc/bitops.c
+ misc/debug.o: misc/debug.c
+ drivers/keyboard.o: drivers/keyboard.c
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2011-04-23 19:19:49 UTC (rev 358)
++++ trunk/kernel.c	2011-04-23 21:00:16 UTC (rev 359)
+@@ -43,7 +43,9 @@
+ #include <kheap.h>
+ #include <vfs.h>
+ #include <initrd.h>
++#ifdef LATEST
+ #include <heap.h>
++#endif
+ #include <keyboard.h>
+ 
+ #ifdef BOCHS_DEBUG
+@@ -55,7 +57,7 @@
+ multiboot_info_t *boot_informations;
+ char *module_start;
+ unsigned int module_end;
+-extern new_heap_t* n_heap;
++//extern new_heap_t* n_heap;
+ asmlinkage void _start(struct multiboot_info *boot_info)
+ {
+     boot_informations = boot_info;    
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2011-04-23 19:19:49 UTC (rev 358)
++++ trunk/shell/commands.c	2011-04-23 21:00:16 UTC (rev 359)
+@@ -25,7 +25,9 @@
+ #include <testing.h>
+ #include <fcntl.h>
+ #include <stat.h>
++#ifdef LATEST
+ #include <heap.h>
++#endif
+ 
+ int argc;
+ char **argv;
+@@ -523,7 +525,9 @@
+ 					{ "test_stat", test_stat},
+ 					{ "try_check", try_check},
+ 					{ "try_shadow", try_shadow},
++					#ifdef LATEST
+ 					{ "try_newheap", try_newheap},
++					#endif
+ 					{ "--help", help_tester },
+ 					};
+ 	if (argc != 2) {
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2011-04-23 19:19:49 UTC (rev 358)
++++ trunk/shell/testing.c	2011-04-23 21:00:16 UTC (rev 359)
+@@ -29,7 +29,9 @@
+ #include <initrd.h>
+ #include <unistd.h>
+ #include <user_shell.h>
++#ifdef LATEST
+ #include <heap.h>
++#endif
+ 
+ //multiboot_info_t *boot_informations;
+ char *module_start;
+@@ -99,6 +101,7 @@
+ 	print_heap_list(kheap->used_list);
+ }
+ 
++#ifdef LATEST
+ void try_newheap(){
+ 	#ifdef NEW_HEAP_TEST
+ 	unsigned int testA;
+@@ -125,6 +128,7 @@
+ 	printf("DONE\n");
+ 	#endif
+ }
++#endif
+ 
+ void help_tester()
+ {
+
+
+

@@ -1,0 +1,192 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r85 - in trunk: . include io mem
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-May/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r85%20-%20in%20trunk%3A%20.%20include%20io%20mem&In-Reply-To=%3C200905310706.n4V76oQb003371%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000085.html">
+   
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r85 - in trunk: . include io mem</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r85%20-%20in%20trunk%3A%20.%20include%20io%20mem&In-Reply-To=%3C200905310706.n4V76oQb003371%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r85 - in trunk: . include io mem">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun May 31 09:06:50 CEST 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000085.html">[Dreamos-dev] r84 - in trunk: . include shell
+</A></li>
+        
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#86">[ date ]</a>
+              <a href="thread.html#86">[ thread ]</a>
+              <a href="subject.html#86">[ subject ]</a>
+              <a href="author.html#86">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-05-31 09:06:46 +0200 (Sun, 31 May 2009)
+New Revision: 85
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/version.h
+   trunk/io/video.c
+   trunk/kernel.c
+   trunk/mem/paging.c
+Log:
+Correzione alcuni problemi scrolling, by vinc94 
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-05-26 19:32:22 UTC (rev 84)
++++ trunk/include/version.h	2009-05-31 07:06:46 UTC (rev 85)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL &quot;1.2&quot;
+ #define EXTRAVERSION &quot;-trunk&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r83&quot;
++#define REV_NUM &quot;-r85&quot;
+
+Modified: trunk/io/video.c
+===================================================================
+--- trunk/io/video.c	2009-05-26 19:32:22 UTC (rev 84)
++++ trunk/io/video.c	2009-05-31 07:06:46 UTC (rev 85)
+@@ -40,13 +40,15 @@
+ int is_scrolled=0;
+ int is_shifted_once=0;
+ unsigned int last_tab=0;
++int last_x=0, last_y=0;
+ 
+ void _kputc(char c)
+ {
+     /* Print a character on the screen*/
+-  _kshiftAll();
++  if (last_x &amp;&amp; last_y) _kscrolldown ();
+   *VIDEO_PTR++ = c;
+   *VIDEO_PTR++ = VIDEO_CLR;
++  _kshiftAll();
+   _ksetcursauto();
+ }
+ 
+@@ -351,6 +353,9 @@
+     }
+   }
+   is_scrolled=1;
++  last_x = _kgetcolumn ();
++  last_y = _kgetline ();
++  _kgoto (_SCR_W, _SCR_H);
+ }
+ 
+ /*
+@@ -373,6 +378,10 @@
+     for (x=0; x&lt;_SCR_W*2; x++)
+       *ptr++ = downbuffer[y][x];
+   }
++  is_scrolled=0;
++  _kgoto (last_x, last_y);
++  last_x=0;
++  last_y=0;
+ }
+ 
+ /* EOF */
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2009-05-26 19:32:22 UTC (rev 84)
++++ trunk/kernel.c	2009-05-31 07:06:46 UTC (rev 85)
+@@ -48,7 +48,7 @@
+ multiboot_info_t *boot_informations;
+ asmlinkage void _start(struct multiboot_info *boot_info)
+ {
+-     boot_informations = boot_info;    
++    boot_informations = boot_info;    
+ 	main_loop(boot_info);
+ 	while(1);
+ }
+@@ -72,12 +72,10 @@
+ 
+     outportb(0xFF, MASTER_PORT_1);
+     outportb(0xFF, SLAVE_PORT_1);
+-    _kputs(LNG_IDT);    
+-    //outportb(0xE9, 'c');
++    _kputs(LNG_IDT);        
+     asm(&quot;cli&quot;);   
+     init_idt();
+     _kprintOK();   
+-    //calcola_memoria(); 
+     set_memorysize((boot_info-&gt;mem_upper+boot_info-&gt;mem_lower)*1024);
+     init_mem();    
+     _kputs(LNG_PIC8259);
+@@ -102,7 +100,7 @@
+ 		printf(&quot;[+] Address: 0x%x\n&quot;, &amp;end);		   	        
+ 		printf(&quot;\n\n&quot;);
+ #ifdef BOCHS_DEBUG
+-		dbg_bochs_print(&quot;DreamOS Debug\n&quot;);
++		dbg_bochs_print(&quot;DreamOS Debug String for Bochs\n&quot;);
+ #endif
+ 		shell();
+ 
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2009-05-26 19:32:22 UTC (rev 84)
++++ trunk/mem/paging.c	2009-05-31 07:06:46 UTC (rev 85)
+@@ -42,6 +42,7 @@
+ 
+ void init_paging(){
+     int i;
++    int apic_location;
+     printf(LNG_PAGING);
+     _kprintOK();    
+     current_page_dir = create_pageDir();
+@@ -68,7 +69,9 @@
+         if(i&lt;10) printf(&quot;cpt: %d\n&quot;, current_page_table[i]);
+         #endif
+         i++;
+-    }        
++    }
++    apic_location = request_pages(1, NOT_ADD_LIST);       
++            
+     load_pdbr((unsigned int)current_page_dir);
+     kheap = make_heap(tot_mem - ((unsigned int) &amp;end));
+ }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000085.html">[Dreamos-dev] r84 - in trunk: . include shell
+</A></li>
+	
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#86">[ date ]</a>
+              <a href="thread.html#86">[ thread ]</a>
+              <a href="subject.html#86">[ subject ]</a>
+              <a href="author.html#86">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

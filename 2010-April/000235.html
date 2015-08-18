@@ -1,0 +1,282 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r232 - in trunk: . hardware mem processore
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-April/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r232%20-%20in%20trunk%3A%20.%20hardware%20mem%20processore&In-Reply-To=%3C201004181435.o3IEZlXf009771%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000234.html">
+   <LINK REL="Next"  HREF="000236.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r232 - in trunk: . hardware mem processore</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r232%20-%20in%20trunk%3A%20.%20hardware%20mem%20processore&In-Reply-To=%3C201004181435.o3IEZlXf009771%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r232 - in trunk: . hardware mem processore">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun Apr 18 16:35:47 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000234.html">[Dreamos-dev] r231 - in trunk: . fs hardware include include/mem	include/processore mem processore shell sys
+</A></li>
+        <LI>Next message: <A HREF="000236.html">[Dreamos-dev] r233 - in trunk: . mem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#235">[ date ]</a>
+              <a href="thread.html#235">[ thread ]</a>
+              <a href="subject.html#235">[ subject ]</a>
+              <a href="author.html#235">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-04-18 16:35:39 +0200 (Sun, 18 Apr 2010)
+New Revision: 232
+
+Modified:
+   trunk/dreamos.img
+   trunk/hardware/8253.c
+   trunk/kernel.c
+   trunk/mem/fismem.c
+   trunk/mem/kheap.c
+   trunk/mem/paging.c
+   trunk/processore/handlers.c
+Log:
+Sistemazione alcune chiamate a funzione. 
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/hardware/8253.c
+===================================================================
+--- trunk/hardware/8253.c	2010-04-17 21:13:18 UTC (rev 231)
++++ trunk/hardware/8253.c	2010-04-18 14:35:39 UTC (rev 232)
+@@ -43,9 +43,8 @@
+     ticks = seconds = 0;
+     outportb (PIT_COMREG,0x37);
+     outportb (PIT_DATAREG0,divisor &amp; 0xFF);
+-    outportb (PIT_DATAREG0,divisor &gt;&gt; 8);
++    outportb (PIT_DATAREG0,divisor &gt;&gt; 8);    
+     asm (&quot;sti&quot;);
+-
+ }
+ 
+ unsigned int sleep (unsigned int secs)
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2010-04-17 21:13:18 UTC (rev 231)
++++ trunk/kernel.c	2010-04-18 14:35:39 UTC (rev 232)
+@@ -84,16 +84,18 @@
+     _kputs(LNG_IDT);        
+     asm(&quot;cli&quot;);   
+     init_idt();
+-    _kprintOK();   
++    _kprintOK();  
++    _kputs(LNG_PIC8259);
++    init_IRQ();   
++    _kprintOK();            	
++    printf(LNG_PIT8253);
++    configure_PIT ();   
++    //_kprintOK();   
+     set_memorysize((boot_info-&gt;mem_upper+boot_info-&gt;mem_lower)*1024);
+-    init_mem();    
+-    _kputs(LNG_PIC8259);
+-    init_IRQ();    
++    init_mem();        
+     asm(&quot;sti&quot;);
+     _kprintOK();   
+     init_paging();    
+-    printf(LNG_PIT8253);
+-    configure_PIT ();
+     _kprintOK();    	
+     printf(&quot;Memory (upper) amount-&gt; %d kb \n&quot;, boot_info-&gt;mem_upper);
+     printf(&quot;Memory (lower) amount-&gt; %d kb \n&quot;, boot_info-&gt;mem_lower);
+
+Modified: trunk/mem/fismem.c
+===================================================================
+--- trunk/mem/fismem.c	2010-04-17 21:13:18 UTC (rev 231)
++++ trunk/mem/fismem.c	2010-04-18 14:35:39 UTC (rev 232)
+@@ -44,12 +44,12 @@
+ //     int remainder=0;
+     mem_info = mem_info_root;
+     while(i&lt;BITMAP_SIZE){
+-        if(i&lt;16)mem_bitmap.mem_map[i] = 0xFFFFFFFF;
++        if(i&lt;32)mem_bitmap.mem_map[i] = 0xFFFFFFFF;
+         else mem_bitmap.mem_map[i] = 0x00000000;
+         i++;
+     }
+-	mem_bitmap.mem_map[0xf7f0] = 0x00000001;
+-	mem_bitmap.mem_map[0x7f60] = 0x00000001;
++	//mem_bitmap.mem_map[0xf7f0] = 0x00000001;
++	//mem_bitmap.mem_map[0x7f60] = 0x00000001;
+     i=0;    
+     bmp_elements = (tot_mem/4096)/32;    
+     //     printf(&quot;bmp_elements: %d\n&quot;, bmp_elements);
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2010-04-17 21:13:18 UTC (rev 231)
++++ trunk/mem/kheap.c	2010-04-18 14:35:39 UTC (rev 232)
+@@ -85,12 +85,13 @@
+ 	heap_node_t* module_node;
+ 
+     new_heap = (heap_t*)KHEAP_LIST_ADDRESS;
+-    node_address = KHEAP_LIST_ADDRESS + sizeof(heap_t);
++    node_address = KHEAP_LIST_ADDRESS + sizeof(heap_t);        
+ //     new_heap = (heap_t*)kmalloc(sizeof(heap_t));
+ //     first_node = (heap_node_t*)alloc_node();
+-    first_node = (heap_node_t*)node_address;
+-    node_address = node_address + sizeof(heap_node_t);
++    first_node = (heap_node_t*)node_address;    
++    node_address = node_address + sizeof(heap_node_t);    
+     first_node-&gt;start_address = (unsigned int)&end;
++    //printf(&quot;Test\n&quot;);
+     first_node-&gt;size = size;
+     first_node-&gt;next = NULL;
+ 
+@@ -98,7 +99,7 @@
+     new_heap-&gt;max_size = tot_mem-(unsigned int) &end;
+     new_heap-&gt;free_list = first_node;
+     new_heap-&gt;used_list = NULL;
+-    new_heap-&gt;free_nodes = NULL;
++    new_heap-&gt;free_nodes = NULL;    
+     printf(&quot;  First heap created...\n&quot;);   
+     printf(&quot;  Size: %d &quot;
+ 	   &quot;  Tot mem: %d\n&quot;, (new_heap-&gt;free_list)-&gt;size, tot_mem);	    
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2010-04-17 21:13:18 UTC (rev 231)
++++ trunk/mem/paging.c	2010-04-18 14:35:39 UTC (rev 232)
+@@ -36,6 +36,8 @@
+ 
+ unsigned int *current_page_dir;
+ unsigned int *current_page_table;
++unsigned int *second_pagedir;
++unsigned int *second_pagetable;
+ size_t tot_mem;
+ unsigned int end;
+ 
+@@ -45,16 +47,19 @@
+     printf(LNG_PAGING);
+     _kprintOK();    
+ 	//apic_location = create_pageTable();
+-    current_page_dir = create_pageDir();
++    current_page_dir = create_pageDir();  
++    second_pagedir = create_pageDir();  
++    //second_pagetable = create_pageTable();
+     #ifdef DEBUG
+     printf(&quot;Pd baseAddress: %d\n&quot;, (unsigned int) current_page_dir);
+     #endif
+     i=0;    
+     while(i&lt;PD_LIMIT){
+         current_page_dir[i] = 0x00000000;
++        second_pagedir[i] = 0x00000000;
+         i++;
+-    }
+-    set_pagedir_entry(1023, (unsigned int)current_page_dir, PD_PRESENT|SUPERVISOR, 0);
++    }    
++    set_pagedir_entry(1023, (unsigned int)current_page_dir, PD_PRESENT|SUPERVISOR, 0);    
+     current_page_table=create_pageTable();
+     i=0;
+     while(i&lt;PT_LIMIT){
+@@ -62,21 +67,22 @@
+         i++;
+     }
+     set_pagedir_entry(0, (unsigned int)current_page_table, PD_PRESENT|SUPERVISOR|WRITE,0);    
++    set_pagedir_entry(1, (unsigned int)second_pagetable, PD_PRESENT|SUPERVISOR|WRITE,0);    
+     i=0;
+     while(i&lt;PT_LIMIT){
+-        set_pagetable_entry(i,i*0x1000,SUPERVISOR|PD_PRESENT|WRITE,0);
++        set_pagetable_entry(i,i*0x1000,SUPERVISOR|PD_PRESENT|WRITE,0);        
+         #ifdef DEBUG
+         if(i&lt;10) printf(&quot;cpt: %d\n&quot;, current_page_table[i]);
+         #endif
+         i++;
+-    }
++    }   
+     //apic_location = request_pages(1, NOT_ADD_LIST);	
+ 	//set_pagedir_entry(1019, (unsigned int) apic_location, PD_PRESENT|SUPERVISOR, 0);	
+            
+     load_pdbr((unsigned int)current_page_dir);
+ 	//set_pagetable_entry_ric(1019, 512 ,0xFEE00000, SUPERVISOR|PD_PRESENT|WRITE, 0);
+-	//set_pagetable_entry_ric(1019, 0 ,0xFEC00000, SUPERVISOR|PD_PRESENT|WRITE, 0);
+-    kheap = make_heap(tot_mem - ((unsigned int) &amp;end));
++	//set_pagetable_entry_ric(1019, 0 ,0xFEC00000, SUPERVISOR|PD_PRESENT|WRITE, 0);	
++    kheap = make_heap(tot_mem - ((unsigned int) &amp;end));    
+ }
+ 
+ /**
+@@ -229,10 +235,11 @@
+     unsigned int pd_entry, pt_entry;
+     unsigned int *new_pt;
+ 	void *new_p;
+-
++    //printf(&quot;Test\n&quot;);
+         /* Ricava l'indirizzo che ha causato l'eccezione */
+     asm (&quot;movl %%cr2, %0&quot;:&quot;=r&quot; (fault_addr));
+-
++	//printf(&quot;Fault addr: %d\n&quot;, fault_addr); 
++	//while(1);
+     if ((ecode &amp; PF_MASK) == 2 || (ecode &amp; PF_MASK) == 0) {
+     pdir = BITRANGE (fault_addr, 22, 31);
+     ptable = BITRANGE (fault_addr, 12, 21);
+
+Modified: trunk/processore/handlers.c
+===================================================================
+--- trunk/processore/handlers.c	2010-04-17 21:13:18 UTC (rev 231)
++++ trunk/processore/handlers.c	2010-04-18 14:35:39 UTC (rev 232)
+@@ -163,15 +163,17 @@
+     int irqn;
+     irqn = get_current_irq();  
+     IRQ_s* tmpHandler; 
+-    if(irqn&gt;=0) {
++    if(irqn&gt;=0) {		
+ 		/*if(irqn==2) {
+ 			outportb(SLAVE_PORT,GET_IRR_STATUS);
+ 			irqn = inportb(SLAVE_PORT);
+ 			irqn = 8 + find_first_bit(irqn);			
+ 		}*/
+         tmpHandler = shareHandler[irqn];		
++        //printf(&quot;Test %d\n&quot;, irqn);
++		//while(1);
+ 		if(tmpHandler!=0) {
+-	    	tmpHandler-&gt;IRQ_func();
++	    	tmpHandler-&gt;IRQ_func();	    	
+ 	    	#ifdef DEBUG
+ 	    		printf(&quot;2 - IRQ_func: %d, %d\n&quot;, tmpHandler-&gt;IRQ_func, tmpHandler);
+ 	    	#endif
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000234.html">[Dreamos-dev] r231 - in trunk: . fs hardware include include/mem	include/processore mem processore shell sys
+</A></li>
+	<LI>Next message: <A HREF="000236.html">[Dreamos-dev] r233 - in trunk: . mem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#235">[ date ]</a>
+              <a href="thread.html#235">[ thread ]</a>
+              <a href="subject.html#235">[ subject ]</a>
+              <a href="author.html#235">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

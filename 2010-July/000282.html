@@ -1,0 +1,432 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r279 - in trunk: . fs include include/shell libc mem	shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-July/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r279%20-%20in%20trunk%3A%20.%20fs%20include%20include/shell%20libc%20mem%0A%09shell&In-Reply-To=%3C20100725072707.094FD480CE1%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000281.html">
+   <LINK REL="Next"  HREF="000283.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r279 - in trunk: . fs include include/shell libc mem	shell</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r279%20-%20in%20trunk%3A%20.%20fs%20include%20include/shell%20libc%20mem%0A%09shell&In-Reply-To=%3C20100725072707.094FD480CE1%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r279 - in trunk: . fs include include/shell libc mem	shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun Jul 25 09:27:06 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000281.html">[Dreamos-dev] r278 - in trunk: . drivers include/drivers	include/lng shell
+</A></li>
+        <LI>Next message: <A HREF="000283.html">[Dreamos-dev] r280 - in trunk: . shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#282">[ date ]</a>
+              <a href="thread.html#282">[ thread ]</a>
+              <a href="subject.html#282">[ subject ]</a>
+              <a href="author.html#282">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-07-25 09:27:06 +0200 (Sun, 25 Jul 2010)
+New Revision: 279
+
+Modified:
+   trunk/.bochsrc
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/fs/vfs.c
+   trunk/include/shell/commands.h
+   trunk/include/shell/testing.h
+   trunk/include/use.h
+   trunk/include/version.h
+   trunk/kernel.lds
+   trunk/libc/stdio.c
+   trunk/mem/kheap.c
+   trunk/mem/paging.c
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+   trunk/shell/testing.c
+   trunk/shell/user_shell.c
+Log:
+Aggiunta possibilita di inserire password senza che questa sia visibile a schermo (ora disabilitata)
+Corretti alcuni errori della stampa decimali di printf
+Modificato script del linker. 
+Aggiunto comando try_shadow.
+
+
+Modified: trunk/.bochsrc
+===================================================================
+--- trunk/.bochsrc	2010-07-17 22:16:17 UTC (rev 278)
++++ trunk/.bochsrc	2010-07-25 07:27:06 UTC (rev 279)
+@@ -60,8 +60,8 @@
+ #display_library: term
+ #display_library: win32, options=&quot;legacyF12&quot; # use F12 to toggle mouse
+ #display_library: wx
+-#display_library: x, options=&quot;gui_debug&quot;
+-display_library: x
++display_library: x, options=&quot;gui_debug&quot;
++#display_library: x
+ #=======================================================================
+ # ROMIMAGE:
+ # The ROM BIOS controls what the PC does when it first powers on.
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2010-07-17 22:16:17 UTC (rev 278)
++++ trunk/fs/fcntl.c	2010-07-25 07:27:06 UTC (rev 279)
+@@ -60,7 +60,7 @@
+ 	}
+ 	strcpy(newpath, path);	
+ 	error = get_abs_path((char*) newpath);
+-	//printf(&quot;After get_abs: %s %s\n&quot;, newpath, current_user.cur_path);
++	//printf(&quot;After get_abs: %s %s\n&quot;, newpath, current_user.cur_path);	
+     mpid = get_mountpoint_id((char*) newpath);		
+ 	//printf(&quot;Cur_fd: %d\n&quot;,cur_fd);
+ 	if(mpid &gt;-1) {
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2010-07-17 22:16:17 UTC (rev 278)
++++ trunk/fs/vfs.c	2010-07-25 07:27:06 UTC (rev 279)
+@@ -109,7 +109,7 @@
+ int get_mountpoint_id(char *path){
+        int i = 0;
+        int last=-1;
+-       while(i&lt;MAX_MOUNTPOINT ){
++       while(i&lt;MAX_MOUNTPOINT ){						
+                        if(!_kstrncmp(path, mountpoint_list[i].mountpoint, strlen(mountpoint_list[i].mountpoint))) {                 
+ 							   if(strlen(mountpoint_list[i].mountpoint) &gt; strlen(mountpoint_list[last].mountpoint) &amp;&amp; i&gt;0)  
+                                		last = i;
+
+Modified: trunk/include/shell/commands.h
+===================================================================
+--- trunk/include/shell/commands.h	2010-07-17 22:16:17 UTC (rev 278)
++++ trunk/include/shell/commands.h	2010-07-25 07:27:06 UTC (rev 279)
+@@ -25,7 +25,7 @@
+ 
+ #include &lt;shell.h&gt;
+ #include &lt;kheap.h&gt;
+-#define MAX_TEST 12
++#define MAX_TEST 13
+ 
+ extern int argc;
+ extern char **argv;
+
+Modified: trunk/include/shell/testing.h
+===================================================================
+--- trunk/include/shell/testing.h	2010-07-17 22:16:17 UTC (rev 278)
++++ trunk/include/shell/testing.h	2010-07-25 07:27:06 UTC (rev 279)
+@@ -30,5 +30,6 @@
+ void try_check();
+ void show_fd();
+ void test_stat();
++void try_shadow();
+ 
+ #endif
+
+Modified: trunk/include/use.h
+===================================================================
+--- trunk/include/use.h	2010-07-17 22:16:17 UTC (rev 278)
++++ trunk/include/use.h	2010-07-25 07:27:06 UTC (rev 279)
+@@ -70,4 +70,6 @@
+ #define LNG_TIMESTAMP2 &quot; del &quot;
+ #define LNG_TIMESTAMP3 &quot; di &quot;
+ 
++#define LNG_TEST &quot;Username provided\n&quot;
++
+ #endif
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2010-07-17 22:16:17 UTC (rev 278)
++++ trunk/include/version.h	2010-07-25 07:27:06 UTC (rev 279)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL &quot;2.1&quot;
+ #define EXTRAVERSION &quot;-trunk&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r275&quot;
++#define REV_NUM &quot;-r279&quot;
+
+Modified: trunk/kernel.lds
+===================================================================
+--- trunk/kernel.lds	2010-07-17 22:16:17 UTC (rev 278)
++++ trunk/kernel.lds	2010-07-25 07:27:06 UTC (rev 279)
+@@ -1,31 +1,26 @@
+-OUTPUT_FORMAT(&quot;binary&quot;)
++OUTPUT_FORMAT(&quot;elf&quot;)
+ OUTPUT_ARCH(i386)
+ ENTRY(start)
++phys = 0x00100000;
+ SECTIONS
+ {
+-
+-    .text 0x100000 :
+-    {
+-        code = .; _code = .; __code = .;
+-        *(.text)
+-        . = ALIGN(4096);
+-    }
+-
+-    .data :
+-    {
+-        data = .; _data = .; __data = .;
+-        *(.data)
+-        *(.rodata)
+-        . = ALIGN(4096);
+-    }
+-
+-    .bss :
+-    {
+-        bss = .; _bss = .; __bss = .;
+-        *(.bss)
+-        . = ALIGN(4096);
+-    }
+-
+-    end = .; _end = .; __end = .;
++  .text phys : AT(phys) {
++    code = .;
++    *(.text)
++    *(.rodata)
++    . = ALIGN(4096);
++  }
++  .data : AT(phys + (data - code))
++  {
++    data = .;
++    *(.data)
++    . = ALIGN(4096);
++  }
++  .bss : AT(phys + (bss - code))
++  {
++    bss = .;
++    *(.bss)
++    . = ALIGN(4096);
++  }
++  end = .;
+ }
+-
+
+Modified: trunk/libc/stdio.c
+===================================================================
+--- trunk/libc/stdio.c	2010-07-17 22:16:17 UTC (rev 278)
++++ trunk/libc/stdio.c	2010-07-25 07:27:06 UTC (rev 279)
+@@ -122,7 +122,7 @@
+     char field[5];
+     int len=0;
+     int i=0;
+-
++    	
+     /* Start variabile argument's list */
+     va_start (ap, format);
+ 
+@@ -154,15 +154,15 @@
+             if (*format == 'd' || *format == 'i') {
+                 int varint = va_arg (ap, int);
+                 if(varint &gt;= 0)
+-					_kntos (cur_p, varint, 10);
++					_kntos (cur_p, (unsigned int)varint, 10);
+ 				else _knntos (cur_p, varint, 10);
+             }
+             if (*format == 'u') {
+-                unsigned int uint = va_arg (ap, int);
++                unsigned int uint = va_arg (ap, unsigned int);
+                 _kntos (cur_p, uint, 10);
+             }
+             if (*format == 'x' || *format == 'X') {
+-                int varhex = va_arg (ap, int);
++                int varhex = va_arg (ap, unsigned int);
+                 _kntos (cur_p, varhex, 16);
+             }
+             if (*format == 'n')
+
+Modified: trunk/mem/kheap.c
+===================================================================
+--- trunk/mem/kheap.c	2010-07-17 22:16:17 UTC (rev 278)
++++ trunk/mem/kheap.c	2010-07-25 07:27:06 UTC (rev 279)
+@@ -81,7 +81,7 @@
+ {
+     heap_t* new_heap;
+     heap_node_t* first_node;
+-	heap_node_t* apic_node;
++	//heap_node_t* apic_node;
+ 	heap_node_t* module_node;
+ 
+     new_heap = (heap_t*)KHEAP_LIST_ADDRESS;
+@@ -103,7 +103,7 @@
+     printf(&quot;  First heap created...\n&quot;);   
+     printf(&quot;  Size: %d &quot;
+ 	   &quot;  Tot mem: %d\n&quot;, (new_heap-&gt;free_list)-&gt;size, tot_mem);	    
+-	apic_node = alloc_node();
++	/*apic_node = alloc_node();
+ 	apic_node-&gt;start_address = 0xFEC00000;
+ 	apic_node-&gt;size = 4096;
+ 	apic_node-&gt;next = NULL;
+@@ -112,7 +112,7 @@
+ 	apic_node-&gt;start_address = 0xFEE00000;
+ 	apic_node-&gt;size = 4096;
+ 	apic_node-&gt;next = NULL;
+-	insert_list (apic_node, &amp;(new_heap-&gt;used_list));
++	insert_list (apic_node, &amp;(new_heap-&gt;used_list));*/
+ 	module_node = alloc_node();
+ 	module_node-&gt;start_address = (unsigned int)module_start;
+ 	module_node-&gt;size = module_end - (unsigned int)module_start;	
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2010-07-17 22:16:17 UTC (rev 278)
++++ trunk/mem/paging.c	2010-07-25 07:27:06 UTC (rev 279)
+@@ -240,7 +240,8 @@
+     //printf(&quot;Test\n&quot;);
+         /* Ricava l'indirizzo che ha causato l'eccezione */
+     asm (&quot;movl %%cr2, %0&quot;:&quot;=r&quot; (fault_addr));
+-	//printf(&quot;Fault addr: %d\n&quot;, fault_addr); 
++    //if(fault_addr &gt; 0) printf(&quot;Ok &quot;);
++	//printf(&quot;Fault addr: %u\n&quot;, fault_addr); 
+ 	//while(1);
+     if ((ecode &amp; PF_MASK) == 2 || (ecode &amp; PF_MASK) == 0) {
+     pdir = BITRANGE (fault_addr, 22, 31);
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2010-07-17 22:16:17 UTC (rev 278)
++++ trunk/shell/commands.c	2010-07-25 07:27:06 UTC (rev 279)
+@@ -525,6 +525,7 @@
+ 					{ &quot;show_fd&quot;, show_fd},
+ 					{ &quot;test_stat&quot;, test_stat},
+ 					{ &quot;try_check&quot;, try_check},
++					{ &quot;try_shadow&quot;, try_shadow},
+ 					{ &quot;--help&quot;, help_tester },
+ 					};
+ 	if (argc != 2) {
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2010-07-17 22:16:17 UTC (rev 278)
++++ trunk/shell/shell.c	2010-07-25 07:27:06 UTC (rev 279)
+@@ -39,6 +39,7 @@
+ #include &lt;clock.h&gt;
+ #include &lt;sys/utsname.h&gt;
+ #include &lt;user_shell.h&gt;
++#include &lt;debug.h&gt;
+ 
+ #define NUM_COM 30
+ userenv_t current_user;
+@@ -122,11 +123,12 @@
+ 
+ 
+   int i = 0;
++  int ret_val;
+   hst_flag = 0;
+   memset(cmd, '\0', CMD_LEN);
+   memset(current_user.username, '\0', USER_LEN);
+-  memset(password, '\0', USER_LEN);
+-  memset(current_user.cur_path, '\0', CURPATH_LEN);  
++  memset(password, '\0', 30);
++  memset(current_user.cur_path, '\0', CURPATH_LEN); 
+   _kcolor(BRIGHT_BLUE);
+   printf(LNG_WELCOME);
+   _kcolor(WHITE);
+@@ -139,7 +141,10 @@
+     printf(LNG_PWD);
+     scanf (&quot;%23s&quot;,password);
+     #endif
+-  } while ((!strlen(current_user.username) || (user_chk(current_user.username, password)!=1)));
++    //printf(&quot;Vediamo %s\n&quot;, current_user.username);
++    dbg_bochs_print((const unsigned char*)&quot;Asking username&quot;);
++    ret_val = user_chk(current_user.username, password);
++  } while ((!strlen(current_user.username) || ret_val!=1));
+     
+   _kclear();  
+   aalogo();
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-07-17 22:16:17 UTC (rev 278)
++++ trunk/shell/testing.c	2010-07-25 07:27:06 UTC (rev 279)
+@@ -210,3 +210,11 @@
+ 	printf(&quot;Uid: %d\n&quot;, stats-&gt;st_uid);
+ 	free(stats);	
+ }
++
++void try_shadow(){
++	char stringa[30];
++	set_shadow(ENABLED);
++	scanf(&quot;%s&quot;, stringa);
++	set_shadow(DISABLED);
++	printf(&quot;%s\n&quot;, stringa);
++}
+
+Modified: trunk/shell/user_shell.c
+===================================================================
+--- trunk/shell/user_shell.c	2010-07-17 22:16:17 UTC (rev 278)
++++ trunk/shell/user_shell.c	2010-07-25 07:27:06 UTC (rev 279)
+@@ -21,11 +21,20 @@
+ #include &lt;vfs.h&gt;
+ #include &lt;fcntl.h&gt;
+ #include &lt;string.h&gt;
+- 
++#include &lt;debug.h&gt;
++#include &lt;use.h&gt;
++
+ int user_chk(char *username, char* usr_pwd){
+ 	int fd = -1;
+-	struct passwd_user checking_user;	
+-	//printf(&quot;Username provided: %s\n&quot;, username);
++	struct passwd_user checking_user;
++	//char *path = kmalloc(sizeof(char) * 8);
++	//memset(path,0,8);
++	//strcpy(path, &quot;/passwd&quot;);		
++	memset(checking_user.username, '\0', 50);
++	memset(checking_user.password, '\0', 50);
++	/*printf(&quot;Username provided: %s\n&quot;);*/
++	puts(username);
++	dbg_bochs_print((const unsigned char*)&quot;Logging In\n&quot;);
+ 	fd = open(&quot;/passwd&quot;, O_RDONLY,0);
+ 	/*if(fd != -1) printf(&quot;File passwd found\n&quot;);
+ 	else printf(&quot;not found\n&quot;);*/
+@@ -41,7 +50,7 @@
+ 	}
+ 	//user_get(fd, &amp;checking_user);
+ 	//printf(&quot;name: %s - password: %s\n&quot;, checking_user.username, checking_user.password);
+-	//strcpy(checking_user.username, appo);	
++	//strcpy(checking_user.username, appo);		
+ 	close(fd);
+ 	return 0;
+ }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000281.html">[Dreamos-dev] r278 - in trunk: . drivers include/drivers	include/lng shell
+</A></li>
+	<LI>Next message: <A HREF="000283.html">[Dreamos-dev] r280 - in trunk: . shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#282">[ date ]</a>
+              <a href="thread.html#282">[ thread ]</a>
+              <a href="subject.html#282">[ subject ]</a>
+              <a href="author.html#282">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

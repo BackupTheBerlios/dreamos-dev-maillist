@@ -1,0 +1,306 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r161 - in trunk: . files utils
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-January/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r161%20-%20in%20trunk%3A%20.%20files%20utils&In-Reply-To=%3C201001031154.o03BsW1h029728%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000162.html">
+   <LINK REL="Next"  HREF="000164.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r161 - in trunk: . files utils</H1>
+    <B>osiris_h4ck at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r161%20-%20in%20trunk%3A%20.%20files%20utils&In-Reply-To=%3C201001031154.o03BsW1h029728%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r161 - in trunk: . files utils">osiris_h4ck at mail.berlios.de
+       </A><BR>
+    <I>Sun Jan  3 12:54:32 CET 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000162.html">[Dreamos-dev] r160 - in trunk: . fs include include/fs include/lng	shell
+</A></li>
+        <LI>Next message: <A HREF="000164.html">[Dreamos-dev] r162 - trunk/boot
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#163">[ date ]</a>
+              <a href="thread.html#163">[ thread ]</a>
+              <a href="subject.html#163">[ subject ]</a>
+              <a href="author.html#163">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: osiris_h4ck
+Date: 2010-01-03 12:54:25 +0100 (Sun, 03 Jan 2010)
+New Revision: 161
+
+Added:
+   trunk/files/
+   trunk/files/test1.txt
+   trunk/files/test2.txt
+   trunk/files/test3.txt
+   trunk/files/test4.txt
+   trunk/files/test5.txt
+Modified:
+   trunk/Makefile
+   trunk/dreamos.img
+   trunk/start.sh
+   trunk/utils/Makefile
+   trunk/utils/initfscp.c
+Log:
+- Modificati i Makefile e migliorati
+- Sistemato lo initscp, ora i file presenti in files/ vengono aggiunti automaticamente al filesystem
+- Aggiunta la cartella files/ appunto quel il punto di prima
+- Aggiunta funzione 'create_fs' che permette di creare il filesystem in automatico durante la compilazione
+  e che pu?\195?\178 essere usata per aggiornare il filesystem di DreamOS con l'aggiunta di altri files.
+
+Greez, Working in Progress :)
+
+
+
+
+Modified: trunk/Makefile
+===================================================================
+--- trunk/Makefile	2010-01-02 23:17:36 UTC (rev 160)
++++ trunk/Makefile	2010-01-03 11:54:25 UTC (rev 161)
+@@ -1,6 +1,6 @@
+ # Please set your kernel preference versions..
+ # Enjoy your self :)
+-# Osiris at <A HREF="https://lists.berlios.de/mailman/listinfo/dreamos-dev">jeek69 at katamail.com</A>
++# Osiris at <A HREF="https://lists.berlios.de/mailman/listinfo/dreamos-dev">osiris at Devils.com</A>
+ 
+ NAME = DreamOS
+ VERSION = 0
+@@ -115,7 +115,7 @@
+ .PHONY: clean install qemu
+ 
+ clean:
+-	rm -f *.img *.bin *.map
++	rm -f *.img *.bin *.map initfs
+ 	rm -f $(OBJ)
+ 
+ install:
+@@ -130,3 +130,6 @@
+ 
+ en:
+ 	cp include/lng/en.h include/use.h
++	
++initfs:
++	su -c &quot;mount -o loop boot/grub.img boot/os &amp;&amp; rm -rf boot/os/initfs &amp;&amp; cp initfs boot/os/initfs &amp;&amp; umount boot/os&quot;
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Added: trunk/files/test1.txt
+===================================================================
+--- trunk/files/test1.txt	2010-01-02 23:17:36 UTC (rev 160)
++++ trunk/files/test1.txt	2010-01-03 11:54:25 UTC (rev 161)
+@@ -0,0 +1 @@
++ciao mondo
+
+Added: trunk/files/test2.txt
+===================================================================
+--- trunk/files/test2.txt	2010-01-02 23:17:36 UTC (rev 160)
++++ trunk/files/test2.txt	2010-01-03 11:54:25 UTC (rev 161)
+@@ -0,0 +1 @@
++come va ?
+
+Added: trunk/files/test3.txt
+===================================================================
+--- trunk/files/test3.txt	2010-01-02 23:17:36 UTC (rev 160)
++++ trunk/files/test3.txt	2010-01-03 11:54:25 UTC (rev 161)
+@@ -0,0 +1 @@
++bho, io credo bene eh eh eh
+
+Added: trunk/files/test4.txt
+===================================================================
+--- trunk/files/test4.txt	2010-01-02 23:17:36 UTC (rev 160)
++++ trunk/files/test4.txt	2010-01-03 11:54:25 UTC (rev 161)
+@@ -0,0 +1 @@
++tanto questa &#232; solo una prova :\
+
+Added: trunk/files/test5.txt
+===================================================================
+--- trunk/files/test5.txt	2010-01-02 23:17:36 UTC (rev 160)
++++ trunk/files/test5.txt	2010-01-03 11:54:25 UTC (rev 161)
+@@ -0,0 +1 @@
++io ti vi bi!
+
+Modified: trunk/start.sh
+===================================================================
+--- trunk/start.sh	2010-01-02 23:17:36 UTC (rev 160)
++++ trunk/start.sh	2010-01-03 11:54:25 UTC (rev 161)
+@@ -3,21 +3,17 @@
+ # 
+ # Coded by Osiris
+ # For any question about this or other, mail me to
+-# <A HREF="https://lists.berlios.de/mailman/listinfo/dreamos-dev">diego.stamigni at linux.com</A>
++# <A HREF="https://lists.berlios.de/mailman/listinfo/dreamos-dev">osiris at Devils.com</A>
+ # greez ;
+ 
+ VERS=&quot;make vers&quot;
+ CLEAN=&quot;make clean&quot;
+ MAKE=&quot;make&quot;
+ MAKE_IMG=&quot;make img&quot;
++MAKE_FS=&quot;make initfs&quot;
+ 
+ if [ &quot;$1&quot; != &quot;--compile&quot; ]; then
+ 
+-#  if [ $UID != &quot;0&quot; ]; then
+-#      echo &quot;[-] You need to run this install script as root!&quot;
+-#     exit
+-#  fi
+-
+ if [ &quot;$1&quot; == &quot;help&quot; ]; then
+ echo &quot;&quot;
+ echo &quot;	    The DreamOS Operating System&quot;
+@@ -48,7 +44,7 @@
+ echo &quot;script, something like that:&quot;
+ echo &quot;&quot;
+ echo &quot;Usage: '$0' '--compile' 'emulator' 'language'&quot;
+-echo &quot;where now language supported is 'it' or 'en'&quot;
++echo &quot;where, now, language supported is 'it' or 'en'&quot;
+ echo &quot;------------------------------------------------------&quot;
+ echo &quot;&quot;
+ echo &quot;If you want, you can install DreamOS on your floppy&quot;
+@@ -72,6 +68,16 @@
+ echo &quot;&quot;
+ echo &quot;Usage: '$0' 'create_iso'&quot;
+ echo &quot;------------------------------------------------------&quot;
++echo &quot;&quot;
++echo &quot;If you want, you can create a DreamOS FileSystem&quot;
++echo &quot;You know, this is *VERY* important :)&quot;
++echo &quot;To add the file and then re-create the FS, put you files&quot;
++echo &quot;into files/ and do:&quot;
++echo &quot;&quot;
++echo &quot;Usage: '$0' 'create_fs'&quot;
++echo &quot;Also you should know that this process is do during the&quot;
++echo &quot;compilation of DreamOS.&quot;
++echo &quot;------------------------------------------------------&quot;
+ exit 1
+ 
+ elif [ &quot;$1&quot; == &quot;qemu&quot; ] || [ &quot;$1&quot; == &quot;bochs&quot; ]; then
+@@ -118,6 +124,20 @@
+   echo &quot;---------------------------------------------&quot;
+   exit
+ 
++elif [ &quot;$1&quot; == &quot;create_fs&quot; ]; then
++
++  echo &quot;--------------------------------------------- &quot;
++  echo &quot;Launching FS Creating script in progress..&quot;
++  echo &quot;&quot;
++  utils/initfscp `find files/* -exec echo {} +;` initfs
++  echo &quot;done.&quot;
++  #$MAKE_FS
++  su -c &quot;mount -o loop boot/grub.img boot/os &amp;&amp; rm -rf boot/os/initfs &amp;&amp; cp initfs boot/os/initfs &amp;&amp; umount boot/os&quot;
++  echo &quot;--------------------------------------------- &quot;
++  echo &quot;FS Created and added to boot/grub.img&quot;
++  echo &quot;---------------------------------------------&quot;
++  exit
++
+ elif [ &quot;$1&quot; == &quot;&quot; ]; then
+   echo &quot;Error: No command inserted!&quot;
+   echo &quot;-----------------------&gt;&quot;
+@@ -135,10 +155,6 @@
+ 
+ else
+ 
+-#  if [ $UID != &quot;0&quot; ]; then
+-#      echo &quot;[-] You need to run this install script as root!&quot;
+-#      exit
+-#  fi
+ 
+ if [ &quot;$2&quot; == &quot;qemu&quot; ] || [ &quot;$2&quot; == &quot;bochs&quot; ]; then
+ 
+@@ -158,7 +174,20 @@
+ 		  echo &quot;Warning: No language translation declared!&quot;
+ 		  echo &quot;-----------------------&gt;&quot;                 
+ 	  fi   
++	  
+ 	 $VERS &amp;&amp; $CLEAN &amp;&amp; $MAKE &amp;&amp; $MAKE_IMG
++	  
++	 echo &quot;--------------------------------------------- &quot;
++  	 echo &quot;Launching FS Creating script in progress..&quot;
++	 echo &quot;&quot;
++         utils/initfscp `find files/* -exec echo {} +;` initfs
++         echo &quot;done.&quot;
++         #$MAKE_FS
++         su -c &quot;mount -o loop boot/grub.img boot/os &amp;&amp; rm -rf boot/os/initfs &amp;&amp; cp initfs boot/os/initfs &amp;&amp; umount boot/os&quot;
++         echo &quot;--------------------------------------------- &quot;
++         echo &quot;FS Created and added to boot/grub.img&quot;
++         echo &quot;---------------------------------------------&quot;
++         
+ 	 qemu -fda boot/grub.img
+ 	 exit
+ 
+@@ -225,7 +254,7 @@
+   exit
+ 
+ else
+-  echo &quot;Uhm? What the hell did you insert ? Lool! '$2' ?? I don't know what is it!&quot;
++  echo &quot;Uhm? What the hell did you insert ? '$2' ?? I don't know what is it!&quot;
+   echo &quot;Please, read the help!!!&quot;
+   echo &quot;-----------------------&gt;&quot;
+   echo &quot;Usage: '$0 help'&quot;
+
+Modified: trunk/utils/Makefile
+===================================================================
+--- trunk/utils/Makefile	2010-01-02 23:17:36 UTC (rev 160)
++++ trunk/utils/Makefile	2010-01-03 11:54:25 UTC (rev 161)
+@@ -1,2 +1,10 @@
++CC = gcc
++FILE = initfscp.c
++OUTPUT = initfscp
++
+ all:
+-	gcc -o initfscp initfscp.c -I./include
++	$(CC) $(FILE) -I./include -o $(OUTPUT)
++
++clean:
++	rm -rf $(OUTPUT)
++
+
+Modified: trunk/utils/initfscp.c
+===================================================================
+--- trunk/utils/initfscp.c	2010-01-02 23:17:36 UTC (rev 160)
++++ trunk/utils/initfscp.c	2010-01-03 11:54:25 UTC (rev 161)
+@@ -56,6 +56,8 @@
+ 				fd = fopen(argv[i+1], &quot;r+&quot;);
+ 				if(fd == NULL){
+ 					 printf(&quot;Error one or more files not found\n&quot;);
++					 // Debug
++      					 printf(&quot;Nome del file: --&gt;%s&lt;--\n&quot;,argv[i+1]);
+ 					 return -1;
+ 				 }
+ 				else {
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000162.html">[Dreamos-dev] r160 - in trunk: . fs include include/fs include/lng	shell
+</A></li>
+	<LI>Next message: <A HREF="000164.html">[Dreamos-dev] r162 - trunk/boot
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#163">[ date ]</a>
+              <a href="thread.html#163">[ thread ]</a>
+              <a href="subject.html#163">[ subject ]</a>
+              <a href="author.html#163">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

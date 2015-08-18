@@ -1,0 +1,106 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r151 - in trunk: . fs
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-December/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r151%20-%20in%20trunk%3A%20.%20fs&In-Reply-To=%3C200912062238.nB6Mc7rT001555%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000152.html">
+   <LINK REL="Next"  HREF="000154.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r151 - in trunk: . fs</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r151%20-%20in%20trunk%3A%20.%20fs&In-Reply-To=%3C200912062238.nB6Mc7rT001555%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r151 - in trunk: . fs">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun Dec  6 23:38:07 CET 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000152.html">[Dreamos-dev] r150 - in trunk: . fs include/fs
+</A></li>
+        <LI>Next message: <A HREF="000154.html">[Dreamos-dev] r152 - in trunk: . fs include/fs include/shell shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#153">[ date ]</a>
+              <a href="thread.html#153">[ thread ]</a>
+              <a href="subject.html#153">[ subject ]</a>
+              <a href="author.html#153">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-12-06 23:38:06 +0100 (Sun, 06 Dec 2009)
+New Revision: 151
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/unistd.c
+   trunk/fs/vfs.c
+Log:
+In read aggiunti controlli sull'esistenza della read specifica del FS.
+Aggiunta una read di prova in initfs che stampa solo una stringa per ora
+
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/unistd.c
+===================================================================
+--- trunk/fs/unistd.c	2009-12-03 22:30:13 UTC (rev 150)
++++ trunk/fs/unistd.c	2009-12-06 22:38:06 UTC (rev 151)
+@@ -28,4 +28,8 @@
+ 	int mp_id = 0;
+ 	mp_id = fd_list[fildes].mountpoint_id;
+ 	printf(&quot;Mpoint id: %d\n&quot;, mp_id);
++	if (mountpoint_list[mp_id].operations.read != NULL)
++		mountpoint_list[mp_id].operations.read(mp_id, buf, 1);
++	else
++		printf(&quot;No READ Found for that file system\n&quot;);
+ }
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2009-12-03 22:30:13 UTC (rev 150)
++++ trunk/fs/vfs.c	2009-12-06 22:38:06 UTC (rev 151)
+@@ -68,6 +68,7 @@
+  	mountpoint_list[0].start_address = 0;
+  	mountpoint_list[0].dir_op.opendir_f = initfs_opendir;
+  	mountpoint_list[0].operations.open = initfs_open;
++ 	mountpoint_list[0].operations.read = initfs_read;
+  	//mountpoint_list[0].operations = kmalloc(sizeof(struct super_node_operations));
+ 
+ 	strcpy(mountpoint_list[1].mountpoint,&quot;/dev&quot;); 	
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000152.html">[Dreamos-dev] r150 - in trunk: . fs include/fs
+</A></li>
+	<LI>Next message: <A HREF="000154.html">[Dreamos-dev] r152 - in trunk: . fs include/fs include/shell shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#153">[ date ]</a>
+              <a href="thread.html#153">[ thread ]</a>
+              <a href="subject.html#153">[ subject ]</a>
+              <a href="author.html#153">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

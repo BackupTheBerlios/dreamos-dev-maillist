@@ -1,0 +1,168 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r38 - in trunk: . include shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2008-October/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r38%20-%20in%20trunk%3A%20.%20include%20shell&In-Reply-To=%3C200810202054.m9KKsfgH018146%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000037.html">
+   <LINK REL="Next"  HREF="000039.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r38 - in trunk: . include shell</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r38%20-%20in%20trunk%3A%20.%20include%20shell&In-Reply-To=%3C200810202054.m9KKsfgH018146%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r38 - in trunk: . include shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Mon Oct 20 22:54:41 CEST 2008</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000037.html">[Dreamos-dev] r37 - in trunk: . libc shell
+</A></li>
+        <LI>Next message: <A HREF="000039.html">[Dreamos-dev] r39 - in trunk: . include include/mem mem misc shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#38">[ date ]</a>
+              <a href="thread.html#38">[ thread ]</a>
+              <a href="subject.html#38">[ subject ]</a>
+              <a href="author.html#38">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2008-10-20 22:54:41 +0200 (Mon, 20 Oct 2008)
+New Revision: 38
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/version.h
+   trunk/shell/shell.c
+Log:
+Ancora bugfix sulla shell:
+    Risolto il problema che venivano generati dei #PF casualmente e dopo la strtok
+Pulito il codice in shell.c (levati riferimenti a variabili non piu utilizzate.
+Aggiunto un comando credits, per stampare le informazioni sugli sviluppatori (da migliorare)
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2008-10-19 21:02:02 UTC (rev 37)
++++ trunk/include/version.h	2008-10-20 20:54:41 UTC (rev 38)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL &quot;0&quot;
+ #define EXTRAVERSION &quot;-dreamos&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r35&quot;
++#define REV_NUM &quot;-r37&quot;
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2008-10-19 21:02:02 UTC (rev 37)
++++ trunk/shell/shell.c	2008-10-20 20:54:41 UTC (rev 38)
+@@ -71,8 +71,7 @@
+ {
+ 	unsigned char cmd[256];
+ 	unsigned char string[256];
+-	int flag = 1;
+-	char *str1, *user = kmalloc(24);
++	char *user = kmalloc(24);
+ 	memset(user, 0, strlen(user));
+ 
+ 	printf(&quot;[?] Enter your username: &quot;);
+@@ -96,7 +95,7 @@
+ 	{
+ 	    printf(&quot;%s~# &quot;,user);
+ 	    scanf(&quot;%s&quot;,cmd);
+-
++        
+             options (cmd);
+ 
+ 		if (!(_kstrncmp(cmd,&quot;help&quot;,4) ) )
+@@ -208,6 +207,24 @@
+         else if (!(_kstrncmp(cmd,&quot;aalogo&quot;,6))) 
+ 		aalogo();
+         
++        else if (!(_kstrncmp(cmd,&quot;credits&quot;,7)))
++            {
++                _kcolor('\011');
++                _kputs(&quot;DreamOS Credits\n\n&quot;);                
++                _kputs(&quot;Main Developers:\n&quot;);
++                _kcolor('\012');
++                printf(&quot;Shainer - Lisa\n&quot;
++                    &quot;Finarfin - Ivan\n\n\n&quot;            
++                );
++                _kcolor('\011');
++                _kputs(&quot;Contributors:\n&quot;);
++                _kcolor('\012');
++                _kputs(&quot;Osiris\n&quot;
++                    &quot;Celeron\n&quot;
++                    &quot;m0nt0\n&quot;
++                    &quot;and many others (3 or 4 :P)\n\n&quot;);
++                _kcolor('\007');
++            }
+         else if (strlen(cmd)&gt;0)
+ 	    {
+             printf(&quot;Unknown command: %s\n&quot;, cmd);            
+@@ -215,7 +232,6 @@
+ 
+ 	memset(string+5, 0, strlen(string));
+ 	memset(cmd, 0, strlen(cmd));
+-	memset(argv[2], 0, strlen(argv[2]));
+ 
+ 	}
+ }
+@@ -262,12 +278,13 @@
+ {
+ 	printf(&quot;help      - See the 'help' list to learn the DreamOS command now avaible\n&quot;
+ 	       &quot;poweroff  - Turn off the machine\n&quot;
+-               &quot;kmalloc   - Test a basic kmalloc function\n&quot;
+-               &quot;do_fault  - Test a page_fault\n&quot;
+-               &quot;aalogo    - Show an ascii art logo\n&quot;
+-               &quot;uname     - Print kernel version, try uname --help for more info\n&quot;
+-               &quot;try_buddy - Try buddy mmu\n&quot;
+-               &quot;try_heap  - Try heap mmu\n&quot;
++           &quot;kmalloc   - Test a basic kmalloc function\n&quot;
++           &quot;do_fault  - Test a page_fault\n&quot;
++           &quot;aalogo    - Show an ascii art logo\n&quot;
++           &quot;uname     - Print kernel version, try uname --help for more info\n&quot;
++           &quot;try_buddy - Try buddy mmu\n&quot;
++           &quot;try_heap  - Try heap mmu\n&quot;
++           &quot;credits  - Show DreamOS credists\n&quot;
+ 	       &quot;echo      - Print some lines of text\n&quot;);
+ }
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000037.html">[Dreamos-dev] r37 - in trunk: . libc shell
+</A></li>
+	<LI>Next message: <A HREF="000039.html">[Dreamos-dev] r39 - in trunk: . include include/mem mem misc shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#38">[ date ]</a>
+              <a href="thread.html#38">[ thread ]</a>
+              <a href="subject.html#38">[ subject ]</a>
+              <a href="author.html#38">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

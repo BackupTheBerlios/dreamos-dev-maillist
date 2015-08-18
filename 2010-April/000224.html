@@ -1,0 +1,165 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r221 - in trunk: . fs sys
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-April/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r221%20-%20in%20trunk%3A%20.%20fs%20sys&In-Reply-To=%3C201004062123.o36LNWH4024615%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000223.html">
+   <LINK REL="Next"  HREF="000225.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r221 - in trunk: . fs sys</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r221%20-%20in%20trunk%3A%20.%20fs%20sys&In-Reply-To=%3C201004062123.o36LNWH4024615%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r221 - in trunk: . fs sys">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Tue Apr  6 23:23:32 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000223.html">[Dreamos-dev] r220 - in trunk: . fs include/fs include/shell	include/sys shell sys
+</A></li>
+        <LI>Next message: <A HREF="000225.html">[Dreamos-dev] r222 - in trunk: . fs include/sys shell sys
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#224">[ date ]</a>
+              <a href="thread.html#224">[ thread ]</a>
+              <a href="subject.html#224">[ subject ]</a>
+              <a href="author.html#224">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-04-06 23:23:24 +0200 (Tue, 06 Apr 2010)
+New Revision: 221
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/fs/initrd.c
+   trunk/fs/vfs.c
+   trunk/sys/stat.c
+Log:
+Aggiunti alcuni commenti nel formato doxygen
+Continuana funzone stat (da terminare)
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2010-04-04 22:23:53 UTC (rev 220)
++++ trunk/fs/fcntl.c	2010-04-06 21:23:24 UTC (rev 221)
+@@ -44,10 +44,7 @@
+ 	va_list ap;
+ 	va_start(ap, oflags);
+ 	ret_fd = 0;	
+-	/*while(ret_fd &lt; _SC_OPEN_MAX){
+-		//if(fd_list[ret_fd].mountpoint_id == -1) printf(&quot;%d &quot;, ret_fd);		
+-		ret_fd++;
+-	}*/
++	
+ 	prova = va_arg(ap, int);
+ 	cur_fd=0;
+ 	if(cur_fd == _SC_OPEN_MAX) cur_fd = 0;			
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-04-04 22:23:53 UTC (rev 220)
++++ trunk/fs/initrd.c	2010-04-06 21:23:24 UTC (rev 221)
+@@ -140,6 +140,7 @@
+ 
+ int initrd_stat(char* path, struct stat *buf){
+ 	printf(&quot;Initrd stat function\n&quot;);
++	buf-&gt;st_uid = 33;	
+ 	return 0;
+ }
+ 
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2010-04-04 22:23:53 UTC (rev 220)
++++ trunk/fs/vfs.c	2010-04-06 21:23:24 UTC (rev 221)
+@@ -120,6 +120,14 @@
+                return last;
+ }
+ 
++/**
++  * @author Ivan Gualandri
++  * @param int mountpoint_id id del punto di mountpoint del file
++  * @param char* path percorso del file da aprire
++  *
++  * Dato un path viene estratto il percorso relativo, escluso il mountpoint.
++  * @return path senza la parte relativa al mountpoint.
++  */
+ char *get_rel_path(int mountpoint_id, const char* path){
+ 	int rel_size = 0;
+ 	int j=0;
+@@ -138,6 +146,14 @@
+ 	return tmp_path;
+ }
+ 
++/**
++  * @author Ivan Gualandri
++  * @param char* path percorso del file da aprire  
++  *
++  * Dato un path ne estrae il percorso assoluto (a partire da quello corrente)
++  * @return Path assoluto
++  * @todo Inserire gestione flags
++  */
+ char *get_abs_path(char *path){
+ 		if(path[0]!='/') {
+ 		char abspath[CURPATH_LEN];
+
+Modified: trunk/sys/stat.c
+===================================================================
+--- trunk/sys/stat.c	2010-04-04 22:23:53 UTC (rev 220)
++++ trunk/sys/stat.c	2010-04-06 21:23:24 UTC (rev 221)
+@@ -28,8 +28,13 @@
+ 	mp_id = get_mountpoint_id((char*) path);	
+ 	printf(&quot;%d\n&quot;, mp_id);
+ 	buf-&gt;st_dev = mp_id;
+-	if(mountpoint_list[mp_id].stat_op.stat!=NULL) mountpoint_list[mp_id].stat_op.stat((char*)path, buf);
++	if(mountpoint_list[mp_id].stat_op.stat!=NULL) {
++		path = get_rel_path(mp_id, path);
++		printf(&quot;Absolute path: %s\n&quot;, path);
++		mountpoint_list[mp_id].stat_op.stat((char*)path, buf);	
++	}
+ 	else printf(&quot;Null\n&quot;);
++	printf(&quot;%d\n&quot;, buf-&gt;st_uid);
+ 	return 0;
+ }
+ 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000223.html">[Dreamos-dev] r220 - in trunk: . fs include/fs include/shell	include/sys shell sys
+</A></li>
+	<LI>Next message: <A HREF="000225.html">[Dreamos-dev] r222 - in trunk: . fs include/sys shell sys
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#224">[ date ]</a>
+              <a href="thread.html#224">[ thread ]</a>
+              <a href="subject.html#224">[ subject ]</a>
+              <a href="author.html#224">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

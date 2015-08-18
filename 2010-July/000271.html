@@ -1,0 +1,112 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r268 - in trunk: . shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-July/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r268%20-%20in%20trunk%3A%20.%20shell&In-Reply-To=%3C20100704183008.83F7C480D6D%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000270.html">
+   <LINK REL="Next"  HREF="000272.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r268 - in trunk: . shell</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r268%20-%20in%20trunk%3A%20.%20shell&In-Reply-To=%3C20100704183008.83F7C480D6D%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r268 - in trunk: . shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun Jul  4 20:30:08 CEST 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000270.html">[Dreamos-dev] r267 - in trunk: . boot files shell
+</A></li>
+        <LI>Next message: <A HREF="000272.html">[Dreamos-dev] r269 - in trunk: . fs shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#271">[ date ]</a>
+              <a href="thread.html#271">[ thread ]</a>
+              <a href="subject.html#271">[ subject ]</a>
+              <a href="author.html#271">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-07-04 20:30:08 +0200 (Sun, 04 Jul 2010)
+New Revision: 268
+
+Modified:
+   trunk/dreamos.img
+   trunk/shell/user_shell.c
+Log:
+Modifiche minori
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/shell/user_shell.c
+===================================================================
+--- trunk/shell/user_shell.c	2010-07-03 15:35:36 UTC (rev 267)
++++ trunk/shell/user_shell.c	2010-07-04 18:30:08 UTC (rev 268)
+@@ -24,8 +24,6 @@
+  
+ int user_chk(char *username){
+ 	int fd = -1;
+-	int i = 0;
+-	int err;	
+ 	struct passwd_user checking_user;	
+ 	printf(&quot;Username provided: %s\n&quot;, username);
+ 	fd = open(&quot;/passwd&quot;, O_RDONLY,0);
+@@ -42,10 +40,10 @@
+ int user_get(int fd, struct passwd_user *checking_user){
+ 	int i=0;
+ 	char appo[50];	
+-	int err;
++	int err = 1;
+ 	memset(appo, '\0', 50);
+ //	printf(&quot;placeholder\n&quot;);	
+-	while(i &lt; 50 || appo[i] != ':'){
++	while((i &lt; 50 || appo[i] != ':') &amp;&amp; err!=0){
+ 		err = read(fd, &amp;appo[i], 1);		
+ 		if(appo[i] == ':') {
+ 			appo[i] = '\0'; 
+@@ -56,7 +54,7 @@
+ 	strcpy(checking_user-&gt;username, appo);	
+ 	i=0;
+ 	memset(appo, '\0', 50);
+-	while(i&lt;50 || appo[i]!='\n'){
++	while((i&lt;50 || appo[i]!='\n')&amp;&amp; err!=0){
+ 		err = read(fd, &amp;appo[i], 1);		
+ 		if(appo[i] == '\n') {
+ 			appo[i] = '\0'; 
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000270.html">[Dreamos-dev] r267 - in trunk: . boot files shell
+</A></li>
+	<LI>Next message: <A HREF="000272.html">[Dreamos-dev] r269 - in trunk: . fs shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#271">[ date ]</a>
+              <a href="thread.html#271">[ thread ]</a>
+              <a href="subject.html#271">[ subject ]</a>
+              <a href="author.html#271">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

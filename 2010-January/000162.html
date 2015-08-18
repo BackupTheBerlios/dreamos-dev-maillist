@@ -1,0 +1,292 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r160 - in trunk: . fs include include/fs include/lng	shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2010-January/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r160%20-%20in%20trunk%3A%20.%20fs%20include%20include/fs%20include/lng%0A%09shell&In-Reply-To=%3C201001022317.o02NHbaY021875%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000161.html">
+   <LINK REL="Next"  HREF="000163.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r160 - in trunk: . fs include include/fs include/lng	shell</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r160%20-%20in%20trunk%3A%20.%20fs%20include%20include/fs%20include/lng%0A%09shell&In-Reply-To=%3C201001022317.o02NHbaY021875%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r160 - in trunk: . fs include include/fs include/lng	shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sun Jan  3 00:17:37 CET 2010</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000161.html">[Dreamos-dev] r159 - trunk/boot
+</A></li>
+        <LI>Next message: <A HREF="000163.html">[Dreamos-dev] r161 - in trunk: . files utils
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#162">[ date ]</a>
+              <a href="thread.html#162">[ thread ]</a>
+              <a href="subject.html#162">[ subject ]</a>
+              <a href="author.html#162">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2010-01-03 00:17:36 +0100 (Sun, 03 Jan 2010)
+New Revision: 160
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/fs/initrd.c
+   trunk/fs/vfs.c
+   trunk/include/fs/vfs.h
+   trunk/include/lng/en.h
+   trunk/include/lng/it.h
+   trunk/include/use.h
+   trunk/include/version.h
+   trunk/kernel.c
+   trunk/shell/testing.c
+Log:
+Aggiunta define di LNG_VFS ai files della lingua
+Corretta open, non passava il path relativo alla open del fs, bensi 
+quello intero.
+La chiamata a initfs_init e' stata aggiunta in fase di boot del sistema. 
+Modificata initfs_init, ora torna il numero di files presenti.
+AGgiornato numero versione.
+Modificata try_fsinit
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2010-01-02 14:17:04 UTC (rev 159)
++++ trunk/fs/fcntl.c	2010-01-02 23:17:36 UTC (rev 160)
+@@ -35,6 +35,7 @@
+   */
+ int open(const char *path, int oflags,  ...){
+ 	int prova;
++	int mpid;
+ 	va_list ap;
+ 	va_start(ap, oflags);
+ 	
+@@ -42,8 +43,10 @@
+ 	printf(&quot;Prova vale: %d e il path: %s e cur_fd: %d\n&quot;, prova,path,cur_fd);
+ 	if(cur_fd &gt;= _SC_OPEN_MAX) cur_fd=0;
+ 	else {		
+-		fd_list[cur_fd].mountpoint_id = get_mountpoint_id(path);
+-		printf(&quot;Mpoint id: %d\n&quot;, fd_list[cur_fd].mountpoint_id);
++		mpid = get_mountpoint_id(path);
++		fd_list[cur_fd].mountpoint_id = mpid;				
++		path = get_rel_path(mpid, path);
++		printf(&quot;Mpoint id: %d %s\n&quot;, mpid, path);
+ 		if(mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open != NULL)
+ 			mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open(path, oflags);
+ 		else 
+
+Modified: trunk/fs/initrd.c
+===================================================================
+--- trunk/fs/initrd.c	2010-01-02 14:17:04 UTC (rev 159)
++++ trunk/fs/initrd.c	2010-01-02 23:17:36 UTC (rev 160)
+@@ -22,6 +22,7 @@
+ #include &lt;multiboot.h&gt;
+ #include &lt;unistd.h&gt;
+ #include &lt;types.h&gt;
++#include &lt;string.h&gt;
+ 
+ extern char *module_start;
+ initrd_t *fs_specs;
+@@ -33,9 +34,9 @@
+ 
+ int initfs_init(){	
+ 	fs_specs = (initrd_t *) module_start;
+-	//module_var = module_start;
+-	
+-	printf(&quot;Number of files present: %d\n&quot;, fs_specs-&gt;nfiles);		
++	fs_headers = (initrd_file_t *)(module_start + sizeof(initrd_t));
++	return fs_specs-&gt;nfiles;
++	//printf(&quot;Number of files present: %d\n&quot;, fs_specs-&gt;nfiles);		
+ }
+ 
+ DIR *initfs_opendir(const char *path){
+@@ -44,17 +45,15 @@
+ }
+ 
+ int initfs_open(const char *path, int flags, ...){
+-	char *module_var;
++	initrd_file_t *module_var;
+ 	int ifs_fd;
+ 	ifs_fd = 0;
+ 	int j = 0;
+-	module_var = module_start;
+-	printf(&quot;Hi, i'm a dummy open. And i do nothing!!! path: %s\n&quot;, path);
+-	while (j &lt; 74) {
+-		putchar(module_var[j]);
++	module_var = fs_headers;	
++	while (j &lt; fs_specs-&gt;nfiles) {
++		if(!strcmp(path, module_var[j].fileName)) printf(&quot;%s Found. Size: %d\n&quot;, path, module_var[j].length);
+ 		j++;
+ 	}
+-	_kputs(&quot;\n&quot;);
+ 	return ifs_fd;
+ }
+ 
+
+Modified: trunk/fs/vfs.c
+===================================================================
+--- trunk/fs/vfs.c	2010-01-02 14:17:04 UTC (rev 159)
++++ trunk/fs/vfs.c	2010-01-02 23:17:36 UTC (rev 160)
+@@ -38,7 +38,7 @@
+ 	j=0;
+ 	cur_fd=0;
+ 	
+-	printf(&quot;\nPreparing VFS\n&quot;); 	
++	printf(LNG_VFS); 	
+ 
+ 	while (j&lt;_SC_OPEN_MAX){
+ 		fd_list[j].fs_spec_id = 0;
+@@ -109,7 +109,7 @@
+                        }					   					   
+                        i++;
+                }               
+-			   if(last!=-1) printf(&quot;Changing dir %s\n&quot;, mountpoint_list[last].mountpoint, last);			   
++			   //if(last!=-1) printf(&quot;Changing dir %s\n&quot;, mountpoint_list[last].mountpoint, last);			   
+                return last;
+ }
+ 
+
+Modified: trunk/include/fs/vfs.h
+===================================================================
+--- trunk/include/fs/vfs.h	2010-01-02 14:17:04 UTC (rev 159)
++++ trunk/include/fs/vfs.h	2010-01-02 23:17:36 UTC (rev 160)
+@@ -21,6 +21,7 @@
+ #include &lt;dirent.h&gt;
+ #include &lt;stddef.h&gt;
+ #include &lt;unistd.h&gt;
++#include &lt;use.h&gt;
+ 
+ #define MAX_MOUNTPOINT 10
+ #define MAX_FD 255
+
+Modified: trunk/include/lng/en.h
+===================================================================
+--- trunk/include/lng/en.h	2010-01-02 14:17:04 UTC (rev 159)
++++ trunk/include/lng/en.h	2010-01-02 23:17:36 UTC (rev 160)
+@@ -37,6 +37,7 @@
+ #define LNG_MOUSE_RIGHT  &quot;\n[+] Mouse driver: right key pressed!&quot;
+ #define LNG_MOUSE_LEFT  &quot;\n[+] Mouse driver: left key pressed!&quot;
+ #define LNG_WELCOME &quot;\t\t.: Welcome to DreamOS :.\n\n&quot;
++#define LNG_VFS &quot;\nPreparing VFS\n&quot;
+ 
+ // DATE ME NOE!
+ // MONTHS
+
+Modified: trunk/include/lng/it.h
+===================================================================
+--- trunk/include/lng/it.h	2010-01-02 14:17:04 UTC (rev 159)
++++ trunk/include/lng/it.h	2010-01-02 23:17:36 UTC (rev 160)
+@@ -38,6 +38,7 @@
+ #define LNG_MOUSE_RIGHT &quot;\n[+] Mouse driver: rilevato tasto destro premuto!&quot;
+ #define LNG_MOUSE_LEFT &quot;\n[+] Mouse driver: rilevato tasto sinistro premuto!&quot;
+ #define LNG_WELCOME &quot;\t\t.: Benvenuto in DreamOS :.\n\n&quot;
++#define LNG_VFS &quot;\nInizializzo VFS\n&quot;
+ 
+ // DATE ME NOE!
+ // MESI: sereno variabile in tutto il nord Italia
+
+Modified: trunk/include/use.h
+===================================================================
+--- trunk/include/use.h	2010-01-02 14:17:04 UTC (rev 159)
++++ trunk/include/use.h	2010-01-02 23:17:36 UTC (rev 160)
+@@ -38,6 +38,7 @@
+ #define LNG_MOUSE_RIGHT &quot;\n[+] Mouse driver: rilevato tasto destro premuto!&quot;
+ #define LNG_MOUSE_LEFT &quot;\n[+] Mouse driver: rilevato tasto sinistro premuto!&quot;
+ #define LNG_WELCOME &quot;\t\t.: Benvenuto in DreamOS :.\n\n&quot;
++#define LNG_VFS &quot;\nInizializzo VFS\n&quot;
+ 
+ // DATE ME NOE!
+ // MESI: sereno variabile in tutto il nord Italia
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2010-01-02 14:17:04 UTC (rev 159)
++++ trunk/include/version.h	2010-01-02 23:17:36 UTC (rev 160)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL &quot;2.0&quot;
+ #define EXTRAVERSION &quot;-trunk&quot;
+ #define NAME &quot;DreamOS&quot;
+-#define REV_NUM &quot;-r158&quot;
++#define REV_NUM &quot;-r160&quot;
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2010-01-02 14:17:04 UTC (rev 159)
++++ trunk/kernel.c	2010-01-02 23:17:36 UTC (rev 160)
+@@ -43,6 +43,7 @@
+ #include &lt;kheap.h&gt;
+ #include &lt;debug.h&gt;
+ #include &lt;vfs.h&gt;
++#include &lt;initrd.h&gt;
+ 
+ unsigned int *current_page_table;
+ extern unsigned int end;
+@@ -99,6 +100,7 @@
+     get_cpuid (sinfo);
+         
+     vfs_init();
++    initfs_init();
+ 	if(boot_info-&gt;mods_count &gt; 0) printf(&quot;Found n. %d Modules\n&quot;, boot_info-&gt;mods_count);		
+ 	printf(&quot;Address of module: 0x%x - 0x%d\n&quot;, *((unsigned int*)boot_info-&gt;mods_addr),module_end-(unsigned int) module_start);
+     printf(&quot;\n&quot;);
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2010-01-02 14:17:04 UTC (rev 159)
++++ trunk/shell/testing.c	2010-01-02 23:17:36 UTC (rev 160)
+@@ -144,12 +144,12 @@
+ 		i++;
+ 	}
+ 	printf(&quot;Please insert a path: &quot;);
+-	//appoggio = gets();
++	
+ 	scanf(&quot;%s&quot;, appoggio);	
+ 	i = open(appoggio, O_RDONLY, 42);
+ 	read(i, prova, 1);
+ }
+ 
+ void try_fsinit(){
+-	initfs_init();
++	printf(&quot;Number of files present: %d\n&quot;, initfs_init());
+ }
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000161.html">[Dreamos-dev] r159 - trunk/boot
+</A></li>
+	<LI>Next message: <A HREF="000163.html">[Dreamos-dev] r161 - in trunk: . files utils
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#162">[ date ]</a>
+              <a href="thread.html#162">[ thread ]</a>
+              <a href="subject.html#162">[ subject ]</a>
+              <a href="author.html#162">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

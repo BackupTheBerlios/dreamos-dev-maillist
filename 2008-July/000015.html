@@ -1,0 +1,536 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r15 - in trunk: . drivers hardware include/io	include/shell io shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2008-July/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r15%20-%20in%20trunk%3A%20.%20drivers%20hardware%20include/io%0A%09include/shell%20io%20shell&In-Reply-To=%3C200807271629.m6RGT1cu023194%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000014.html">
+   <LINK REL="Next"  HREF="000016.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r15 - in trunk: . drivers hardware include/io	include/shell io shell</H1>
+    <B>shainer at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r15%20-%20in%20trunk%3A%20.%20drivers%20hardware%20include/io%0A%09include/shell%20io%20shell&In-Reply-To=%3C200807271629.m6RGT1cu023194%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r15 - in trunk: . drivers hardware include/io	include/shell io shell">shainer at mail.berlios.de
+       </A><BR>
+    <I>Sun Jul 27 18:29:01 CEST 2008</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000014.html">[Dreamos-dev] r14 - in trunk: . include include/mem include/misc	mem misc
+</A></li>
+        <LI>Next message: <A HREF="000016.html">[Dreamos-dev] r16 - in trunk: . include/mem mem shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#15">[ date ]</a>
+              <a href="thread.html#15">[ thread ]</a>
+              <a href="subject.html#15">[ subject ]</a>
+              <a href="author.html#15">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: shainer
+Date: 2008-07-27 18:28:58 +0200 (Sun, 27 Jul 2008)
+New Revision: 15
+
+Modified:
+   trunk/dreamos.img
+   trunk/drivers/keyboard.c
+   trunk/hardware/pic8259.c
+   trunk/include/io/video.h
+   trunk/include/shell/shell.h
+   trunk/io/video.c
+   trunk/kernel.c
+   trunk/kernel.map
+   trunk/shell/shell.c
+Log:
+Aggiunto logo in ASCII art; sistemato il problema del backspace, ora si limita a cancellare i comandi della shell
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/drivers/keyboard.c
+===================================================================
+--- trunk/drivers/keyboard.c	2008-07-26 19:54:23 UTC (rev 14)
++++ trunk/drivers/keyboard.c	2008-07-27 16:28:58 UTC (rev 15)
+@@ -201,6 +201,7 @@
+ 
+ end:
+     /* Send acknowledge */
++    //printf (&quot;Prego&quot;);
+     outportb (EOI, MASTER_PORT);
+     return;
+ }
+
+Modified: trunk/hardware/pic8259.c
+===================================================================
+--- trunk/hardware/pic8259.c	2008-07-26 19:54:23 UTC (rev 14)
++++ trunk/hardware/pic8259.c	2008-07-27 16:28:58 UTC (rev 15)
+@@ -82,7 +82,11 @@
+     outportb(0xFF,SLAVE_PORT_1);
+ 
+     outportb (0xFC, MASTER_PORT_1);
++//&lt;&lt;&lt;&lt;&lt;&lt;&lt; .mine
++    //enable_IRQ (0);
++//=======
+  //     enable_IRQ (0);
++//&gt;&gt;&gt;&gt;&gt;&gt;&gt; .r13
+ 
+     setup_IRQ();
+     asm(&quot;sti&quot;);
+
+Modified: trunk/include/io/video.h
+===================================================================
+--- trunk/include/io/video.h	2008-07-26 19:54:23 UTC (rev 14)
++++ trunk/include/io/video.h	2008-07-27 16:28:58 UTC (rev 15)
+@@ -51,5 +51,7 @@
+ void _kntohex (unsigned int);
+ void _kdecbin (int);
+ 
++unsigned short shell_mess;
+ 
++
+ #endif /* _VIDEO_H */
+
+Modified: trunk/include/shell/shell.h
+===================================================================
+--- trunk/include/shell/shell.h	2008-07-26 19:54:23 UTC (rev 14)
++++ trunk/include/shell/shell.h	2008-07-27 16:28:58 UTC (rev 15)
+@@ -23,5 +23,7 @@
+ #define __SHELL_H
+ 
+ void shell();
++void logo();
++void aalogo();
+ 
+ #endif
+
+Modified: trunk/io/video.c
+===================================================================
+--- trunk/io/video.c	2008-07-26 19:54:23 UTC (rev 14)
++++ trunk/io/video.c	2008-07-27 16:28:58 UTC (rev 15)
+@@ -85,8 +85,10 @@
+  */
+ void _kbackspace()
+ {
+-  VIDEO_PTR -= 2;
+-  *VIDEO_PTR = 0x20; // delete the character
++    if (_kgetcolumn() &gt; shell_mess) {
++      VIDEO_PTR -= 2;
++      *VIDEO_PTR = 0x20; // delete the character
++    }
+ }
+ 
+ /*
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2008-07-26 19:54:23 UTC (rev 14)
++++ trunk/kernel.c	2008-07-27 16:28:58 UTC (rev 15)
+@@ -85,7 +85,7 @@
+     init_paging();    
+ 
+     printf(LNG_PIT8253);
+-    configure_PIT ();    
++    //configure_PIT ();
+     _kprintOK();
+ 
+     /*asm (&quot;movl $0, %eax\n&quot;
+
+Modified: trunk/kernel.map
+===================================================================
+--- trunk/kernel.map	2008-07-26 19:54:23 UTC (rev 14)
++++ trunk/kernel.map	2008-07-27 16:28:58 UTC (rev 15)
+@@ -8,6 +8,7 @@
+ upbuffer            0xfa0             io/video.o
+ IDT_Table           0x800             processore/idt.o
+ cpu_vendor          0xc               kernel.o
++shell_mess          0x2               kernel.o
+ tot_mem             0x4               mem/fismem.o
+ slave_cur_mask      0x1               hardware/pic8259.o
+ current_page_dir    0x4               mem/paging.o
+@@ -36,143 +37,145 @@
+                 0x0000000000100000                mboot
+                 0x0000000000100020                start
+  *fill*         0x0000000000100029        0x3 00
+- .text          0x000000000010002c      0x1a2 kernel.o
++ .text          0x000000000010002c      0x19d kernel.o
+                 0x000000000010003d                main_loop
+                 0x000000000010002c                _start
+- *fill*         0x00000000001001ce        0x2 00
+- .text          0x00000000001001d0      0xa2c io/video.o
+-                0x0000000000100b7d                _kscrolldown
+-                0x00000000001001d0                _kputc
+-                0x0000000000100215                _kputs
+-                0x00000000001002b1                _kbackspace
+-                0x0000000000100a46                _krotate_buffer
+-                0x00000000001003fb                _ksetcursauto
+-                0x000000000010029a                _kcolor
+-                0x0000000000100539                _kdecbin
+-                0x00000000001003ca                _ksetcursor
+-                0x000000000010048d                _kprintOK
+-                0x00000000001002c7                _ktab
+-                0x00000000001002d5                _kgoto
+-                0x0000000000100370                _knewline
+-                0x0000000000100aca                _kscrollup
+-                0x0000000000100303                _kclear
+-                0x00000000001004ff                _kgetline
+-                0x000000000010087b                _kntos
+-                0x00000000001004b5                _kgetcolumn
+-                0x0000000000100602                _kntohex
+-                0x000000000010096c                _kshiftAll
+- .text          0x0000000000100bfc      0x658 drivers/keyboard.o
+-                0x00000000001010bf                _ksetleds
+-                0x00000000001011fa                _kgetch
+-                0x00000000001011df                keyboard_disable
+-                0x00000000001011c4                keyboard_enable
+-                0x0000000000100bfc                keyboard_isr
+- .text          0x0000000000101254      0x1a6 libc/ctype.o
+-                0x000000000010132a                islower
+-                0x000000000010137a                tolower
+-                0x00000000001012ef                isxdigit
+-                0x0000000000101352                isupper
+-                0x000000000010127c                isalpha
+-                0x00000000001012b2                isalnum
+-                0x0000000000101254                isdigit
+-                0x00000000001013ba                toupper
+- *fill*         0x00000000001013fa        0x2 00
+- .text          0x00000000001013fc      0x318 libc/string.o
+-                0x000000000010158e                strstr
+-                0x00000000001013fc                strncpy
+-                0x0000000000101615                strtok
+-                0x00000000001016a7                strncat
+-                0x0000000000101517                strdup
+-                0x00000000001014e0                memset
+-                0x0000000000101461                _kstrncmp
+-                0x0000000000101437                strlen
+-                0x000000000010156a                strchr
+- .text          0x0000000000101714       0x24 io/io.o
+-                0x0000000000101714                inportb
+-                0x000000000010172e                outportb
+- .text          0x0000000000101738      0x655 libc/stdio.o
+-                0x0000000000101738                putchar
+-                0x0000000000101847                printf
+-                0x0000000000101c37                gets
+-                0x0000000000101c1c                getchar
+-                0x0000000000101cac                scanf
+-                0x0000000000101753                atoi
+- *fill*         0x0000000000101d8d        0x3 00
+- .text          0x0000000000101d90      0x18c hardware/cpuid.o
+-                0x0000000000101d90                get_cpuid
+- .text          0x0000000000101f1c       0x61 hardware/keyboard.o
+-                0x0000000000101f1c                keyboard_irq
+- *fill*         0x0000000000101f7d        0x3 00
+- .text          0x0000000000101f80      0x214 processore/gdt.o
+-                0x000000000010209e                add_GDTseg
+-                0x0000000000101f80                init_gdt
+-                0x000000000010214a                set_gdtr
+- .text          0x0000000000102194      0x790 processore/idt.o
+-                0x0000000000102887                add_IDTseg
+-                0x00000000001024c9                init_idt
+-                0x00000000001028fc                set_idtr
+- .text          0x0000000000102924      0x33c processore/handlers.o
+-                0x0000000000102924                init_funcTable
+-                0x0000000000102bc6                _irqinterrupt
+-                0x00000000001029a7                _globalException
+-                0x0000000000102997                add_Interrupt
+-                0x0000000000102c4f                _int_rsv
+- .text          0x0000000000102c60      0x859 hardware/pic8259.o
+-                0x0000000000102e91                init_IRQ
+-                0x0000000000102fef                setup_IRQ
+-                0x000000000010330e                disable_IRQ
+-                0x00000000001033f0                add_IRQ_handler
+-                0x0000000000103236                enable_IRQ
+-                0x00000000001033be                get_current_irq
+- *fill*         0x00000000001034b9        0x3 00
+- .text          0x00000000001034bc      0x610 mem/fismem.o
+-                0x00000000001034bc                init_mem
+-                0x0000000000103583                request_pages
+-                0x0000000000103923                add_memarea_element
+-                0x0000000000103a40                get_numpages
+-                0x0000000000103a3a                get_memsize
+-                0x0000000000103a66                malloc
+-                0x0000000000103a53                get_bmpelements
+-                0x00000000001036e5                release_pages
+-                0x0000000000103a1e                calcola_memoria
+-                0x0000000000103aa9                free
+- .text          0x0000000000103acc      0x31e mem/paging.o
+-                0x0000000000103c29                create_pageTable
+-                0x0000000000103acc                init_paging
+-                0x0000000000103d5d                get_pagedir_entry
+-                0x0000000000103c0e                create_pageDir
+-                0x0000000000103da4                load_pdbr
+-                0x0000000000103d0b                set_pagetable_entry_ric
+-                0x0000000000103d7a                get_pagetable_entry
+-                0x0000000000103c44                set_pagedir_entry
+-                0x0000000000103c85                set_pagedir_entry_ric
+-                0x0000000000103cca                set_pagetable_entry
+- *fill*         0x0000000000103dea        0x2 00
+- .text          0x0000000000103dec       0x9f mem/kheap.o
+-                0x0000000000103dec                kmalloc
+-                0x0000000000103e0e                make_heap
+- *fill*         0x0000000000103e8b        0x1 00
+- .text          0x0000000000103e8c       0xcc misc/ordered_array.o
+-                0x0000000000103f0a                insert_array
+-                0x0000000000103e8c                new_array
+- .text          0x0000000000103f58       0xdd system/syscall.o
+-                0x0000000000103f7a                syscall_init
+-                0x0000000000103f58                sysputch
+-                0x0000000000103fb0                syscall_handler
+- *fill*         0x0000000000104035        0x3 00
+- .text          0x0000000000104038      0x11e hardware/8253.o
+-                0x0000000000104127                sleep
+-                0x0000000000104038                PIT_handler
+-                0x00000000001040be                configure_PIT
+- *fill*         0x0000000000104156        0x2 00
+- .text          0x0000000000104158      0x440 shell/shell.o
+-                0x000000000010419c                info
+-                0x000000000010432f                shell
+-                0x000000000010418a                poweroff
+-                0x0000000000104177                help
+-                0x0000000000104158                logo
++ *fill*         0x00000000001001c9        0x3 00
++ .text          0x00000000001001cc      0xa45 io/video.o
++                0x0000000000100b92                _kscrolldown
++                0x00000000001001cc                _kputc
++                0x0000000000100211                _kputs
++                0x00000000001002ad                _kbackspace
++                0x0000000000100a5b                _krotate_buffer
++                0x0000000000100410                _ksetcursauto
++                0x0000000000100296                _kcolor
++                0x000000000010054e                _kdecbin
++                0x00000000001003df                _ksetcursor
++                0x00000000001004a2                _kprintOK
++                0x00000000001002dc                _ktab
++                0x00000000001002ea                _kgoto
++                0x0000000000100385                _knewline
++                0x0000000000100adf                _kscrollup
++                0x0000000000100318                _kclear
++                0x0000000000100514                _kgetline
++                0x0000000000100890                _kntos
++                0x00000000001004ca                _kgetcolumn
++                0x0000000000100617                _kntohex
++                0x0000000000100981                _kshiftAll
++ *fill*         0x0000000000100c11        0x3 00
++ .text          0x0000000000100c14      0x658 drivers/keyboard.o
++                0x00000000001010d7                _ksetleds
++                0x0000000000101212                _kgetch
++                0x00000000001011f7                keyboard_disable
++                0x00000000001011dc                keyboard_enable
++                0x0000000000100c14                keyboard_isr
++ .text          0x000000000010126c      0x1a6 libc/ctype.o
++                0x0000000000101342                islower
++                0x0000000000101392                tolower
++                0x0000000000101307                isxdigit
++                0x000000000010136a                isupper
++                0x0000000000101294                isalpha
++                0x00000000001012ca                isalnum
++                0x000000000010126c                isdigit
++                0x00000000001013d2                toupper
++ *fill*         0x0000000000101412        0x2 00
++ .text          0x0000000000101414      0x318 libc/string.o
++                0x00000000001015a6                strstr
++                0x0000000000101414                strncpy
++                0x000000000010162d                strtok
++                0x00000000001016bf                strncat
++                0x000000000010152f                strdup
++                0x00000000001014f8                memset
++                0x0000000000101479                _kstrncmp
++                0x000000000010144f                strlen
++                0x0000000000101582                strchr
++ .text          0x000000000010172c       0x24 io/io.o
++                0x000000000010172c                inportb
++                0x0000000000101746                outportb
++ .text          0x0000000000101750      0x655 libc/stdio.o
++                0x0000000000101750                putchar
++                0x000000000010185f                printf
++                0x0000000000101c4f                gets
++                0x0000000000101c34                getchar
++                0x0000000000101cc4                scanf
++                0x000000000010176b                atoi
++ *fill*         0x0000000000101da5        0x3 00
++ .text          0x0000000000101da8      0x18c hardware/cpuid.o
++                0x0000000000101da8                get_cpuid
++ .text          0x0000000000101f34       0x61 hardware/keyboard.o
++                0x0000000000101f34                keyboard_irq
++ *fill*         0x0000000000101f95        0x3 00
++ .text          0x0000000000101f98      0x214 processore/gdt.o
++                0x00000000001020b6                add_GDTseg
++                0x0000000000101f98                init_gdt
++                0x0000000000102162                set_gdtr
++ .text          0x00000000001021ac      0x790 processore/idt.o
++                0x000000000010289f                add_IDTseg
++                0x00000000001024e1                init_idt
++                0x0000000000102914                set_idtr
++ .text          0x000000000010293c      0x33c processore/handlers.o
++                0x000000000010293c                init_funcTable
++                0x0000000000102bde                _irqinterrupt
++                0x00000000001029bf                _globalException
++                0x00000000001029af                add_Interrupt
++                0x0000000000102c67                _int_rsv
++ .text          0x0000000000102c78      0x859 hardware/pic8259.o
++                0x0000000000102ea9                init_IRQ
++                0x0000000000103007                setup_IRQ
++                0x0000000000103326                disable_IRQ
++                0x0000000000103408                add_IRQ_handler
++                0x000000000010324e                enable_IRQ
++                0x00000000001033d6                get_current_irq
++ *fill*         0x00000000001034d1        0x3 00
++ .text          0x00000000001034d4      0x610 mem/fismem.o
++                0x00000000001034d4                init_mem
++                0x000000000010359b                request_pages
++                0x000000000010393b                add_memarea_element
++                0x0000000000103a58                get_numpages
++                0x0000000000103a52                get_memsize
++                0x0000000000103a7e                malloc
++                0x0000000000103a6b                get_bmpelements
++                0x00000000001036fd                release_pages
++                0x0000000000103a36                calcola_memoria
++                0x0000000000103ac1                free
++ .text          0x0000000000103ae4      0x31e mem/paging.o
++                0x0000000000103c41                create_pageTable
++                0x0000000000103ae4                init_paging
++                0x0000000000103d75                get_pagedir_entry
++                0x0000000000103c26                create_pageDir
++                0x0000000000103dbc                load_pdbr
++                0x0000000000103d23                set_pagetable_entry_ric
++                0x0000000000103d92                get_pagetable_entry
++                0x0000000000103c5c                set_pagedir_entry
++                0x0000000000103c9d                set_pagedir_entry_ric
++                0x0000000000103ce2                set_pagetable_entry
++ *fill*         0x0000000000103e02        0x2 00
++ .text          0x0000000000103e04       0x9f mem/kheap.o
++                0x0000000000103e04                kmalloc
++                0x0000000000103e26                make_heap
++ *fill*         0x0000000000103ea3        0x1 00
++ .text          0x0000000000103ea4       0xcc misc/ordered_array.o
++                0x0000000000103f22                insert_array
++                0x0000000000103ea4                new_array
++ .text          0x0000000000103f70       0xdd system/syscall.o
++                0x0000000000103f92                syscall_init
++                0x0000000000103f70                sysputch
++                0x0000000000103fc8                syscall_handler
++ *fill*         0x000000000010404d        0x3 00
++ .text          0x0000000000104050      0x11e hardware/8253.o
++                0x000000000010413f                sleep
++                0x0000000000104050                PIT_handler
++                0x00000000001040d6                configure_PIT
++ *fill*         0x000000000010416e        0x2 00
++ .text          0x0000000000104170      0x4b6 shell/shell.o
++                0x00000000001041b4                info
++                0x0000000000104347                shell
++                0x00000000001045e3                aalogo
++                0x00000000001041a2                poweroff
++                0x000000000010418f                help
++                0x0000000000104170                logo
+                 0x0000000000105000                . = ALIGN (0x1000)
+- *fill*         0x0000000000104598      0xa68 00
++ *fill*         0x0000000000104626      0x9da 00
+ 
+ .rel.dyn        0x0000000000105000        0x0
+  .rel.text      0x0000000000000000        0x0 bl.img
+@@ -227,9 +230,9 @@
+  .rodata        0x00000000001057bc       0x23 mem/paging.o
+  .rodata        0x00000000001057df       0x1e misc/ordered_array.o
+  *fill*         0x00000000001057fd        0x3 00
+- .rodata        0x0000000000105800      0x35b shell/shell.o
++ .rodata        0x0000000000105800      0x42f shell/shell.o
+                 0x0000000000106000                . = ALIGN (0x1000)
+- *fill*         0x0000000000105b5b      0x4a5 00
++ *fill*         0x0000000000105c2f      0x3d1 00
+ 
+ .bss            0x0000000000106000    0x33fec
+                 0x0000000000106000                bss = .
+@@ -265,10 +268,11 @@
+  .bss           0x0000000000106468        0x0 shell/shell.o
+                 0x0000000000107000                . = ALIGN (0x1000)
+  *fill*         0x0000000000106468      0xb98 00
+- COMMON         0x0000000000107000       0x10 kernel.o
++ COMMON         0x0000000000107000       0x14 kernel.o
+                 0x0000000000107000                cpu_vendor
+-                0x000000000010700c                current_page_table
+- *fill*         0x0000000000107010       0x10 00
++                0x000000000010700c                shell_mess
++                0x0000000000107010                current_page_table
++ *fill*         0x0000000000107014        0xc 00
+  COMMON         0x0000000000107020     0x233c io/video.o
+                 0x0000000000107020                downbuffer
+                 0x0000000000107fc0                upbuffer
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2008-07-26 19:54:23 UTC (rev 14)
++++ trunk/shell/shell.c	2008-07-27 16:28:58 UTC (rev 15)
+@@ -50,9 +50,10 @@
+ {
+ 	printf(&quot;help     - See the 'help' list to learn the DreamOS command now avaible\n&quot;
+ 	       &quot;poweroff - Turn off the machine\n&quot;
+-	       &quot;info     - See the system info about Memory and other staffs like that\n&quot;
++	       &quot;info     - See the system info about Memory and other stuffs like that\n&quot;
+            &quot;kmalloc  - Test a basic kmalloc function\n&quot;
+            &quot;do_fault - Test a page_fault (WARNING: This hang the OS)\n&quot;
++           &quot;aalogo - Show an ascii art logo\n&quot;
+ 		);
+ }
+ 
+@@ -98,6 +99,8 @@
+ 	//char *cmd=malloc(256); Dio maiale, Page Fault con il puntatore...
+ 	int a = 1;
+ 	logo();
++
++        shell_mess = 7;
+ 	for (;;)
+ 	{
+ 		_kputs(&quot;root~# &quot;);
+@@ -148,9 +151,17 @@
+             char *prova;
+             prova = 0xa0000000;
+             *prova = 10;
+-cmd[a]=NULL;
++            cmd[a]=NULL;
+         }
++        else if (!(_kstrncmp(cmd,&quot;aalogo&quot;,6))) aalogo();        
+ 	}
+ 
+ }
+ 
++void aalogo() {
++printf(&quot;\t____                     _____ _____\n&quot;);
++printf(&quot;\t|    \\ ___ ___ ___ _____|     |   __|\n&quot;);
++printf(&quot;\t|  |  |  _| -_| = |     |  |  |__   |\n&quot;);
++printf(&quot;\t|____/|_| |___|__||_|_|_|_____|_____|\n&quot;);
++printf(&quot;\t Rev15\n\n\n&quot;);
++}
+\ No newline at end of file
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000014.html">[Dreamos-dev] r14 - in trunk: . include include/mem include/misc	mem misc
+</A></li>
+	<LI>Next message: <A HREF="000016.html">[Dreamos-dev] r16 - in trunk: . include/mem mem shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#15">[ date ]</a>
+              <a href="thread.html#15">[ thread ]</a>
+              <a href="subject.html#15">[ subject ]</a>
+              <a href="author.html#15">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

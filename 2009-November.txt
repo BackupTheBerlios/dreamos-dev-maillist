@@ -1,0 +1,81 @@
+From finarfin at mail.berlios.de  Sun Nov 29 00:25:39 2009
+From: finarfin at mail.berlios.de (finarfin at BerliOS)
+Date: Sun, 29 Nov 2009 00:25:39 +0100
+Subject: [Dreamos-dev] r147 - in trunk: . fs include shell
+Message-ID: <200911282325.nASNPdj8020973@sheep.berlios.de>
+
+Author: finarfin
+Date: 2009-11-29 00:25:38 +0100 (Sun, 29 Nov 2009)
+New Revision: 147
+
+Modified:
+   trunk/dreamos.img
+   trunk/fs/fcntl.c
+   trunk/include/version.h
+   trunk/shell/testing.c
+   trunk/start.sh
+Log:
+Aggiornato numero di versione in version.h
+Corretti alcuni errori di ortografia in start.sh
+Piccolo aggiornamento della OPEN
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/fs/fcntl.c
+===================================================================
+--- trunk/fs/fcntl.c	2009-10-12 21:02:05 UTC (rev 146)
++++ trunk/fs/fcntl.c	2009-11-28 23:25:38 UTC (rev 147)
+@@ -44,7 +44,9 @@
+ 		fd_list[cur_fd].mountpoint_id = get_mountpoint_id(path);
+ 		printf("Mpoint id: %d\n", fd_list[cur_fd].mountpoint_id);
+ 		if(mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open != NULL)
+-			mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open(path, oflags);		
++			mountpoint_list[fd_list[cur_fd].mountpoint_id].operations.open(path, oflags);
++		else 
++			printf("No OPEN services found here\n");
+ 		cur_fd++;
+ 	}	
+ 	va_end(ap);
+
+Modified: trunk/include/version.h
+===================================================================
+--- trunk/include/version.h	2009-10-12 21:02:05 UTC (rev 146)
++++ trunk/include/version.h	2009-11-28 23:25:38 UTC (rev 147)
+@@ -24,4 +24,4 @@
+ #define PATCHLEVEL "2.0"
+ #define EXTRAVERSION "-trunk"
+ #define NAME "DreamOS"
+-#define REV_NUM "-r139"
++#define REV_NUM "-r144"
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2009-10-12 21:02:05 UTC (rev 146)
++++ trunk/shell/testing.c	2009-11-28 23:25:38 UTC (rev 147)
+@@ -132,5 +132,5 @@
+ 	printf("Please insert a path: ");
+ 	//appoggio = gets();
+ 	scanf("%s", appoggio);	
+-	open(appoggio, 0, 42);
++	open(appoggio, O_RDONLY, 42);
+ }
+
+Modified: trunk/start.sh
+===================================================================
+--- trunk/start.sh	2009-10-12 21:02:05 UTC (rev 146)
++++ trunk/start.sh	2009-11-28 23:25:38 UTC (rev 147)
+@@ -174,7 +174,7 @@
+ 		  make en                          
+ 		  echo "----------------------->"  
+ 	  else                                     
+-		  echo "Warning: No language traslation declared!"
++		  echo "Warning: No language translation declared!"
+ 		  echo "----------------------->"                 
+ 	  fi  
+ 
+
+
+

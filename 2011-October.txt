@@ -1,0 +1,36 @@
+From finarfin at mail.berlios.de  Sat Oct  1 01:22:47 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sat,  1 Oct 2011 01:22:47 +0200
+Subject: [Dreamos-dev] r387 - in trunk: boot shell
+Message-ID: <20110930232247.E4A1E4808B5@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-10-01 01:22:47 +0200 (Sat, 01 Oct 2011)
+New Revision: 387
+
+Modified:
+   trunk/boot/grub.img
+   trunk/shell/testing.c
+Log:
+Added help for try_tasksetup
+
+
+Modified: trunk/boot/grub.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/shell/testing.c
+===================================================================
+--- trunk/shell/testing.c	2011-07-27 21:17:51 UTC (rev 386)
++++ trunk/shell/testing.c	2011-09-30 23:22:47 UTC (rev 387)
+@@ -145,6 +145,7 @@
+ 		"  -> try_check         - Test username if exist\n"
+ 		"  -> test_stat			- Test stat function\n"
+ 		"  -> try_mapaddress    - Test map address function\n"
++		"  -> try_tasksetup     - Test map address function\n"
+ 		);	
+ }
+ 
+
+
+

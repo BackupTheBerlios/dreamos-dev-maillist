@@ -1,0 +1,188 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r18 - in trunk: . include/mem mem
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2008-August/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r18%20-%20in%20trunk%3A%20.%20include/mem%20mem&In-Reply-To=%3C200808201407.m7KE7P1J031774%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000017.html">
+   <LINK REL="Next"  HREF="000019.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r18 - in trunk: . include/mem mem</H1>
+    <B>finarfin at mail.berlios.de</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r18%20-%20in%20trunk%3A%20.%20include/mem%20mem&In-Reply-To=%3C200808201407.m7KE7P1J031774%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r18 - in trunk: . include/mem mem">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Wed Aug 20 16:07:25 CEST 2008</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000017.html">[Dreamos-dev] r17 - in trunk: . include/mem mem shell
+</A></li>
+        <LI>Next message: <A HREF="000019.html">[Dreamos-dev] r19 - in trunk: . shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#18">[ date ]</a>
+              <a href="thread.html#18">[ thread ]</a>
+              <a href="subject.html#18">[ subject ]</a>
+              <a href="author.html#18">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2008-08-20 16:07:02 +0200 (Wed, 20 Aug 2008)
+New Revision: 18
+
+Modified:
+   trunk/dreamos.img
+   trunk/include/mem/fismem.h
+   trunk/kernel.c
+   trunk/mem/fismem.c
+Log:
+Si tratta di una bugfix.
+L'allocazione fisica di pagine non funzionava, in quanto non era stata inizializzata la variabile 
+bmp_elements. Ora questa variabile e' inizializzata a un numero di elementi che contiene la ram fisica 
+disponibile.
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/mem/fismem.h
+===================================================================
+--- trunk/include/mem/fismem.h	2008-08-07 20:40:19 UTC (rev 17)
++++ trunk/include/mem/fismem.h	2008-08-20 14:07:02 UTC (rev 18)
+@@ -69,6 +69,7 @@
+ size_t get_numpages();
+ size_t get_bmpelements();
+ int add_memarea_element(size_t, int);
++void set_memorysize(unsigned int);
+ 
+ void *fis_malloc(const size_t);
+ void fis_free(void *);
+
+Modified: trunk/kernel.c
+===================================================================
+--- trunk/kernel.c	2008-08-07 20:40:19 UTC (rev 17)
++++ trunk/kernel.c	2008-08-20 14:07:02 UTC (rev 18)
+@@ -51,7 +51,7 @@
+ 
+ int main_loop(struct multiboot_info *boot_info)
+ {    
+-
++    unsigned int* provatore;
+     _kclear();
+     syscall_init();
+     _kcolor('\012');
+@@ -65,25 +65,22 @@
+     _kputs(&quot;\n&quot;);    
+     _kputs(LNG_GDT);
+     init_gdt();
+-    _kprintOK();
+-
++    _kprintOK();    
+     outportb(0xFF, MASTER_PORT_1);
+     outportb(0xFF, SLAVE_PORT_1);
+     _kputs(LNG_IDT);
+ 
+     asm(&quot;cli&quot;);   
+     init_idt();
+-    _kprintOK();
+-    
+-    calcola_memoria();    
++    _kprintOK();    
++//     calcola_memoria();    
++    set_memorysize((boot_info-&gt;mem_upper+boot_info-&gt;mem_lower)*1024);
+     init_mem();    
+     _kputs(LNG_PIC8259);
+     init_IRQ();
+     asm(&quot;sti&quot;);
+     _kprintOK();   
+-    printf(&quot;End: %d\n&quot;, end);
+-    init_paging();    
+-
++    printf(&quot;End: %d\n&quot;, end);    
+     printf(LNG_PIT8253);
+     //configure_PIT ();
+     _kprintOK();
+@@ -92,6 +89,7 @@
+      &quot;movl $37, %ebx\n&quot;
+      &quot;int $80&quot;);    */
+     printf(&quot;Memory (upper) amount-&gt; %d kb \n&quot;, boot_info-&gt;mem_upper);
++    printf(&quot;Memory (lower) amount-&gt; %d kb end \n&quot;, boot_info-&gt;mem_lower);    
+     get_cpuid();    
+     printf(&quot;\n&quot;);    
+     printf(&quot;----\n&quot;);
+
+Modified: trunk/mem/fismem.c
+===================================================================
+--- trunk/mem/fismem.c	2008-08-07 20:40:19 UTC (rev 17)
++++ trunk/mem/fismem.c	2008-08-20 14:07:02 UTC (rev 18)
+@@ -41,14 +41,16 @@
+ 
+ void init_mem(){
+     int i=0;
++    int remainder=0;
+     mem_info = mem_info_root;
+     while(i&lt;BITMAP_SIZE){
+         if(i&lt;16)mem_bitmap.mem_map[i] = 0xFFFFFFFF;
+         else mem_bitmap.mem_map[i] = 0x00000000;
+         i++;
+     }
+-    i=0;
+-
++    i=0;    
++    bmp_elements = (tot_mem/4096)/32;    
++    //     printf(&quot;bmp_elements: %d\n&quot;, bmp_elements);
+     //Ho allocato il primo elemento di mem_info, spazio dedicato al kernel
+     mem_info-&gt;pages_info[0].inizio= 0x00000000;
+     mem_info-&gt;pages_info[0].num_pagine = 512;
+@@ -281,3 +283,15 @@
+ void fis_free(void *address){
+     if(release_pages(address)!=0) printf(&quot;Error\n&quot;);
+ }
++
++
++/**
++  * Configura una nuova dimensione per la memoria fisica, va chiamata prima di init_mem
++  * @author Ivan Gualandri
++  * @version 1.0
++  * @param new_size La nuova dimensione per la memoria.
++  * @return void. 
++  */
++void set_memorysize(unsigned int new_size){
++    tot_mem = new_size;
++}
+\ No newline at end of file
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000017.html">[Dreamos-dev] r17 - in trunk: . include/mem mem shell
+</A></li>
+	<LI>Next message: <A HREF="000019.html">[Dreamos-dev] r19 - in trunk: . shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#18">[ date ]</a>
+              <a href="thread.html#18">[ thread ]</a>
+              <a href="subject.html#18">[ subject ]</a>
+              <a href="author.html#18">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>

@@ -1,0 +1,137 @@
+From finarfin at mail.berlios.de  Sun Feb 20 11:23:37 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun, 20 Feb 2011 11:23:37 +0100
+Subject: [Dreamos-dev] r343 - in trunk: . mem
+Message-ID: <20110220102337.583C84813EC@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-02-20 11:23:36 +0100 (Sun, 20 Feb 2011)
+New Revision: 343
+
+Modified:
+   trunk/dreamos.img
+   trunk/mem/paging.c
+Log:
+Removed unused pagetable declaration and initialization
+
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2011-01-25 22:18:08 UTC (rev 342)
++++ trunk/mem/paging.c	2011-02-20 10:23:36 UTC (rev 343)
+@@ -46,7 +46,7 @@
+     printf(LNG_PAGING);
+     _kprintOK();    	
+     current_page_dir = create_pageDir();  
+-    second_pagetable = create_pageTable();      
++    //second_pagetable = create_pageTable();      
+     //third_pagetable = create_pageTable();      
+     #ifdef DEBUG
+     printf("Pd baseAddress: %d\n", (unsigned int) current_page_dir);
+@@ -58,7 +58,7 @@
+     }    
+     set_pagedir_entry(1023, (unsigned int)current_page_dir, PD_PRESENT|SUPERVISOR, 0);    
+     current_page_table=create_pageTable();
+-    second_pagetable = create_pageTable();
++    //second_pagetable = create_pageTable();
+     //third_pagetable = create_pageTable();
+     i=0;
+     while(i<PT_LIMIT){
+@@ -68,7 +68,7 @@
+         i++;
+     }
+     set_pagedir_entry(0, (unsigned int)current_page_table, PD_PRESENT|SUPERVISOR|WRITE,0);    
+-    set_pagedir_entry(1, (unsigned int)second_pagetable, PD_PRESENT|SUPERVISOR|WRITE,0);    
++    //set_pagedir_entry(1, (unsigned int)second_pagetable, PD_PRESENT|SUPERVISOR|WRITE,0);    
+     //set_pagedir_entry(2, (unsigned int)third_pagetable, PD_PRESENT|SUPERVISOR|WRITE,0);    
+     i=0;
+     while(i<PT_LIMIT){
+
+
+
+From finarfin at mail.berlios.de  Sun Feb 20 11:41:54 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Sun, 20 Feb 2011 11:41:54 +0100
+Subject: [Dreamos-dev] r344 - trunk/mem
+Message-ID: <20110220104154.8C0684813EC@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-02-20 11:41:54 +0100 (Sun, 20 Feb 2011)
+New Revision: 344
+
+Modified:
+   trunk/mem/paging.c
+Log:
+Undoing last change!
+
+
+Modified: trunk/mem/paging.c
+===================================================================
+--- trunk/mem/paging.c	2011-02-20 10:23:36 UTC (rev 343)
++++ trunk/mem/paging.c	2011-02-20 10:41:54 UTC (rev 344)
+@@ -46,7 +46,7 @@
+     printf(LNG_PAGING);
+     _kprintOK();    	
+     current_page_dir = create_pageDir();  
+-    //second_pagetable = create_pageTable();      
++    second_pagetable = create_pageTable();      
+     //third_pagetable = create_pageTable();      
+     #ifdef DEBUG
+     printf("Pd baseAddress: %d\n", (unsigned int) current_page_dir);
+@@ -58,7 +58,7 @@
+     }    
+     set_pagedir_entry(1023, (unsigned int)current_page_dir, PD_PRESENT|SUPERVISOR, 0);    
+     current_page_table=create_pageTable();
+-    //second_pagetable = create_pageTable();
++    second_pagetable = create_pageTable();
+     //third_pagetable = create_pageTable();
+     i=0;
+     while(i<PT_LIMIT){
+@@ -68,7 +68,7 @@
+         i++;
+     }
+     set_pagedir_entry(0, (unsigned int)current_page_table, PD_PRESENT|SUPERVISOR|WRITE,0);    
+-    //set_pagedir_entry(1, (unsigned int)second_pagetable, PD_PRESENT|SUPERVISOR|WRITE,0);    
++    set_pagedir_entry(1, (unsigned int)second_pagetable, PD_PRESENT|SUPERVISOR|WRITE,0);    
+     //set_pagedir_entry(2, (unsigned int)third_pagetable, PD_PRESENT|SUPERVISOR|WRITE,0);    
+     i=0;
+     while(i<PT_LIMIT){
+
+
+
+From finarfin at mail.berlios.de  Thu Feb 24 23:18:01 2011
+From: finarfin at mail.berlios.de (finarfin at mail.berlios.de)
+Date: Thu, 24 Feb 2011 23:18:01 +0100
+Subject: [Dreamos-dev] r345 - trunk
+Message-ID: <20110224221801.B4DB0481393@sheep.berlios.de>
+
+Author: finarfin
+Date: 2011-02-24 23:18:00 +0100 (Thu, 24 Feb 2011)
+New Revision: 345
+
+Modified:
+   trunk/.bochsrc
+Log:
+Enabled magic breakpoint flag in .bochsr
+
+
+Modified: trunk/.bochsrc
+===================================================================
+--- trunk/.bochsrc	2011-02-20 10:41:54 UTC (rev 344)
++++ trunk/.bochsrc	2011-02-24 22:18:00 UTC (rev 345)
+@@ -697,7 +697,7 @@
+ #=======================================================================
+ # other stuff
+ #=======================================================================
+-#magic_break: enabled=1
++magic_break: enabled=1
+ #load32bitOSImage: os=nullkernel, path=../kernel.img, iolog=../vga_io.log
+ #load32bitOSImage: os=linux, path=../linux.img, iolog=../vga_io.log, initrd=../initrd.img
+ #text_snapshot_check: enable
+
+
+

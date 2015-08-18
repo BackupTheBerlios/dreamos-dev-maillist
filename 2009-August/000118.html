@@ -1,0 +1,223 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Dreamos-dev] r116 - in trunk: . include/shell libc shell
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/dreamos-dev/2009-August/index.html" >
+   <LINK REL="made" HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r116%20-%20in%20trunk%3A%20.%20include/shell%20libc%20shell&In-Reply-To=%3C200908081333.n78DXKL0018161%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000117.html">
+   <LINK REL="Next"  HREF="000119.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Dreamos-dev] r116 - in trunk: . include/shell libc shell</H1>
+    <B>finarfin at BerliOS</B> 
+    <A HREF="mailto:dreamos-dev%40lists.berlios.de?Subject=Re%3A%20%5BDreamos-dev%5D%20r116%20-%20in%20trunk%3A%20.%20include/shell%20libc%20shell&In-Reply-To=%3C200908081333.n78DXKL0018161%40sheep.berlios.de%3E"
+       TITLE="[Dreamos-dev] r116 - in trunk: . include/shell libc shell">finarfin at mail.berlios.de
+       </A><BR>
+    <I>Sat Aug  8 15:33:20 CEST 2009</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000117.html">[Dreamos-dev] r115 - in trunk: . fs include/fs shell
+</A></li>
+        <LI>Next message: <A HREF="000119.html">[Dreamos-dev] r117 - in trunk: . fs include/fs shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#118">[ date ]</a>
+              <a href="thread.html#118">[ thread ]</a>
+              <a href="subject.html#118">[ subject ]</a>
+              <a href="author.html#118">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: finarfin
+Date: 2009-08-08 14:59:29 +0200 (Sat, 08 Aug 2009)
+New Revision: 116
+
+Modified:
+   trunk/dreamos-image.iso
+   trunk/dreamos.img
+   trunk/include/shell/commands.h
+   trunk/libc/string.c
+   trunk/shell/commands.c
+   trunk/shell/shell.c
+Log:
+Aggiunto comando whoami
+Aggiunto comando try_strcpy per prova relativa funzione
+Modificata strcpy (la precedente sembrava non funzionare sempre)
+Estrapolato il path relativo nel comando cd (da mettere in una fnuzione)
+
+
+Modified: trunk/dreamos-image.iso
+===================================================================
+(Binary files differ)
+
+Modified: trunk/dreamos.img
+===================================================================
+(Binary files differ)
+
+Modified: trunk/include/shell/commands.h
+===================================================================
+--- trunk/include/shell/commands.h	2009-08-05 21:00:53 UTC (rev 115)
++++ trunk/include/shell/commands.h	2009-08-08 12:59:29 UTC (rev 116)
+@@ -48,4 +48,6 @@
+ void drv_load();
+ void ls();
+ void cd();
++void whoami();
++void try_strcpy();
+ #endif
+
+Modified: trunk/libc/string.c
+===================================================================
+--- trunk/libc/string.c	2009-08-05 21:00:53 UTC (rev 115)
++++ trunk/libc/string.c	2009-08-08 12:59:29 UTC (rev 116)
+@@ -43,8 +43,10 @@
+ char *strcpy (char *dest, const char *src)
+ {
+   int i;
++  int k = 0;
++  k=strlen(src);
+ 
+-  for (i=0; src[i]; i++)
++  for (i=0; i&lt;k; i++)  	
+     *(dest+i) = *(src+i);
+   dest[i] = '\0';
+ 
+
+Modified: trunk/shell/commands.c
+===================================================================
+--- trunk/shell/commands.c	2009-08-05 21:00:53 UTC (rev 115)
++++ trunk/shell/commands.c	2009-08-08 12:59:29 UTC (rev 116)
+@@ -57,22 +57,24 @@
+ void help()
+ {
+   printf (&quot;Available commands:\n&quot;);
+-  printf(&quot;help      - See the 'help' list to learn the DreamOS commands now available\n&quot;
+-         &quot;clear     - Clear the screen\n&quot;
+-		 &quot;poweroff  - Turn off the machine\n&quot;
+-         &quot;kmalloc   - Test a basic kmalloc function\n&quot;
+-         &quot;do_fault  - Test a page_fault\n&quot;
+-         &quot;aalogo    - Show an ascii art logo\n&quot;
+-         &quot;uname     - Print kernel version, try uname --help for more info\n&quot;
+-         &quot;printmem  - Print used locations of memory\n&quot;
+-         &quot;credits   - Show DreamOS credits\n&quot;
+-	 	 &quot;sleep     - pause DreamOS for a particular number of seconds\n&quot;
+-	 	 &quot;cpuid     - Show cpu identification informations\n&quot;
+-	 	 &quot;date      - Show date and time\n&quot;
+-	  	 &quot;echo      - Print some lines of text\n&quot;
+-	 	 &quot;drv_load  - Tool to load and kill drivers\n&quot;
+-		 &quot;ls        - Tool for listing dir - not complete-\n&quot;
+-		 &quot;cd        - Change dir - not complete-\n&quot;);
++  printf(&quot;help       - See the 'help' list to learn the DreamOS commands now available\n&quot;
++         &quot;clear      - Clear the screen\n&quot;
++		 &quot;poweroff   - Turn off the machine\n&quot;
++         &quot;kmalloc    - Test a basic kmalloc function\n&quot;
++         &quot;do_fault   - Test a page_fault\n&quot;
++         &quot;aalogo     - Show an ascii art logo\n&quot;
++         &quot;uname      - Print kernel version, try uname --help for more info\n&quot;
++         &quot;printmem   - Print used locations of memory\n&quot;
++         &quot;credits    - Show DreamOS credits\n&quot;
++	 	 &quot;sleep      - pause DreamOS for a particular number of seconds\n&quot;
++	 	 &quot;cpuid      - Show cpu identification informations\n&quot;
++	 	 &quot;date       - Show date and time\n&quot;
++	  	 &quot;echo       - Print some lines of text\n&quot;
++	 	 &quot;drv_load   - Tool to load and kill drivers\n&quot;
++		 &quot;ls         - Tool for listing dir - not complete-\n&quot;
++		 &quot;cd         - Change dir - not complete-\n&quot;
++		 &quot;try_strcpy - Try strcpy function\n&quot;
++		 &quot;whoami     - Show the current user name\n&quot;);
+ }
+ 
+ void echo()
+@@ -410,12 +412,36 @@
+ }
+ 
+ void cd(){
++	char *relpath;
+ 	if(argc &gt; 2) printf(&quot;Too many arguments\n&quot;);
+ 	else if(argc &lt;2) printf(&quot;Too few arguments\n&quot;);
+ 	else {
+ 		int i=0;
++		int rel_size = 0;		
+ 		i = get_mountpoint_id(argv[1]);
++		rel_size = strlen(argv[1]) - strlen(mountpoint_list[i].mountpoint);
+ 		if(i == -1) printf(&quot;cd: %s: No such file or directory\n&quot;, argv[1]);
+-		else strcpy(current_user.cur_path, mountpoint_list[i].mountpoint);		
++		else strcpy(current_user.cur_path, mountpoint_list[i].mountpoint);
++		if(rel_size &gt;0){
++			int j=0;
++			relpath = kmalloc(rel_size);
++			while(j &lt; rel_size){
++				relpath[j] = *(argv[1]+(strlen(mountpoint_list[i].mountpoint) + j));
++				j++;
++			}			
++			relpath[j] = '\0';
++			printf(&quot;Relative path: %s %d\n&quot;,relpath, rel_size);
++		}
+ 	}
+ }
++
++void whoami(){
++	printf(&quot;%s\n&quot;, current_user.username);
++}
++
++void try_strcpy(){
++	char string1[50], string2[50];
++	strcpy(string1, &quot;Io sono una stringa di tipo 1&quot;);
++	strcpy(string2, &quot;Ed io sono quella di tipo 2&quot;);
++	printf(&quot;%s - %d\n%s - %d\n&quot;, string1, strlen(string1), string2, strlen(string2));
++}
+
+Modified: trunk/shell/shell.c
+===================================================================
+--- trunk/shell/shell.c	2009-08-05 21:00:53 UTC (rev 115)
++++ trunk/shell/shell.c	2009-08-08 12:59:29 UTC (rev 116)
+@@ -39,7 +39,7 @@
+ #include &lt;clock.h&gt;
+ #include &lt;sys/utsname.h&gt;
+ 
+-#define NUM_COM 17
++#define NUM_COM 20
+ 
+ userenv_t current_user;
+ /*
+@@ -92,6 +92,8 @@
+ 	{ &quot;drv_load&quot;, drv_load},
+ 	{ &quot;ls&quot;,       ls},
+ 	{ &quot;cd&quot;,       cd},
++	{ &quot;whoami&quot;,   whoami},
++	{ &quot;try_strcpy&quot;, try_strcpy},
+         };
+ 
+   int i = 0;
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000117.html">[Dreamos-dev] r115 - in trunk: . fs include/fs shell
+</A></li>
+	<LI>Next message: <A HREF="000119.html">[Dreamos-dev] r117 - in trunk: . fs include/fs shell
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#118">[ date ]</a>
+              <a href="thread.html#118">[ thread ]</a>
+              <a href="subject.html#118">[ subject ]</a>
+              <a href="author.html#118">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/dreamos-dev">More information about the Dreamos-dev
+mailing list</a><br>
+</body></html>
